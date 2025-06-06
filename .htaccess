@@ -1,0 +1,11 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Если запрашиваемый ресурс реально существует как файл или папка — отдать его напрямую
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+
+  # Иначе любой URI (с / или без /) “зашить” в index.php
+  RewriteRule ^ index.php [L,QSA]
+</IfModule>
+

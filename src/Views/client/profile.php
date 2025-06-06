@@ -1,0 +1,291 @@
+<?php
+/**
+ * @var array  $user          // ['id'=>..., 'name'=>..., 'phone'=>..., 'referral_code'=>..., 'points_balance'=>..., 'referred_by'=>...]
+ * @var string $address
+ * @var array  $transactions  // каждая транзакция ['id'=>..., 'amount'=>..., 'transaction_type'=>..., 'description'=>..., 'created_at'=>..., 'order_id'=>...]
+ */
+?>
+
+<main class="bg-gradient-to-br from-orange-50 via-white to-pink-50 min-h-screen pb-24">
+
+  <!-- Hero Header -->
+  <div class="pt-6 px-4 mb-6">
+    <div class="bg-gradient-to-r from-emerald-500 to-teal-500 rounded-3xl p-6 text-white shadow-2xl relative overflow-hidden">
+      <!-- Декоративные элементы -->
+      <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
+      <div class="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-12 -translate-x-12"></div>
+      
+      <div class="relative z-10 text-center">
+        <!-- Аватар пользователя -->
+        <div class="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-3xl flex items-center justify-center mx-auto mb-4">
+          <span class="material-icons-round text-4xl">person</span>
+        </div>
+        
+        <h1 class="text-2xl font-bold mb-2">Мой профиль</h1>
+        <p class="text-emerald-100">Привет, <?= htmlspecialchars($user['name'] ?? 'Гость') ?>! 👋</p>
+        <p class="mt-2">
+          Ваш баланс: 
+          <button id="openPointsPopup" class="inline-flex items-center space-x-1 font-semibold hover:underline focus:outline-none">
+            <span><?= (int)$user['points_balance'] ?></span>
+            <span>🍓</span>
+            
+          </button>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="px-4 space-y-6">
+    
+    <!-- Блок «Клубничек: пригласи и получи баллы» -->
+    <div class="bg-white rounded-3xl shadow-lg overflow-hidden">
+      <div class="bg-gradient-to-r from-gray-50 to-emerald-50 px-6 py-4 border-b border-gray-100">
+        <h2 class="font-bold text-gray-800 flex items-center">
+          <span class="material-icons-round mr-2 text-emerald-500">card_giftcard</span>
+          Клубнички и подарки
+        </h2>
+      </div>
+      <div class="p-6 space-y-4 text-gray-700">
+        <p>Подарите другу 10 % скидку на первый заказ, а сами получайте клубнички за каждый его заказ!</p>
+        <p>Скопируйте ссылку и отправьте другу:</p>
+        <div class="flex items-center space-x-2">
+          <?php $refLink = "https://yagodgo.ru/register?invite=" . urlencode($user['referral_code']); ?>
+          <input type="text"
+                 readonly
+                 value="<?= htmlspecialchars($refLink) ?>"
+                 class="flex-1 bg-gray-100 rounded-lg px-3 py-2 text-sm text-gray-800 outline-none select-all"
+                 onclick="this.select()">
+          <button onclick="copyInviteLink()"
+                  class="bg-emerald-500 text-white px-4 py-2 rounded-lg hover:bg-emerald-600 transition">
+            Копировать
+          </button>
+        </div>
+        <p class="text-sm text-gray-500">Или используйте купон:</p>
+        <div class="flex items-center space-x-2">
+          <code class="bg-gray-100 rounded-lg px-3 py-2 font-mono">
+            <?= htmlspecialchars($user['referral_code']) ?>
+          </code>
+          <button onclick="copyInviteCode()"
+                  class="bg-emerald-500 text-white px-4 py-2 rounded-lg hover:bg-emerald-600 transition">
+            Копировать
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Основная информация -->
+    <div class="bg-white rounded-3xl shadow-lg overflow-hidden">
+      <div class="bg-gradient-to-r from-gray-50 to-emerald-50 px-6 py-4 border-b border-gray-100">
+        <h2 class="font-bold text-gray-800 flex items-center">
+          <span class="material-icons-round mr-2 text-emerald-500">badge</span>
+          Основная информация
+        </h2>
+      </div>
+      <div class="p-6 space-y-4">
+        <!-- Имя -->
+        <div class="flex items-center space-x-4">
+          <div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-2xl flex items-center justify-center flex-shrink-0">
+            <span class="material-icons-round text-white">person</span>
+          </div>
+          <div class="flex-1">
+            <p class="text-sm text-gray-500 font-medium">Имя</p>
+            <p class="text-lg font-semibold text-gray-800"><?= htmlspecialchars($user['name'] ?? 'Не указано') ?></p>
+          </div>
+        </div>
+        <!-- Телефон -->
+        <div class="flex items-center space-x-4">
+          <div class="w-12 h-12 bg-gradient-to-br from-green-400 to-emerald-500 rounded-2xl flex items-center justify-center flex-shrink-0">
+            <span class="material-icons-round text-white">phone</span>
+          </div>
+          <div class="flex-1">
+            <p class="text-sm text-gray-500 font-medium">Телефон</p>
+            <p class="text-lg font-semibold text-gray-800"><?= htmlspecialchars($user['phone'] ?? 'Не указан') ?></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Адрес доставки -->
+    <div class="bg-white rounded-3xl shadow-lg overflow-hidden">
+      <div class="bg-gradient-to-r from-gray-50 to-orange-50 px-6 py-4 border-b border-gray-100">
+        <h2 class="font-bold text-gray-800 flex items-center">
+          <span class="material-icons-round mr-2 text-orange-500">location_on</span>
+          Адрес доставки
+        </h2>
+      </div>
+      <form action="/profile" method="post" class="p-6 space-y-4">
+        <div class="flex items-start space-x-4 mb-4">
+          <div class="w-12 h-12 bg-gradient-to-br from-orange-400 to-red-500 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1">
+            <span class="material-icons-round text-white">home</span>
+          </div>
+          <div class="flex-1">
+            <label for="address" class="block text-sm font-medium text-gray-700 mb-2">
+              Укажите ваш адрес для доставки
+            </label>
+            <textarea
+              name="address"
+              id="address"
+              rows="3"
+              placeholder="Например: ул. Манаса 123, кв. 45, 2 этаж, домофон 45К"
+              class="w-full border border-gray-300 rounded-2xl px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all resize-none"
+            ><?= htmlspecialchars($address) ?></textarea>
+            <p class="text-xs text-gray-500 mt-2 flex items-center">
+              <span class="material-icons-round mr-1 text-sm">info</span>
+              Чем подробнее адрес, тем быстрее доставка!
+            </p>
+          </div>
+        </div>
+        <button type="submit"
+                class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white py-4 rounded-2xl font-semibold hover:shadow-lg hover:scale-105 transition-all flex items-center justify-center space-x-3">
+          <span class="material-icons-round">save</span>
+          <span>Сохранить адрес</span>
+        </button>
+      </form>
+    </div>
+
+    <!-- История баллов -->
+    <div class="bg-white rounded-3xl shadow-lg overflow-hidden">
+      <div class="bg-gradient-to-r from-gray-50 to-blue-50 px-6 py-4 border-b border-gray-100">
+        <h2 class="font-bold text-gray-800 flex items-center">
+          <span class="material-icons-round mr-2 text-blue-500">receipt_long</span>
+          История клубничек
+        </h2>
+      </div>
+      <div class="p-6 overflow-x-auto">
+        <?php if (empty($transactions)): ?>
+          <p class="text-gray-500">История пуста</p>
+        <?php else: ?>
+          <table class="w-full text-left">
+            <thead>
+              <tr>
+                <th class="px-4 py-2 text-sm text-gray-500">Дата</th>
+                <th class="px-4 py-2 text-sm text-gray-500">Сумма</th>
+                <th class="px-4 py-2 text-sm text-gray-500">Тип</th>
+                <th class="px-4 py-2 text-sm text-gray-500">Описание</th>
+                <th class="px-4 py-2 text-sm text-gray-500">Заказ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($transactions as $tx): ?>
+                <tr class="border-t">
+                  <td class="px-4 py-2 text-sm text-gray-700"><?= date('d.m.Y H:i', strtotime($tx['created_at'])) ?></td>
+                  <td class="px-4 py-2 text-sm">
+                    <?php if ((int)$tx['amount'] > 0): ?>
+                      <span class="text-green-600 font-semibold">+<?= $tx['amount'] ?></span>
+                    <?php else: ?>
+                      <span class="text-red-600 font-semibold"><?= $tx['amount'] ?></span>
+                    <?php endif; ?>
+                    <span class="text-sm">🍓</span>
+                  </td>
+                  <td class="px-4 py-2 text-sm text-gray-700">
+                    <?= $tx['transaction_type'] === 'accrual' ? 'Приз' : 'Трата' ?>
+                  </td>
+                  <td class="px-4 py-2 text-sm text-gray-700"><?= htmlspecialchars($tx['description']) ?></td>
+                  <td class="px-4 py-2 text-sm text-gray-700">
+                    <?php if (!empty($tx['order_id'])): ?>
+                      <a href="/orders/<?= $tx['order_id'] ?>" class="text-blue-600 hover:underline">
+                        #<?= $tx['order_id'] ?>
+                      </a>
+                    <?php else: ?>
+                      —
+                    <?php endif; ?>
+                  </td>
+                </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        <?php endif; ?>
+      </div>
+    </div>
+
+    <!-- Быстрые действия -->
+    <div class="bg-white rounded-3xl shadow-lg overflow-hidden">
+      <div class="bg-gradient-to-r from-gray-50 to-blue-50 px-6 py-4 border-b border-gray-100">
+        <h2 class="font-bold text-gray-800 flex items-center">
+          <span class="material-icons-round mr-2 text-blue-500">bolt</span>
+          Быстрые действия
+        </h2>
+      </div>
+      <div class="p-6 grid grid-cols-2 gap-4">
+        <a href="/orders"
+           class="flex flex-col items-center p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl hover:shadow-lg transition-all hover:scale-105 group">
+          <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+            <span class="material-icons-round text-white">receipt_long</span>
+          </div>
+          <span class="font-semibold text-gray-800 text-sm text-center">Мои заказы</span>
+        </a>
+        <a href="/catalog"
+           class="flex flex-col items-center p-4 bg-gradient-to-br from-red-50 to-pink-50 rounded-2xl hover:shadow-lg transition-all hover:scale-105 group">
+          <div class="w-12 h-12 bg-gradient-to-br from-red-500 to-pink-500 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+            <span class="material-icons-round text-white">store</span>
+          </div>
+          <span class="font-semibold text-gray-800 text-sm text-center">Каталог</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Настройки аккаунта -->
+    <div class="bg-white rounded-3xl shadow-lg overflow-hidden">
+      <div class="bg-gradient-to-r from-gray-50 to-red-50 px-6 py-4 border-b border-gray-100">
+        <h2 class="font-bold text-gray-800 flex items-center">
+          <span class="material-icons-round mr-2 text-red-500">settings</span>
+          Настройки аккаунта
+        </h2>
+      </div>
+      <div class="p-6">
+        <!-- Статистика -->
+        <div class="grid grid-cols-3 gap-4 mb-6">
+          <div class="text-center p-4 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl">
+            <div class="text-2xl font-bold text-emerald-600 mb-1">0</div>
+            <div class="text-xs text-gray-600">Заказов</div>
+          </div>
+          <div class="text-center p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl">
+            <div class="text-2xl font-bold text-blue-600 mb-1">0 ₽</div>
+            <div class="text-xs text-gray-600">Потрачено</div>
+          </div>
+          <div class="text-center p-4 bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl">
+            <div class="text-2xl font-bold text-orange-600 mb-1">0 ₽</div>
+            <div class="text-xs text-gray-600">Скидок</div>
+          </div>
+        </div>
+        <!-- Кнопка выхода -->
+        <form action="/logout" method="post">
+          <button type="submit"
+                  class="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-4 rounded-2xl font-semibold hover:shadow-lg hover:scale-105 transition-all flex items-center justify-center space-x-3">
+            <span class="material-icons-round">logout</span>
+            <span>Выйти из аккаунта</span>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Дополнительная информация -->
+    <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-3xl p-6 text-center">
+      <div class="w-16 h-16 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-3xl flex items-center justify-center mx-auto mb-4">
+        <span class="material-icons-round text-2xl text-white">favorite</span>
+      </div>
+      <h3 class="font-bold text-gray-800 mb-2">Спасибо, что с нами!</h3>
+      <p class="text-sm text-gray-600 mb-4">Мы ценим каждого клиента и стараемся делать лучший сервис для вас.</p>
+      <a href="/catalog" 
+         class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-2xl font-medium hover:shadow-lg transition-all space-x-2">
+        <span class="material-icons-round">shopping_cart</span>
+        <span>Сделать заказ</span>
+      </a>
+    </div>
+
+  </div>
+
+</main>
+
+<script>
+  function copyInviteLink() {
+    const link = "<?= addslashes($refLink) ?>";
+    navigator.clipboard.writeText(link)
+      .then(() => alert('Ссылка скопирована в буфер обмена!'));
+  }
+  function copyInviteCode() {
+    const code = "<?= addslashes(htmlspecialchars($user['referral_code'])) ?>";
+    navigator.clipboard.writeText(code)
+      .then(() => alert('Купон скопирован в буфер обмена!'));
+  }
+</script>
