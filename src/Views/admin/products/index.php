@@ -1,7 +1,7 @@
 <?php /** @var array $products */ ?>
 
-<a href="/admin/products/edit" class="bg-[#C86052] text-white px-4 py-2 rounded mb-4 inline-block">
-  Добавить товар
+<a href="/admin/products/edit" class="bg-[#C86052] text-white px-4 py-2 rounded mb-4 inline-flex items-center">
+  <span class="material-icons-round text-base mr-1">add</span> Добавить товар
 </a>
 
 <table class="min-w-full bg-white rounded shadow overflow-hidden">
@@ -33,8 +33,8 @@
         </td>
         <td class="p-2">
           <a href="/admin/products/edit?id=<?= $p['id'] ?>"
-             class="text-[#C86052] hover:underline">
-            Редактировать
+             class="flex items-center text-[#C86052] hover:underline">
+            <span class="material-icons-round text-base mr-1">edit</span> Редактировать
           </a>
         </td>
       </tr>

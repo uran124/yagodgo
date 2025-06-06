@@ -21,7 +21,9 @@
       <td class="p-2"><?= $o['created_at'] ?></td>
       <td class="p-2"><?= htmlspecialchars($o['courier_name'] ?? '-') ?></td>
       <td class="p-2">
-        <a href="/admin/orders/<?= $o['id'] ?>" class="text-[#C86052] hover:underline">Открыть</a>
+        <a href="/admin/orders/<?= $o['id'] ?>" class="flex items-center text-[#C86052] hover:underline">
+          <span class="material-icons-round text-base mr-1">open_in_new</span> Открыть
+        </a>
       </td>
     </tr>
     <?php endforeach; ?>
