@@ -1,5 +1,5 @@
 <?php
-namespace Models;
+namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
@@ -20,6 +20,6 @@ class PointsTransaction extends Model
 
     public function order()
     {
-        return $this->belongsTo(\Models\Order::class, 'order_id');
+        return $this->belongsTo(Order::class, 'order_id');
     }
 }
