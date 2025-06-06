@@ -21,11 +21,15 @@
       <td class="p-2"><?= $o['created_at'] ?></td>
       <td class="p-2"><?= htmlspecialchars($o['courier_name'] ?? '-') ?></td>
       <td class="p-2">
-        <a href="/admin/orders/<?= $o['id'] ?>" class="text-[#C86052] hover:underline">Открыть</a>
-        <form action="/admin/orders/delete" method="post" class="inline-block ml-2" onsubmit="return confirm('Удалить заказ?');">
+                <a href="/admin/orders/<?= $o['id'] ?>" class="flex items-center text-[#C86052] hover:underline">
+          <span class="material-icons-round text-base mr-1">open_in_new</span> Открыть
+        </a>
+              <form action="/admin/orders/delete" method="post" class="inline-block ml-2" onsubmit="return confirm('Удалить заказ?');">
           <input type="hidden" name="order_id" value="<?= $o['id'] ?>">
           <button type="submit" class="text-red-600 hover:underline">Удалить</button>
         </form>
+      
+      
       </td>
     </tr>
     <?php endforeach; ?>
