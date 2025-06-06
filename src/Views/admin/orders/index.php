@@ -1,28 +1,20 @@
 <?php /** @var array $orders */ ?>
-<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+<ul class="bg-white rounded shadow divide-y">
   <?php foreach ($orders as $o): ?>
-    <div class="bg-white rounded shadow p-4 flex flex-col hover:shadow-md transition-shadow">
-      <div class="flex justify-between items-center mb-2">
+    <li class="p-4 flex items-center justify-between hover:bg-gray-50">
+      <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm md:text-base">
         <span class="font-semibold">#<?= $o['id'] ?></span>
-        <span class="text-sm text-gray-500"><?= $o['created_at'] ?></span>
+        <span><?= htmlspecialchars($o['client_name']) ?></span>
+        <span><?= $o['total_amount'] ?> ₽</span>
+        <span><?= htmlspecialchars($o['status']) ?></span>
+        <span class="text-gray-500"><?= $o['created_at'] ?></span>
+        <span><?= htmlspecialchars($o['courier_name'] ?? '-') ?></span>
       </div>
-      <div class="font-medium text-gray-800 mb-1">
-        <?= htmlspecialchars($o['client_name']) ?>
-      </div>
-      <div class="text-sm text-gray-600 mb-1">
-        <?= htmlspecialchars($o['status']) ?>
-      </div>
-      <div class="text-lg font-semibold mb-1">
-        <?= $o['total_amount'] ?> ₽
-      </div>
-      <div class="text-sm text-gray-500 mb-4">
-        Курьер: <?= htmlspecialchars($o['courier_name'] ?? '-') ?>
-      </div>
-      <div class="flex justify-end space-x-2 mt-auto">
-        <a href="/admin/orders/<?= $o['id'] ?>" class="text-[#C86052] hover:text-[#B44D47] flex items-center" title="Открыть">
-          <span class="material-icons-round">open_in_new</span>
-        </a>
-        <form action="/admin/orders/delete" method="post">
+      <div class="flex items-center space-x-2 ml-4">
+        <a href="/admin/orders/<?= $o['id'] ?>" class="text-[#C86052] hover:text-[#B44D47]" title="Открыть">
+          <button type="submit" class="text-red-500 hover:text-red-700" title="Удалить">
+    </li>
+</ul>
           <input type="hidden" name="order_id" value="<?= $o['id'] ?>">
           <button type="submit" class="text-red-500 hover:text-red-700 flex items-center" title="Удалить">
             <span class="material-icons-round">delete</span>
