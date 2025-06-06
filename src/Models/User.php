@@ -1,5 +1,5 @@
 <?php
-namespace Models;
+namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
@@ -31,7 +31,7 @@ class User extends Model
     // Транзакции баллов
     public function pointsTransactions()
     {
-        return $this->hasMany(\Models\PointsTransaction::class, 'user_id');
+        return $this->hasMany(PointsTransaction::class, 'user_id');
     }
     
     public function isFirstReferredOrder(): bool
