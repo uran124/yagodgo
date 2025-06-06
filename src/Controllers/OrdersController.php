@@ -315,4 +315,31 @@ class OrdersController
         header("Location: /orders/thankyou");
         exit;
     }
+
+    // Удаление заказа (POST, админ)
+    public function delete(): void
+    {
+        $orderId = (int)($_POST['order_id'] ?? 0);
+        if ($orderId) {
+            // Удаляем связанные записи в order_items
+            $stmt = $this->pdo->prepare(
+                "DELETE FROM order_items WHERE order_id = ?"
+            );
+            $stmt->execute([$orderId]);
+
+            // Удаляем связанные транзакции баллов
+            $stmt = $this->pdo->prepare(
+                "DELETE FROM points_transactions WHERE order_id = ?"
+            );
+            $stmt->execute([$orderId]);
+
+            // Удаляем сам заказ
+            $stmt = $this->pdo->prepare(
+                "DELETE FROM orders WHERE id = ?"
+            );
+            $stmt->execute([$orderId]);
+        }
+        header('Location: /admin/orders');
+        exit;
+    }
 }

@@ -226,6 +226,9 @@ switch ("$method $uri") {
     case 'POST /admin/orders/status':
         (new App\Controllers\OrdersController($pdo))->updateStatus();
         break;
+    case 'POST /admin/orders/delete':
+        (new App\Controllers\OrdersController($pdo))->delete();
+        break;
 
     case 'GET /admin/slots':
         (new App\Controllers\SlotsController($pdo))->index();
