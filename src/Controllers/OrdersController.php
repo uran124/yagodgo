@@ -50,9 +50,10 @@ class OrdersController
 
         // Товары в заказе
         $stmt = $this->pdo->prepare(
-          "SELECT oi.quantity, oi.unit_price, p.name, p.unit
+          "SELECT oi.quantity, oi.unit_price, t.name AS name, p.unit
            FROM order_items oi
            JOIN products p ON p.id = oi.product_id
+           JOIN product_types t ON t.id = p.product_type_id
            WHERE oi.order_id = ?"
         );
         $stmt->execute([$id]);
@@ -117,9 +118,10 @@ class OrdersController
 
         // Получаем товары из корзины
         $stmt = $this->pdo->prepare(
-            "SELECT ci.product_id, p.name AS product, p.variety, ci.quantity, ci.unit_price, p.delivery_date
+            "SELECT ci.product_id, t.name AS product, p.variety, ci.quantity, ci.unit_price, p.delivery_date
              FROM cart_items ci
              JOIN products p ON p.id = ci.product_id
+             JOIN product_types t ON t.id = p.product_type_id
              WHERE ci.user_id = ?"
         );
         $stmt->execute([$user->id]);
@@ -311,6 +313,33 @@ class OrdersController
         }
 
         header("Location: /orders/thankyou");
+        exit;
+    }
+
+    // Удаление заказа (POST, админ)
+    public function delete(): void
+    {
+        $orderId = (int)($_POST['order_id'] ?? 0);
+        if ($orderId) {
+            // Удаляем связанные записи в order_items
+            $stmt = $this->pdo->prepare(
+                "DELETE FROM order_items WHERE order_id = ?"
+            );
+            $stmt->execute([$orderId]);
+
+            // Удаляем связанные транзакции баллов
+            $stmt = $this->pdo->prepare(
+                "DELETE FROM points_transactions WHERE order_id = ?"
+            );
+            $stmt->execute([$orderId]);
+
+            // Удаляем сам заказ
+            $stmt = $this->pdo->prepare(
+                "DELETE FROM orders WHERE id = ?"
+            );
+            $stmt->execute([$orderId]);
+        }
+        header('Location: /admin/orders');
         exit;
     }
 }

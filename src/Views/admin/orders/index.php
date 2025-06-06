@@ -20,12 +20,12 @@
       </div>
       <div class="flex justify-end space-x-2 mt-auto">
         <a href="/admin/orders/<?= $o['id'] ?>" class="text-[#C86052] hover:text-[#B44D47] flex items-center" title="Открыть">
-          <span class="material-icons">open_in_new</span>
+          <span class="material-icons-round">open_in_new</span>
         </a>
         <form action="/admin/orders/delete" method="post">
           <input type="hidden" name="order_id" value="<?= $o['id'] ?>">
           <button type="submit" class="text-red-500 hover:text-red-700 flex items-center" title="Удалить">
-            <span class="material-icons">delete</span>
+            <span class="material-icons-round">delete</span>
           </button>
         </form>
       </div>
