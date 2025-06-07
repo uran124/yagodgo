@@ -1,12 +1,48 @@
 <?php
   $points = (int)($_SESSION['points_balance'] ?? 0);
+
+  /** Метаданные страницы */
+  global $pdo;
+  $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?? '/';
+  $slugMap = [
+    '/'          => 'home',
+    '/catalog'   => 'catalog',
+    '/about'     => 'about_app',
+    '/about_app' => 'about_app',
+    '/contacts'  => 'contacts',
+  ];
+  $pageSlug = $slugMap[$path] ?? trim($path, '/');
+
+  $meta = [
+    'title'       => 'ЯгодGO',
+    'description' => '',
+    'keywords'    => '',
+    'h1'          => '',
+    'text'        => '',
+  ];
+
+  if (isset($pdo)) {
+      $stmt = $pdo->prepare('SELECT title, description, keywords, h1, text FROM metadata WHERE page = ? LIMIT 1');
+      if ($stmt->execute([$pageSlug])) {
+          $row = $stmt->fetch(PDO::FETCH_ASSOC);
+          if ($row) {
+              $meta = $row;
+          }
+      }
+  }
 ?>
 <!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>ЯгодGO</title>
+  <title><?= htmlspecialchars($meta['title'] ?? 'ЯгодGO') ?></title>
+  <?php if (!empty($meta['description'])): ?>
+    <meta name="description" content="<?= htmlspecialchars($meta['description']) ?>">
+  <?php endif; ?>
+  <?php if (!empty($meta['keywords'])): ?>
+    <meta name="keywords" content="<?= htmlspecialchars($meta['keywords']) ?>">
+  <?php endif; ?>
   
   <link rel="icon" href="/assets/images/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/assets/images/favicon.svg">
@@ -198,6 +234,14 @@
   <!-- Контент -->
   <div class="pt-16">
     <?= $content ?>
+    <?php if (!empty($meta['text'])): ?>
+      <div class="hidden lg:block max-w-screen-lg mx-auto px-4 pb-24 text-gray-700 text-sm">
+        <?php if (!empty($meta['h1'])): ?>
+          <h1 class="text-2xl font-bold mb-4"><?= htmlspecialchars($meta['h1']) ?></h1>
+        <?php endif; ?>
+        <p><?= nl2br(htmlspecialchars($meta['text'])) ?></p>
+      </div>
+    <?php endif; ?>
   </div>
 
   <!-- Bottom Navigation -->
