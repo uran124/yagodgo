@@ -27,8 +27,18 @@ class ClientController
     public function home(): void
     {
         $popular = $this->pdo->query(
-            "SELECT p.id, t.name AS product, p.variety, p.description, p.origin_country,
-                    p.box_size, p.box_unit, p.price, p.image_path, p.delivery_date
+            "SELECT p.id,
+                    t.name AS product,
+                    p.variety,
+                    p.description,
+                    p.origin_country,
+                    p.box_size,
+                    p.box_unit,
+                    p.price,
+                    p.sale_price,
+                    p.is_active,
+                    p.image_path,
+                    p.delivery_date
              FROM products p
              JOIN product_types t ON t.id = p.product_type_id
              ORDER BY p.id DESC
