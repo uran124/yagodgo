@@ -200,7 +200,10 @@ public function cart(): void
         }
 
         $this->refreshCartTotal();
-        header('Location: /cart');
+
+        // После добавления не переходим в корзину, а возвращаемся на предыдущую страницу
+        $referer = $_SERVER['HTTP_REFERER'] ?? '/';
+        header('Location: ' . $referer);
         exit;
     }
 
