@@ -62,12 +62,54 @@ class UsersController
         $stmt->execute([$user['id']]);
         $transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // 4) Рендерим клиентский шаблон через общий layout,
+        // 4) Активные заказы пользователя (new, processing, assigned)
+        $stmt = $this->pdo->prepare(
+            "SELECT id, status, total_amount, created_at
+             FROM orders
+             WHERE user_id = ? AND status IN ('new','processing','assigned')
+             ORDER BY created_at DESC"
+        );
+        $stmt->execute([$user['id']]);
+        $activeOrders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // 5) Статистика по рефералам
+        // Количество пользователей, пришедших по ссылке
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM users WHERE referred_by = ?");
+        $stmt->execute([$user['id']]);
+        $refUsers = (int)$stmt->fetchColumn();
+
+        // Количество выполненных заказов от таких пользователей
+        $stmt = $this->pdo->prepare(
+            "SELECT COUNT(*)
+             FROM orders o
+             JOIN users u ON u.id = o.user_id
+             WHERE u.referred_by = ? AND o.status = 'delivered'"
+        );
+        $stmt->execute([$user['id']]);
+        $refOrders = (int)$stmt->fetchColumn();
+
+        // Сумма начисленных баллов по реферальным заказам
+        $stmt = $this->pdo->prepare(
+            "SELECT SUM(o.points_accrued)
+             FROM orders o
+             JOIN users u ON u.id = o.user_id
+             WHERE u.referred_by = ? AND o.status = 'delivered'"
+        );
+        $stmt->execute([$user['id']]);
+        $refPoints = (int)($stmt->fetchColumn() ?: 0);
+
+        // 6) Рендерим клиентский шаблон через общий layout,
         // чтобы подключились все стили из /src/Views/layouts/main.php
         view('client/profile', [
             'user'         => $user,
             'address'      => $address,
             'transactions' => $transactions,
+            'activeOrders' => $activeOrders,
+            'refStats'     => [
+                'users'  => $refUsers,
+                'orders' => $refOrders,
+                'points' => $refPoints,
+            ],
         ]);
     }
 
