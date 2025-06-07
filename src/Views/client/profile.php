@@ -37,41 +37,6 @@
 
   <div class="px-4 space-y-6">
     
-    <!-- Блок «Клубничек: пригласи и получи баллы» -->
-    <div class="bg-white rounded-3xl shadow-lg overflow-hidden">
-      <div class="bg-gradient-to-r from-gray-50 to-emerald-50 px-6 py-4 border-b border-gray-100">
-        <h2 class="font-bold text-gray-800 flex items-center">
-          <span class="material-icons-round mr-2 text-emerald-500">card_giftcard</span>
-          Клубнички и подарки
-        </h2>
-      </div>
-      <div class="p-6 space-y-4 text-gray-700">
-        <p>Подарите другу 10 % скидку на первый заказ, а сами получайте клубнички за каждый его заказ!</p>
-        <p>Скопируйте ссылку и отправьте другу:</p>
-        <div class="flex items-center space-x-2">
-          <?php $refLink = "https://yagodgo.ru/register?invite=" . urlencode($user['referral_code']); ?>
-          <input type="text"
-                 readonly
-                 value="<?= htmlspecialchars($refLink) ?>"
-                 class="flex-1 bg-gray-100 rounded-lg px-3 py-2 text-sm text-gray-800 outline-none select-all"
-                 onclick="this.select()">
-          <button onclick="copyInviteLink()"
-                  class="bg-emerald-500 text-white px-4 py-2 rounded-lg hover:bg-emerald-600 transition">
-            Копировать
-          </button>
-        </div>
-        <p class="text-sm text-gray-500">Или используйте купон:</p>
-        <div class="flex items-center space-x-2">
-          <code class="bg-gray-100 rounded-lg px-3 py-2 font-mono">
-            <?= htmlspecialchars($user['referral_code']) ?>
-          </code>
-          <button onclick="copyInviteCode()"
-                  class="bg-emerald-500 text-white px-4 py-2 rounded-lg hover:bg-emerald-600 transition">
-            Копировать
-          </button>
-        </div>
-      </div>
-    </div>
 
     <!-- Основная информация -->
     <div class="bg-white rounded-3xl shadow-lg overflow-hidden">
@@ -82,35 +47,90 @@
         </h2>
       </div>
       <div class="p-6 space-y-4">
-        <!-- Имя -->
         <div class="flex items-center space-x-4">
           <div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-2xl flex items-center justify-center flex-shrink-0">
             <span class="material-icons-round text-white">person</span>
           </div>
-          <div class="flex-1">
-            <p class="text-sm text-gray-500 font-medium">Имя</p>
-            <p class="text-lg font-semibold text-gray-800"><?= htmlspecialchars($user['name'] ?? 'Не указано') ?></p>
+          <div class="flex-1 text-lg font-semibold text-gray-800">
+            <?= htmlspecialchars($user['name'] ?? 'Не указано') ?>
           </div>
         </div>
-        <!-- Телефон -->
         <div class="flex items-center space-x-4">
           <div class="w-12 h-12 bg-gradient-to-br from-green-400 to-emerald-500 rounded-2xl flex items-center justify-center flex-shrink-0">
             <span class="material-icons-round text-white">phone</span>
           </div>
-          <div class="flex-1">
-            <p class="text-sm text-gray-500 font-medium">Телефон</p>
-            <p class="text-lg font-semibold text-gray-800"><?= htmlspecialchars($user['phone'] ?? 'Не указан') ?></p>
+          <div class="flex-1 text-lg font-semibold text-gray-800">
+            <?= htmlspecialchars($user['phone'] ?? 'Не указан') ?>
+          </div>
+        </div>
+        <div class="flex items-center space-x-4">
+          <div class="w-12 h-12 bg-gradient-to-br from-orange-400 to-red-500 rounded-2xl flex items-center justify-center flex-shrink-0">
+            <span class="material-icons-round text-white">home</span>
+          </div>
+          <div class="flex-1 text-lg font-semibold text-gray-800">
+            <?= htmlspecialchars($address ?: 'Не указан') ?>
+          </div>
+          <a href="#address-form" class="text-gray-500 hover:text-gray-700">
+            <span class="material-icons-round">refresh</span>
+          </a>
+        </div>
+        <div class="flex items-center space-x-4">
+          <div class="w-12 h-12 bg-gradient-to-br from-pink-400 to-red-500 rounded-2xl flex items-center justify-center flex-shrink-0">
+            <span class="text-xl">🍓</span>
+          </div>
+          <div class="flex-1 text-lg font-semibold text-gray-800">
+            <?= (int)$user['points_balance'] ?>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Адрес доставки -->
+    <!-- Активные заказы -->
     <div class="bg-white rounded-3xl shadow-lg overflow-hidden">
+      <div class="bg-gradient-to-r from-gray-50 to-blue-50 px-6 py-4 border-b border-gray-100">
+        <h2 class="font-bold text-gray-800 flex items-center">
+          <span class="material-icons-round mr-2 text-blue-500">local_shipping</span>
+          Активные заказы
+        </h2>
+      </div>
+      <div class="p-6 space-y-4">
+        <?php if (empty($activeOrders)): ?>
+          <p class="text-gray-500">Нет активных заказов</p>
+        <?php else: ?>
+          <?php foreach ($activeOrders as $ao): ?>
+            <?php
+            $status = $ao['status'];
+            $cfg = [
+              'new' => ['bg-red-100','text-red-800','Новый'],
+              'processing' => ['bg-yellow-100','text-yellow-800','В обработке'],
+              'assigned' => ['bg-green-100','text-green-800','Назначен'],
+            ][$status] ?? ['bg-gray-100','text-gray-800',$status];
+            ?>
+            <div class="p-4 rounded-2xl border flex items-center justify-between">
+              <div>
+                <div class="font-semibold text-gray-800 mb-1">Заказ #<?= $ao['id'] ?></div>
+                <div class="text-sm text-gray-500"><?= date('d.m.Y H:i', strtotime($ao['created_at'])) ?></div>
+              </div>
+              <div class="text-right space-y-1">
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium <?= $cfg[0] ?> <?= $cfg[1] ?>">
+                  <?= $cfg[2] ?>
+                </span>
+                <div class="font-semibold text-gray-800">
+                  <?= number_format($ao['total_amount'], 0, '.', ' ') ?> ₽
+                </div>
+              </div>
+            </div>
+          <?php endforeach; ?>
+        <?php endif; ?>
+      </div>
+    </div>
+
+    <!-- Обновить адрес -->
+    <div class="bg-white rounded-3xl shadow-lg overflow-hidden" id="address-form">
       <div class="bg-gradient-to-r from-gray-50 to-orange-50 px-6 py-4 border-b border-gray-100">
         <h2 class="font-bold text-gray-800 flex items-center">
           <span class="material-icons-round mr-2 text-orange-500">location_on</span>
-          Адрес доставки
+          Обновить адрес
         </h2>
       </div>
       <form action="/profile" method="post" class="p-6 space-y-4">
@@ -141,6 +161,46 @@
           <span>Сохранить адрес</span>
         </button>
       </form>
+    </div>
+
+    <!-- Бонусы -->
+    <div class="bg-white rounded-3xl shadow-lg overflow-hidden">
+      <div class="bg-gradient-to-r from-gray-50 to-emerald-50 px-6 py-4 border-b border-gray-100">
+        <h2 class="font-bold text-gray-800 flex items-center">
+          <span class="material-icons-round mr-2 text-emerald-500">card_giftcard</span>
+          Бонусы
+        </h2>
+      </div>
+      <div class="p-6 space-y-4 text-gray-700">
+        <p>Подарите другу 10 % скидку на первый заказ и получайте клубнички за каждый его заказ!</p>
+        <p>Скопируйте ссылку и отправьте другу:</p>
+        <div class="flex items-center space-x-2">
+          <?php $refLink = "https://yagodgo.ru/register?invite=" . urlencode($user['referral_code']); ?>
+          <input type="text" readonly value="<?= htmlspecialchars($refLink) ?>" class="flex-1 bg-gray-100 rounded-lg px-3 py-2 text-sm text-gray-800 outline-none select-all" onclick="this.select()">
+          <button onclick="copyInviteLink()" class="bg-emerald-500 text-white px-4 py-2 rounded-lg hover:bg-emerald-600 transition">Копировать</button>
+        </div>
+        <p class="text-sm text-gray-500">Или используйте купон:</p>
+        <div class="flex items-center space-x-2">
+          <code class="bg-gray-100 rounded-lg px-3 py-2 font-mono">
+            <?= htmlspecialchars($user['referral_code']) ?>
+          </code>
+          <button onclick="copyInviteCode()" class="bg-emerald-500 text-white px-4 py-2 rounded-lg hover:bg-emerald-600 transition">Копировать</button>
+        </div>
+        <div class="grid grid-cols-3 gap-4 pt-4">
+          <div class="text-center p-4 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl">
+            <div class="text-2xl font-bold text-emerald-600 mb-1"><?= $refStats['users'] ?></div>
+            <div class="text-xs text-gray-600">приглашено</div>
+          </div>
+          <div class="text-center p-4 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl">
+            <div class="text-2xl font-bold text-orange-600 mb-1"><?= $refStats['orders'] ?></div>
+            <div class="text-xs text-gray-600">заказов</div>
+          </div>
+          <div class="text-center p-4 bg-gradient-to-br from-pink-50 to-red-50 rounded-2xl">
+            <div class="text-2xl font-bold text-pink-600 mb-1"><?= $refStats['points'] ?></div>
+            <div class="text-xs text-gray-600">клубничек</div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- История баллов -->
