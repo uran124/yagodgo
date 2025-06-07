@@ -12,6 +12,27 @@ class ProductsController
         $this->pdo = $pdo;
     }
 
+
+
+    // Возвращает массив всех активных товаров
+    public function getAllActive(): array
+    {
+        $stmt = $this->pdo->query("SELECT id, variety, price, unit, image_path FROM products WHERE stock_boxes > 0");
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
+    // Возвращает один товар по ID
+    public function find(int $id): ?array
+    {
+        $stmt = $this->pdo->prepare("SELECT id, variety, price, unit, image_path FROM products WHERE id = ?");
+        $stmt->execute([$id]);
+        $prod = $stmt->fetch(\PDO::FETCH_ASSOC);
+        return $prod ?: null;
+    }
+
+
+
+
     /**
      * Список товаров для админки
      */

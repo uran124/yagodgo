@@ -34,5 +34,12 @@
       </select>
       <button class="bg-gray-300 px-3 py-1 rounded hover:bg-gray-400 ml-2">Обновить</button>
     </form>
+        <form action="/admin/orders/delete" method="post" onsubmit="return confirm('Удалить этот заказ?');">
+      <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
+      <button class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">Удалить</button>
+    </form>
+    
+    
+    
   </div>
 </div>

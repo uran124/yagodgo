@@ -1,8 +1,7 @@
 <?php /** @var array $products */ ?>
 
-<a href="/admin/products/edit" class="bg-[#C86052] text-white px-4 py-2 rounded mb-4 inline-block">
-  Добавить товар
-</a>
+<a href="/admin/products/edit" class="bg-[#C86052] text-white px-4 py-2 rounded mb-4 inline-flex items-center">
+  <span class="material-icons-round text-base mr-1">add</span> Добавить товар</a>
 
 <table class="min-w-full bg-white rounded shadow overflow-hidden">
   <thead class="bg-gray-200 text-gray-700">

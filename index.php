@@ -30,6 +30,11 @@ if (!empty($_SESSION['user_id'])) {
     $_SESSION['points_balance'] = $bal !== false ? (int)$bal : 0;
 }
 
+// -------------------------------------------------------
+// 2) Подключаем конфиг Telegram
+$telegramConfig = require __DIR__ . '/config/telegram.php';
+// -----
+
 
 
 // 2) Простейший PSR-4 автозагрузчик для классов в src/
@@ -45,6 +50,18 @@ spl_autoload_register(function(string $class) {
         require $file;
     }
 });
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Функция для рендеринга админских шаблонов
 function viewAdmin(string $template, array $data = []): void
@@ -82,6 +99,34 @@ function requireClient(): void
 }
 
 switch ("$method $uri") {
+
+
+
+
+   // --- ДОБАВЛЯЕМ РАБОТУ С TELEGRAM BOT ---
+
+    // Обработка обычных сообщений и команд (без нажатий Inline-кнопок)
+    case 'POST /telegram/webhook':
+        // Подключаем контроллер бота
+        // Предполагается, что у вас есть файл src/Controllers/BotController.php
+        $botController = new App\Controllers\BotController($pdo, $telegramConfig);
+        $botController->webhook();
+        // Telegram ожидает, что сервер вернёт HTTP 200 OK
+        http_response_code(200);
+        exit;
+
+    // Если вы планируете обрабатывать callback_query отдельно
+    case 'POST /telegram/callback':
+        $botController = new App\Controllers\BotController($pdo, $telegramConfig);
+        $botController->handleCallbackQuery();
+        http_response_code(200);
+        exit;
+
+
+
+
+
+
 
     // Публичная главная (например, редирект на каталог для гостей)
     case 'GET /':
@@ -226,7 +271,10 @@ switch ("$method $uri") {
     case 'POST /admin/orders/status':
         (new App\Controllers\OrdersController($pdo))->updateStatus();
         break;
-
+    case 'POST /admin/orders/delete':
+        (new App\Controllers\OrdersController($pdo))->delete();
+        break;
+        
     case 'GET /admin/slots':
         (new App\Controllers\SlotsController($pdo))->index();
         break;

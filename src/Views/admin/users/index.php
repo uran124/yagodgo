@@ -20,7 +20,9 @@
       <td class="p-2"><?= htmlspecialchars($u['created_at']) ?></td>
       <td class="p-2">
         <a href="/admin/users/edit?id=<?= $u['id'] ?>"
-           class="text-[#C86052] hover:underline">Редактировать</a>
+                      class="flex items-center text-[#C86052] hover:underline">
+          <span class="material-icons-round text-base mr-1">edit</span> Редактировать
+        </a>
       </td>
     </tr>
     <?php endforeach; ?>
