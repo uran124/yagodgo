@@ -41,6 +41,7 @@ class ClientController
                     p.delivery_date
              FROM products p
              JOIN product_types t ON t.id = p.product_type_id
+             WHERE p.is_active = 1
              ORDER BY p.id DESC
              LIMIT 4"
         )->fetchAll(PDO::FETCH_ASSOC);
@@ -62,7 +63,7 @@ class ClientController
     {
         $today = date('Y-m-d');
         $all = $this->pdo->query(
-            "SELECT 
+            "SELECT
                  p.id,
                  t.name        AS product,
                  p.variety,
@@ -71,13 +72,15 @@ class ClientController
                  p.box_size,
                  p.box_unit,
                  p.price,
-                 p.sale_price,           -- добавили акционную цену
-                 p.is_active,            -- добавили флаг активности
+                 p.sale_price,
+                 p.is_active,
                  p.image_path,
                  p.delivery_date
              FROM products p
              JOIN product_types t ON t.id = p.product_type_id
+             WHERE p.is_active = 1
              ORDER BY
+               CASE WHEN p.sale_price > 0 THEN 0 ELSE 1 END,
                CASE
                  WHEN p.delivery_date IS NULL    THEN 3
                  WHEN p.delivery_date > '$today' THEN 2
@@ -714,7 +717,7 @@ public function showOrder(int $orderId): void
              FROM favorites f
              JOIN products p ON p.id = f.product_id
              JOIN product_types t ON t.id = p.product_type_id
-             WHERE f.user_id = ?
+             WHERE f.user_id = ? AND p.is_active = 1
              ORDER BY f.created_at DESC"
         );
         $stmt->execute([$userId]);
