@@ -70,9 +70,39 @@
           <div class="flex-1 text-lg font-semibold text-gray-800">
             <?= htmlspecialchars($address ?: 'Не указан') ?>
           </div>
-          <a href="#address-form" class="text-gray-500 hover:text-gray-700">
+          <button id="toggleAddressForm" type="button" class="text-gray-500 hover:text-gray-700">
             <span class="material-icons-round">refresh</span>
-          </a>
+          </button>
+        </div>
+        <div id="addressForm" class="space-y-4 hidden">
+          <form action="/profile" method="post" class="space-y-4">
+            <div class="flex items-start space-x-4 mb-4">
+              <div class="w-12 h-12 bg-gradient-to-br from-orange-400 to-red-500 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1">
+                <span class="material-icons-round text-white">home</span>
+              </div>
+              <div class="flex-1">
+                <label for="address" class="block text-sm font-medium text-gray-700 mb-2">
+                  Укажите ваш адрес для доставки
+                </label>
+                <textarea
+                  name="address"
+                  id="address"
+                  rows="3"
+                  placeholder="Например: ул. Манаса 123, кв. 45, 2 этаж, домофон 45К"
+                  class="w-full border border-gray-300 rounded-2xl px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all resize-none"
+                ><?= htmlspecialchars($address) ?></textarea>
+                <p class="text-xs text-gray-500 mt-2 flex items-center">
+                  <span class="material-icons-round mr-1 text-sm">info</span>
+                  Чем подробнее адрес, тем быстрее доставка!
+                </p>
+              </div>
+            </div>
+            <button type="submit"
+                    class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white py-4 rounded-2xl font-semibold hover:shadow-lg hover:scale-105 transition-all flex items-center justify-center space-x-3">
+              <span class="material-icons-round">save</span>
+              <span>Сохранить адрес</span>
+            </button>
+          </form>
         </div>
         <div class="flex items-center space-x-4">
           <div class="w-12 h-12 bg-gradient-to-br from-pink-400 to-red-500 rounded-2xl flex items-center justify-center flex-shrink-0">
@@ -85,85 +115,55 @@
       </div>
     </div>
 
-    <!-- Активные заказы -->
-    <div class="bg-white rounded-3xl shadow-lg overflow-hidden">
-      <div class="bg-gradient-to-r from-gray-50 to-blue-50 px-6 py-4 border-b border-gray-100">
-        <h2 class="font-bold text-gray-800 flex items-center">
-          <span class="material-icons-round mr-2 text-blue-500">local_shipping</span>
-          Активные заказы
-        </h2>
-      </div>
-      <div class="p-6 space-y-4">
-        <?php if (empty($activeOrders)): ?>
-          <p class="text-gray-500">Нет активных заказов</p>
-        <?php else: ?>
-          <?php foreach ($activeOrders as $ao): ?>
-            <?php
-            $status = $ao['status'];
-            $cfg = [
-              'new' => ['bg-red-100','text-red-800','Новый'],
-              'processing' => ['bg-yellow-100','text-yellow-800','В обработке'],
-              'assigned' => ['bg-green-100','text-green-800','Назначен'],
-            ][$status] ?? ['bg-gray-100','text-gray-800',$status];
-            ?>
-            <div class="p-4 rounded-2xl border flex items-center justify-between">
-              <div>
-                <div class="font-semibold text-gray-800 mb-1">Заказ #<?= $ao['id'] ?></div>
-                <div class="text-sm text-gray-500"><?= date('d.m.Y H:i', strtotime($ao['created_at'])) ?></div>
-              </div>
-              <div class="text-right space-y-1">
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium <?= $cfg[0] ?> <?= $cfg[1] ?>">
-                  <?= $cfg[2] ?>
-                </span>
-                <div class="font-semibold text-gray-800">
-                  <?= number_format($ao['total_amount'], 0, '.', ' ') ?> ₽
+      <?php if (empty($activeOrders)): ?>
+        <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-3xl p-6 text-center">
+          <div class="w-16 h-16 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-3xl flex items-center justify-center mx-auto mb-4">
+            <span class="material-icons-round text-2xl text-white">favorite</span>
+          </div>
+          <h3 class="font-bold text-gray-800 mb-2">Спасибо, что с нами!</h3>
+          <p class="text-sm text-gray-600 mb-4">Мы ценим каждого клиента и стараемся делать лучший сервис для вас.</p>
+          <a href="/catalog"
+             class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-2xl font-medium hover:shadow-lg transition-all space-x-2">
+            <span class="material-icons-round">shopping_cart</span>
+            <span>Сделать заказ</span>
+          </a>
+        </div>
+      <?php else: ?>
+        <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-3xl p-6">
+          <h2 class="font-bold text-gray-800 flex items-center mb-4">
+            <span class="material-icons-round mr-2 text-purple-500">local_shipping</span>
+            Активные заказы
+          </h2>
+          <div class="space-y-4">
+            <?php foreach ($activeOrders as $ao): ?>
+              <?php
+              $status = $ao['status'];
+              $cfg = [
+                'new' => ['bg-red-100','text-red-800','Новый'],
+                'processing' => ['bg-yellow-100','text-yellow-800','В обработке'],
+                'assigned' => ['bg-green-100','text-green-800','Назначен'],
+              ][$status] ?? ['bg-gray-100','text-gray-800',$status];
+              ?>
+              <div class="p-4 rounded-2xl border flex items-center justify-between bg-white">
+                <div>
+                  <div class="font-semibold text-gray-800 mb-1">Заказ #<?= $ao['id'] ?></div>
+                  <div class="text-sm text-gray-500"><?= date('d.m.Y H:i', strtotime($ao['created_at'])) ?></div>
+                </div>
+                <div class="text-right space-y-1">
+                  <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium <?= $cfg[0] ?> <?= $cfg[1] ?>">
+                    <?= $cfg[2] ?>
+                  </span>
+                  <div class="font-semibold text-gray-800">
+                    <?= number_format($ao['total_amount'], 0, '.', ' ') ?> ₽
+                  </div>
                 </div>
               </div>
-            </div>
-          <?php endforeach; ?>
-        <?php endif; ?>
-      </div>
-    </div>
-
-    <!-- Обновить адрес -->
-    <div class="bg-white rounded-3xl shadow-lg overflow-hidden" id="address-form">
-      <div class="bg-gradient-to-r from-gray-50 to-orange-50 px-6 py-4 border-b border-gray-100">
-        <h2 class="font-bold text-gray-800 flex items-center">
-          <span class="material-icons-round mr-2 text-orange-500">location_on</span>
-          Обновить адрес
-        </h2>
-      </div>
-      <form action="/profile" method="post" class="p-6 space-y-4">
-        <div class="flex items-start space-x-4 mb-4">
-          <div class="w-12 h-12 bg-gradient-to-br from-orange-400 to-red-500 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1">
-            <span class="material-icons-round text-white">home</span>
-          </div>
-          <div class="flex-1">
-            <label for="address" class="block text-sm font-medium text-gray-700 mb-2">
-              Укажите ваш адрес для доставки
-            </label>
-            <textarea
-              name="address"
-              id="address"
-              rows="3"
-              placeholder="Например: ул. Манаса 123, кв. 45, 2 этаж, домофон 45К"
-              class="w-full border border-gray-300 rounded-2xl px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all resize-none"
-            ><?= htmlspecialchars($address) ?></textarea>
-            <p class="text-xs text-gray-500 mt-2 flex items-center">
-              <span class="material-icons-round mr-1 text-sm">info</span>
-              Чем подробнее адрес, тем быстрее доставка!
-            </p>
+            <?php endforeach; ?>
           </div>
         </div>
-        <button type="submit"
-                class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white py-4 rounded-2xl font-semibold hover:shadow-lg hover:scale-105 transition-all flex items-center justify-center space-x-3">
-          <span class="material-icons-round">save</span>
-          <span>Сохранить адрес</span>
-        </button>
-      </form>
-    </div>
+      <?php endif; ?>
 
-    <!-- Бонусы -->
+      <!-- Бонусы -->
     <div class="bg-white rounded-3xl shadow-lg overflow-hidden">
       <div class="bg-gradient-to-r from-gray-50 to-emerald-50 px-6 py-4 border-b border-gray-100">
         <h2 class="font-bold text-gray-800 flex items-center">
@@ -284,54 +284,6 @@
       </div>
     </div>
 
-    <!-- Настройки аккаунта -->
-    <div class="bg-white rounded-3xl shadow-lg overflow-hidden">
-      <div class="bg-gradient-to-r from-gray-50 to-red-50 px-6 py-4 border-b border-gray-100">
-        <h2 class="font-bold text-gray-800 flex items-center">
-          <span class="material-icons-round mr-2 text-red-500">settings</span>
-          Настройки аккаунта
-        </h2>
-      </div>
-      <div class="p-6">
-        <!-- Статистика -->
-        <div class="grid grid-cols-3 gap-4 mb-6">
-          <div class="text-center p-4 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl">
-            <div class="text-2xl font-bold text-emerald-600 mb-1">0</div>
-            <div class="text-xs text-gray-600">Заказов</div>
-          </div>
-          <div class="text-center p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl">
-            <div class="text-2xl font-bold text-blue-600 mb-1">0 ₽</div>
-            <div class="text-xs text-gray-600">Потрачено</div>
-          </div>
-          <div class="text-center p-4 bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl">
-            <div class="text-2xl font-bold text-orange-600 mb-1">0 ₽</div>
-            <div class="text-xs text-gray-600">Скидок</div>
-          </div>
-        </div>
-        <!-- Кнопка выхода -->
-        <form action="/logout" method="post">
-          <button type="submit"
-                  class="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-4 rounded-2xl font-semibold hover:shadow-lg hover:scale-105 transition-all flex items-center justify-center space-x-3">
-            <span class="material-icons-round">logout</span>
-            <span>Выйти из аккаунта</span>
-          </button>
-        </form>
-      </div>
-    </div>
-
-    <!-- Дополнительная информация -->
-    <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-3xl p-6 text-center">
-      <div class="w-16 h-16 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-3xl flex items-center justify-center mx-auto mb-4">
-        <span class="material-icons-round text-2xl text-white">favorite</span>
-      </div>
-      <h3 class="font-bold text-gray-800 mb-2">Спасибо, что с нами!</h3>
-      <p class="text-sm text-gray-600 mb-4">Мы ценим каждого клиента и стараемся делать лучший сервис для вас.</p>
-      <a href="/catalog" 
-         class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-2xl font-medium hover:shadow-lg transition-all space-x-2">
-        <span class="material-icons-round">shopping_cart</span>
-        <span>Сделать заказ</span>
-      </a>
-    </div>
 
   </div>
 
@@ -348,4 +300,9 @@
     navigator.clipboard.writeText(code)
       .then(() => alert('Купон скопирован в буфер обмена!'));
   }
+
+  document.getElementById('toggleAddressForm').addEventListener('click', () => {
+    const f = document.getElementById('addressForm');
+    f.classList.toggle('hidden');
+  });
 </script>
