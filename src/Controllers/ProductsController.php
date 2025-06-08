@@ -51,6 +51,7 @@ class ProductsController
                 p.unit,
                 p.price,
                 p.stock_boxes,
+                p.is_active,
                 p.image_path,
                 p.delivery_date
              FROM products p
@@ -112,6 +113,7 @@ class ProductsController
         $unit          = ($unitRaw === 'л' ? 'л' : 'кг');
         $price         = (float)$_POST['price'];
         $stockBoxes    = (float)$_POST['stock_boxes'];
+        $isActive      = isset($_POST['is_active']) ? 1 : 0;
 
         // дата поставки (NULL → под заказ)
         $deliveryDateRaw = trim($_POST['delivery_date'] ?? '');
@@ -178,12 +180,13 @@ class ProductsController
                         unit            = ?,
                         price           = ?,
                         stock_boxes     = ?,
-                        delivery_date   = ?";
+                        delivery_date   = ?,
+                        is_active       = ?";
             $params = [
                 $typeId, $variety, $description, $manufacturer,
                 $originCountry, $boxSize, $boxUnit,
                 $unit, $price, $stockBoxes,
-                $deliveryDate
+                $deliveryDate, $isActive
             ];
 
             if ($imagePath) {
@@ -199,13 +202,13 @@ class ProductsController
 
         } else {
             // INSERT
-            $columns      = "product_type_id,variety,description,manufacturer,origin_country,box_size,box_unit,unit,price,stock_boxes,delivery_date";
-            $placeholders = "?,?,?,?,?,?,?,?,?,?,?,?";
+            $columns      = "product_type_id,variety,description,manufacturer,origin_country,box_size,box_unit,unit,price,stock_boxes,delivery_date,is_active";
+            $placeholders = "?,?,?,?,?,?,?,?,?,?,?,?,?";
             $params       = [
                 $typeId, $variety, $description, $manufacturer,
                 $originCountry, $boxSize, $boxUnit,
                 $unit, $price, $stockBoxes,
-                $deliveryDate
+                $deliveryDate, $isActive
             ];
 
             if ($imagePath) {
@@ -219,6 +222,30 @@ class ProductsController
             $stmt->execute($params);
         }
 
+        header('Location: /admin/products');
+        exit;
+    }
+
+    // Включение/выключение товара
+    public function toggle(): void
+    {
+        $id = (int)($_POST['id'] ?? 0);
+        if ($id) {
+            $this->pdo->prepare(
+                "UPDATE products SET is_active = CASE WHEN is_active=1 THEN 0 ELSE 1 END WHERE id = ?"
+            )->execute([$id]);
+        }
+        header('Location: /admin/products');
+        exit;
+    }
+
+    // Удаление товара
+    public function delete(): void
+    {
+        $id = (int)($_POST['id'] ?? 0);
+        if ($id) {
+            $this->pdo->prepare("DELETE FROM products WHERE id = ?")->execute([$id]);
+        }
         header('Location: /admin/products');
         exit;
     }

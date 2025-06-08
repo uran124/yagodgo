@@ -12,7 +12,7 @@ class CouponsController
     public function index(): void
     {
         $stmt = $this->pdo->query(
-          "SELECT id, code, discount, expires_at, is_active FROM coupons ORDER BY id DESC"
+          "SELECT id, code, discount, points, type, expires_at, is_active FROM coupons ORDER BY id DESC"
         );
         $coupons = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -44,23 +44,45 @@ class CouponsController
         $id        = $_POST['id'] ?? null;
         $code      = trim($_POST['code'] ?? '');
         $discount  = (float)($_POST['discount'] ?? 0);
+        $points    = (int)($_POST['points'] ?? 0);
+        $type      = $_POST['type'] ?? 'discount';
         $expires   = $_POST['expires_at'] ?? '';
         $isActive  = isset($_POST['is_active']) ? 1 : 0;
 
         if ($id) {
             $stmt = $this->pdo->prepare(
-              "UPDATE coupons 
-               SET code = ?, discount = ?, expires_at = ?, is_active = ?
+              "UPDATE coupons
+               SET code = ?, discount = ?, points = ?, type = ?, expires_at = ?, is_active = ?
                WHERE id = ?"
             );
-            $stmt->execute([$code, $discount, $expires, $isActive, (int)$id]);
+            $stmt->execute([$code, $discount, $points, $type, $expires, $isActive, (int)$id]);
         } else {
             $stmt = $this->pdo->prepare(
-              "INSERT INTO coupons (code, discount, expires_at, is_active)
-               VALUES (?, ?, ?, ?)"
+              "INSERT INTO coupons (code, discount, points, type, expires_at, is_active)
+               VALUES (?, ?, ?, ?, ?, ?)"
             );
-            $stmt->execute([$code, $discount, $expires, $isActive]);
+            $stmt->execute([$code, $discount, $points, $type, $expires, $isActive]);
         }
+        header('Location: /admin/coupons');
+        exit;
+    }
+
+    // Генерация промокода (POST)
+    public function generate(): void
+    {
+        $type    = $_POST['type'] ?? 'discount';
+        $value   = (int)($_POST['value'] ?? 0);
+        $expires = $_POST['expires_at'] ?? null;
+
+        $code = strtoupper(substr(md5(uniqid('', true)), 0, 8));
+
+        $stmt = $this->pdo->prepare(
+            "INSERT INTO coupons (code, discount, points, type, expires_at, is_active) VALUES (?, ?, ?, ?, ?, 1)"
+        );
+        $discount = ($type === 'discount') ? $value : 0;
+        $points   = ($type === 'points') ? $value : 0;
+        $stmt->execute([$code, $discount, $points, $type, $expires]);
+
         header('Location: /admin/coupons');
         exit;
     }

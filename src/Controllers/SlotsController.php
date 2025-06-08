@@ -60,4 +60,15 @@ class SlotsController
         header('Location: /admin/slots');
         exit;
     }
+
+    // Удаление слота
+    public function delete(): void
+    {
+        $id = (int)($_POST['id'] ?? 0);
+        if ($id) {
+            $this->pdo->prepare("DELETE FROM delivery_slots WHERE id = ?")->execute([$id]);
+        }
+        header('Location: /admin/slots');
+        exit;
+    }
 }

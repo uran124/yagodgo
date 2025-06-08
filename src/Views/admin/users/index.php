@@ -7,6 +7,7 @@
       <th class="p-2">Телефон</th>
       <th class="p-2">Роль</th>
       <th class="p-2">Дата регистрации</th>
+      <th class="p-2">Заблокирован</th>
       <th class="p-2">Действия</th>
     </tr>
   </thead>
@@ -18,6 +19,12 @@
       <td class="p-2"><?= htmlspecialchars($u['phone']) ?></td>
       <td class="p-2"><?= htmlspecialchars($u['role']) ?></td>
       <td class="p-2"><?= htmlspecialchars($u['created_at']) ?></td>
+      <td class="p-2 text-center">
+        <form action="/admin/users/toggle-block" method="post">
+          <input type="hidden" name="id" value="<?= $u['id'] ?>">
+          <input type="checkbox" onchange="this.form.submit()" <?= $u['is_blocked'] ? 'checked' : '' ?>>
+        </form>
+      </td>
       <td class="p-2">
         <a href="/admin/users/edit?id=<?= $u['id'] ?>"
                       class="flex items-center text-[#C86052] hover:underline">
