@@ -145,14 +145,26 @@ class UsersController
      */
     public function index(): void
     {
-        $stmt = $this->pdo->query(
-          "SELECT u.id, u.name, u.phone, u.role, u.created_at,
-                  u.referral_code, u.points_balance, u.is_blocked,
-                  ref.name AS referrer_name
-           FROM users u
-           LEFT JOIN users ref ON ref.id = u.referred_by
-           ORDER BY u.created_at DESC"
-        );
+        try {
+            $stmt = $this->pdo->query(
+                "SELECT u.id, u.name, u.phone, u.role, u.created_at,
+                        u.referral_code, u.points_balance, u.is_blocked,
+                        ref.name AS referrer_name
+                 FROM users u
+                 LEFT JOIN users ref ON ref.id = u.referred_by
+                 ORDER BY u.created_at DESC"
+            );
+        } catch (\PDOException $e) {
+            // Совместимость с БД без поля is_blocked
+            $stmt = $this->pdo->query(
+                "SELECT u.id, u.name, u.phone, u.role, u.created_at,
+                        u.referral_code, u.points_balance,
+                        ref.name AS referrer_name
+                 FROM users u
+                 LEFT JOIN users ref ON ref.id = u.referred_by
+                 ORDER BY u.created_at DESC"
+            );
+        }
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         viewAdmin('users/index', [
@@ -167,12 +179,22 @@ class UsersController
     public function edit(): void
     {
         $id = (int)($_GET['id'] ?? 0);
-        $stmt = $this->pdo->prepare(
-            "SELECT id, name, phone, role, is_blocked 
-             FROM users 
-             WHERE id = ?"
-        );
-        $stmt->execute([$id]);
+        try {
+            $stmt = $this->pdo->prepare(
+                "SELECT id, name, phone, role, is_blocked
+                 FROM users
+                 WHERE id = ?"
+            );
+            $stmt->execute([$id]);
+        } catch (\PDOException $e) {
+            // Поля is_blocked может не быть в старой схеме
+            $stmt = $this->pdo->prepare(
+                "SELECT id, name, phone, role
+                 FROM users
+                 WHERE id = ?"
+            );
+            $stmt->execute([$id]);
+        }
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
         viewAdmin('users/edit', [
@@ -190,12 +212,22 @@ class UsersController
         $role      = $_POST['role'] ?? 'client';
         $isBlocked = isset($_POST['is_blocked']) ? 1 : 0;
 
-        $stmt = $this->pdo->prepare(
-          "UPDATE users 
-           SET role = ?, is_blocked = ? 
-           WHERE id = ?"
-        );
-        $stmt->execute([$role, $isBlocked, $id]);
+        try {
+            $stmt = $this->pdo->prepare(
+                "UPDATE users
+                 SET role = ?, is_blocked = ?
+                 WHERE id = ?"
+            );
+            $stmt->execute([$role, $isBlocked, $id]);
+        } catch (\PDOException $e) {
+            // База может не поддерживать поле is_blocked
+            $stmt = $this->pdo->prepare(
+                "UPDATE users
+                 SET role = ?
+                 WHERE id = ?"
+            );
+            $stmt->execute([$role, $id]);
+        }
 
         header('Location: /admin/users');
         exit;
@@ -206,9 +238,13 @@ class UsersController
     {
         $id = (int)($_POST['id'] ?? 0);
         if ($id) {
-            $this->pdo->prepare(
-                "UPDATE users SET is_blocked = CASE WHEN is_blocked=1 THEN 0 ELSE 1 END WHERE id = ?"
-            )->execute([$id]);
+            try {
+                $this->pdo->prepare(
+                    "UPDATE users SET is_blocked = CASE WHEN is_blocked=1 THEN 0 ELSE 1 END WHERE id = ?"
+                )->execute([$id]);
+            } catch (\PDOException $e) {
+                // Если поле отсутствует, просто игнорируем переключение
+            }
         }
         header('Location: /admin/users');
         exit;
