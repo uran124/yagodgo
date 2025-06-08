@@ -147,7 +147,7 @@ class UsersController
     {
         $stmt = $this->pdo->query(
           "SELECT u.id, u.name, u.phone, u.role, u.created_at,
-                  u.referral_code, u.points_balance,
+                  u.referral_code, u.points_balance, u.is_blocked,
                   ref.name AS referrer_name
            FROM users u
            LEFT JOIN users ref ON ref.id = u.referred_by
@@ -197,6 +197,19 @@ class UsersController
         );
         $stmt->execute([$role, $isBlocked, $id]);
 
+        header('Location: /admin/users');
+        exit;
+    }
+
+    // Блокировка/разблокировка
+    public function toggleBlock(): void
+    {
+        $id = (int)($_POST['id'] ?? 0);
+        if ($id) {
+            $this->pdo->prepare(
+                "UPDATE users SET is_blocked = CASE WHEN is_blocked=1 THEN 0 ELSE 1 END WHERE id = ?"
+            )->execute([$id]);
+        }
         header('Location: /admin/users');
         exit;
     }

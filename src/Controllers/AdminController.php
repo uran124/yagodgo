@@ -45,6 +45,35 @@ class AdminController
             "SELECT AVG(total_amount) FROM orders"
         );
         $averageCheck = (int)($stmt->fetchColumn() ?: 0);
+
+        // Количество выполненных заказов за разные периоды
+        $completedDay = (int)$this->pdo->query(
+            "SELECT COUNT(*) FROM orders WHERE status = 'delivered' " .
+            "AND created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)"
+        )->fetchColumn();
+
+        $completedWeek = (int)$this->pdo->query(
+            "SELECT COUNT(*) FROM orders WHERE status = 'delivered' " .
+            "AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)"
+        )->fetchColumn();
+
+        $completedMonth = (int)$this->pdo->query(
+            "SELECT COUNT(*) FROM orders WHERE status = 'delivered' " .
+            "AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)"
+        )->fetchColumn();
+
+        // Новые пользователи за периоды
+        $newUsersDay = (int)$this->pdo->query(
+            "SELECT COUNT(*) FROM users WHERE created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)"
+        )->fetchColumn();
+
+        $newUsersWeek = (int)$this->pdo->query(
+            "SELECT COUNT(*) FROM users WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)"
+        )->fetchColumn();
+
+        $newUsersMonth = (int)$this->pdo->query(
+            "SELECT COUNT(*) FROM users WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)"
+        )->fetchColumn();
         
         
         
@@ -52,9 +81,15 @@ class AdminController
         
         
         $stats = [
-            'today_revenue' => $todayRevenue,
-            'today_orders'  => $todayOrders,
-            'average_check' => $averageCheck,
+            'today_revenue'   => $todayRevenue,
+            'today_orders'    => $todayOrders,
+            'average_check'   => $averageCheck,
+            'completed_day'   => $completedDay,
+            'completed_week'  => $completedWeek,
+            'completed_month' => $completedMonth,
+            'users_day'       => $newUsersDay,
+            'users_week'      => $newUsersWeek,
+            'users_month'     => $newUsersMonth,
         ];
         
         

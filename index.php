@@ -258,6 +258,12 @@ switch ("$method $uri") {
     case 'POST /admin/products/save':
         (new App\Controllers\ProductsController($pdo))->save();
         break;
+    case 'POST /admin/products/toggle':
+        (new App\Controllers\ProductsController($pdo))->toggle();
+        break;
+    case 'POST /admin/products/delete':
+        (new App\Controllers\ProductsController($pdo))->delete();
+        break;
 
     case 'GET /admin/orders':
         (new App\Controllers\OrdersController($pdo))->index();
@@ -284,6 +290,9 @@ switch ("$method $uri") {
     case 'POST /admin/slots/save':
         (new App\Controllers\SlotsController($pdo))->save();
         break;
+    case 'POST /admin/slots/delete':
+        (new App\Controllers\SlotsController($pdo))->delete();
+        break;
 
     case 'GET /admin/coupons':
         (new App\Controllers\CouponsController($pdo))->index();
@@ -294,6 +303,9 @@ switch ("$method $uri") {
     case 'POST /admin/coupons/save':
         (new App\Controllers\CouponsController($pdo))->save();
         break;
+    case 'POST /admin/coupons/generate':
+        (new App\Controllers\CouponsController($pdo))->generate();
+        break;
 
     case 'GET /admin/users':
         (new App\Controllers\UsersController($pdo))->index();
@@ -303,6 +315,9 @@ switch ("$method $uri") {
         break;
     case 'POST /admin/users/save':
         (new App\Controllers\UsersController($pdo))->save();
+        break;
+    case 'POST /admin/users/toggle-block':
+        (new App\Controllers\UsersController($pdo))->toggleBlock();
         break;
 
     case 'GET /admin/settings':

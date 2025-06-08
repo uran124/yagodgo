@@ -20,6 +20,36 @@
     </div>
   </div>
 
+  <div class="grid grid-cols-3 gap-4">
+    <div class="bg-white p-4 rounded shadow">
+      <h3 class="text-lg font-medium">Выполнено за 24ч</h3>
+      <p class="text-2xl font-bold"><?= $stats['completed_day'] ?></p>
+    </div>
+    <div class="bg-white p-4 rounded shadow">
+      <h3 class="text-lg font-medium">Выполнено за 7 дней</h3>
+      <p class="text-2xl font-bold"><?= $stats['completed_week'] ?></p>
+    </div>
+    <div class="bg-white p-4 rounded shadow">
+      <h3 class="text-lg font-medium">Выполнено за 30 дней</h3>
+      <p class="text-2xl font-bold"><?= $stats['completed_month'] ?></p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-3 gap-4">
+    <div class="bg-white p-4 rounded shadow">
+      <h3 class="text-lg font-medium">Новых пользователей 24ч</h3>
+      <p class="text-2xl font-bold"><?= $stats['users_day'] ?></p>
+    </div>
+    <div class="bg-white p-4 rounded shadow">
+      <h3 class="text-lg font-medium">Новых пользователей 7д</h3>
+      <p class="text-2xl font-bold"><?= $stats['users_week'] ?></p>
+    </div>
+    <div class="bg-white p-4 rounded shadow">
+      <h3 class="text-lg font-medium">Новых пользователей 30д</h3>
+      <p class="text-2xl font-bold"><?= $stats['users_month'] ?></p>
+    </div>
+  </div>
+
   <!-- Здесь, например, график выручки -->
   <div class="bg-white p-4 rounded shadow">
     <h3 class="text-lg font-medium mb-2">Выручка за 7 дней</h3>
