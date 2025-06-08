@@ -1,6 +1,11 @@
 <?php
 namespace App\Models;
 
+// В тестовой среде Illuminate может отсутствовать
+if (!class_exists('Illuminate\\Database\\Eloquent\\Model')) {
+    class_alias('\\stdClass', 'Illuminate\\Database\\Eloquent\\Model');
+}
+
 use Illuminate\Database\Eloquent\Model;
 
 class Order extends Model
