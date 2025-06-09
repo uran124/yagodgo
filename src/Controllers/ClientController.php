@@ -377,6 +377,7 @@ public function cart(): void
             'userName'         => $_SESSION['name'] ?? null,
             'today'            => date('Y-m-d'),
             'debugData'        => $debugData,
+            'couponError'      => $_GET['coupon_error'] ?? null,
         ]);
     }
 
@@ -433,6 +434,27 @@ public function cart(): void
     $pointsBalance = (int)$userRow['points_balance'];
     $referredBy    = $userRow['referred_by'] ? (int)$userRow['referred_by'] : null;
 
+    // 4.1) Проверяем промокод
+    $couponCode      = trim($_POST['coupon_code'] ?? '');
+    $discountPercent = 0.0;
+    $couponPoints    = 0;
+    if ($couponCode !== '') {
+        $stmt = $this->pdo->prepare(
+            "SELECT code, type, discount, points FROM coupons WHERE code = ? AND is_active = 1 AND (expires_at IS NULL OR expires_at >= CURDATE())"
+        );
+        $stmt->execute([$couponCode]);
+        $coupon = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$coupon) {
+            header('Location: /checkout?coupon_error=Неверный+купон');
+            exit;
+        }
+        if ($coupon['type'] === 'discount') {
+            $discountPercent = (float)$coupon['discount'];
+        } elseif ($coupon['type'] === 'points') {
+            $couponPoints = (int)$coupon['points'];
+        }
+    }
+
     // 5) Считаем, сколько баллов списать (до 30% от суммы)
     $maxPossible  = floor($allTotal * 0.3);
     $pointsToUse  = min($pointsBalance, $maxPossible);
@@ -455,22 +477,15 @@ public function cart(): void
         $stmtTx->execute([$userId, -$pointsToUse]);
     }
 
-    // 7) Разбиваем скидку пропорционально по датам
+    // 7) Распределяем списанные баллы и купон с баллами только на первый заказ
     $discountsByDate = [];
-    if ($pointsToUse > 0 && $allTotal > 0) {
-        foreach ($itemsByDate as $dateKey => $block) {
-            $blockSum = 0;
-            foreach ($block as $data) {
-                $blockSum += $data['quantity'] * $data['unit_price'];
-            }
-            $discountsByDate[$dateKey] = floor($pointsToUse * ($blockSum / $allTotal));
-        }
-        $sumDistributed = array_sum($discountsByDate);
-        $leftover = $pointsToUse - $sumDistributed;
-        if ($leftover !== 0) {
-            $firstKey = array_key_first($discountsByDate);
-            $discountsByDate[$firstKey] += $leftover;
-        }
+    $pointsTotal = $pointsToUse + $couponPoints;
+    $firstKey = array_key_first($itemsByDate);
+    foreach ($itemsByDate as $dateKey => $block) {
+        $discountsByDate[$dateKey] = 0;
+    }
+    if ($pointsTotal > 0 && $firstKey !== null) {
+        $discountsByDate[$firstKey] = min($pointsTotal, $allTotal);
     }
 
     // 8) Обрабатываем адреса: для каждой даты либо свой, либо default
@@ -489,8 +504,12 @@ public function cart(): void
         foreach ($block as $data) {
             $blockSum += $data['quantity'] * $data['unit_price'];
         }
-        $discount    = $discountsByDate[$dateKey] ?? 0;
-        $finalSum    = $blockSum - $discount;
+        $pointsDiscount = $discountsByDate[$dateKey] ?? 0;
+        $couponDiscount = 0;
+        if ($discountPercent > 0) {
+            $couponDiscount = (int) floor(($blockSum - $pointsDiscount) * ($discountPercent / 100));
+        }
+        $finalSum = $blockSum - $pointsDiscount - $couponDiscount;
 
         $deliverySlot = $_POST['slot_id'][$dateKey] ?? ''; // из формы
 
@@ -498,18 +517,19 @@ public function cart(): void
         $stmtOrder = $this->pdo->prepare(
             "INSERT INTO orders
                (user_id, address_id, status, total_amount,
-                discount_applied, points_used, points_accrued,
+                discount_applied, points_used, points_accrued, coupon_code,
                 delivery_date, delivery_slot, created_at)
-             VALUES (?, ?, 'new', ?, ?, ?, ?, ?, ?, NOW())"
+             VALUES (?, ?, 'new', ?, ?, ?, ?, ?, ?, ?, NOW())"
         );
         $pointsAccrued = 0; // пока 0, начислим ниже, если надо
         $stmtOrder->execute([
             $userId,
             $addressIds[$dateKey],
             $finalSum,
-            $discount,        // discount_applied = сумма списанных баллов по этому блоку
-            $discount,        // points_used = та же сумма (списанные баллы)
+            $couponDiscount,  // discount_applied = скидка по купону %
+            $pointsDiscount,  // points_used = списанные баллы
             $pointsAccrued,   // points_accrued = пока 0
+            $couponCode,
             $dateKey,
             $deliverySlot
         ]);
