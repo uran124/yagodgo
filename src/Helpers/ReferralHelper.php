@@ -24,6 +24,7 @@ class ReferralHelper
                 $code .= $chars[random_int(0, $maxIndex)];
             }
             // Проверяем, что такого кода ещё нет в таблице users
+            $pdo->setAttribute(PDO::ATTR_STRINGIFY_FETCHES, true);
             $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE referral_code = ?");
             $stmt->execute([$code]);
             $exists = (int)$stmt->fetchColumn() > 0;

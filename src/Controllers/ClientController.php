@@ -535,7 +535,19 @@ public function cart(): void
         ]);
         $orderId = (int)$this->pdo->lastInsertId();
 
-        // (7.3) Вставляем позиции в order_items — без изменений
+        // (7.3) Вставляем позиции в order_items
+        $stmtItem = $this->pdo->prepare(
+            "INSERT INTO order_items (order_id, product_id, quantity, unit_price)\n" .
+            "VALUES (?, ?, ?, ?)"
+        );
+        foreach ($block as $prodId => $data) {
+            $stmtItem->execute([
+                $orderId,
+                $prodId,
+                $data['quantity'],
+                $data['unit_price'],
+            ]);
+        }
 
         // (7.4) Начисляем реферальный бонус пригласившему, если он есть
         if ($referredBy) {
@@ -611,6 +623,20 @@ public function showOrder(int $orderId): void
         exit;
     }
 
+    // Получаем информацию о купоне, если применялся
+    $couponInfo = null;
+    $pointsFromBalance = (int)($order['points_used'] ?? 0);
+    if (!empty($order['coupon_code'])) {
+        $cStmt = $this->pdo->prepare(
+            "SELECT code, type, discount, points FROM coupons WHERE code = ?"
+        );
+        $cStmt->execute([$order['coupon_code']]);
+        $couponInfo = $cStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        if ($couponInfo && $couponInfo['type'] === 'points') {
+            $pointsFromBalance = max(0, $pointsFromBalance - (int)$couponInfo['points']);
+        }
+    }
+
     // 2) Проверяем, что текущий пользователь — владелец заказа или админ
     if ($order['user_id'] !== $userId && $role !== 'admin') {
         http_response_code(403);
@@ -636,9 +662,11 @@ public function showOrder(int $orderId): void
 
     // 4) Отправляем всё в view. Файл-шаблон: src/Views/client/order_show.php
     view('client/order_show', [
-        'order'    => $order,
-        'items'    => $items,
-        'userName' => $_SESSION['name'] ?? null,
+        'order'           => $order,
+        'items'           => $items,
+        'userName'        => $_SESSION['name'] ?? null,
+        'coupon'          => $couponInfo,
+        'pointsFromBalance' => $pointsFromBalance,
     ]);
 }
 
