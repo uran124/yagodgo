@@ -669,20 +669,34 @@ public function showOrder(int $orderId): void
         requireClient();
         $userId = $_SESSION['user_id'];
         $stmt = $this->pdo->prepare(
-            "SELECT id, status, total_amount, created_at
-             FROM orders
-             WHERE user_id = ?
-             ORDER BY created_at DESC"
+            "SELECT o.id, o.status, o.total_amount, o.created_at, o.delivery_date, o.delivery_slot, a.street AS address
+             FROM orders o
+             LEFT JOIN addresses a ON a.id = o.address_id
+             WHERE o.user_id = ?
+             ORDER BY o.created_at DESC"
         );
         $stmt->execute([$userId]);
         $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Подтягиваем позиции для каждого заказа
+        $itemsStmt = $this->pdo->prepare(
+            "SELECT t.name AS product_name, p.variety, oi.quantity
+             FROM order_items oi
+             JOIN products p ON p.id = oi.product_id
+             JOIN product_types t ON t.id = p.product_type_id
+             WHERE oi.order_id = ?"
+        );
+        foreach ($orders as &$o) {
+            $itemsStmt->execute([$o['id']]);
+            $o['items'] = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
+        }
 
         $debugData = [
             'ordersCount' => count($orders),
             'today'       => date('Y-m-d'),
         ];
 
-        view('client/orders', [
+        view('client/v2/orders', [
             'orders'    => $orders,
             'userName'  => $_SESSION['name'] ?? null,
             'debugData' => $debugData,
