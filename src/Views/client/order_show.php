@@ -10,6 +10,8 @@
 $order    = $order    ?? [];
 $items    = $items    ?? [];
 $userName = $userName ?? null;
+$coupon   = $coupon   ?? null;
+$pointsFromBalance = $pointsFromBalance ?? 0;
 
 // Считаем «сырьевую» сумму (без учёта скидки)
 $rawSum = 0;
@@ -109,15 +111,27 @@ $discount = max(0, $rawSum - $order['total_amount']);
         </span>
       </div>
 
-      <?php if ($discount > 0): ?>
-        <!-- Блок «Списано клубничек/Скидка» -->
+      <?php if ($coupon): ?>
+        <div class="flex justify-between items-center mt-2">
+          <span class="font-medium text-gray-700">
+            Купон <?= htmlspecialchars($coupon['code']) ?>:
+            <?php if ($coupon['type'] === 'discount'): ?>
+              скидка <?= htmlspecialchars($coupon['discount']) ?>%
+            <?php else: ?>
+              <?= htmlspecialchars($coupon['points']) ?> клубничек
+            <?php endif; ?>
+          </span>
+        </div>
+      <?php endif; ?>
+
+      <?php if ($pointsFromBalance > 0): ?>
         <div class="flex justify-between items-center mt-2">
           <span class="font-medium text-pink-600 flex items-center">
             <span class="text-2xl mr-1">🍓</span>
-            Списано «клубничек»
+            Списано клубничек
           </span>
           <span class="text-pink-600 font-semibold">
-            <?= number_format($discount, 0, '.', ' ') ?> ₽
+            <?= number_format($pointsFromBalance, 0, '.', ' ') ?>
           </span>
         </div>
       <?php endif; ?>
