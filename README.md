@@ -10,3 +10,12 @@ Install dependencies using Composer and run PHPUnit:
 composer install
 vendor/bin/phpunit
 ```
+
+### Database update
+
+Checkout now supports discount coupons. Add the following field to the `orders`
+table:
+
+```sql
+ALTER TABLE orders ADD COLUMN coupon_code VARCHAR(50) DEFAULT NULL;
+```
