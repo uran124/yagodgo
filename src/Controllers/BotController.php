@@ -207,7 +207,7 @@ class BotController
     {
         $this->telegram->sendMessage([
             'chat_id' => $chatId,
-            'text'    => "Добро пожаловать в ЯгодGO! Выберите действие:",
+            'text'    => "Добро пожаловать в BerryGo! Выберите действие:",
             'reply_markup' => json_encode([
                 'keyboard' => [
                     [['text' => '📋 Меню'], ['text' => '🛒 Мои заказы']],
@@ -388,7 +388,7 @@ class BotController
                      "• Товар ID: {$productId}" . PHP_EOL .
                      "• Количество: {$quantity}" . PHP_EOL .
                      "• Сумма: {$sum} руб." . PHP_EOL .
-                     "[Посмотреть в админке](https://yagodgo.ru/admin/orders/{$orderId})";
+                     "[Посмотреть в админке](https://berrygo.ru/admin/orders/{$orderId})";
 
         // Проверяем, может быть, admin_chat_id — массив, тогда шлём всем
         if (is_array($this->adminChatId)) {

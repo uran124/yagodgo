@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>Админка ЯгодGO – <?= htmlspecialchars($pageTitle) ?></title>
+  <title>Админка BerryGo – <?= htmlspecialchars($pageTitle) ?></title>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 </head>
@@ -12,7 +12,7 @@
   <!-- Header -->
   <header class="flex items-center justify-between bg-white p-4 shadow">
     <div class="flex items-center space-x-4">
-      <div class="font-bold text-xl text-[#C86052]">ЯгодGO Admin</div>
+      <div class="font-bold text-xl text-[#C86052]">BerryGo Admin</div>
       <nav class="hidden md:flex space-x-4">
         <a href="/admin/dashboard" class="hover:underline">Dashboard</a>
         <a href="/admin/orders" class="hover:underline">Заказы</a>

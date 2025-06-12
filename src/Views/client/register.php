@@ -14,7 +14,7 @@
     <!-- Заголовок с логотипом -->
     <div class="text-center mb-3 sm:mb-6">
       <h1 class="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent mb-1 sm:mb-2">
-        Регистрация в ЯгодGO
+        Регистрация в BerryGo
       </h1>
 
     </div>

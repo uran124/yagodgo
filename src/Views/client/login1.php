@@ -13,7 +13,7 @@
     <!-- Заголовок с логотипом -->
     <div class="text-center mb-8">
       <h1 class="text-3xl font-bold bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent mb-2">
-        Вход в ЯгодGO
+        Вход в BerryGo
       </h1>
       <p class="text-gray-500 text-sm">Войдите, чтобы делать покупки</p>
     </div>
@@ -84,7 +84,7 @@
     <!-- Регистрация -->
     <div class="text-center mt-6">
       <p class="text-gray-600 mb-4">
-        Впервые в ЯгодGO?
+        Впервые в BerryGo?
       </p>
       <a href="/register" 
          class="inline-flex items-center px-6 py-3 bg-white border-2 border-gray-200 rounded-2xl font-medium text-gray-700 hover:border-red-200 hover:text-red-500 transition-all shadow-lg hover:shadow-xl space-x-2">

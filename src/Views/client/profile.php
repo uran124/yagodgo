@@ -175,7 +175,7 @@
         <p>Подарите другу 10 % скидку на первый заказ и получайте клубнички за каждый его заказ!</p>
         <p>Скопируйте ссылку и отправьте другу:</p>
         <div class="flex items-center space-x-2">
-          <?php $refLink = "https://yagodgo.ru/register?invite=" . urlencode($user['referral_code']); ?>
+          <?php $refLink = "https://berrygo.ru/register?invite=" . urlencode($user['referral_code']); ?>
           <input type="text" readonly value="<?= htmlspecialchars($refLink) ?>" class="flex-1 bg-gray-100 rounded-lg px-3 py-2 text-sm text-gray-800 outline-none select-all" onclick="this.select()">
           <button onclick="copyInviteLink()" class="bg-emerald-500 text-white px-4 py-2 rounded-lg hover:bg-emerald-600 transition">Копировать</button>
         </div>

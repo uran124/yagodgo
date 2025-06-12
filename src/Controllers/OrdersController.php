@@ -241,7 +241,7 @@ protected function notifyAdmins(int $orderId, string $clientName, float $sum): v
         $text = "🆕 *Новый заказ* №{$orderId}\n"
               . "• Клиент: {$clientName}\n"
               . "• Сумма: {$sum} руб.\n"
-              . "[Перейти в админку](https://yagodgo.ru/admin/orders/{$orderId})";
+              . "[Перейти в админку](https://berrygo.ru/admin/orders/{$orderId})";
 
         $url = "https://api.telegram.org/bot{$token}/sendMessage";
         $payload = json_encode([
