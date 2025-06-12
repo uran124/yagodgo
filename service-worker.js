@@ -1,4 +1,4 @@
-const CACHE_NAME = "yagodgo-cache-v1";
+const CACHE_NAME = "berrygo-cache-v1";
 const urlsToCache = ["/", "/assets/css/style.css", "/assets/js/app.js"];
 
 self.addEventListener("install", (event) => {

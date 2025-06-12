@@ -14,7 +14,7 @@
   $pageSlug = $slugMap[$path] ?? trim($path, '/');
 
   $meta = [
-    'title'       => 'ЯгодGO',
+    'title'       => 'BerryGo',
     'description' => '',
     'keywords'    => '',
     'h1'          => '',
@@ -36,7 +36,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title><?= htmlspecialchars($meta['title'] ?? 'ЯгодGO') ?></title>
+  <title><?= htmlspecialchars($meta['title'] ?? 'BerryGo') ?></title>
   <?php if (!empty($meta['description'])): ?>
     <meta name="description" content="<?= htmlspecialchars($meta['description']) ?>">
   <?php endif; ?>
@@ -149,9 +149,9 @@
 <header class="fixed top-0 left-0 right-0 glass-effect flex items-center justify-between p-4 z-20 border-b border-white/20">
   <a href="/" class="group flex items-center space-x-3">
     <div class="w-10 h-10 berry-gradient rounded-2xl flex items-center justify-center floating-animation">
-      <img src="/assets/yagodgo_strawberry.svg" alt="ЯгодGO" class="w-6 h-6 filter brightness-0 invert">
+      <img src="/assets/berrygo_strawberry.svg" alt="BerryGo" class="w-6 h-6 filter brightness-0 invert">
     </div>
-    <span class="font-bold text-xl bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">ЯгодGO</span>
+    <span class="font-bold text-xl bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">BerryGo</span>
   </a>
 
   <div class="flex items-center space-x-3">
@@ -235,7 +235,7 @@
   <div id="installWrapper" class="w-full berry-gradient text-white text-center py-4 shadow-lg">
     <button id="installBtn" class="install-pulse text-lg font-semibold px-8 py-3 bg-white text-red-500 rounded-2xl shadow-lg inline-flex items-center space-x-3 hover:shadow-xl transition-all">
       <span class="material-icons-round">download</span>
-      <span>Установить ЯгодGO</span>
+      <span>Установить BerryGo</span>
     </button>
   </div>
 
@@ -529,7 +529,7 @@
 
         <!-- Ссылка-приглашение -->
         <div class="relative flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
-            <?php $inviteLink = "https://yagodgo.ru/register?invite=" . urlencode($_SESSION['referral_code'] ?? ''); ?>
+            <?php $inviteLink = "https://berrygo.ru/register?invite=" . urlencode($_SESSION['referral_code'] ?? ''); ?>
             <input
               id="inviteLinkInput"
               type="text"

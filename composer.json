@@ -1,6 +1,6 @@
 {
-  "name": "yagodgo/webapp",
-  "description": "Веб-приложение доставки ягод и фруктов ЯгодGO",
+  "name": "berrygo/webapp",
+  "description": "Веб-приложение доставки ягод и фруктов BerryGo",
   "type": "project",
   "require": {
     "php": ">=8.0",

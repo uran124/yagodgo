@@ -19,7 +19,7 @@
         <div class="mb-6">
           <h1 class="text-4xl font-bold mb-3 leading-tight">
             Добро пожаловать в 
-            <span class="bg-gradient-to-r from-yellow-200 to-orange-200 bg-clip-text text-transparent">ЯгодGO</span>
+            <span class="bg-gradient-to-r from-yellow-200 to-orange-200 bg-clip-text text-transparent">BerryGo</span>
           </h1>
           <p class="text-lg opacity-90 mb-2">Свежие ягоды и фрукты из Киргизии</p>
           <p class="text-sm opacity-75">🚀 Доставка за час • 🍓 100% натуральные • ❄️ Всегда свежие</p>

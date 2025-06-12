@@ -1,5 +1,5 @@
 <?php
-// ~/www/yagodgo.ru/config/routes.php
+// ~/www/berrygo.ru/config/routes.php
 
 use App\Controllers\AuthController;
 use App\Controllers\ClientController;

@@ -1,6 +1,6 @@
-# YagodGO Web App
+# BerryGo Web App
 
-This project contains a simple PHP application for the YagodGO delivery service.
+This project contains a simple PHP application for the BerryGo delivery service.
 
 ## Running tests
 
