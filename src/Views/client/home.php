@@ -1,5 +1,9 @@
-<?php /** @var array  $popularProducts 
-          @var string|null $userName */ ?>
+<?php /**
+ * @var array $saleProducts
+ * @var array $inStockProducts
+ * @var array $preorderProducts
+ * @var string|null $userName
+ */ ?>
 
 <main class="bg-gradient-to-br from-orange-50 via-white to-pink-50 min-h-screen pb-24">
   
@@ -11,15 +15,6 @@
       <div class="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-12 -translate-x-12"></div>
       
       <div class="relative z-10 text-center">
-        <!-- Приветствие пользователя -->
-        <?php if ($userName): ?>
-          <div class="mb-4">
-            <span class="inline-flex items-center px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-sm font-medium">
-              <span class="material-icons-round mr-2 text-lg">waving_hand</span>
-              Привет, <?= htmlspecialchars($userName) ?>!
-            </span>
-          </div>
-        <?php endif; ?>
         
         <div class="mb-6">
           <h1 class="text-4xl font-bold mb-3 leading-tight">
@@ -77,34 +72,55 @@
     </div>
   </section>-->
 
-  <!-- Популярные товары -->
+  <!-- Sale Products -->
   <section class="px-4 mb-8">
-    <div class="flex items-center justify-between mb-6">
-      <div>
-        <h2 class="text-2xl font-bold text-gray-800 mb-1">🔥 Популярное</h2>
-        <p class="text-gray-500 text-sm">Самые любимые продукты наших клиентов</p>
-      </div>
-      <a href="/catalog" class="inline-flex items-center text-red-500 font-medium hover:text-red-600 transition-colors">
-        <span class="mr-1">Все</span>
-        <span class="material-icons-round text-lg">arrow_forward</span>
-      </a>
-    </div>
-    
-    <?php if (empty($popularProducts)): ?>
-      <div class="bg-white rounded-2xl p-12 text-center shadow-lg">
-        <div class="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <span class="material-icons-round text-4xl text-gray-400">inventory_2</span>
-        </div>
-        <h3 class="text-lg font-semibold text-gray-600 mb-2">Скоро появятся товары</h3>
-        <p class="text-gray-500 text-sm">Мы готовим для вас самые свежие ягоды и фрукты!</p>
-      </div>
-    <?php else: ?>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <?php foreach ($popularProducts as $p): ?>
+    <h2 class="text-2xl font-bold text-gray-800 mb-4">💥 Товары со скидкой</h2>
+    <div class="flex space-x-4 overflow-x-auto pb-2 no-scrollbar snap-x snap-mandatory">
+      <?php foreach ($saleProducts as $p): ?>
+        <div class="flex-none w-[66vw] sm:w-1/2 md:w-1/3 snap-start">
           <?php include __DIR__ . '/_card.php'; ?>
-        <?php endforeach; ?>
+        </div>
+      <?php endforeach; ?>
+      <div class="flex-none w-[66vw] sm:w-1/2 md:w-1/3 snap-start">
+        <div class="h-full flex items-center justify-center bg-white rounded-2xl shadow-lg p-4 text-center">
+          <p class="text-sm text-gray-600">Узнайте о наших горячих предложениях!</p>
+        </div>
       </div>
-    <?php endif; ?>
+    </div>
+  </section>
+
+  <!-- In Stock Products -->
+  <section class="px-4 mb-8">
+    <h2 class="text-2xl font-bold text-gray-800 mb-4">📦 В наличии</h2>
+    <div class="flex space-x-4 overflow-x-auto pb-2 no-scrollbar snap-x snap-mandatory">
+      <?php foreach ($inStockProducts as $p): ?>
+        <div class="flex-none w-[66vw] sm:w-1/2 md:w-1/3 snap-start">
+          <?php include __DIR__ . '/_card.php'; ?>
+        </div>
+      <?php endforeach; ?>
+      <div class="flex-none w-[66vw] sm:w-1/2 md:w-1/3 snap-start">
+        <div class="h-full flex items-center justify-center bg-white rounded-2xl shadow-lg p-4 text-center">
+          <p class="text-sm text-gray-600">Все товары из этого раздела готовы к отправке.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Preorder Products -->
+  <section class="px-4 mb-8">
+    <h2 class="text-2xl font-bold text-gray-800 mb-4">🛒 Под заказ</h2>
+    <div class="flex space-x-4 overflow-x-auto pb-2 no-scrollbar snap-x snap-mandatory">
+      <?php foreach ($preorderProducts as $p): ?>
+        <div class="flex-none w-[66vw] sm:w-1/2 md:w-1/3 snap-start">
+          <?php include __DIR__ . '/_card.php'; ?>
+        </div>
+      <?php endforeach; ?>
+      <div class="flex-none w-[66vw] sm:w-1/2 md:w-1/3 snap-start">
+        <div class="h-full flex items-center justify-center bg-white rounded-2xl shadow-lg p-4 text-center">
+          <p class="text-sm text-gray-600">Здесь собраны товары, которые мы привезём под заказ.</p>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- Преимущества -->
