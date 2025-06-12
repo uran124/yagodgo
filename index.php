@@ -33,6 +33,8 @@ if (!empty($_SESSION['user_id'])) {
 // -------------------------------------------------------
 // 2) Подключаем конфиг Telegram
 $telegramConfig = require __DIR__ . '/config/telegram.php';
+// Конфиг SMS.RU
+$smsConfig = require __DIR__ . '/config/sms.php';
 // -----
 
 
@@ -151,6 +153,25 @@ switch ("$method $uri") {
         break;
     case 'POST /login':
         (new App\Controllers\AuthController($pdo))->login();
+        break;
+
+    // СМС подтверждения при регистрации
+    case 'POST /api/send-reg-code':
+        (new App\Controllers\AuthController($pdo, $smsConfig))->sendRegistrationCode();
+        break;
+    case 'POST /api/verify-reg-code':
+        (new App\Controllers\AuthController($pdo, $smsConfig))->verifyRegistrationCode();
+        break;
+
+    // Восстановление PIN-кода
+    case 'GET /reset-pin':
+        (new App\Controllers\AuthController($pdo, $smsConfig))->showResetPinForm();
+        break;
+    case 'POST /reset-pin/send-code':
+        (new App\Controllers\AuthController($pdo, $smsConfig))->sendResetPinCode();
+        break;
+    case 'POST /reset-pin':
+        (new App\Controllers\AuthController($pdo, $smsConfig))->resetPin();
         break;
 
     // Выход

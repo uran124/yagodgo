@@ -38,6 +38,27 @@
     <div class="bg-white rounded-3xl shadow-2xl p-4 sm:p-6 md:p-8 backdrop-blur-sm">
       <form id="registerForm" action="/register" method="post" class="space-y-3 sm:space-y-4">
 
+        <!-- Блок проверки телефона -->
+        <div id="phoneBlock" class="space-y-2">
+          <div class="relative">
+            <div class="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 flex items-center">
+              <span class="material-icons-round text-red-500 mr-1 sm:mr-2 text-lg sm:text-xl">phone</span>
+              <span class="text-gray-700 font-semibold text-sm sm:text-base">+7</span>
+            </div>
+            <input id="phone" name="phone" type="tel" maxlength="10" inputmode="numeric" pattern="\d{10}" placeholder="902 923 7794" required class="w-full pl-16 sm:pl-20 pr-3 sm:pr-4 py-2.5 sm:py-3 md:py-4 text-sm sm:text-base md:text-lg border-2 border-gray-100 rounded-2xl focus:border-red-500 focus:ring-2 focus:ring-red-100 outline-none transition-all text-gray-800 placeholder-gray-400">
+          </div>
+          <button type="button" id="sendRegCode" class="w-full bg-red-500 text-white py-2 rounded-2xl">Подтвердить</button>
+          <div id="codeRegBlock" class="hidden space-y-2">
+            <div class="flex space-x-3 justify-center">
+              <?php for ($i=0;$i<4;$i++): ?>
+                <input type="tel" maxlength="1" inputmode="numeric" data-reg-code class="w-12 h-12 text-center text-xl font-bold border-2 border-gray-200 rounded-2xl" />
+              <?php endfor; ?>
+            </div>
+            <button type="button" id="checkRegCode" class="w-full bg-pink-500 text-white py-2 rounded-2xl">Проверить код</button>
+          </div>
+        </div>
+
+        <fieldset id="extraFields" disabled class="opacity-50 space-y-3 sm:space-y-4">
         <!-- Поле имени -->
         <div class="relative">
           <div class="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 flex items-center">
@@ -140,6 +161,7 @@
           <span class="relative z-10">Зарегистрироваться</span>
         </button>
 
+      </fieldset>
       </form>
     </div>
 
@@ -206,8 +228,29 @@
 
 <script>
 // Маска для телефона: только цифры
-document.getElementById('phone').addEventListener('input', function() {
+const phoneInput = document.getElementById('phone');
+phoneInput.addEventListener('input', function() {
   this.value = this.value.replace(/\D/g, '').slice(0, 10);
+});
+
+const sendRegBtn = document.getElementById('sendRegCode');
+const checkRegBtn = document.getElementById('checkRegCode');
+const codeRegBlock = document.getElementById('codeRegBlock');
+const regCodeInputs = document.querySelectorAll('input[data-reg-code]');
+const extraFields = document.getElementById('extraFields');
+
+sendRegBtn.addEventListener('click', () => {
+  const phone = phoneInput.value.replace(/\D/g, '');
+  if (phone.length !== 10) { alert('Введите номер'); return; }
+  fetch('/api/send-reg-code', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'phone='+phone})
+    .then(r => r.json()).then(() => { codeRegBlock.classList.remove('hidden'); });
+});
+
+checkRegBtn.addEventListener('click', () => {
+  const code = Array.from(regCodeInputs).map(i=>i.value).join('');
+  const phone = phoneInput.value.replace(/\D/g, '');
+  fetch('/api/verify-reg-code', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'phone='+phone+'&code='+code})
+    .then(r=>r.json()).then(d => { if(d.success){ extraFields.disabled=false; extraFields.classList.remove('opacity-50'); document.getElementById('phoneBlock').classList.add('hidden'); } else { alert('Неверный код'); } });
 });
 
 // PIN-код: автопереход и сбор в скрытое поле

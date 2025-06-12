@@ -3,14 +3,17 @@ namespace App\Controllers;
 
 use PDO;
 use App\Helpers\ReferralHelper;
+use App\Helpers\SmsRu;
 
 class AuthController
 {
     private PDO $pdo;
+    private array $smsConfig;
 
-    public function __construct(PDO $pdo)
+    public function __construct(PDO $pdo, array $smsConfig = [])
     {
         $this->pdo = $pdo;
+        $this->smsConfig = $smsConfig;
     }
 
     /**
@@ -58,6 +61,11 @@ public function register(): void
     $name  = trim($nameRaw);
     $phone = $this->normalizePhone($phoneRaw);
     $pin   = trim($pinRaw);
+
+    if (empty($_SESSION['reg_verified']) || $_SESSION['reg_phone'] !== $phone) {
+        header('Location: /register?error=Подтвердите+номер');
+        exit;
+    }
 
     // Валидация
     if (
@@ -132,6 +140,8 @@ public function register(): void
     // Новый пользователь получает баланс 0 при регистрации
     $_SESSION['points_balance'] = 0;
 
+    unset($_SESSION['reg_verified'], $_SESSION['reg_phone'], $_SESSION['reg_code']);
+
     header('Location: /');
     exit;
 }
@@ -183,6 +193,82 @@ public function register(): void
             header('Location: /login?error=Неверный+телефон+или+PIN');
             exit;
         }
+    }
+
+    // Отправка кода подтверждения при регистрации
+    public function sendRegistrationCode(): void
+    {
+        $phone = $this->normalizePhone($_POST['phone'] ?? '');
+        if (!preg_match('/^7\d{10}$/', $phone)) {
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'Неверный номер']);
+            return;
+        }
+        $code = random_int(1000, 9999);
+        $_SESSION['reg_phone'] = $phone;
+        $_SESSION['reg_code'] = $code;
+        $sms = new SmsRu($this->smsConfig['api_id'] ?? '');
+        $ok = $sms->send($phone, "Код подтверждения: {$code}");
+        header('Content-Type: application/json');
+        echo json_encode(['success' => $ok]);
+    }
+
+    // Проверка кода для регистрации
+    public function verifyRegistrationCode(): void
+    {
+        $phone = $this->normalizePhone($_POST['phone'] ?? '');
+        $code  = trim($_POST['code'] ?? '');
+        $valid = isset($_SESSION['reg_phone'], $_SESSION['reg_code']) &&
+            $_SESSION['reg_phone'] === $phone && $_SESSION['reg_code'] == $code;
+        if ($valid) {
+            $_SESSION['reg_verified'] = true;
+        }
+        header('Content-Type: application/json');
+        echo json_encode(['success' => $valid]);
+    }
+
+    // Страница восстановления PIN
+    public function showResetPinForm(): void
+    {
+        include 'src/Views/client/reset_pin.php';
+    }
+
+    // Отправка кода для смены PIN
+    public function sendResetPinCode(): void
+    {
+        $phone = $this->normalizePhone($_POST['phone'] ?? '');
+        if (!preg_match('/^7\d{10}$/', $phone)) {
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'Неверный номер']);
+            return;
+        }
+        $code = random_int(1000, 9999);
+        $_SESSION['reset_phone'] = $phone;
+        $_SESSION['reset_code'] = $code;
+        $sms = new SmsRu($this->smsConfig['api_id'] ?? '');
+        $ok = $sms->send($phone, "Код сброса PIN: {$code}");
+        header('Content-Type: application/json');
+        echo json_encode(['success' => $ok]);
+    }
+
+    // Смена PIN после подтверждения
+    public function resetPin(): void
+    {
+        $phone = $this->normalizePhone($_POST['phone'] ?? '');
+        $code  = trim($_POST['code'] ?? '');
+        $pin   = trim($_POST['pin'] ?? '');
+        $validCode = isset($_SESSION['reset_phone'], $_SESSION['reset_code']) &&
+            $_SESSION['reset_phone'] === $phone && $_SESSION['reset_code'] == $code;
+        if (!$validCode || !preg_match('/^\d{4}$/', $pin)) {
+            header('Location: /reset-pin?error=Неверные+данные');
+            exit;
+        }
+        $hash = password_hash($pin, PASSWORD_DEFAULT);
+        $stmt = $this->pdo->prepare("UPDATE users SET password_hash = ? WHERE phone = ?");
+        $stmt->execute([$hash, $phone]);
+        unset($_SESSION['reset_phone'], $_SESSION['reset_code']);
+        header('Location: /login?success=PIN+обновлен');
+        exit;
     }
 
     /**
