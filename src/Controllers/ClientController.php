@@ -23,10 +23,32 @@ class ClientController
         $_SESSION['cart_total'] = (float)$stmt->fetchColumn();
     }
 
-    /** Главная: последние 4 товара */
+    /** Главная страница */
     public function home(): void
     {
-        $popular = $this->pdo->query(
+        $today = date('Y-m-d');
+
+        $sale = $this->pdo->query(
+            "SELECT p.id,
+                    t.name AS product,
+                    p.variety,
+                    p.description,
+                    p.origin_country,
+                    p.box_size,
+                    p.box_unit,
+                    p.price,
+                    p.sale_price,
+                    p.is_active,
+                    p.image_path,
+                    p.delivery_date
+             FROM products p
+             JOIN product_types t ON t.id = p.product_type_id
+             WHERE p.is_active = 1 AND p.sale_price > 0
+             ORDER BY p.id DESC
+             LIMIT 10"
+        )->fetchAll(PDO::FETCH_ASSOC);
+
+        $inStock = $this->pdo->query(
             "SELECT p.id,
                     t.name AS product,
                     p.variety,
@@ -42,19 +64,38 @@ class ClientController
              FROM products p
              JOIN product_types t ON t.id = p.product_type_id
              WHERE p.is_active = 1
+               AND p.delivery_date IS NOT NULL
+               AND p.delivery_date <= '$today'
              ORDER BY p.id DESC
-             LIMIT 4"
+             LIMIT 10"
         )->fetchAll(PDO::FETCH_ASSOC);
 
-        $debugData = [
-            'popularCount' => count($popular),
-            'today'        => date('Y-m-d'),
-        ];
+        $preorder = $this->pdo->query(
+            "SELECT p.id,
+                    t.name AS product,
+                    p.variety,
+                    p.description,
+                    p.origin_country,
+                    p.box_size,
+                    p.box_unit,
+                    p.price,
+                    p.sale_price,
+                    p.is_active,
+                    p.image_path,
+                    p.delivery_date
+             FROM products p
+             JOIN product_types t ON t.id = p.product_type_id
+             WHERE p.is_active = 1
+               AND p.delivery_date IS NULL
+             ORDER BY p.id DESC
+             LIMIT 10"
+        )->fetchAll(PDO::FETCH_ASSOC);
 
         view('client/home', [
-            'popularProducts' => $popular,
+            'saleProducts'    => $sale,
+            'inStockProducts' => $inStock,
+            'preorderProducts'=> $preorder,
             'userName'        => $_SESSION['name'] ?? null,
-            'debugData'       => $debugData,
         ]);
     }
 
