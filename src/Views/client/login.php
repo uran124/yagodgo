@@ -84,11 +84,14 @@
     <!-- Регистрация -->
     <div class="text-center mt-6">
 
-      <a href="/register" 
+      <a href="/register"
          class="inline-flex items-center px-6 py-3 bg-white border-2 border-gray-200 rounded-2xl font-medium text-gray-700 hover:border-red-200 hover:text-red-500 transition-all shadow-lg hover:shadow-xl space-x-2">
         <span class="material-icons-round">person_add</span>
         <span>Зарегистрироваться</span>
       </a>
+      <div class="mt-3">
+        <a href="/reset-pin" class="text-sm text-red-500 hover:underline">Забыли PIN-код?</a>
+      </div>
     </div>
 
   </div>
