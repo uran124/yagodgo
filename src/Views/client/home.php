@@ -77,11 +77,11 @@
     <h2 class="text-2xl font-bold text-gray-800 mb-4">💥 Товары со скидкой</h2>
     <div class="flex space-x-4 overflow-x-auto pb-2 no-scrollbar snap-x snap-mandatory">
       <?php foreach ($saleProducts as $p): ?>
-        <div class="flex-none w-[66vw] sm:w-1/2 md:w-1/3 snap-start">
+        <div class="flex-none w-[66vw] sm:w-1/2 md:w-1/3 snap-start h-full">
           <?php include __DIR__ . '/_card.php'; ?>
         </div>
       <?php endforeach; ?>
-      <div class="flex-none w-[66vw] sm:w-1/2 md:w-1/3 snap-start">
+      <div class="flex-none w-[66vw] sm:w-1/2 md:w-1/3 snap-start h-full">
         <div class="h-full flex items-center justify-center bg-white rounded-2xl shadow-lg p-4 text-center">
           <p class="text-sm text-gray-600">Узнайте о наших горячих предложениях!</p>
         </div>
@@ -94,11 +94,11 @@
     <h2 class="text-2xl font-bold text-gray-800 mb-4">📦 В наличии</h2>
     <div class="flex space-x-4 overflow-x-auto pb-2 no-scrollbar snap-x snap-mandatory">
       <?php foreach ($inStockProducts as $p): ?>
-        <div class="flex-none w-[66vw] sm:w-1/2 md:w-1/3 snap-start">
+        <div class="flex-none w-[66vw] sm:w-1/2 md:w-1/3 snap-start h-full">
           <?php include __DIR__ . '/_card.php'; ?>
         </div>
       <?php endforeach; ?>
-      <div class="flex-none w-[66vw] sm:w-1/2 md:w-1/3 snap-start">
+      <div class="flex-none w-[66vw] sm:w-1/2 md:w-1/3 snap-start h-full">
         <div class="h-full flex items-center justify-center bg-white rounded-2xl shadow-lg p-4 text-center">
           <p class="text-sm text-gray-600">Все товары из этого раздела готовы к отправке.</p>
         </div>
@@ -111,11 +111,11 @@
     <h2 class="text-2xl font-bold text-gray-800 mb-4">🛒 Под заказ</h2>
     <div class="flex space-x-4 overflow-x-auto pb-2 no-scrollbar snap-x snap-mandatory">
       <?php foreach ($preorderProducts as $p): ?>
-        <div class="flex-none w-[66vw] sm:w-1/2 md:w-1/3 snap-start">
+        <div class="flex-none w-[66vw] sm:w-1/2 md:w-1/3 snap-start h-full">
           <?php include __DIR__ . '/_card.php'; ?>
         </div>
       <?php endforeach; ?>
-      <div class="flex-none w-[66vw] sm:w-1/2 md:w-1/3 snap-start">
+      <div class="flex-none w-[66vw] sm:w-1/2 md:w-1/3 snap-start h-full">
         <div class="h-full flex items-center justify-center bg-white rounded-2xl shadow-lg p-4 text-center">
           <p class="text-sm text-gray-600">Здесь собраны товары, которые мы привезём под заказ.</p>
         </div>
