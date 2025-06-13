@@ -49,9 +49,10 @@
           </div>
           <button type="button" id="sendRegCode" class="w-full bg-red-500 text-white py-2 rounded-2xl">Подтвердить</button>
           <div id="codeRegBlock" class="hidden space-y-2">
-            <div class="flex space-x-3 justify-center">
+            <div class="flex space-x-1.5 sm:space-x-2 justify-center">
               <?php for ($i=0;$i<4;$i++): ?>
-                <input type="tel" maxlength="1" inputmode="numeric" data-reg-code class="w-12 h-12 text-center text-xl font-bold border-2 border-gray-200 rounded-2xl" />
+                <input type="tel" maxlength="1" inputmode="numeric" data-reg-code
+                  class="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 text-center text-lg sm:text-xl md:text-2xl font-bold border-2 border-gray-200 rounded-2xl focus:border-red-500 focus:ring-2 focus:ring-red-100 outline-none transition-all text-gray-800 bg-gradient-to-br from-gray-50 to-white hover:from-white hover:to-gray-50" />
               <?php endfor; ?>
             </div>
           </div>
@@ -178,8 +179,9 @@
     animation: shake 0.5s ease-in-out;
   }
   
-  /* Эффект фокуса для PIN-кода */
-  input[data-pin-input]:focus {
+  /* Эффект фокуса для PIN-кода и кода из SMS */
+  input[data-pin-input]:focus,
+  input[data-reg-code]:focus {
     transform: scale(1.05);
     border-color: #ef4444;
   }
@@ -221,7 +223,29 @@ sendRegBtn.addEventListener('click', () => {
   const phone = phoneInput.value.replace(/\D/g, '');
   if (phone.length !== 10) { alert('Введите номер'); return; }
   fetch('/api/send-reg-code', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'phone='+phone})
-    .then(r => r.json()).then(() => { codeRegBlock.classList.remove('hidden'); regCodeInputs[0].focus(); });
+    .then(r => r.json())
+    .then(d => {
+      if (d.blocked) {
+        alert('Ваш номер заблокирован. Если вы считаете блокировку ошибочной, свяжитесь со службой поддержки');
+        const btn = document.createElement('a');
+        btn.href = 'https://wa.me/79029237794';
+        btn.textContent = 'Написать в WhatsApp';
+        btn.className = 'mt-2 inline-block bg-green-500 text-white px-4 py-2 rounded-2xl';
+        codeRegBlock.innerHTML = '';
+        codeRegBlock.classList.remove('hidden');
+        codeRegBlock.appendChild(btn);
+        return;
+      }
+      if (d.exists) {
+        alert('Вы уже зарегистрированы. Через 10 секунд произойдёт переход на страницу входа');
+        setTimeout(() => { window.location.href = '/login'; }, 10000);
+        return;
+      }
+      if (d.success) {
+        codeRegBlock.classList.remove('hidden');
+        regCodeInputs[0].focus();
+      }
+    });
 });
 
 function verifyRegCode() {
