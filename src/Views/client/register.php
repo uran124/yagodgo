@@ -54,7 +54,6 @@
                 <input type="tel" maxlength="1" inputmode="numeric" data-reg-code class="w-12 h-12 text-center text-xl font-bold border-2 border-gray-200 rounded-2xl" />
               <?php endfor; ?>
             </div>
-            <button type="button" id="checkRegCode" class="w-full bg-pink-500 text-white py-2 rounded-2xl">Проверить код</button>
           </div>
         </div>
 
@@ -73,26 +72,6 @@
             class="w-full pl-12 sm:pl-16 pr-3 sm:pr-4 py-2.5 sm:py-3 md:py-4 text-sm sm:text-base md:text-lg border-2 border-gray-100 rounded-2xl focus:border-red-500 focus:ring-2 focus:ring-red-100 outline-none transition-all text-gray-800 placeholder-gray-400"
           >
         </div>
-
-        <!-- Поле телефона -->
-        <div class="relative">
-          <div class="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 flex items-center">
-            <span class="material-icons-round text-red-500 mr-1 sm:mr-2 text-lg sm:text-xl">phone</span>
-            <span class="text-gray-700 font-semibold text-sm sm:text-base">+7</span>
-          </div>
-          <input
-            id="phone"
-            name="phone"
-            type="tel"
-            maxlength="10"
-            inputmode="numeric"
-            pattern="\d{10}"
-            placeholder="902 923 7794"
-            required
-            class="w-full pl-16 sm:pl-20 pr-3 sm:pr-4 py-2.5 sm:py-3 md:py-4 text-sm sm:text-base md:text-lg border-2 border-gray-100 rounded-2xl focus:border-red-500 focus:ring-2 focus:ring-red-100 outline-none transition-all text-gray-800 placeholder-gray-400"
-          >
-        </div>
-
         <!-- Поле адреса -->
         <div class="relative">
           <div class="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 flex items-center">
@@ -234,7 +213,6 @@ phoneInput.addEventListener('input', function() {
 });
 
 const sendRegBtn = document.getElementById('sendRegCode');
-const checkRegBtn = document.getElementById('checkRegCode');
 const codeRegBlock = document.getElementById('codeRegBlock');
 const regCodeInputs = document.querySelectorAll('input[data-reg-code]');
 const extraFields = document.getElementById('extraFields');
@@ -243,14 +221,41 @@ sendRegBtn.addEventListener('click', () => {
   const phone = phoneInput.value.replace(/\D/g, '');
   if (phone.length !== 10) { alert('Введите номер'); return; }
   fetch('/api/send-reg-code', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'phone='+phone})
-    .then(r => r.json()).then(() => { codeRegBlock.classList.remove('hidden'); });
+    .then(r => r.json()).then(() => { codeRegBlock.classList.remove('hidden'); regCodeInputs[0].focus(); });
 });
 
-checkRegBtn.addEventListener('click', () => {
-  const code = Array.from(regCodeInputs).map(i=>i.value).join('');
+function verifyRegCode() {
+  const code = Array.from(regCodeInputs).map(i => i.value).join('');
+  if (code.length !== 4) return;
   const phone = phoneInput.value.replace(/\D/g, '');
   fetch('/api/verify-reg-code', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'phone='+phone+'&code='+code})
-    .then(r=>r.json()).then(d => { if(d.success){ extraFields.disabled=false; extraFields.classList.remove('opacity-50'); document.getElementById('phoneBlock').classList.add('hidden'); } else { alert('Неверный код'); } });
+    .then(r => r.json()).then(d => {
+      if (d.success) {
+        extraFields.disabled = false;
+        extraFields.classList.remove('opacity-50');
+        document.getElementById('phoneBlock').classList.add('hidden');
+      } else {
+        alert('Неверный код');
+        regCodeInputs.forEach(i => i.value = '');
+        regCodeInputs[0].focus();
+      }
+    });
+}
+
+regCodeInputs.forEach((input, idx) => {
+  input.addEventListener('input', () => {
+    input.value = input.value.replace(/\D/, '').slice(0, 1);
+    if (input.value && idx < regCodeInputs.length - 1) {
+      regCodeInputs[idx + 1].focus();
+    }
+    verifyRegCode();
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Backspace' && !input.value && idx > 0) {
+      regCodeInputs[idx - 1].focus();
+    }
+  });
 });
 
 // PIN-код: автопереход и сбор в скрытое поле
