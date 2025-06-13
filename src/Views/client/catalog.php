@@ -2,27 +2,13 @@
 
 <main class="bg-gradient-to-br from-orange-50 via-white to-pink-50 min-h-screen pb-24">
 
-  <!-- Хедер с названием и приветствием -->
-  <div class="pt-6 px-4 mb-6">
-    <div class="bg-gradient-to-r from-red-500 to-pink-500 rounded-3xl p-6 text-white shadow-2xl flex flex-col md:flex-row justify-between items-center">
-      <div class="mb-4 md:mb-0">
-        <h1 class="text-3xl font-bold mb-1">🛒 Каталог</h1>
-        <p class="text-red-100 text-sm">Свежие ягоды и фрукты из Киргизии</p>
-      </div>
-      <?php if ($userName): ?>
-        <div class="inline-flex items-center bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
-          <span class="material-icons-round text-lg mr-2">person</span>
-          <span class="font-medium"><?= htmlspecialchars($userName) ?></span>
-        </div>
-      <?php endif; ?>
-    </div>
-  </div>
+
 
   <!-- Поле поиска и фильтры -->
   <div class="px-4 mb-6">
     <div class="bg-white rounded-2xl shadow-lg p-4 space-y-4">
       <div class="relative">
-        <input type="text"
+        <input id="catalogSearch" type="text"
                placeholder="Поиск ягод и фруктов..."
                class="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all text-gray-700 placeholder-gray-400">
         <span class="material-icons-round absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">search</span>
@@ -52,12 +38,31 @@
         </a>
       </div>
     <?php else: ?>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
-        <?php foreach ($products as $p): ?>
-          <?php include __DIR__ . '/_card.php'; ?>
-        <?php endforeach; ?>
-      </div>
+    <div id="productsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+      <?php foreach ($products as $p): ?>
+        <?php include __DIR__ . '/_card.php'; ?>
+      <?php endforeach; ?>
+    </div>
     <?php endif; ?>
   </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const search = document.getElementById('catalogSearch');
+      const container = document.getElementById('productsContainer');
+      const allCards = Array.from(container.querySelectorAll('.product-card'));
+
+      function applyFilter() {
+        const term = search.value.trim().toLowerCase();
+        const cards = allCards
+          .filter(c => c.dataset.search.includes(term))
+          .sort((a, b) => a.dataset.search.localeCompare(b.dataset.search, 'ru'));
+        container.innerHTML = '';
+        cards.forEach(c => container.appendChild(c));
+      }
+
+      search.addEventListener('input', applyFilter);
+    });
+  </script>
 
 </main>

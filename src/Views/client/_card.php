@@ -14,7 +14,8 @@
  *   - delivery_date    (строка 'Y-m-d' или null)
  */
 ?>
-<div class="bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col hover:shadow-2xl transition-shadow duration-200 h-full">
+<?php $search = mb_strtolower(($p['product'] ?? '') . ' ' . ($p['variety'] ?? ''), 'UTF-8'); ?>
+<div class="product-card bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col hover:shadow-2xl transition-shadow duration-200 h-full" data-search="<?= htmlspecialchars($search) ?>">
   <?php 
     $img       = $p['image_path']        ?? '/assets/placeholder.png';
     $today     = date('Y-m-d');
