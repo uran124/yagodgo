@@ -607,6 +607,30 @@
   }
 </script>
 
+<script>
+  // Equalize heights of product cards on the home page
+  function equalizeProductRows() {
+    document.querySelectorAll('.eq-row').forEach(row => {
+      let max = 0;
+      const items = Array.from(row.children);
+      items.forEach(el => {
+        el.style.height = 'auto';
+        const h = el.offsetHeight;
+        if (h > max) max = h;
+      });
+      items.forEach(el => {
+        el.style.height = max + 'px';
+      });
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', equalizeProductRows);
+  window.addEventListener('resize', () => {
+    clearTimeout(window.eqResizeTimeout);
+    window.eqResizeTimeout = setTimeout(equalizeProductRows, 100);
+  });
+</script>
+
 
 
 
