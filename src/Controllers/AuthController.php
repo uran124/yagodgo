@@ -199,17 +199,43 @@ public function register(): void
     public function sendRegistrationCode(): void
     {
         $phone = $this->normalizePhone($_POST['phone'] ?? '');
+        header('Content-Type: application/json');
+
         if (!preg_match('/^7\d{10}$/', $phone)) {
-            header('Content-Type: application/json');
             echo json_encode(['error' => 'Неверный номер']);
             return;
         }
+
+        // Проверяем наличие пользователя и его блокировку
+        try {
+            $stmt = $this->pdo->prepare("SELECT is_blocked FROM users WHERE phone = ?");
+            $stmt->execute([$phone]);
+            $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (\PDOException $e) {
+            // Совместимость со схемой без поля is_blocked
+            $stmt = $this->pdo->prepare("SELECT 1 FROM users WHERE phone = ?");
+            $stmt->execute([$phone]);
+            $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($existing) {
+                echo json_encode(['exists' => true]);
+                return;
+            }
+        }
+
+        if ($existing) {
+            if (isset($existing['is_blocked']) && $existing['is_blocked']) {
+                echo json_encode(['blocked' => true]);
+            } else {
+                echo json_encode(['exists' => true]);
+            }
+            return;
+        }
+
         $code = random_int(1000, 9999);
         $_SESSION['reg_phone'] = $phone;
         $_SESSION['reg_code'] = $code;
         $sms = new SmsRu($this->smsConfig['api_id'] ?? '');
         $ok = $sms->send($phone, "Код подтверждения: {$code}");
-        header('Content-Type: application/json');
         echo json_encode(['success' => $ok]);
     }
 
