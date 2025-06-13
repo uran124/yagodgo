@@ -155,8 +155,10 @@
           </button>
         <?php else: ?>
           <a href="/login"
+
              class="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white px-2 py-1 sm:px-3 sm:py-2 rounded-lg hover:from-pink-500 hover:to-red-500 transition-all text-sm sm:text-base flex items-center justify-center space-x-1">
             <span class="material-icons-round text-sm sm:text-base">login</span>
+
             <span>Войдите, чтобы заказать</span>
           </a>
         <?php endif; ?>
