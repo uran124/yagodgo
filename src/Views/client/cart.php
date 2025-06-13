@@ -5,12 +5,6 @@
 
 <main class="bg-gradient-to-br from-orange-50 via-white to-pink-50 min-h-screen pb-24">
 
-  <!-- Header Section -->
-  <div class="pt-6 px-4 mb-6">
-    <div class="bg-gradient-to-r from-red-500 to-pink-500 rounded-3xl p-6 text-white shadow-2xl">
-      <h1 class="text-3xl font-bold">🛒 Корзина</h1>
-    </div>
-  </div>
 
   <?php if (empty($items)): ?>
     <!-- Пустая корзина -->
@@ -159,13 +153,13 @@
         
         <div class="flex justify-between items-center space-x-4">
           <a href="/catalog"
-             class="flex items-center px-6 py-3 bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 rounded-2xl font-medium hover:from-gray-200 hover:to-gray-300 transition-all space-x-2">
+             class="flex items-center px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 rounded-2xl font-medium hover:from-gray-200 hover:to-gray-300 transition-all space-x-1 sm:space-x-2 text-sm sm:text-base">
             <span class="material-icons-round">arrow_back</span>
             <span>В каталог</span>
           </a>
           <form id="checkoutForm" action="/checkout" method="get">
             <button type="submit"
-                    class="flex items-center px-6 py-3 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-2xl font-semibold hover:shadow-lg hover:shadow-red-500/25 transition-all space-x-2">
+                    class="flex items-center px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-2xl font-semibold hover:shadow-lg hover:shadow-red-500/25 transition-all space-x-1 sm:space-x-2 text-sm sm:text-base">
               <span>Оформить</span>
               <span class="material-icons-round">arrow_forward</span>
             </button>
