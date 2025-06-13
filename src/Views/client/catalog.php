@@ -52,7 +52,7 @@
         </a>
       </div>
     <?php else: ?>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
         <?php foreach ($products as $p): ?>
           <?php include __DIR__ . '/_card.php'; ?>
         <?php endforeach; ?>

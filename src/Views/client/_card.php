@@ -14,7 +14,7 @@
  *   - delivery_date    (строка 'Y-m-d' или null)
  */
 ?>
-<div class="bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col hover:shadow-2xl transition-shadow duration-200">
+<div class="bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col hover:shadow-2xl transition-shadow duration-200 h-full">
   <?php 
     $img       = $p['image_path']        ?? '/assets/placeholder.png';
     $today     = date('Y-m-d');
@@ -32,7 +32,7 @@
   <div class="relative">
     <img src="<?= htmlspecialchars($img) ?>"
          alt="<?= htmlspecialchars($p['product'] ?? '') ?>"
-         class="w-full object-cover h-48">
+         class="w-full object-cover h-40 sm:h-48">
 
     <?php if (!$active): ?>
       <!-- Товар отключён в админке -->
@@ -66,11 +66,11 @@
     <?php endif; ?>
   </div>
 
-  <div class="p-4 flex-1 flex flex-col">
+  <div class="p-3 sm:p-4 flex-1 flex flex-col">
     <!-- Название и сорт -->
     <div class="mb-2">
       <?php $boxLabel = htmlspecialchars($boxSize . ' ' . $boxUnit); ?>
-      <h3 class="text-lg font-semibold text-gray-800">
+      <h3 class="text-base sm:text-lg font-semibold text-gray-800">
         <?= htmlspecialchars($p['product']      ?? '') ?>
         <?php if (!empty($p['variety'])): ?>
           <?= ' ' . htmlspecialchars($p['variety']) ?>
@@ -83,7 +83,7 @@
 
     <!-- Описание (если есть) -->
     <?php if (!empty($p['description'])): ?>
-      <p class="text-sm text-gray-600 mb-4 flex-1">
+      <p class="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 flex-1">
         <?= htmlspecialchars($p['description']) ?>
       </p>
     <?php else: ?>
@@ -95,23 +95,23 @@
       <?php if ($sale > 0): ?>
         <!-- Акционная цена -->
         <div class="flex items-baseline space-x-2 mb-3">
-          <div class="text-sm text-gray-400 line-through">
+          <div class="text-xs sm:text-sm text-gray-400 line-through">
             <?= number_format($price, 0, '.', ' ') ?> ₽/ящик
           </div>
-          <div class="text-xl font-bold text-red-600">
+          <div class="text-lg sm:text-xl font-bold text-red-600">
             <?= number_format($sale, 0, '.', ' ') ?> ₽/ящик
           </div>
         </div>
-        <div class="text-sm text-gray-400 mb-3">
+        <div class="text-xs sm:text-sm text-gray-400 mb-3">
           ≈ <?= htmlspecialchars($unitPrice) ?> ₽/кг
         </div>
       <?php else: ?>
         <!-- Обычная цена -->
         <div class="flex justify-between items-center mb-3">
-          <div class="text-2xl font-bold text-gray-800">
+          <div class="text-xl sm:text-2xl font-bold text-gray-800">
             <?= number_format($price, 0, '.', ' ') ?> ₽/ящик
           </div>
-          <div class="text-sm text-gray-400">
+          <div class="text-xs sm:text-sm text-gray-400">
             ≈ <?= htmlspecialchars($unitPrice) ?> ₽/кг
           </div>
         </div>
@@ -119,30 +119,30 @@
 
       <!-- Кнопка «В корзину» или «Войдите» -->
       <?php if ((string)($_SESSION['role'] ?? '') === 'client' && $active): ?>
-        <form action="/cart/add" method="post" class="flex items-center space-x-2">
+        <form action="/cart/add" method="post" class="flex items-center space-x-1 sm:space-x-2">
           <input type="hidden" name="product_id" value="<?= $p['id'] ?>">
           <div class="flex items-center border border-gray-200 rounded-lg overflow-hidden">
             <button type="button"
-                    class="px-3 py-1 bg-gray-100 hover:bg-gray-200 transition-colors"
+                    class="px-2 sm:px-3 py-1 bg-gray-100 hover:bg-gray-200 transition-colors text-sm sm:text-base"
                     onclick="let inp=this.nextElementSibling; if(+inp.value>1) inp.value=+inp.value-1;">
               −
             </button>
-            <input type="number" 
-                   name="quantity" 
-                   value="1" 
-                   min="1" 
+            <input type="number"
+                   name="quantity"
+                   value="1"
+                   min="1"
                    step="1"
-                   class="w-10 text-center outline-none" />
+                   class="w-8 sm:w-10 text-center outline-none text-sm sm:text-base" />
             <button type="button"
-                    class="px-3 py-1 bg-gray-100 hover:bg-gray-200 transition-colors"
+                    class="px-2 sm:px-3 py-1 bg-gray-100 hover:bg-gray-200 transition-colors text-sm sm:text-base"
                     onclick="let inp=this.previousElementSibling; inp.value=+inp.value+1;">
               +
             </button>
           </div>
-          
+
           <button type="submit"
-                  class="ml-2 bg-gradient-to-r from-red-500 to-pink-500 text-white px-3 py-2 rounded-lg hover:from-pink-500 hover:to-red-500 transition-all flex items-center">
-            <span class="material-icons-round text-base mr-1">shopping_cart</span>
+                  class="ml-2 bg-gradient-to-r from-red-500 to-pink-500 text-white px-2 py-1 sm:px-3 sm:py-2 rounded-lg hover:from-pink-500 hover:to-red-500 transition-all flex items-center text-sm sm:text-base">
+            <span class="material-icons-round text-sm sm:text-base mr-1">shopping_cart</span>
             В корзину
           </button>
         </form>
@@ -150,13 +150,14 @@
         <!-- Гость или неактивный товар -->
         <?php if (!empty($_SESSION['user_id']) && !$active): ?>
           <button disabled
-                  class="w-full bg-gray-100 text-gray-500 px-3 py-2 rounded-lg text-sm text-center cursor-not-allowed">
+                  class="w-full bg-gray-100 text-gray-500 px-2 py-1 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm text-center cursor-not-allowed">
             Товар недоступен
           </button>
         <?php else: ?>
           <a href="/login"
-             class="w-full bg-white border border-red-500 text-red-500 px-3 py-2 rounded-2xl hover:bg-red-50 transition-all text-sm text-center">
-            Войдите, чтобы заказать
+             class="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white px-2 py-1 sm:px-3 sm:py-2 rounded-lg hover:from-pink-500 hover:to-red-500 transition-all text-sm sm:text-base flex items-center justify-center space-x-1">
+            <span class="material-icons-round text-sm sm:text-base">login</span>
+            <span>Войдите, чтобы заказать</span>
           </a>
         <?php endif; ?>
       <?php endif; ?>
