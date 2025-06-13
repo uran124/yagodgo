@@ -25,28 +25,6 @@ $couponError     = $couponError     ?? null;
 
 <main class="bg-gradient-to-br from-orange-50 via-white to-pink-50 min-h-screen pb-24">
 
-  <!-- Шапка с градиентом в стиле сайта -->
-  <div class="pt-6 px-4 mb-6">
-    <section class="relative overflow-hidden bg-gradient-to-br from-red-500 via-pink-500 to-rose-400 text-white rounded-3xl shadow-2xl p-6">
-      <!-- Декоративные элементы -->
-      <div class="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-y-12 translate-x-12"></div>
-      <div class="absolute bottom-0 left-0 w-16 h-16 bg-white/10 rounded-full translate-y-8 -translate-x-8"></div>
-      
-      <div class="relative z-10 flex justify-between items-center">
-        <div>
-          <h2 class="text-2xl font-bold mb-2">🛒 Подтверждение заказа</h2>
-          <p class="text-white/80 text-sm">Проверьте детали и оформите доставку</p>
-        </div>
-        <?php if ($userName): ?>
-          <div class="flex items-center space-x-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
-            <span class="material-icons-round text-lg">person</span>
-            <span class="font-medium"><?= htmlspecialchars($userName) ?></span>
-          </div>
-        <?php endif; ?>
-      </div>
-    </section>
-  </div>
-
   <div class="px-4 space-y-6">
 
     <!-- Если корзина пуста -->
@@ -250,7 +228,7 @@ $couponError     = $couponError     ?? null;
             <button type="submit"
                     class="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-4 rounded-2xl font-semibold text-lg hover:shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center space-x-3">
               <span class="material-icons-round">credit_card</span>
-              <span>Подтвердить и оплатить</span>
+              <span>Подтвердить</span>
               <span class="material-icons-round">arrow_forward</span>
             </button>
           </div>
