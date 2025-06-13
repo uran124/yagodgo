@@ -75,7 +75,7 @@
   <!-- Sale Products -->
   <section class="px-4 mb-8">
     <h2 class="text-2xl font-bold text-gray-800 mb-4">💥 Товары со скидкой</h2>
-    <div class="flex space-x-4 overflow-x-auto pb-2 no-scrollbar snap-x snap-mandatory">
+    <div class="flex space-x-4 overflow-x-auto pb-2 no-scrollbar snap-x snap-mandatory eq-row">
       <?php foreach ($saleProducts as $p): ?>
         <div class="flex-none w-[66vw] sm:w-1/2 md:w-1/3 snap-start h-full">
           <?php include __DIR__ . '/_card.php'; ?>
@@ -92,7 +92,7 @@
   <!-- In Stock Products -->
   <section class="px-4 mb-8">
     <h2 class="text-2xl font-bold text-gray-800 mb-4">📦 В наличии</h2>
-    <div class="flex space-x-4 overflow-x-auto pb-2 no-scrollbar snap-x snap-mandatory">
+    <div class="flex space-x-4 overflow-x-auto pb-2 no-scrollbar snap-x snap-mandatory eq-row">
       <?php foreach ($inStockProducts as $p): ?>
         <div class="flex-none w-[66vw] sm:w-1/2 md:w-1/3 snap-start h-full">
           <?php include __DIR__ . '/_card.php'; ?>
@@ -109,7 +109,7 @@
   <!-- Preorder Products -->
   <section class="px-4 mb-8">
     <h2 class="text-2xl font-bold text-gray-800 mb-4">🛒 Под заказ</h2>
-    <div class="flex space-x-4 overflow-x-auto pb-2 no-scrollbar snap-x snap-mandatory">
+    <div class="flex space-x-4 overflow-x-auto pb-2 no-scrollbar snap-x snap-mandatory eq-row">
       <?php foreach ($preorderProducts as $p): ?>
         <div class="flex-none w-[66vw] sm:w-1/2 md:w-1/3 snap-start h-full">
           <?php include __DIR__ . '/_card.php'; ?>
