@@ -203,7 +203,8 @@ class ProductsController
         } else {
             // INSERT
             $columns      = "product_type_id,variety,description,manufacturer,origin_country,box_size,box_unit,unit,price,stock_boxes,delivery_date,is_active";
-            $placeholders = "?,?,?,?,?,?,?,?,?,?,?,?,?";
+            // 12 placeholders corresponding to the columns above
+            $placeholders = "?,?,?,?,?,?,?,?,?,?,?,?";
             $params       = [
                 $typeId, $variety, $description, $manufacturer,
                 $originCountry, $boxSize, $boxUnit,
