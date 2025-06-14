@@ -590,30 +590,6 @@ public function cart(): void
             ]);
         }
 
-        // (7.4) Начисляем реферальный бонус пригласившему, если он есть
-        if ($referredBy) {
-            $refBonus = (int) floor($finalSum * 0.03);
-            if ($refBonus > 0) {
-                // Обновляем баланс пригласившего
-                $this->pdo->prepare(
-                  "UPDATE users SET points_balance = points_balance + ? WHERE id = ?"
-                )->execute([$refBonus, $referredBy]);
-
-                // Вставляем транзакцию с transaction_type = 'accrual'
-                $stmtRefTx = $this->pdo->prepare(
-                  "INSERT INTO points_transactions
-                     (user_id, amount, transaction_type, description, order_id, created_at)
-                   VALUES (?, ?, 'accrual', ?, ?, NOW())"
-                );
-                $desc = "Бонус за заказ №{$orderId}";
-                $stmtRefTx->execute([$referredBy, $refBonus, $desc, $orderId]);
-
-                // Обновляем поле points_accrued в самом заказе
-                $this->pdo->prepare(
-                    "UPDATE orders SET points_accrued = ? WHERE id = ?"
-                )->execute([$refBonus, $orderId]);
-            }
-        }
     }
 
     // 10) Очищаем корзину

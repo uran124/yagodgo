@@ -93,10 +93,62 @@ class OrdersController
         $orderId = (int)($_POST['order_id'] ?? 0);
         $status  = $_POST['status'] ?? '';
         if ($orderId && in_array($status, ['new','processing','assigned','delivered','cancelled'], true)) {
+            // Получаем текущий статус и данные заказа
             $stmt = $this->pdo->prepare(
-                "UPDATE orders SET status = ? WHERE id = ?"
+                "SELECT status, user_id, total_amount, points_accrued FROM orders WHERE id = ?"
             );
-            $stmt->execute([$status, $orderId]);
+            $stmt->execute([$orderId]);
+            $order = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($order) {
+                // Если переводим в delivered впервые — начисляем бонусы
+                if ($status === 'delivered' && $order['status'] !== 'delivered') {
+                    $userId = (int)$order['user_id'];
+                    $sum    = (int)$order['total_amount'];
+
+                    // 5% личный бонус
+                    $personal = (int) floor($sum * 0.05);
+                    if ($personal > 0) {
+                        $this->pdo->prepare(
+                            "UPDATE users SET points_balance = points_balance + ? WHERE id = ?"
+                        )->execute([$personal, $userId]);
+
+                        $desc = "Начисление {$personal} за заказ №{$orderId}";
+                        $this->pdo->prepare(
+                            "INSERT INTO points_transactions (user_id, order_id, amount, transaction_type, description, created_at) VALUES (?, ?, ?, 'accrual', ?, NOW())"
+                        )->execute([$userId, $orderId, $personal, $desc]);
+                    }
+
+                    // 3% пригласившему (если есть и ещё не начислено)
+                    if ((int)$order['points_accrued'] === 0) {
+                        $refStmt = $this->pdo->prepare("SELECT referred_by FROM users WHERE id = ?");
+                        $refStmt->execute([$userId]);
+                        $refId = (int)($refStmt->fetchColumn() ?: 0);
+                        if ($refId) {
+                            $refBonus = (int) floor($sum * 0.03);
+                            if ($refBonus > 0) {
+                                $this->pdo->prepare(
+                                    "UPDATE users SET points_balance = points_balance + ? WHERE id = ?"
+                                )->execute([$refBonus, $refId]);
+
+                                $refDesc = "Бонус за заказ №{$orderId}";
+                                $this->pdo->prepare(
+                                    "INSERT INTO points_transactions (user_id, order_id, amount, transaction_type, description, created_at) VALUES (?, ?, ?, 'accrual', ?, NOW())"
+                                )->execute([$refId, $orderId, $refBonus, $refDesc]);
+
+                                $this->pdo->prepare(
+                                    "UPDATE orders SET points_accrued = ? WHERE id = ?"
+                                )->execute([$refBonus, $orderId]);
+                            }
+                        }
+                    }
+                }
+
+                $stmt = $this->pdo->prepare(
+                    "UPDATE orders SET status = ? WHERE id = ?"
+                );
+                $stmt->execute([$status, $orderId]);
+            }
         }
         header("Location: /admin/orders/{$orderId}");
         exit;
