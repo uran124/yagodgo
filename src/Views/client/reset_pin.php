@@ -39,7 +39,6 @@
               <input type="tel" maxlength="1" inputmode="numeric" data-code-input class="w-14 h-14 text-center text-2xl font-bold border-2 border-gray-200 rounded-2xl" />
             <?php endfor; ?>
           </div>
-          <button type="button" id="verifyCode" class="w-full bg-pink-500 text-white py-2 rounded-2xl">Проверить</button>
         </div>
         <div id="newPinBlock" class="space-y-2 hidden">
           <label class="flex items-center text-sm font-semibold text-gray-700">
@@ -64,7 +63,6 @@ const phoneInput = document.getElementById('phone');
 phoneInput.addEventListener('input',()=>{phoneInput.value=phoneInput.value.replace(/\D/g,'').slice(0,10);});
 const sendBtn=document.getElementById('sendCode');
 const codeBlock=document.getElementById('codeBlock');
-const verifyBtn=document.getElementById('verifyCode');
 const newPinBlock=document.getElementById('newPinBlock');
 const codeInputs=document.querySelectorAll('input[data-code-input]');
 const pinInputs=document.querySelectorAll('input[data-pin-input]');
@@ -75,15 +73,43 @@ sendBtn.addEventListener('click',()=>{
   const phone=phoneInput.value.replace(/\D/g,'');
   if(phone.length!==10)return alert('Введите номер');
   fetch('/reset-pin/send-code',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'phone='+phone})
-    .then(r=>r.json()).then(()=>{codeBlock.classList.remove('hidden');});
+    .then(r=>r.json()).then(()=>{codeBlock.classList.remove('hidden');codeInputs[0].focus();});
 });
-verifyBtn.addEventListener('click',()=>{
+
+function verifyResetCode(){
   const code=Array.from(codeInputs).map(i=>i.value).join('');
+  if(code.length!==4)return;
   const phone=phoneInput.value.replace(/\D/g,'');
   fetch('/api/verify-reg-code',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'phone='+phone+'&code='+code})
-    .then(r=>r.json()).then(d=>{if(d.success){newPinBlock.classList.remove('hidden');codeHidden.value=code;codeBlock.classList.add('hidden');}else{alert('Неверный код');}});
+    .then(r=>r.json()).then(d=>{if(d.success){newPinBlock.classList.remove('hidden');codeHidden.value=code;codeBlock.classList.add('hidden');pinInputs[0].focus();}else{alert('Неверный код');codeInputs.forEach(i=>i.value='');codeInputs[0].focus();}});
+}
+
+codeInputs.forEach((el,idx)=>{
+  el.addEventListener('input',()=>{
+    el.value=el.value.replace(/\D/,'').slice(0,1);
+    if(el.value&&idx<codeInputs.length-1)codeInputs[idx+1].focus();
+    verifyResetCode();
+  });
+  el.addEventListener('keydown',(e)=>{
+    if(e.key==='Backspace'&&!el.value&&idx>0){codeInputs[idx-1].focus();}
+  });
 });
+
 pinInputs.forEach((el,idx)=>{
-  el.addEventListener('input',()=>{el.value=el.value.replace(/\D/,'').slice(0,1);if(el.value&&idx<pinInputs.length-1)pinInputs[idx+1].focus();pinHidden.value=Array.from(pinInputs).map(i=>i.value).join('');});
+  el.addEventListener('input',()=>{
+    el.value=el.value.replace(/\D/,'').slice(0,1);
+    if(el.value&&idx<pinInputs.length-1)pinInputs[idx+1].focus();
+    updateHiddenPin();
+  });
+  el.addEventListener('keydown',(e)=>{
+    if(e.key==='Backspace'){
+      if(!el.value&&idx>0){pinInputs[idx-1].focus();pinInputs[idx-1].value='';updateHiddenPin();}
+      else if(el.value){el.value='';updateHiddenPin();}
+    }
+  });
 });
+
+function updateHiddenPin(){
+  pinHidden.value=Array.from(pinInputs).map(i=>i.value).join('');
+}
 </script>
