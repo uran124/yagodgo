@@ -40,19 +40,19 @@
             <?php endfor; ?>
           </div>
         </div>
-        <div id="newPinBlock" class="space-y-2 hidden">
+        <div id="newPinBlock" class="space-y-2 opacity-50">
           <label class="flex items-center text-sm font-semibold text-gray-700">
             <span class="material-icons-round mr-2 text-red-500">lock</span>
             Новый PIN
           </label>
           <div class="flex space-x-3 justify-center">
             <?php for ($i=0;$i<4;$i++): ?>
-              <input type="tel" maxlength="1" inputmode="numeric" data-pin-input class="w-14 h-14 text-center text-2xl font-bold border-2 border-gray-200 rounded-2xl" />
+              <input type="tel" maxlength="1" inputmode="numeric" data-pin-input class="w-14 h-14 text-center text-2xl font-bold border-2 border-gray-200 rounded-2xl" disabled />
             <?php endfor; ?>
           </div>
           <input type="hidden" name="pin" id="pinHidden">
           <input type="hidden" name="code" id="codeHidden">
-          <button type="submit" class="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-2 rounded-2xl">Сохранить PIN</button>
+          <button type="submit" id="savePinBtn" class="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-2 rounded-2xl" disabled>Сохранить PIN</button>
         </div>
       </form>
     </div>
@@ -66,6 +66,7 @@ const codeBlock=document.getElementById('codeBlock');
 const newPinBlock=document.getElementById('newPinBlock');
 const codeInputs=document.querySelectorAll('input[data-code-input]');
 const pinInputs=document.querySelectorAll('input[data-pin-input]');
+const savePinBtn=document.getElementById('savePinBtn');
 const codeHidden=document.getElementById('codeHidden');
 const pinHidden=document.getElementById('pinHidden');
 
@@ -81,7 +82,20 @@ function verifyResetCode(){
   if(code.length!==4)return;
   const phone=phoneInput.value.replace(/\D/g,'');
   fetch('/api/verify-reg-code',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'phone='+phone+'&code='+code})
-    .then(r=>r.json()).then(d=>{if(d.success){newPinBlock.classList.remove('hidden');codeHidden.value=code;codeBlock.classList.add('hidden');pinInputs[0].focus();}else{alert('Неверный код');codeInputs.forEach(i=>i.value='');codeInputs[0].focus();}});
+    .then(r=>r.json()).then(d=>{
+      if(d.success){
+        newPinBlock.classList.remove('opacity-50');
+        codeHidden.value=code;
+        codeBlock.classList.add('hidden');
+        pinInputs.forEach(i=>i.disabled=false);
+        savePinBtn.disabled=false;
+        pinInputs[0].focus();
+      }else{
+        alert('Неверный код');
+        codeInputs.forEach(i=>i.value='');
+        codeInputs[0].focus();
+      }
+    });
 }
 
 codeInputs.forEach((el,idx)=>{
