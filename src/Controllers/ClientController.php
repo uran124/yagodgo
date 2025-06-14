@@ -86,7 +86,7 @@ class ClientController
              FROM products p
              JOIN product_types t ON t.id = p.product_type_id
              WHERE p.is_active = 1
-               AND p.delivery_date IS NULL
+               AND (p.delivery_date IS NULL OR p.delivery_date > '$today')
              ORDER BY p.id DESC
              LIMIT 10"
         )->fetchAll(PDO::FETCH_ASSOC);
