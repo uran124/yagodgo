@@ -162,6 +162,9 @@ switch ("$method $uri") {
     case 'POST /api/verify-reg-code':
         (new App\Controllers\AuthController($pdo, $smsConfig))->verifyRegistrationCode();
         break;
+    case 'POST /api/verify-reset-code':
+        (new App\Controllers\AuthController($pdo, $smsConfig))->verifyResetPinCode();
+        break;
 
     // Восстановление PIN-кода
     case 'GET /reset-pin':

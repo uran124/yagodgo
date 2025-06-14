@@ -81,7 +81,7 @@ function verifyResetCode(){
   const code=Array.from(codeInputs).map(i=>i.value).join('');
   if(code.length!==4)return;
   const phone=phoneInput.value.replace(/\D/g,'');
-  fetch('/api/verify-reg-code',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'phone='+phone+'&code='+code})
+  fetch('/api/verify-reset-code',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'phone='+phone+'&code='+code})
     .then(r=>r.json()).then(d=>{
       if(d.success){
         newPinBlock.classList.remove('opacity-50');
