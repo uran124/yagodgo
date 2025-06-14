@@ -256,7 +256,9 @@ public function register(): void
     // Страница восстановления PIN
     public function showResetPinForm(): void
     {
-        include 'src/Views/client/reset_pin.php';
+        view('client/reset_pin', [
+            'error' => $_GET['error'] ?? null,
+        ]);
     }
 
     // Отправка кода для смены PIN
