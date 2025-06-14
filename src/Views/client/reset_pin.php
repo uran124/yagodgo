@@ -6,11 +6,11 @@
         Восстановление PIN
       </h1>
     </div>
-    <?php if (!empty($_GET['error'])): ?>
+    <?php if (!empty($error)): ?>
       <div class="bg-gradient-to-r from-red-50 to-pink-50 border-l-4 border-red-400 p-4 rounded-2xl mb-6 animate-shake">
         <div class="flex items-center">
           <span class="material-icons-round text-red-500 mr-3">error</span>
-          <p class="text-red-700 font-medium"><?= htmlspecialchars($_GET['error']) ?></p>
+          <p class="text-red-700 font-medium"><?= htmlspecialchars($error) ?></p>
         </div>
       </div>
     <?php endif; ?>
