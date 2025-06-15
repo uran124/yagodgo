@@ -2,10 +2,11 @@
 <?php
 function status_classes(string $status): string {
     return match($status) {
-        'new' => 'bg-teal-100 text-teal-800',
+        'new' => 'bg-red-100 text-red-800',
         'processing' => 'bg-yellow-100 text-yellow-800',
-        'delivered' => 'bg-emerald-100 text-emerald-800',
-        'cancelled' => 'bg-red-100 text-red-800',
+        'assigned' => 'bg-green-100 text-green-800',
+        'delivered' => 'bg-gray-200 text-gray-800',
+        'cancelled' => 'text-gray-500',
         default => 'bg-gray-100 text-gray-800',
     };
 }
@@ -18,8 +19,9 @@ function status_classes(string $status): string {
         <select id="statusFilter" class="border rounded-lg px-3 py-2 text-sm">
           <option value="">Все статусы</option>
           <option value="new">Новые</option>
-          <option value="processing">В обработке</option>
-          <option value="delivered">Доставленные</option>
+          <option value="processing">Принятые</option>
+          <option value="assigned">Обработанные</option>
+          <option value="delivered">Выполненные</option>
           <option value="cancelled">Отмененные</option>
         </select>
         <button id="sortBtn" class="flex items-center border rounded-lg px-3 py-2 text-sm text-gray-600">
@@ -32,7 +34,8 @@ function status_classes(string $status): string {
     <!-- Orders list -->
     <div id="ordersContainer" class="mt-4 space-y-4">
       <?php foreach ($orders as $order): ?>
-        <div class="order-card bg-white rounded-2xl shadow p-3 sm:p-4 hover:-translate-y-1 hover:shadow-lg transition-transform" data-status="<?= $order['status'] ?>" data-id="<?= $order['id'] ?>">
+        <?php $info = order_status_info($order['status']); ?>
+        <div class="order-card rounded-2xl shadow p-3 sm:p-4 hover:-translate-y-1 hover:shadow-lg transition-transform <?= $info['bg'] ?>" data-status="<?= $order['status'] ?>" data-id="<?= $order['id'] ?>">
           <div class="flex justify-between items-start">
             <div class="flex items-center space-x-2">
               <span class="material-icons-round text-lg">shopping_bag</span>
@@ -44,7 +47,7 @@ function status_classes(string $status): string {
           </div>
           <div class="mt-2">
             <span class="status-badge inline-block text-sm px-2 py-0.5 rounded-full <?= status_classes($order['status']) ?>">
-              <?= strtoupper($order['status']) ?>
+              <?= order_status_info($order['status'])['label'] ?>
             </span>
           </div>
           <div class="mt-2">

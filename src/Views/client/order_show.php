@@ -34,9 +34,13 @@ $discount = max(0, $rawSum - $order['total_amount']);
       <div class="relative z-10 flex justify-between items-center">
         <div>
           <h2 class="text-2xl font-bold mb-2">📦 Заказ №<?= htmlspecialchars($order['id']) ?></h2>
+          <?php $info = order_status_info($order['status']); ?>
           <p class="text-white/80 text-sm">
-            <?= date('d.m.Y H:i', strtotime($order['created_at'])) ?> 
-            • Статус: <span class="font-semibold"><?= htmlspecialchars($order['status']) ?></span>
+            <?= date('d.m.Y H:i', strtotime($order['created_at'])) ?>
+            • Статус:
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium <?= $info['badge'] ?>">
+              <?= $info['label'] ?>
+            </span>
           </p>
         </div>
         <?php if ($userName): ?>
