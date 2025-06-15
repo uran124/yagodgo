@@ -39,19 +39,25 @@ $smsConfig = require __DIR__ . '/config/sms.php';
 
 
 
-// 2) Простейший PSR-4 автозагрузчик для классов в src/
-spl_autoload_register(function(string $class) {
-    $prefix   = 'App\\';
-    $baseDir  = __DIR__ . '/src/';
-    if (strpos($class, $prefix) !== 0) {
-        return;
-    }
-    $relative = substr($class, strlen($prefix));
-    $file     = $baseDir . str_replace('\\', '/', $relative) . '.php';
-    if (file_exists($file)) {
-        require $file;
-    }
-});
+// 2) Подключаем Composer autoloader, если он есть,
+//    иначе fallback на простейший PSR-4 автозагрузчик
+$vendorAutoload = __DIR__ . '/vendor/autoload.php';
+if (file_exists($vendorAutoload)) {
+    require $vendorAutoload;
+} else {
+    spl_autoload_register(function (string $class) {
+        $prefix  = 'App\\';
+        $baseDir = __DIR__ . '/src/';
+        if (strpos($class, $prefix) !== 0) {
+            return;
+        }
+        $relative = substr($class, strlen($prefix));
+        $file     = $baseDir . str_replace('\\', '/', $relative) . '.php';
+        if (file_exists($file)) {
+            require $file;
+        }
+    });
+}
 
 
 
