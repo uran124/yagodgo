@@ -12,7 +12,7 @@
     <ul class="divide-y">
       <?php foreach ($items as $it): ?>
       <li class="py-2 flex justify-between">
-        <span><?= htmlspecialchars($it['name']) ?> (<?= $it['quantity'] ?> <?= $it['unit'] ?>)</span>
+        <span><?= htmlspecialchars($it['product_name']) ?> (<?= $it['quantity'] ?> <?= $it['unit'] ?>)</span>
         <span><?= $it['unit_price'] ?> ₽</span>
       </li>
       <?php endforeach; ?>
