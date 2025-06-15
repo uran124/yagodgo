@@ -32,7 +32,7 @@
   }
 ?>
 <!DOCTYPE html>
-<html lang="ru" data-theme="light">
+<html lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
@@ -135,41 +135,8 @@
       scrollbar-width: none;
     }
 
-    [data-theme='dark'] body {
-      background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 100%);
-      color: #f1f5f9;
-    }
-    [data-theme='dark'] .bg-white { background-color: #1f2937; }
-    [data-theme='dark'] .bg-gray-50 { background-color: #111827; }
-    [data-theme='dark'] .text-gray-800 { color: #f8fafc; }
-    [data-theme='dark'] .text-gray-700 { color: #f1f5f9; }
-    [data-theme='dark'] .text-gray-600 { color: #e5e7eb; }
-    [data-theme='dark'] .text-gray-500 { color: #d1d5db; }
-    [data-theme='dark'] .border-gray-100 { border-color: #374151; }
-    [data-theme='dark'] .border-gray-300 { border-color: #4b5563; }
   </style>
 
-  <script>
-    function setTheme(mode) {
-      if (mode === 'system') {
-        localStorage.setItem('theme', 'system');
-        mode = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      } else {
-        localStorage.setItem('theme', mode);
-      }
-      document.documentElement.setAttribute('data-theme', mode);
-    }
-
-    (function() {
-      const saved = localStorage.getItem('theme');
-      if (saved === 'light' || saved === 'dark') {
-        document.documentElement.setAttribute('data-theme', saved);
-      } else {
-        const prefers = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        document.documentElement.setAttribute('data-theme', prefers);
-      }
-    })();
-  </script>
   
   <!-- <script>
     if ('serviceWorker' in navigator) {
