@@ -392,13 +392,17 @@ public function cart(): void
         );
         $stmtUser->execute([$userId]);
         $userRow = $stmtUser->fetch(PDO::FETCH_ASSOC);
-        $pointsBalance     = (int)($userRow['points_balance'] ?? 0);
-        $referredBy        = $userRow['referred_by'] ? (int)$userRow['referred_by'] : null;
+        $pointsBalance      = (int)($userRow['points_balance'] ?? 0);
+        $referredBy         = $userRow['referred_by'] ? (int)$userRow['referred_by'] : null;
         $usedReferralCoupon = (int)($userRow['has_used_referral_coupon'] ?? 0);
+
+        $cntStmt = $this->pdo->prepare("SELECT COUNT(*) FROM orders WHERE user_id = ?");
+        $cntStmt->execute([$userId]);
+        $orderCount = (int)$cntStmt->fetchColumn();
 
         // Код пригласившего для автоподстановки на первый заказ
         $prefilledReferral = '';
-        if ($referredBy !== null && $usedReferralCoupon === 0) {
+        if ($referredBy !== null && $usedReferralCoupon === 0 && $orderCount === 0) {
             $refStmt = $this->pdo->prepare("SELECT referral_code FROM users WHERE id = ?");
             $refStmt->execute([$referredBy]);
             $prefilledReferral = $refStmt->fetchColumn() ?: '';

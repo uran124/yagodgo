@@ -163,6 +163,17 @@ class OrdersController
                     "UPDATE orders SET status = ? WHERE id = ?"
                 );
                 $stmt->execute([$status, $orderId]);
+
+                if ($status === 'cancelled') {
+                    $cnt = $this->pdo->prepare(
+                        "SELECT COUNT(*) FROM orders WHERE user_id = ? AND id <> ? AND status <> 'cancelled'"
+                    );
+                    $cnt->execute([(int)$order['user_id'], $orderId]);
+                    if ((int)$cnt->fetchColumn() === 0) {
+                        $this->pdo->prepare("UPDATE users SET has_used_referral_coupon = 0 WHERE id = ?")
+                                 ->execute([(int)$order['user_id']]);
+                    }
+                }
             }
         }
         header("Location: /admin/orders/{$orderId}");
@@ -405,9 +416,22 @@ class OrdersController
     {
         $orderId = (int)($_POST['order_id'] ?? 0);
         if ($orderId) {
+            $stmt = $this->pdo->prepare("SELECT user_id FROM orders WHERE id = ?");
+            $stmt->execute([$orderId]);
+            $userId = (int)$stmt->fetchColumn();
+
             $this->pdo->prepare("DELETE FROM order_items WHERE order_id = ?")->execute([$orderId]);
             $this->pdo->prepare("DELETE FROM points_transactions WHERE order_id = ?")->execute([$orderId]);
             $this->pdo->prepare("DELETE FROM orders WHERE id = ?")->execute([$orderId]);
+
+            if ($userId) {
+                $cnt = $this->pdo->prepare("SELECT COUNT(*) FROM orders WHERE user_id = ? AND status <> 'cancelled'");
+                $cnt->execute([$userId]);
+                if ((int)$cnt->fetchColumn() === 0) {
+                    $this->pdo->prepare("UPDATE users SET has_used_referral_coupon = 0 WHERE id = ?")
+                             ->execute([$userId]);
+                }
+            }
         }
         header('Location: /admin/orders');
         exit;
