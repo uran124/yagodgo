@@ -222,22 +222,6 @@
     </div>
   </div>
 
-  <!-- Настройки -->
-  <div class="bg-white rounded-3xl shadow-lg overflow-hidden">
-    <div class="bg-gradient-to-r from-gray-50 to-emerald-50 px-6 py-4 border-b border-gray-100">
-      <h2 class="font-bold text-gray-800 flex items-center">
-        <span class="material-icons-round mr-2 text-emerald-500">tune</span>
-        Настройки
-      </h2>
-    </div>
-    <div class="p-6">
-      <div class="flex space-x-2">
-        <button type="button" class="theme-btn px-4 py-2 rounded-full border" data-theme-value="light">Светлая</button>
-        <button type="button" class="theme-btn px-4 py-2 rounded-full border" data-theme-value="dark">Темная</button>
-        <button type="button" class="theme-btn px-4 py-2 rounded-full border" data-theme-value="system">Система</button>
-      </div>
-    </div>
-  </div>
 
     <!-- Дополнительная информация -->
     <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-3xl p-6 text-center">
@@ -269,27 +253,4 @@
       .then(() => alert('Купон скопирован в буфер обмена!'));
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
-    const btns = document.querySelectorAll('.theme-btn');
-    const saved = localStorage.getItem('theme') || 'system';
-    highlight(saved);
-
-    btns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const val = btn.dataset.themeValue;
-        setTheme(val);
-        highlight(val);
-      });
-    });
-
-    function highlight(val) {
-      btns.forEach(b => {
-        if (b.dataset.themeValue === val) {
-          b.classList.add('berry-gradient', 'text-white');
-        } else {
-          b.classList.remove('berry-gradient', 'text-white');
-        }
-      });
-    }
-  });
 </script>
