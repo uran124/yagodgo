@@ -4,7 +4,9 @@
  * @var float        $subtotal         // исходная сумма без учёта баллов
  * @var int          $pointsBalance    // сколько баллов (клубничек) есть у пользователя
  * @var int          $pointsToUse      // сколько баллов автоматически списывается (до 30% от суммы)
- * @var float        $totalAfterPoints // итоговая сумма после списания баллов
+ * @var string|null  $couponCode       // введённый промокод
+ * @var array|null   $couponInfo       // информация о применённом купоне
+ * @var float        $finalTotal       // итоговая сумма после всех скидок
  * @var string|null  $userName         // имя пользователя (для вывода в шапке)
  * @var string       $today            // сегодняшняя дата в формате Y-m-d
  * @var string       $address          // текущий адрес доставки пользователя
@@ -16,7 +18,9 @@ $groups          = $groups          ?? [];
 $subtotal        = $subtotal        ?? 0.0;
 $pointsBalance   = $pointsBalance   ?? 0;
 $pointsToUse     = $pointsToUse     ?? 0;
-$totalAfterPoints = $totalAfterPoints ?? $subtotal;
+$couponCode      = $couponCode      ?? '';
+$couponInfo      = $couponInfo      ?? null;
+$finalTotal      = $finalTotal      ?? ($subtotal - $pointsToUse);
 $userName        = $userName        ?? null;
 $today           = $today           ?? date('Y-m-d');
 $address         = $address         ?? '';
@@ -200,12 +204,26 @@ $couponError     = $couponError     ?? null;
                 <span class="material-icons-round text-sm mr-1 align-middle">sell</span>
                 Промокод
               </label>
-              <input type="text" name="coupon_code"
-                     value="<?= htmlspecialchars($_POST['coupon_code'] ?? '') ?>"
-                     placeholder="Введите промокод"
-                     class="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all" />
+              <div class="flex space-x-2">
+                <input type="text" name="coupon_code" value="<?= htmlspecialchars($couponCode ?? '') ?>"
+                       placeholder="Введите промокод"
+                       <?= !empty($lockCoupon) ? 'readonly' : '' ?>
+                       class="flex-1 border-2 border-gray-200 rounded-2xl px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all" />
+                <button type="submit" name="apply_coupon" value="1"
+                        formaction="/checkout" formmethod="get"
+                        class="bg-red-500 text-white px-4 py-3 rounded-2xl font-semibold">Применить</button>
+              </div>
               <?php if ($couponError): ?>
                 <p class="text-red-600 text-sm mt-2"><?= htmlspecialchars($couponError) ?></p>
+              <?php elseif ($couponInfo): ?>
+                <p class="text-emerald-600 text-sm mt-2">
+                  <?php if ($couponInfo['type'] === 'discount'): ?>
+                    Скидка <?= htmlspecialchars($couponInfo['discount']) ?>%
+                  <?php else: ?>
+                    <?= htmlspecialchars($couponInfo['points']) ?> клубничек
+                  <?php endif; ?>
+                  применена
+                </p>
               <?php endif; ?>
             </div>
 
@@ -215,7 +233,7 @@ $couponError     = $couponError     ?? null;
                 <div>
                   <div class="text-sm text-gray-600 mb-1">К оплате</div>
                   <div class="text-2xl font-bold text-gray-800">
-                    <?= number_format($totalAfterPoints, 0, '.', ' ') ?> ₽
+                    <?= number_format($finalTotal, 0, '.', ' ') ?> ₽
                   </div>
                 </div>
                 <div class="w-16 h-16 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center">
