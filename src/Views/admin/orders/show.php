@@ -4,7 +4,7 @@
   <div class="bg-white p-4 rounded shadow">
     <p><strong>Клиент:</strong> <?= htmlspecialchars($order['client_name']) ?></p>
     <p><strong>Телефон:</strong> <?= htmlspecialchars($order['phone']) ?></p>
-    <p><strong>Адрес:</strong> <?= htmlspecialchars($order['street']) ?></p>
+    <p><strong>Адрес:</strong> <?= htmlspecialchars($order['address']) ?></p>
     <p><strong>Статус:</strong> <?= htmlspecialchars($order['status']) ?></p>
   </div>
   <div class="bg-white p-4 rounded shadow">
