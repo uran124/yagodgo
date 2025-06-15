@@ -386,17 +386,83 @@ public function cart(): void
             $subtotal += $it['quantity'] * $it['unit_price'];
         }
     
-        // 5) Получаем баланс баллов пользователя (points_balance)
-        $pointsStmt = $this->pdo->prepare("SELECT points_balance FROM users WHERE id = ?");
-        $pointsStmt->execute([$userId]);
-        $pointsBalance = (int)$pointsStmt->fetchColumn();
+        // 5) Получаем информацию о пользователе: баланс баллов и данные реферала
+        $stmtUser = $this->pdo->prepare(
+            "SELECT points_balance, referred_by, has_used_referral_coupon FROM users WHERE id = ?"
+        );
+        $stmtUser->execute([$userId]);
+        $userRow = $stmtUser->fetch(PDO::FETCH_ASSOC);
+        $pointsBalance     = (int)($userRow['points_balance'] ?? 0);
+        $referredBy        = $userRow['referred_by'] ? (int)$userRow['referred_by'] : null;
+        $usedReferralCoupon = (int)($userRow['has_used_referral_coupon'] ?? 0);
+
+        // Код пригласившего для автоподстановки на первый заказ
+        $prefilledReferral = '';
+        if ($referredBy !== null && $usedReferralCoupon === 0) {
+            $refStmt = $this->pdo->prepare("SELECT referral_code FROM users WHERE id = ?");
+            $refStmt->execute([$referredBy]);
+            $prefilledReferral = $refStmt->fetchColumn() ?: '';
+        }
+
+        // Полученный из GET код купона или автоподставленный реферальный
+        $couponCode  = trim($_GET['coupon_code'] ?? $prefilledReferral);
+        $applyCoupon = isset($_GET['apply_coupon']) || $prefilledReferral !== '';
+
+        $discountPercent = 0.0;
+        $couponPoints    = 0;
+        $couponInfo      = null;
+        $couponError     = null;
+
+        if ($applyCoupon && $couponCode !== '') {
+            $stmt = $this->pdo->prepare(
+                "SELECT code, type, discount, points FROM coupons WHERE code = ? AND is_active = 1 AND (expires_at IS NULL OR expires_at >= CURDATE())"
+            );
+            $stmt->execute([$couponCode]);
+            $coupon = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$coupon) {
+                // Может быть реферальным кодом
+                $rStmt = $this->pdo->prepare("SELECT id FROM users WHERE referral_code = ?");
+                $rStmt->execute([$couponCode]);
+                $ref = $rStmt->fetch(PDO::FETCH_ASSOC);
+                if ($ref) {
+                    $cntStmt = $this->pdo->prepare("SELECT COUNT(*) FROM orders WHERE user_id = ?");
+                    $cntStmt->execute([$userId]);
+                    $orderCount = (int)$cntStmt->fetchColumn();
+                    if ($referredBy === null && $orderCount === 0) {
+                        $discountPercent = 10.0;
+                        $couponInfo = [
+                            'code' => $couponCode,
+                            'type' => 'discount',
+                            'discount' => 10
+                        ];
+                    } else {
+                        $couponError = 'Промокод действует на первый заказ';
+                    }
+                } else {
+                    $couponError = 'Неверный купон';
+                }
+            } else {
+                $couponInfo = $coupon;
+                if ($coupon['type'] === 'discount') {
+                    $discountPercent = (float)$coupon['discount'];
+                } elseif ($coupon['type'] === 'points') {
+                    $couponPoints = (int)$coupon['points'];
+                }
+            }
+        }
     
-        // 6) Рассчитываем, сколько баллов можно списать (до 30% от subtotal)
+        // 6) Рассчитываем, сколько баллов можно списать (до 30% от суммы)
         $maxAllowedByPercent = (int)floor($subtotal * 0.30);
         $pointsToUse = min($pointsBalance, $maxAllowedByPercent);
-    
-        // 7) Общая сумма после списания баллов
-        $totalAfterPoints = $subtotal - $pointsToUse;
+
+        // 7) Итог после применения купона и баллов
+        $pointsDiscountTotal = min($pointsToUse + $couponPoints, $subtotal);
+        $couponPercentAmount = 0;
+        if ($discountPercent > 0) {
+            $couponPercentAmount = (int)floor(($subtotal - $pointsDiscountTotal) * ($discountPercent / 100));
+        }
+        $finalTotal = $subtotal - $pointsDiscountTotal - $couponPercentAmount;
     
         // 8) Берём текущий адрес пользователя
         $addrStmt = $this->pdo->prepare("SELECT street FROM addresses WHERE user_id = ?");
@@ -410,7 +476,9 @@ public function cart(): void
             'subtotal'         => $subtotal,
             'pointsBalance'    => $pointsBalance,
             'pointsToUse'      => $pointsToUse,
-            'totalAfterPoints' => $totalAfterPoints,
+            'discountPercent'  => $discountPercent,
+            'couponPoints'     => $couponPoints,
+            'finalTotal'       => $finalTotal,
             'today'            => date('Y-m-d'),
             'address'          => $address,
             'session_delivery' => $_SESSION['delivery_date'],
@@ -422,12 +490,15 @@ public function cart(): void
             'subtotal'         => $subtotal,
             'pointsBalance'    => $pointsBalance,
             'pointsToUse'      => $pointsToUse,
-            'totalAfterPoints' => $totalAfterPoints,
+            'couponCode'       => $couponCode,
+            'couponInfo'       => $couponInfo,
+            'couponError'      => $couponError,
+            'finalTotal'       => $finalTotal,
+            'lockCoupon'       => $prefilledReferral !== '',
             'address'          => $address,
             'userName'         => $_SESSION['name'] ?? null,
             'today'            => date('Y-m-d'),
             'debugData'        => $debugData,
-            'couponError'      => $_GET['coupon_error'] ?? null,
         ]);
     }
 
