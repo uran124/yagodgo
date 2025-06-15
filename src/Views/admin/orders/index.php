@@ -2,7 +2,7 @@
 <ul class="bg-white rounded shadow divide-y">
   <?php foreach ($orders as $o): ?>
     <?php $info = order_status_info($o['status']); ?>
-    <li class="p-4 flex items-center justify-between hover:bg-gray-50 <?= $info['bg'] ?>">
+    <li class="p-4 flex items-center justify-between hover:bg-gray-50 transition-all duration-200 <?= $info['bg'] ?>">
       <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm md:text-base">
         <span class="font-semibold">#<?= $o['id'] ?></span>
         <span><?= htmlspecialchars($o['client_name']) ?></span>

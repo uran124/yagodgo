@@ -168,6 +168,48 @@
       margin: 8px;
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
     }
+
+    /* Дополнительные стили для таблиц и переключателей */
+    [data-theme='dark'] .bg-red-100 {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.3)) !important;
+      color: #fca5a5 !important;
+    }
+
+    [data-theme='dark'] .text-red-800 {
+      color: #fca5a5 !important;
+    }
+
+    [data-theme='dark'] .bg-green-100 {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.3)) !important;
+      color: #86efac !important;
+    }
+
+    [data-theme='dark'] .text-green-800 {
+      color: #86efac !important;
+    }
+
+    [data-theme='dark'] .peer-checked\:bg-red-600:checked {
+      background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+      box-shadow: 0 0 10px rgba(220, 38, 38, 0.5);
+    }
+
+    [data-theme='dark'] .bg-gray-200 {
+      background: linear-gradient(135deg, #475569, #64748b) !important;
+    }
+
+    [data-theme='dark'] .after\:bg-white::after {
+      background: #f1f5f9 !important;
+    }
+
+    [data-theme='dark'] .border-\[\#C86052\] {
+      border-color: #ff6b5a !important;
+      color: #ff6b5a !important;
+    }
+
+    [data-theme='dark'] .hover\:bg-\[\#C86052\]:hover {
+      background: linear-gradient(135deg, #ff6b5a, #e55a4a) !important;
+      box-shadow: 0 4px 12px rgba(255, 107, 90, 0.4);
+    }
   </style>
 </head>
 <body class="flex flex-col min-h-screen bg-gray-100 font-sans">

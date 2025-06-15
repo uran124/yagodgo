@@ -16,23 +16,23 @@
 <table class="min-w-full bg-white rounded shadow overflow-hidden">
   <thead class="bg-gray-200 text-gray-700">
     <tr>
-      <th class="p-2">Код</th>
-      <th class="p-2">Тип</th>
-      <th class="p-2">Значение</th>
-      <th class="p-2">Истекает</th>
-      <th class="p-2">Активен</th>
+      <th class="p-3 text-left font-semibold">Код</th>
+      <th class="p-3 text-left font-semibold">Тип</th>
+      <th class="p-3 text-left font-semibold">Значение</th>
+      <th class="p-3 text-left font-semibold">Истекает</th>
+      <th class="p-3 text-center font-semibold">Активен</th>
     </tr>
   </thead>
   <tbody>
     <?php foreach ($coupons as $c): ?>
-    <tr class="border-b hover:bg-gray-50">
-      <td class="p-2"><?= htmlspecialchars($c['code']) ?></td>
-      <td class="p-2"><?= htmlspecialchars($c['type']) ?></td>
-      <td class="p-2">
+    <tr class="border-b hover:bg-gray-50 transition-all duration-200">
+      <td class="p-3 font-medium text-gray-600"><?= htmlspecialchars($c['code']) ?></td>
+      <td class="p-3 text-gray-600"><?= htmlspecialchars($c['type']) ?></td>
+      <td class="p-3 text-gray-600">
         <?= $c['type']==='points' ? $c['points'].' баллов' : $c['discount'].' %' ?>
       </td>
-      <td class="p-2"><?= htmlspecialchars($c['expires_at']) ?></td>
-      <td class="p-2"><?= $c['is_active'] ? 'Да' : 'Нет' ?></td>
+      <td class="p-3 text-gray-600"><?= htmlspecialchars($c['expires_at']) ?></td>
+      <td class="p-3 text-center text-gray-600"><?= $c['is_active'] ? 'Да' : 'Нет' ?></td>
     </tr>
     <?php endforeach; ?>
   </tbody>
