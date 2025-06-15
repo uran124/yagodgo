@@ -477,17 +477,22 @@ public function cart(): void
         }
     }
 
-    // 4) Узнаём баланс баллов и реферера
+    // 4) Узнаём баланс баллов, реферера и кол-во заказов
     $stmt = $this->pdo->prepare("SELECT points_balance, referred_by FROM users WHERE id = ?");
     $stmt->execute([$userId]);
     $userRow      = $stmt->fetch(PDO::FETCH_ASSOC);
     $pointsBalance = (int)$userRow['points_balance'];
     $referredBy    = $userRow['referred_by'] ? (int)$userRow['referred_by'] : null;
+    $stmtCnt = $this->pdo->prepare("SELECT COUNT(*) FROM orders WHERE user_id = ?");
+    $stmtCnt->execute([$userId]);
+    $orderCount = (int)$stmtCnt->fetchColumn();
 
     // 4.1) Проверяем промокод
     $couponCode      = trim($_POST['coupon_code'] ?? '');
     $discountPercent = 0.0;
     $couponPoints    = 0;
+    $referralUsed = false;
+    $referrerId   = null;
     if ($couponCode !== '') {
         $stmt = $this->pdo->prepare(
             "SELECT code, type, discount, points FROM coupons WHERE code = ? AND is_active = 1 AND (expires_at IS NULL OR expires_at >= CURDATE())"
@@ -495,13 +500,29 @@ public function cart(): void
         $stmt->execute([$couponCode]);
         $coupon = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$coupon) {
-            header('Location: /checkout?coupon_error=Неверный+купон');
-            exit;
-        }
-        if ($coupon['type'] === 'discount') {
-            $discountPercent = (float)$coupon['discount'];
-        } elseif ($coupon['type'] === 'points') {
-            $couponPoints = (int)$coupon['points'];
+            // может быть реферальный код
+            $stmt = $this->pdo->prepare("SELECT id FROM users WHERE referral_code = ?");
+            $stmt->execute([$couponCode]);
+            $ref = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($ref) {
+                if ($referredBy === null && $orderCount === 0) {
+                    $discountPercent = 10.0;
+                    $referrerId = (int)$ref['id'];
+                    $referralUsed = true;
+                } else {
+                    header('Location: /checkout?coupon_error=Промокод+действует+на+первый+заказ');
+                    exit;
+                }
+            } else {
+                header('Location: /checkout?coupon_error=Неверный+купон');
+                exit;
+            }
+        } else {
+            if ($coupon['type'] === 'discount') {
+                $discountPercent = (float)$coupon['discount'];
+            } elseif ($coupon['type'] === 'points') {
+                $couponPoints = (int)$coupon['points'];
+            }
         }
     }
 
@@ -607,6 +628,15 @@ public function cart(): void
     $this->pdo->prepare("DELETE FROM cart_items WHERE user_id = ?")->execute([$userId]);
     $_SESSION['delivery_date'] = [];
     $this->refreshCartTotal();
+
+    if ($referralUsed && $referrerId !== null) {
+        $this->pdo->prepare(
+            "UPDATE users SET referred_by = ?, has_used_referral_coupon = 1 WHERE id = ?"
+        )->execute([$referrerId, $userId]);
+        $this->pdo->prepare(
+            "INSERT INTO referrals (referrer_id, referred_id, created_at) VALUES (?, ?, NOW())"
+        )->execute([$referrerId, $userId]);
+    }
 
     $this->pdo->commit();
 
