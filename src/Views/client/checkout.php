@@ -204,7 +204,7 @@ $couponError     = $couponError     ?? null;
                 <span class="material-icons-round text-sm mr-1 align-middle">sell</span>
                 Промокод
               </label>
-              <div class="flex space-x-2">
+              <div class="flex flex-col space-y-2">
                 <input type="text" name="coupon_code" value="<?= htmlspecialchars($couponCode ?? '') ?>"
                        placeholder="Введите промокод"
                        <?= !empty($lockCoupon) ? 'readonly' : '' ?>

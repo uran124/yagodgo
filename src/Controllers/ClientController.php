@@ -429,7 +429,8 @@ public function cart(): void
                     $cntStmt = $this->pdo->prepare("SELECT COUNT(*) FROM orders WHERE user_id = ?");
                     $cntStmt->execute([$userId]);
                     $orderCount = (int)$cntStmt->fetchColumn();
-                    if ($referredBy === null && $orderCount === 0) {
+                    if (( $referredBy === null && $orderCount === 0 ) ||
+                        ( $referredBy === (int)$ref['id'] && $usedReferralCoupon === 0 && $orderCount === 0 )) {
                         $discountPercent = 10.0;
                         $couponInfo = [
                             'code' => $couponCode,
@@ -549,11 +550,12 @@ public function cart(): void
     }
 
     // 4) Узнаём баланс баллов, реферера и кол-во заказов
-    $stmt = $this->pdo->prepare("SELECT points_balance, referred_by FROM users WHERE id = ?");
+    $stmt = $this->pdo->prepare("SELECT points_balance, referred_by, has_used_referral_coupon FROM users WHERE id = ?");
     $stmt->execute([$userId]);
     $userRow      = $stmt->fetch(PDO::FETCH_ASSOC);
     $pointsBalance = (int)$userRow['points_balance'];
     $referredBy    = $userRow['referred_by'] ? (int)$userRow['referred_by'] : null;
+    $usedReferralCoupon = (int)($userRow['has_used_referral_coupon'] ?? 0);
     $stmtCnt = $this->pdo->prepare("SELECT COUNT(*) FROM orders WHERE user_id = ?");
     $stmtCnt->execute([$userId]);
     $orderCount = (int)$stmtCnt->fetchColumn();
@@ -576,7 +578,8 @@ public function cart(): void
             $stmt->execute([$couponCode]);
             $ref = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($ref) {
-                if ($referredBy === null && $orderCount === 0) {
+                if (( $referredBy === null && $orderCount === 0 ) ||
+                    ( $referredBy === (int)$ref['id'] && $usedReferralCoupon === 0 && $orderCount === 0 )) {
                     $discountPercent = 10.0;
                     $referrerId = (int)$ref['id'];
                     $referralUsed = true;
@@ -707,6 +710,10 @@ public function cart(): void
         $this->pdo->prepare(
             "INSERT INTO referrals (referrer_id, referred_id, created_at) VALUES (?, ?, NOW())"
         )->execute([$referrerId, $userId]);
+    } elseif ($referredBy !== null && $usedReferralCoupon === 0 && $couponCode !== '') {
+        $this->pdo->prepare(
+            "UPDATE users SET has_used_referral_coupon = 1 WHERE id = ?"
+        )->execute([$userId]);
     }
 
     $this->pdo->commit();
