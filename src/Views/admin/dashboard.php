@@ -1,111 +1,63 @@
 <?php
-// Здесь могут быть данные: $stats, $chartData и т.п.
-/** @var array $stats */
 /** @var array $chartData */
-/** @var array $purchaseList */
+/** @var string $mode */
+/** @var int $year */
+/** @var int $month */
 ?>
+<form method="get" class="flex space-x-2 mb-4">
+  <select name="mode" id="mode" class="border px-2 py-1 rounded">
+    <option value="month" <?= $mode==='month' ? 'selected' : '' ?>>По дням</option>
+    <option value="year" <?= $mode==='year' ? 'selected' : '' ?>>По месяцам</option>
+  </select>
+  <select name="month" id="monthSelect" class="border px-2 py-1 rounded" <?= $mode==='month' ? '' : 'style="display:none"' ?>>
+    <?php for ($m=1; $m<=12; $m++): ?>
+      <option value="<?= $m ?>" <?= $month==$m?'selected':'' ?>><?= date('F', mktime(0,0,0,$m,1)) ?></option>
+    <?php endfor; ?>
+  </select>
+  <select name="year" id="yearSelect" class="border px-2 py-1 rounded">
+    <?php $currentYear=(int)date('Y'); for ($y=$currentYear; $y>=$currentYear-5; $y--): ?>
+      <option value="<?= $y ?>" <?= $year==$y?'selected':'' ?>><?= $y ?></option>
+    <?php endfor; ?>
+  </select>
+  <button type="submit" class="bg-[#C86052] text-white px-3 py-1 rounded">Показать</button>
+</form>
 <div class="space-y-6">
-  <div class="grid grid-cols-3 gap-4">
-    <div class="bg-white p-4 rounded shadow">
-      <h3 class="text-lg font-medium">Сегодняшняя выручка</h3>
-      <p class="text-2xl font-bold"><?= htmlspecialchars($stats['today_revenue'] ?? '—') ?> ₽</p>
-    </div>
-    <div class="bg-white p-4 rounded shadow">
-      <h3 class="text-lg font-medium">Новых заказов</h3>
-      <p class="text-2xl font-bold"><?= htmlspecialchars($stats['today_orders'] ?? '—') ?></p>
-    </div>
-    <div class="bg-white p-4 rounded shadow">
-      <h3 class="text-lg font-medium">Средний чек</h3>
-      <p class="text-2xl font-bold"><?= htmlspecialchars($stats['average_check'] ?? '—') ?> ₽</p>
-    </div>
-  </div>
-
-  <div class="grid grid-cols-3 gap-4">
-    <div class="bg-white p-4 rounded shadow">
-      <h3 class="text-lg font-medium">Выполнено за 24ч</h3>
-      <p class="text-2xl font-bold"><?= $stats['completed_day'] ?></p>
-    </div>
-    <div class="bg-white p-4 rounded shadow">
-      <h3 class="text-lg font-medium">Выполнено за 7 дней</h3>
-      <p class="text-2xl font-bold"><?= $stats['completed_week'] ?></p>
-    </div>
-    <div class="bg-white p-4 rounded shadow">
-      <h3 class="text-lg font-medium">Выполнено за 30 дней</h3>
-      <p class="text-2xl font-bold"><?= $stats['completed_month'] ?></p>
-    </div>
-  </div>
-
-  <div class="grid grid-cols-3 gap-4">
-    <div class="bg-white p-4 rounded shadow">
-      <h3 class="text-lg font-medium">Новых пользователей 24ч</h3>
-      <p class="text-2xl font-bold"><?= $stats['users_day'] ?></p>
-    </div>
-    <div class="bg-white p-4 rounded shadow">
-      <h3 class="text-lg font-medium">Новых пользователей 7д</h3>
-      <p class="text-2xl font-bold"><?= $stats['users_week'] ?></p>
-    </div>
-    <div class="bg-white p-4 rounded shadow">
-      <h3 class="text-lg font-medium">Новых пользователей 30д</h3>
-      <p class="text-2xl font-bold"><?= $stats['users_month'] ?></p>
-    </div>
-  </div>
-
-  <!-- Здесь, например, график выручки -->
   <div class="bg-white p-4 rounded shadow">
-    <h3 class="text-lg font-medium mb-2">Выручка за 7 дней</h3>
+    <canvas id="ordersChart" class="w-full h-64"></canvas>
+  </div>
+  <div class="bg-white p-4 rounded shadow">
     <canvas id="revenueChart" class="w-full h-64"></canvas>
   </div>
-  
-  
-  
-  <?php if (!empty($purchaseList)): ?>
   <div class="bg-white p-4 rounded shadow">
-    <h3 class="text-lg font-medium mb-2">Закупка по принятым заказам</h3>
-    <table class="min-w-full text-sm">
-      <thead>
-        <tr>
-          <th class="p-2 text-left">Товар</th>
-          <th class="p-2 text-left">Количество</th>
-        </tr>
-      </thead>
-      <tbody>
-        <?php foreach ($purchaseList as $row): ?>
-        <tr class="border-b">
-          <td class="p-2"><?= htmlspecialchars($row['product']) ?></td>
-          <td class="p-2">
-            <?= $row['qty'] ?> <?= htmlspecialchars($row['unit']) ?>
-          </td>
-        </tr>
-        <?php endforeach; ?>
-      </tbody>
-    </table>
+    <canvas id="usersChart" class="w-full h-64"></canvas>
   </div>
-  <?php endif; ?>
-  
-  
-  
-  
-  
-  
-  
-  
-  
 </div>
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-  const ctx = document.getElementById('revenueChart').getContext('2d');
-  new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: <?= json_encode($chartData['labels'] ?? []) ?>,
-      datasets: [{
-        label: 'Выручка',
-        data: <?= json_encode($chartData['values'] ?? []) ?>,
-        fill: false,
-        borderColor: '#C86052'
-      }]
-    },
-    options: { responsive: true, maintainAspectRatio: false }
+  const labels = <?= json_encode($chartData['labels']) ?>;
+  const ordersData = <?= json_encode($chartData['orders']) ?>;
+  const revenueData = <?= json_encode($chartData['revenue']) ?>;
+  const usersData = <?= json_encode($chartData['users']) ?>;
+
+  const baseOptions = {responsive: true, maintainAspectRatio: false};
+
+  new Chart(document.getElementById('ordersChart').getContext('2d'), {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Заказы', data: ordersData, backgroundColor: '#C86052' }] },
+    options: baseOptions
+  });
+  new Chart(document.getElementById('revenueChart').getContext('2d'), {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Выручка', data: revenueData, backgroundColor: '#4CAF50' }] },
+    options: baseOptions
+  });
+  new Chart(document.getElementById('usersChart').getContext('2d'), {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Новые пользователи', data: usersData, backgroundColor: '#03A9F4' }] },
+    options: baseOptions
+  });
+
+  document.getElementById('mode').addEventListener('change', function() {
+    document.getElementById('monthSelect').style.display = this.value === 'month' ? '' : 'none';
   });
 </script>
