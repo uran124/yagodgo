@@ -292,7 +292,7 @@ class OrdersController
 
         // Получаем основные данные заказа и пользователя
         $stmt = $this->pdo->prepare(
-            "SELECT o.created_at, o.total_amount, u.name, u.phone
+            "SELECT o.created_at, o.total_amount, o.delivery_date, o.delivery_slot, u.name, u.phone
              FROM orders o
              JOIN users u ON u.id = o.user_id
              WHERE o.id = ?"
@@ -317,6 +317,17 @@ class OrdersController
 
         $createdAt = date('d.m.Y H:i', strtotime($order['created_at']));
 
+        $deliveryDate = $order['delivery_date'] ?? null;
+        $deliverySlot = $order['delivery_slot'] ?? '';
+        if ($deliveryDate) {
+            $deliveryText = date('d.m.Y', strtotime($deliveryDate));
+            if ($deliverySlot !== '') {
+                $deliveryText .= ' ' . $deliverySlot;
+            }
+        } else {
+            $deliveryText = $createdAt;
+        }
+
         $line1 = $order['phone'] . ', ' . $order['name'];
 
         if ($item) {
@@ -326,13 +337,13 @@ class OrdersController
             }
             $line2 = sprintf(
                 '%s, %s, %s, %.0f',
-                $createdAt,
+                $deliveryText,
                 $productInfo,
                 $item['quantity'],
                 $order['total_amount']
             );
         } else {
-            $line2 = sprintf('%s, сумма %.0f', $createdAt, $order['total_amount']);
+            $line2 = sprintf('%s, сумма %.0f', $deliveryText, $order['total_amount']);
         }
 
         $line3 = 'https://berrygo.ru/admin/orders/' . $orderId;
