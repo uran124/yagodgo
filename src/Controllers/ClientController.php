@@ -182,7 +182,7 @@ public function cart(): void
         } else {
             $prodDate = $row['delivery_date'];
             if ($prodDate === null) {
-                $deliveryDate = null;
+                $deliveryDate = PLACEHOLDER_DATE;
             } elseif ($prodDate > $today) {
                 $deliveryDate = $prodDate;
             } else {
@@ -378,8 +378,8 @@ public function cart(): void
         // 2) Прикрепляем к каждому товару дату из сессии (или сегодняшнюю, если до этого не указывалось)
         foreach ($rawItems as &$it) {
             $pid = $it['product_id'];
-            $it['delivery_date'] = $_SESSION['delivery_date'][$pid] 
-                                  ?? date('Y-m-d');
+            $it['delivery_date'] = $_SESSION['delivery_date'][$pid]
+                                  ?? PLACEHOLDER_DATE;
         }
         unset($it);
     
@@ -548,7 +548,7 @@ public function cart(): void
     $itemsByDate = [];
     foreach ($rawItems as $it) {
         $pid = $it['product_id'];
-        $dateKey = $_SESSION['delivery_date'][$pid] ?? date('Y-m-d');
+        $dateKey = $_SESSION['delivery_date'][$pid] ?? PLACEHOLDER_DATE;
         if (!isset($itemsByDate[$dateKey])) {
             $itemsByDate[$dateKey] = [];
         }

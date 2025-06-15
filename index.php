@@ -35,6 +35,9 @@ if (!empty($_SESSION['user_id'])) {
 $telegramConfig = require __DIR__ . '/config/telegram.php';
 // Конфиг SMS.RU
 $smsConfig = require __DIR__ . '/config/sms.php';
+// Общие константы
+$constants = require __DIR__ . '/config/constants.php';
+define('PLACEHOLDER_DATE', $constants['placeholder_date']);
 // -----
 
 

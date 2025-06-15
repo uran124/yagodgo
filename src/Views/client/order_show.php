@@ -67,7 +67,13 @@ $discount = max(0, $rawSum - $order['total_amount']);
       </p>
       <p class="text-gray-700 mb-2 flex items-center">
         <span class="material-icons-round align-middle mr-2">calendar_today</span>
-        Дата: <?= date('d.m.Y', strtotime($order['delivery_date'])) ?>
+        <?php $placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15'; ?>
+        Дата:
+        <?php if ($order['delivery_date'] === $placeholder): ?>
+          Ближайшая возможная дата
+        <?php else: ?>
+          <?= date('d.m.Y', strtotime($order['delivery_date'])) ?>
+        <?php endif; ?>
       </p>
       <p class="text-gray-700 flex items-center">
         <span class="material-icons-round align-middle mr-2">schedule</span>

@@ -262,8 +262,8 @@ class OrdersController
             // Сохраняем заказ
             $stmtOrder = $this->pdo->prepare(
                 "INSERT INTO orders
-                 (user_id, address_id, slot_id, status, total_amount, discount_applied, points_used, points_accrued, delivery_date, delivery_slot, created_at)
-                 VALUES (?, ?, ?, 'new', ?, ?, ?, 0, CURDATE(), '', NOW())"
+                (user_id, address_id, slot_id, status, total_amount, discount_applied, points_used, points_accrued, delivery_date, delivery_slot, created_at)
+                 VALUES (?, ?, ?, 'new', ?, ?, ?, 0, ?, '', NOW())"
             );
             $stmtOrder->execute([
                 $user['id'],
@@ -271,7 +271,8 @@ class OrdersController
                 $_POST['slot_id'] ?? null,
                 $totalAmount,
                 $discount,
-                $pointsUsed
+                $pointsUsed,
+                PLACEHOLDER_DATE
             ]);
             $orderId = (int)$this->pdo->lastInsertId();
 
@@ -345,7 +346,8 @@ class OrdersController
 
         $deliveryDate = $order['delivery_date'] ?? null;
         $deliverySlot = $order['delivery_slot'] ?? '';
-        if ($deliveryDate) {
+        $placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
+        if ($deliveryDate && $deliveryDate !== $placeholder) {
             $deliveryText = date('d.m.Y', strtotime($deliveryDate));
             if ($deliverySlot !== '') {
                 $deliveryText .= ' ' . $deliverySlot;
