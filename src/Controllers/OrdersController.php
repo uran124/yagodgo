@@ -284,7 +284,7 @@ class OrdersController
     }
 
     // Уведомление администраторам
-protected function notifyAdmins(int $orderId): void
+    public function notifyAdmins(int $orderId): void
     {
         $cfg    = require __DIR__ . '/../../config/telegram.php';
         $token  = $cfg['bot_token'];

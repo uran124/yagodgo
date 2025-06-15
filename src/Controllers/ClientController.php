@@ -539,6 +539,7 @@ public function cart(): void
     }
 
     // 9) СОЗДАЁМ ЗАКАЗЫ ПО КАЖДОЙ ДАТЕ, учитываем дату и слот
+    $createdOrderIds = [];
         foreach ($itemsByDate as $dateKey => $block) {
         // (7.1) Считаем сумму по блоку и применяем скидку
         $blockSum = 0;
@@ -575,6 +576,7 @@ public function cart(): void
             $deliverySlot
         ]);
         $orderId = (int)$this->pdo->lastInsertId();
+        $createdOrderIds[] = $orderId;
 
         // (7.3) Вставляем позиции в order_items
         $stmtItem = $this->pdo->prepare(
@@ -598,6 +600,12 @@ public function cart(): void
     $this->refreshCartTotal();
 
     $this->pdo->commit();
+
+    // Оповещаем администраторов о новых заказах
+    $ordersController = new OrdersController($this->pdo);
+    foreach ($createdOrderIds as $oid) {
+        $ordersController->notifyAdmins($oid);
+    }
 
     header('Location: /orders');
     exit;
