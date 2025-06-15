@@ -271,7 +271,7 @@ class OrdersController
             $this->pdo->commit();
 
             // Уведомляем админов в Telegram
-            $this->notifyAdmins($orderId, $user['name'] ?? (string)$user['id'], $totalAmount);
+            $this->notifyAdmins($orderId);
 
             header('Location: /orders/thankyou');
             exit;
@@ -284,16 +284,60 @@ class OrdersController
     }
 
     // Уведомление администраторам
-protected function notifyAdmins(int $orderId, string $clientName, float $sum): void
+protected function notifyAdmins(int $orderId): void
     {
         $cfg    = require __DIR__ . '/../../config/telegram.php';
         $token  = $cfg['bot_token'];
         $chatId = $cfg['admin_chat_id'];
 
-        $text = "🆕 *Новый заказ* №{$orderId}\n"
-              . "• Клиент: {$clientName}\n"
-              . "• Сумма: {$sum} руб.\n"
-              . "[Перейти в админку](https://berrygo.ru/admin/orders/{$orderId})";
+        // Получаем основные данные заказа и пользователя
+        $stmt = $this->pdo->prepare(
+            "SELECT o.created_at, o.total_amount, u.name, u.phone
+             FROM orders o
+             JOIN users u ON u.id = o.user_id
+             WHERE o.id = ?"
+        );
+        $stmt->execute([$orderId]);
+        $order = $stmt->fetch(\PDO::FETCH_ASSOC);
+        if (!$order) {
+            return;
+        }
+
+        // Получаем первую позицию заказа (если их несколько, берём первую)
+        $stmtItems = $this->pdo->prepare(
+            "SELECT t.name AS product, p.variety, p.unit, oi.quantity, oi.unit_price
+             FROM order_items oi
+             JOIN products p ON p.id = oi.product_id
+             JOIN product_types t ON t.id = p.product_type_id
+             WHERE oi.order_id = ?
+             LIMIT 1"
+        );
+        $stmtItems->execute([$orderId]);
+        $item = $stmtItems->fetch(\PDO::FETCH_ASSOC);
+
+        $createdAt = date('d.m.Y H:i', strtotime($order['created_at']));
+
+        $line1 = $order['phone'] . ', ' . $order['name'];
+
+        if ($item) {
+            $productInfo = trim($item['product'] . ' ' . $item['variety']);
+            if ($item['unit']) {
+                $productInfo .= ' ' . $item['unit'];
+            }
+            $line2 = sprintf(
+                '%s, %s, %s, %.0f',
+                $createdAt,
+                $productInfo,
+                $item['quantity'],
+                $order['total_amount']
+            );
+        } else {
+            $line2 = sprintf('%s, сумма %.0f', $createdAt, $order['total_amount']);
+        }
+
+        $line3 = 'https://berrygo.ru/admin/orders/' . $orderId;
+
+        $text = $line1 . "\n" . $line2 . "\n" . $line3;
 
         $url = "https://api.telegram.org/bot{$token}/sendMessage";
         $payload = json_encode([
@@ -325,7 +369,7 @@ protected function notifyAdmins(int $orderId, string $clientName, float $sum): v
             $logEntry .= " | curl_error={$error}";
         }
         $logEntry .= " | response=" . ($response === false ? 'false' : $response) . "\n";
-        file_put_contents(__DIR__ . '/../../logs/telegram_notify.log', $logEntry, FILE_APPEND);
+        file_put_contents(__DIR__ . '/../../log/telegram_notify.log', $logEntry, FILE_APPEND);
         // если используете PSR-3 логгер:
         // $this->logger?->error('notifyAdmins', ['orderId'=>$orderId,'http'=>$httpCode,'curlErr'=>$error,'resp'=>$response]);
     }
