@@ -712,7 +712,7 @@ public function cart(): void
             "UPDATE users SET referred_by = ?, has_used_referral_coupon = 1 WHERE id = ?"
         )->execute([$referrerId, $userId]);
         $this->pdo->prepare(
-            "INSERT INTO referrals (referrer_id, referred_id, created_at) VALUES (?, ?, NOW())"
+            "INSERT IGNORE INTO referrals (referrer_id, referred_id, created_at) VALUES (?, ?, NOW())"
         )->execute([$referrerId, $userId]);
     } elseif ($referredBy !== null && $usedReferralCoupon === 0 && $couponCode !== '') {
         $this->pdo->prepare(
