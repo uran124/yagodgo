@@ -205,13 +205,18 @@ $couponError     = $couponError     ?? null;
                 Промокод
               </label>
               <div class="flex flex-col space-y-2">
-                <input type="text" name="coupon_code" value="<?= htmlspecialchars($couponCode ?? '') ?>"
-                       placeholder="Введите промокод"
-                       <?= !empty($lockCoupon) ? 'readonly' : '' ?>
-                       class="flex-1 border-2 border-gray-200 rounded-2xl px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all" />
-                <button type="submit" name="apply_coupon" value="1"
-                        formaction="/checkout" formmethod="get"
-                        class="bg-red-500 text-white px-4 py-3 rounded-2xl font-semibold">Применить</button>
+                <?php if (!empty($lockCoupon)): ?>
+                  <input type="text" value="" placeholder="<?= htmlspecialchars($couponCode) ?>" readonly
+                         class="flex-1 border-2 border-gray-200 rounded-2xl px-4 py-3 bg-gray-100 cursor-not-allowed" />
+                  <input type="hidden" name="coupon_code" value="<?= htmlspecialchars($couponCode) ?>">
+                <?php else: ?>
+                  <input type="text" name="coupon_code" value="<?= htmlspecialchars($couponCode ?? '') ?>"
+                         placeholder="Введите промокод"
+                         class="flex-1 border-2 border-gray-200 rounded-2xl px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all" />
+                  <button type="submit" name="apply_coupon" value="1"
+                          formaction="/checkout" formmethod="get"
+                          class="bg-red-500 text-white px-4 py-3 rounded-2xl font-semibold">Применить</button>
+                <?php endif; ?>
               </div>
               <?php if ($couponError): ?>
                 <p class="text-red-600 text-sm mt-2"><?= htmlspecialchars($couponError) ?></p>
