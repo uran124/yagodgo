@@ -870,7 +870,7 @@ public function showOrder(int $orderId): void
             'today'       => date('Y-m-d'),
         ];
 
-        view('client/v2/orders', [
+        view('client/orders', [
             'orders'    => $orders,
             'userName'  => $_SESSION['name'] ?? null,
             'debugData' => $debugData,
