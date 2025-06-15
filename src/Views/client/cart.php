@@ -122,7 +122,7 @@
                 </option>
               <?php endforeach; ?>
             <?php else: ?>
-              <option>Ближайшая возможная дата</option>
+              <option>По мере поступления</option>
             <?php endif; ?>
           </select>
         </div>

@@ -173,9 +173,22 @@ public function cart(): void
 
     // 2) Подставляем в каждый элемент выбранную дату доставки из сессии (или "сегодня")
     $items = [];
+    $today = date('Y-m-d');
     foreach ($rawItems as $row) {
         $pid = $row['product_id'];
-        $deliveryDate = $_SESSION['delivery_date'][$pid] ?? date('Y-m-d');
+        $sessionDate = $_SESSION['delivery_date'][$pid] ?? null;
+        if ($sessionDate !== null) {
+            $deliveryDate = $sessionDate;
+        } else {
+            $prodDate = $row['delivery_date'];
+            if ($prodDate === null) {
+                $deliveryDate = null;
+            } elseif ($prodDate > $today) {
+                $deliveryDate = $prodDate;
+            } else {
+                $deliveryDate = $today;
+            }
+        }
 
         $items[] = [
             'product_id'    => $pid,
