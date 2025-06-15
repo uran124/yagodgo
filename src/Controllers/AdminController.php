@@ -109,14 +109,31 @@ class AdminController
         );
         $purchaseList = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Данные для графика (заглушка)
-        
-        
-        
-        
+        // === Выручка по дням за последнюю неделю ===
+        $rows = $this->pdo->query(
+            "SELECT DATE(created_at) AS day, SUM(total_amount) AS revenue
+             FROM orders
+             WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+             GROUP BY day
+             ORDER BY day"
+        )->fetchAll(PDO::FETCH_ASSOC);
+
+        $revenueByDay = [];
+        foreach ($rows as $row) {
+            $revenueByDay[$row['day']] = (int) $row['revenue'];
+        }
+
+        $labels = [];
+        $values = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = date('Y-m-d', strtotime("-$i days"));
+            $labels[] = date('d.m', strtotime($date));
+            $values[] = $revenueByDay[$date] ?? 0;
+        }
+
         $chartData = [
-            'labels' => [],
-            'values' => [],
+            'labels' => $labels,
+            'values' => $values,
         ];
 
         // Отображаем дашборд
