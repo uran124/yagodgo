@@ -194,15 +194,15 @@ $couponError     = $couponError     ?? null;
               </div>
             <?php endif; ?>
 
-            <!-- Купон на скидку -->
+            <!-- Промокод -->
             <div class="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-2xl p-4">
               <label class="block text-sm font-medium text-gray-700 mb-2">
                 <span class="material-icons-round text-sm mr-1 align-middle">sell</span>
-                Купон на скидку
+                Промокод
               </label>
               <input type="text" name="coupon_code"
                      value="<?= htmlspecialchars($_POST['coupon_code'] ?? '') ?>"
-                     placeholder="Введите код купона"
+                     placeholder="Введите промокод"
                      class="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all" />
               <?php if ($couponError): ?>
                 <p class="text-red-600 text-sm mt-2"><?= htmlspecialchars($couponError) ?></p>
