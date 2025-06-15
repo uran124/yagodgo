@@ -1,11 +1,24 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Админка BerryGo – <?= htmlspecialchars($pageTitle) ?></title>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+  <style>
+    [data-theme='dark'] body {
+      background-color: #1f2937;
+      color: #f1f5f9;
+    }
+    [data-theme='dark'] .bg-white { background-color: #374151; }
+    [data-theme='dark'] .bg-gray-100 { background-color: #1f2937; }
+    [data-theme='dark'] .bg-gray-50 { background-color: #111827; }
+    [data-theme='dark'] .text-gray-700 { color: #e5e7eb; }
+    [data-theme='dark'] .text-gray-600 { color: #d1d5db; }
+    [data-theme='dark'] .text-gray-500 { color: #9ca3af; }
+    [data-theme='dark'] .border-gray-200 { border-color: #374151; }
+  </style>
 </head>
 <body class="flex flex-col min-h-screen bg-gray-100 font-sans">
 

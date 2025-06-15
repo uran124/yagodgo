@@ -204,23 +204,40 @@
           Быстрые действия
         </h2>
       </div>
-      <div class="p-6 grid grid-cols-2 gap-4">
-        <a href="/orders"
-           class="flex flex-col items-center p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl hover:shadow-lg transition-all hover:scale-105 group">
-          <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-            <span class="material-icons-round text-white">receipt_long</span>
-          </div>
-          <span class="font-semibold text-gray-800 text-sm text-center">Мои заказы</span>
-        </a>
-        <a href="/catalog"
-           class="flex flex-col items-center p-4 bg-gradient-to-br from-red-50 to-pink-50 rounded-2xl hover:shadow-lg transition-all hover:scale-105 group">
-          <div class="w-12 h-12 bg-gradient-to-br from-red-500 to-pink-500 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-            <span class="material-icons-round text-white">store</span>
-          </div>
-          <span class="font-semibold text-gray-800 text-sm text-center">Каталог</span>
-        </a>
+    <div class="p-6 grid grid-cols-2 gap-4">
+      <a href="/orders"
+         class="flex flex-col items-center p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl hover:shadow-lg transition-all hover:scale-105 group">
+        <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+          <span class="material-icons-round text-white">receipt_long</span>
+        </div>
+        <span class="font-semibold text-gray-800 text-sm text-center">Мои заказы</span>
+      </a>
+      <a href="/catalog"
+         class="flex flex-col items-center p-4 bg-gradient-to-br from-red-50 to-pink-50 rounded-2xl hover:shadow-lg transition-all hover:scale-105 group">
+        <div class="w-12 h-12 bg-gradient-to-br from-red-500 to-pink-500 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+          <span class="material-icons-round text-white">store</span>
+        </div>
+        <span class="font-semibold text-gray-800 text-sm text-center">Каталог</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Настройки -->
+  <div class="bg-white rounded-3xl shadow-lg overflow-hidden">
+    <div class="bg-gradient-to-r from-gray-50 to-emerald-50 px-6 py-4 border-b border-gray-100">
+      <h2 class="font-bold text-gray-800 flex items-center">
+        <span class="material-icons-round mr-2 text-emerald-500">tune</span>
+        Настройки
+      </h2>
+    </div>
+    <div class="p-6">
+      <div class="flex space-x-2">
+        <button type="button" class="theme-btn px-4 py-2 rounded-full border" data-theme-value="light">Светлая</button>
+        <button type="button" class="theme-btn px-4 py-2 rounded-full border" data-theme-value="dark">Темная</button>
+        <button type="button" class="theme-btn px-4 py-2 rounded-full border" data-theme-value="system">Система</button>
       </div>
     </div>
+  </div>
 
     <!-- Дополнительная информация -->
     <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-3xl p-6 text-center">
@@ -251,4 +268,28 @@
     navigator.clipboard.writeText(code)
       .then(() => alert('Купон скопирован в буфер обмена!'));
   }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const btns = document.querySelectorAll('.theme-btn');
+    const saved = localStorage.getItem('theme') || 'system';
+    highlight(saved);
+
+    btns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const val = btn.dataset.themeValue;
+        setTheme(val);
+        highlight(val);
+      });
+    });
+
+    function highlight(val) {
+      btns.forEach(b => {
+        if (b.dataset.themeValue === val) {
+          b.classList.add('berry-gradient', 'text-white');
+        } else {
+          b.classList.remove('berry-gradient', 'text-white');
+        }
+      });
+    }
+  });
 </script>
