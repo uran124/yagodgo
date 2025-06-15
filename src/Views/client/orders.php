@@ -65,8 +65,9 @@
       <!-- Список заказов -->
       <div class="space-y-4">
         <?php foreach ($orders as $index => $o): ?>
-          <a href="/orders/<?= $o['id'] ?>" 
-             class="block bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 overflow-hidden group">
+          <?php $info = order_status_info($o['status']); ?>
+          <a href="/orders/<?= $o['id'] ?>"
+             class="block rounded-2xl shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 overflow-hidden group <?= $info['bg'] ?>">
             
             <!-- Заголовок заказа -->
             <div class="p-6 pb-4">
@@ -92,12 +93,11 @@
                   <?php
                   $status = $o['status'];
                   $statusConfig = [
-                    'pending' => ['bg-yellow-100', 'text-yellow-800', 'hourglass_empty', 'Ожидает'],
-                    'confirmed' => ['bg-blue-100', 'text-blue-800', 'check_circle', 'Подтвержден'],
-                    'preparing' => ['bg-orange-100', 'text-orange-800', 'kitchen', 'Готовится'],
-                    'ready' => ['bg-green-100', 'text-green-800', 'done_all', 'Готов'],
-                    'delivered' => ['bg-emerald-100', 'text-emerald-800', 'local_shipping', 'Доставлен'],
-                    'cancelled' => ['bg-red-100', 'text-red-800', 'cancel', 'Отменен']
+                    'new' => ['bg-red-100', 'text-red-800', 'fiber_new', 'Новый заказ'],
+                    'processing' => ['bg-yellow-100', 'text-yellow-800', 'hourglass_empty', 'Принят'],
+                    'assigned' => ['bg-green-100', 'text-green-800', 'check_circle', 'Обработан'],
+                    'delivered' => ['bg-gray-200', 'text-gray-800', 'done_all', 'Выполнен'],
+                    'cancelled' => ['bg-gray-50', 'text-gray-500', 'cancel', 'Отменен']
                   ];
                   $config = $statusConfig[$status] ?? ['bg-gray-100', 'text-gray-800', 'help', $status];
                   ?>
@@ -115,15 +115,14 @@
             </div>
 
             <!-- Прогресс-бар (для активных заказов) -->
-            <?php if (in_array($status, ['pending', 'confirmed', 'preparing', 'ready'])): ?>
+            <?php if (in_array($status, ['new', 'processing', 'assigned'])): ?>
               <div class="px-6 pb-4">
                 <div class="bg-gray-100 rounded-full h-2 overflow-hidden">
                   <?php
                   $progress = [
-                    'pending' => 25,
-                    'confirmed' => 50, 
-                    'preparing' => 75,
-                    'ready' => 100
+                    'new' => 33,
+                    'processing' => 66,
+                    'assigned' => 100
                   ][$status] ?? 0;
                   ?>
                   <div class="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-1000" 

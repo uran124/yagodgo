@@ -72,9 +72,9 @@
             <?php
             $status = $ao['status'];
             $cfg = [
-              'new' => ['bg-red-100','text-red-800','Новый'],
-              'processing' => ['bg-yellow-100','text-yellow-800','В обработке'],
-              'assigned' => ['bg-green-100','text-green-800','Назначен'],
+              'new' => ['bg-red-100','text-red-800','Новый заказ'],
+              'processing' => ['bg-yellow-100','text-yellow-800','Принят'],
+              'assigned' => ['bg-green-100','text-green-800','Обработан'],
             ][$status] ?? ['bg-gray-100','text-gray-800',$status];
             ?>
             <div class="p-4 rounded-2xl border flex items-center justify-between">

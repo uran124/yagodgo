@@ -1,12 +1,15 @@
 <?php /** @var array $orders */ ?>
 <ul class="bg-white rounded shadow divide-y">
   <?php foreach ($orders as $o): ?>
-    <li class="p-4 flex items-center justify-between hover:bg-gray-50">
+    <?php $info = order_status_info($o['status']); ?>
+    <li class="p-4 flex items-center justify-between hover:bg-gray-50 <?= $info['bg'] ?>">
       <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm md:text-base">
         <span class="font-semibold">#<?= $o['id'] ?></span>
         <span><?= htmlspecialchars($o['client_name']) ?></span>
         <span><?= $o['total_amount'] ?> ₽</span>
-        <span><?= htmlspecialchars($o['status']) ?></span>
+        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium <?= $info['badge'] ?>">
+          <?= $info['label'] ?>
+        </span>
         <span class="text-gray-500"><?= $o['created_at'] ?></span>
         <span><?= htmlspecialchars($o['courier_name'] ?? '-') ?></span>
       </div>
