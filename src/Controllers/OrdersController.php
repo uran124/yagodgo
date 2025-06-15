@@ -64,11 +64,26 @@ class OrdersController
         $stmt->execute([$id]);
         $transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        $couponInfo = null;
+        $pointsFromBalance = (int)($order['points_used'] ?? 0);
+        if (!empty($order['coupon_code'])) {
+            $cStmt = $this->pdo->prepare(
+                "SELECT code, type, discount, points FROM coupons WHERE code = ?"
+            );
+            $cStmt->execute([$order['coupon_code']]);
+            $couponInfo = $cStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+            if ($couponInfo && $couponInfo['type'] === 'points') {
+                $pointsFromBalance = max(0, $pointsFromBalance - (int)$couponInfo['points']);
+            }
+        }
+
         viewAdmin('orders/show', [
             'pageTitle'    => "Заказ #{$id}",
             'order'        => $order,
             'items'        => $items,
             'transactions' => $transactions,
+            'coupon'       => $couponInfo,
+            'pointsFromBalance' => $pointsFromBalance,
         ]);
     }
 
