@@ -119,7 +119,7 @@ public function register(): void
         // 3) Если есть пригласивший, фиксируем связь в таблице referrals
         if ($referredBy !== null) {
             $stmt = $this->pdo->prepare("
-                INSERT INTO referrals (referrer_id, referred_id, created_at)
+                INSERT IGNORE INTO referrals (referrer_id, referred_id, created_at)
                 VALUES (?, ?, NOW())
             ");
             $stmt->execute([$referredBy, $userId]);
