@@ -18,6 +18,21 @@
       <?php endforeach; ?>
     </ul>
     <p class="mt-4 text-right font-bold">Итого: <?= $order['total_amount'] ?> ₽</p>
+
+    <?php if (!empty($coupon)): ?>
+      <p class="mt-2">
+        Купон <?= htmlspecialchars($coupon['code']) ?>:
+        <?php if ($coupon['type'] === 'discount'): ?>
+          скидка <?= htmlspecialchars($coupon['discount']) ?>%
+        <?php else: ?>
+          <?= htmlspecialchars($coupon['points']) ?> клубничек
+        <?php endif; ?>
+      </p>
+    <?php endif; ?>
+
+    <?php if (($pointsFromBalance ?? 0) > 0): ?>
+      <p class="mt-1 text-pink-600">Списано клубничек: <?= $pointsFromBalance ?></p>
+    <?php endif; ?>
   </div>
   <!-- Кнопки действий -->
   <div class="flex space-x-2">
