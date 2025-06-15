@@ -35,16 +35,21 @@
             <?= htmlspecialchars($user['phone'] ?? 'Не указан') ?>
           </div>
         </div>
-        <div class="flex items-start space-x-4">
-          <div class="w-12 h-12 bg-gradient-to-br from-orange-400 to-red-500 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1">
-            <span class="material-icons-round text-white">home</span>
+        <form action="/profile" method="post" class="space-y-4">
+          <div class="flex items-start space-x-4">
+            <div class="w-12 h-12 bg-gradient-to-br from-orange-400 to-red-500 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1">
+              <span class="material-icons-round text-white">home</span>
+            </div>
+            <textarea
+              name="address"
+              rows="3"
+              class="flex-1 border border-gray-300 rounded-2xl px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all resize-none"
+            ><?= htmlspecialchars($address) ?></textarea>
           </div>
-          <textarea
-            name="address"
-            rows="3"
-            class="flex-1 border border-gray-300 rounded-2xl px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all resize-none"
-          ><?= htmlspecialchars($address) ?></textarea>
-        </div>
+          <div class="flex justify-end">
+            <button type="submit" class="bg-emerald-500 text-white px-4 py-2 rounded-lg hover:bg-emerald-600 transition">Обновить</button>
+          </div>
+        </form>
         <div class="flex items-center space-x-4">
           <div class="w-12 h-12 bg-gradient-to-br from-pink-400 to-red-500 rounded-2xl flex items-center justify-center flex-shrink-0">
             <span class="text-xl">🍓</span>
@@ -97,27 +102,27 @@
     </div>
 
     <!-- Бонусы -->
-    <div class="bg-white rounded-3xl shadow-lg overflow-hidden">
-      <div class="bg-gradient-to-r from-gray-50 to-emerald-50 px-6 py-4 border-b border-gray-100">
-        <h2 class="font-bold text-gray-800 flex items-center">
-          <span class="material-icons-round mr-2 text-emerald-500">card_giftcard</span>
+    <div class="bg-white rounded-3xl shadow-2xl overflow-hidden">
+      <div class="bg-gradient-to-r from-red-500 to-pink-500 px-6 py-4 border-b border-red-400">
+        <h2 class="font-bold text-white flex items-center">
+          <span class="material-icons-round mr-2 text-white">card_giftcard</span>
           Бонусы
         </h2>
       </div>
-      <div class="p-6 space-y-4 text-gray-700">
+      <div class="p-6 space-y-4 text-gray-700 bg-gradient-to-br from-red-50 via-white to-pink-50">
         <p>Подарите другу 10 % скидку на первый заказ и получайте клубнички за каждый его заказ!</p>
         <p>Скопируйте ссылку и отправьте другу:</p>
         <div class="flex items-center space-x-2">
           <?php $refLink = "https://berrygo.ru/register?invite=" . urlencode($user['referral_code']); ?>
-          <input type="text" readonly value="<?= htmlspecialchars($refLink) ?>" class="flex-1 bg-gray-100 rounded-lg px-3 py-2 text-sm text-gray-800 outline-none select-all" onclick="this.select()">
-          <button onclick="copyInviteLink()" class="bg-emerald-500 text-white px-4 py-2 rounded-lg hover:bg-emerald-600 transition">Копировать</button>
+          <input type="text" readonly value="<?= htmlspecialchars($refLink) ?>" class="flex-1 bg-white/80 rounded-lg px-3 py-2 text-sm text-gray-800 outline-none cursor-pointer" onclick="copyInviteLink()" title="Нажмите, чтобы скопировать">
+          <button onclick="copyInviteLink()" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-pink-500 transition">Копировать</button>
         </div>
         <p class="text-sm text-gray-500">Или используйте купон:</p>
         <div class="flex items-center space-x-2">
-          <code class="bg-gray-100 rounded-lg px-3 py-2 font-mono">
+          <code class="bg-white/80 rounded-lg px-3 py-2 font-mono cursor-pointer" onclick="copyInviteCode()" title="Нажмите, чтобы скопировать">
             <?= htmlspecialchars($user['referral_code']) ?>
           </code>
-          <button onclick="copyInviteCode()" class="bg-emerald-500 text-white px-4 py-2 rounded-lg hover:bg-emerald-600 transition">Копировать</button>
+          <button onclick="copyInviteCode()" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-pink-500 transition">Копировать</button>
         </div>
         <div class="grid grid-cols-3 gap-4 pt-4">
           <div class="text-center p-4 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl">
