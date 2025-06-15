@@ -232,14 +232,23 @@ public function cart(): void
         }
 
         if ($productId && $quantity > 0) {
-            $priceStmt = $this->pdo->prepare("SELECT price FROM products WHERE id = ?");
+            $priceStmt = $this->pdo->prepare(
+                "SELECT price, sale_price FROM products WHERE id = ?"
+            );
             $priceStmt->execute([$productId]);
-            $price = (float)$priceStmt->fetchColumn();
+            $row = $priceStmt->fetch(PDO::FETCH_ASSOC);
+            $price = 0.0;
+            if ($row) {
+                $sale    = (float)($row['sale_price'] ?? 0);
+                $regular = (float)($row['price'] ?? 0);
+                $price   = $sale > 0 ? $sale : $regular;
+            }
 
             $this->pdo->prepare(
-                "INSERT INTO cart_items (user_id, product_id, quantity, unit_price)
-                 VALUES (?, ?, ?, ?)
-                 ON DUPLICATE KEY UPDATE quantity = quantity + VALUES(quantity)"
+                "INSERT INTO cart_items (user_id, product_id, quantity, unit_price)" .
+                " VALUES (?, ?, ?, ?)" .
+                " ON DUPLICATE KEY UPDATE quantity = quantity + VALUES(quantity)," .
+                " unit_price = VALUES(unit_price)"
             )->execute([$userId, $productId, $quantity, $price]);
         }
 
