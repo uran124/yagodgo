@@ -6,36 +6,39 @@
 <table class="min-w-full bg-white rounded shadow overflow-hidden">
   <thead class="bg-gray-200 text-gray-700">
     <tr>
-      <th class="p-2">Продукт</th>
-      <th class="p-2">Сорт</th>
-      <th class="p-2">Вес ящика</th>
-      <th class="p-2">Цена</th>
-      <th class="p-2">Остаток (ящиков)</th>
-      <th class="p-2">Активен</th>
-      <th class="p-2">Удалить</th>
+      <th class="p-3 text-left font-semibold">Продукт</th>
+      <th class="p-3 text-left font-semibold">Сорт</th>
+      <th class="p-3 text-left font-semibold">Вес ящика</th>
+      <th class="p-3 text-left font-semibold">Цена</th>
+      <th class="p-3 text-left font-semibold">Остаток (ящиков)</th>
+      <th class="p-3 text-center font-semibold">Активен</th>
+      <th class="p-3 text-center font-semibold">Удалить</th>
     </tr>
   </thead>
   <tbody>
     <?php foreach ($products as $p): ?>
-      <tr class="border-b hover:bg-gray-50">
-        <td class="p-2">
+      <tr class="border-b hover:bg-gray-50 transition-all duration-200">
+        <td class="p-3 font-medium text-gray-600">
           <a href="/admin/products/edit?id=<?= $p['id'] ?>" class="text-[#C86052] hover:underline">
             <?= htmlspecialchars($p['product']) ?>
           </a>
         </td>
-        <td class="p-2"><?= htmlspecialchars($p['variety']) ?></td>
-        <td class="p-2">
+        <td class="p-3 text-gray-600"><?= htmlspecialchars($p['variety']) ?></td>
+        <td class="p-3 text-gray-600">
           <?= $p['box_size'] ?> <?= htmlspecialchars($p['box_unit']) ?>
         </td>
-        <td class="p-2"><?= $p['price'] ?> ₽/<?= $p['unit'] ?></td>
-        <td class="p-2"><?= $p['stock_boxes'] ?></td>
-        <td class="p-2">
-          <form action="/admin/products/toggle" method="post">
+        <td class="p-3 text-gray-600"><?= $p['price'] ?> ₽/<?= $p['unit'] ?></td>
+        <td class="p-3 text-gray-600"><?= $p['stock_boxes'] ?></td>
+        <td class="p-3 text-center">
+          <form action="/admin/products/toggle" method="post" class="inline-block">
             <input type="hidden" name="id" value="<?= $p['id'] ?>">
-            <input type="checkbox" name="active" onchange="this.form.submit()" <?= $p['is_active'] ? 'checked' : '' ?>>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" name="active" onchange="this.form.submit()" <?= $p['is_active'] ? 'checked' : '' ?> class="sr-only peer">
+              <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+            </label>
           </form>
         </td>
-        <td class="p-2 text-center">
+        <td class="p-3 text-center">
           <form action="/admin/products/delete" method="post" onsubmit="return confirm('Удалить товар?');">
             <input type="hidden" name="id" value="<?= $p['id'] ?>">
             <button type="submit" class="text-red-600">
