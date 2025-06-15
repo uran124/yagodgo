@@ -112,6 +112,7 @@ class ProductsController
         $unitRaw       = $_POST['unit'] ?? 'кг';
         $unit          = ($unitRaw === 'л' ? 'л' : 'кг');
         $price         = (float)$_POST['price'];
+        $salePrice     = (float)($_POST['sale_price'] ?? 0);
         $stockBoxes    = (float)$_POST['stock_boxes'];
         $isActive      = isset($_POST['is_active']) ? 1 : 0;
 
@@ -179,13 +180,14 @@ class ProductsController
                         box_unit        = ?,
                         unit            = ?,
                         price           = ?,
+                        sale_price      = ?,
                         stock_boxes     = ?,
                         delivery_date   = ?,
                         is_active       = ?";
             $params = [
                 $typeId, $variety, $description, $manufacturer,
                 $originCountry, $boxSize, $boxUnit,
-                $unit, $price, $stockBoxes,
+                $unit, $price, $salePrice, $stockBoxes,
                 $deliveryDate, $isActive
             ];
 
@@ -202,13 +204,13 @@ class ProductsController
 
         } else {
             // INSERT
-            $columns      = "product_type_id,variety,description,manufacturer,origin_country,box_size,box_unit,unit,price,stock_boxes,delivery_date,is_active";
-            // 12 placeholders corresponding to the columns above
-            $placeholders = "?,?,?,?,?,?,?,?,?,?,?,?";
+            $columns      = "product_type_id,variety,description,manufacturer,origin_country,box_size,box_unit,unit,price,sale_price,stock_boxes,delivery_date,is_active";
+            // 13 placeholders corresponding to the columns above
+            $placeholders = "?,?,?,?,?,?,?,?,?,?,?,?,?";
             $params       = [
                 $typeId, $variety, $description, $manufacturer,
                 $originCountry, $boxSize, $boxUnit,
-                $unit, $price, $stockBoxes,
+                $unit, $price, $salePrice, $stockBoxes,
                 $deliveryDate, $isActive
             ];
 
