@@ -47,7 +47,7 @@ class OrdersController
         $order = $stmt->fetch(PDO::FETCH_ASSOC);
 
         $stmt = $this->pdo->prepare(
-            "SELECT oi.quantity, oi.unit_price, t.name AS product_name, p.unit\n" .
+            "SELECT oi.quantity, oi.unit_price, t.name AS product_name, p.unit, p.variety, p.box_size, p.box_unit\n" .
             "FROM order_items oi\n" .
             "JOIN products p ON p.id = oi.product_id\n" .
             "JOIN product_types t ON t.id = p.product_type_id\n" .
