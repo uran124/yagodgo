@@ -21,8 +21,9 @@
 <table class="min-w-full bg-white rounded shadow overflow-hidden">
   <thead class="bg-gray-200 text-gray-700">
     <tr>
-      <th class="p-3 text-left font-semibold">№</th>
-      <th class="p-3 text-left font-semibold">Дата</th>
+      <th class="p-3 text-left font-semibold cursor-pointer sortable" data-sort="id">№</th>
+      <th class="p-3 text-left font-semibold cursor-pointer sortable" data-sort="created">Дата оформления</th>
+      <th class="p-3 text-left font-semibold cursor-pointer sortable" data-sort="delivery">Дата доставки</th>
       <th class="p-3 text-left font-semibold">Слот</th>
       <th class="p-3 text-left font-semibold">Клиент</th>
       <th class="p-3 text-left font-semibold">Телефон</th>
@@ -35,8 +36,10 @@
       <?php
         $bg = in_array($o['status'], ['new','processing'], true) ? 'bg-gray-200' : '';
         $dateAttr = $o['delivery_date'] ? date('Y-m-d', strtotime($o['delivery_date'])) : '';
+        $createdAttr = date('Y-m-d H:i', strtotime($o['created_at']));
+        $deliveryAttr = $o['delivery_date'] ? date('Y-m-d', strtotime($o['delivery_date'])) : '';
       ?>
-      <tr data-status="<?= $o['status'] ?>" data-date="<?= $dateAttr ?>" class="border-b hover:bg-gray-50 cursor-pointer <?= $bg ?>" onclick="location.href='/admin/orders/<?= $o['id'] ?>'">
+      <tr data-status="<?= $o['status'] ?>" data-date="<?= $dateAttr ?>" data-created="<?= $createdAttr ?>" data-id="<?= $o['id'] ?>" data-delivery="<?= $deliveryAttr ?>" class="border-b hover:bg-gray-50 cursor-pointer <?= $bg ?>" onclick="location.href='/admin/orders/<?= $o['id'] ?>'">
         <?php
           $numCls = match($o['status']) {
             'new' => 'text-red-500',
@@ -46,9 +49,10 @@
           };
         ?>
         <td class="p-3 font-semibold <?= $numCls ?>">#<?= $o['id'] ?></td>
+        <td class="p-3 text-gray-600"><?= date('d.m H:i', strtotime($o['created_at'])) ?></td>
         <td class="p-3 text-gray-600">
           <?php if ($o['delivery_date']): ?>
-            <?= date('d.m', strtotime($o['delivery_date'])) ?>
+            <?= date('d.m', strtotime($o['delivery_date'])) ?> <?= htmlspecialchars($o['delivery_slot']) ?>
           <?php endif; ?>
         </td>
         <td class="p-3 text-gray-600"><?= htmlspecialchars($o['delivery_slot']) ?></td>
@@ -69,7 +73,7 @@
     const todayBtn = document.getElementById('todayBtn');
     const tomorrowBtn = document.getElementById('tomorrowBtn');
     const clearDate = document.getElementById('clearDate');
-    const rows = document.querySelectorAll('#ordersTable tr');
+    let rows = document.querySelectorAll('#ordersTable tr');
 
     function applyFilters() {
       const s = statusFilter.value;
@@ -109,5 +113,33 @@
       dateTo.value = '';
       applyFilters();
     });
+
+    document.querySelectorAll('th.sortable').forEach(th => {
+      th.addEventListener('click', function () {
+        const field = th.dataset.sort;
+        const dir = th.dataset.dir === 'asc' ? 'desc' : 'asc';
+        th.dataset.dir = dir;
+        sortRows(field, dir);
+      });
+    });
+
+    function sortRows(field, dir) {
+      const tbody = document.getElementById('ordersTable');
+      const arr = Array.from(tbody.querySelectorAll('tr'));
+      arr.sort((a, b) => {
+        let av = a.dataset[field];
+        let bv = b.dataset[field];
+        if (field === 'id') {
+          av = parseInt(av, 10);
+          bv = parseInt(bv, 10);
+        } else {
+          av = new Date(av || 0);
+          bv = new Date(bv || 0);
+        }
+        return dir === 'asc' ? av - bv : bv - av;
+      });
+      arr.forEach(r => tbody.appendChild(r));
+      rows = document.querySelectorAll('#ordersTable tr');
+    }
   });
 </script>
