@@ -38,7 +38,8 @@
         // Подготовка опций дат
         $options = [];
         $d = $it['delivery_date']; // может быть null или строка 'YYYY-MM-DD'
-        if ($d === null) {
+        $placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
+        if ($d === null || $d === $placeholder) {
           // Под заказ: select станет disabled
           $options = [];
         } else {
@@ -122,7 +123,7 @@
                 </option>
               <?php endforeach; ?>
             <?php else: ?>
-              <option>По мере поступления</option>
+              <option>Ближайшая возможная дата</option>
             <?php endif; ?>
           </select>
         </div>

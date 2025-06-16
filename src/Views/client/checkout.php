@@ -66,8 +66,8 @@ $couponError     = $couponError     ?? null;
         <?php foreach ($groups as $dateKey => $block): ?>
           <?php
             // Определяем читабельную метку даты
-            if ($dateKey === 'on_demand') {
-              $label = 'По мере поступления';
+            if ($dateKey === 'on_demand' || $dateKey === (defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15')) {
+              $label = 'Ближайшая возможная дата';
               $emoji = '📦';
             } elseif ($dateKey === $today) {
               $label = 'Сегодня';

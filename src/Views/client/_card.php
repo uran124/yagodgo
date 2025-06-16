@@ -20,6 +20,8 @@
     $img       = $p['image_path']        ?? '/assets/placeholder.png';
     $today     = date('Y-m-d');
     $d         = $p['delivery_date']     ?? null;
+    $placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
+    $showDate = $d !== null && $d !== $placeholder;
     $active    = (int)($p['is_active']    ?? 0);
     $price     = floatval($p['price']     ?? 0);
     $sale      = floatval($p['sale_price']?? 0);
@@ -42,17 +44,17 @@
       </span>
     <?php else: ?>
       <!-- Бейджик даты / наличия -->
-      <?php if ($d !== null && $d <= $today): ?>
+      <?php if ($showDate && $d <= $today): ?>
         <span class="absolute top-3 left-3 bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded-full">
           В наличии
         </span>
-      <?php elseif ($d !== null): ?>
+      <?php elseif ($showDate): ?>
         <span class="absolute top-3 left-3 bg-orange-100 text-orange-800 text-xs font-semibold px-2 py-1 rounded-full">
           <?= date('d.m.Y', strtotime($d)) ?>
         </span>
       <?php else: ?>
         <span class="absolute top-3 left-3 bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded-full">
-          Под заказ
+          Ближайшая возможная дата
         </span>
       <?php endif; ?>
 

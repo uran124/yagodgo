@@ -62,9 +62,15 @@ function status_classes(string $status): string {
             </ul>
           </div>
           <?php if (!empty($order['delivery_date'])): ?>
+            <?php $placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15'; ?>
             <div class="mt-2 text-sm text-gray-600 flex items-center">
               <span class="material-icons-round mr-1 text-base">local_shipping</span>
-              Доставка: <?= date('d.m.Y', strtotime($order['delivery_date'])) ?><?php if($order['delivery_slot']): ?>, <?= htmlspecialchars($order['delivery_slot']) ?><?php endif; ?>
+              Доставка:
+              <?php if ($order['delivery_date'] === $placeholder): ?>
+                Ближайшая возможная дата
+              <?php else: ?>
+                <?= date('d.m.Y', strtotime($order['delivery_date'])) ?>
+              <?php endif; ?><?php if($order['delivery_slot']): ?>, <?= htmlspecialchars($order['delivery_slot']) ?><?php endif; ?>
             </div>
           <?php else: ?>
             <button class="mt-2 text-sm text-blue-600 underline">Выбрать слот</button>
