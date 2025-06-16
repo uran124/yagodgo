@@ -130,13 +130,13 @@ function order_status_info(string $status): array
         ],
         'delivered' => [
             'label' => 'Выполнен',
-            'badge' => 'bg-gray-200 text-gray-800',
-            'bg'    => 'bg-gray-100',
+            'badge' => 'bg-blue-100 text-blue-800',
+            'bg'    => 'bg-blue-50',
         ],
         'cancelled' => [
             'label' => 'Отменен',
-            'badge' => 'text-gray-500',
-            'bg'    => '',
+            'badge' => 'bg-gray-100 text-gray-800',
+            'bg'    => 'bg-gray-50',
         ],
         default => [
             'label' => $status,
