@@ -342,18 +342,16 @@ class OrdersController
         $stmtItems->execute([$orderId]);
         $item = $stmtItems->fetch(\PDO::FETCH_ASSOC);
 
-        $createdAt = date('d.m.Y H:i', strtotime($order['created_at']));
-
         $deliveryDate = $order['delivery_date'] ?? null;
         $deliverySlot = $order['delivery_slot'] ?? '';
         $placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
         if ($deliveryDate && $deliveryDate !== $placeholder) {
             $deliveryText = date('d.m.Y', strtotime($deliveryDate));
-            if ($deliverySlot !== '') {
-                $deliveryText .= ' ' . $deliverySlot;
-            }
         } else {
-            $deliveryText = $createdAt;
+            $deliveryText = 'Ближайшая возможная дата';
+        }
+        if ($deliverySlot !== '') {
+            $deliveryText .= ' ' . $deliverySlot;
         }
 
         $line1 = $order['phone'] . ', ' . $order['name'];
