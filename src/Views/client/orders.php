@@ -5,8 +5,8 @@ function status_classes(string $status): string {
         'new' => 'bg-red-100 text-red-800',
         'processing' => 'bg-yellow-100 text-yellow-800',
         'assigned' => 'bg-green-100 text-green-800',
-        'delivered' => 'bg-gray-200 text-gray-800',
-        'cancelled' => 'text-gray-500',
+        'delivered' => 'bg-blue-100 text-blue-800',
+        'cancelled' => 'bg-gray-100 text-gray-800',
         default => 'bg-gray-100 text-gray-800',
     };
 }
@@ -32,64 +32,30 @@ function status_classes(string $status): string {
     </div>
 
     <!-- Orders list -->
-    <div id="ordersContainer" class="mt-4 space-y-4">
+    <div id="ordersContainer" class="mt-4 space-y-2">
       <?php foreach ($orders as $order): ?>
-        <?php $info = order_status_info($order['status']); ?>
-        <div class="order-card rounded-2xl shadow p-3 sm:p-4 hover:-translate-y-1 hover:shadow-lg transition-transform <?= $info['bg'] ?>" data-status="<?= $order['status'] ?>" data-id="<?= $order['id'] ?>">
-          <div class="flex justify-between items-start">
-            <div class="flex items-center space-x-2">
-              <span class="material-icons-round text-lg">shopping_bag</span>
-              <span class="font-semibold">Заказ #<?= $order['id'] ?></span>
-            </div>
-            <div class="order-date text-xs text-gray-500">
-              <?= date('d.m.Y', strtotime($order['created_at'])) ?> · <?= date('H:i', strtotime($order['created_at'])) ?>
-            </div>
-          </div>
-          <div class="mt-2">
-            <span class="status-badge inline-block text-sm px-2 py-0.5 rounded-full <?= status_classes($order['status']) ?>">
-              <?= order_status_info($order['status'])['label'] ?>
+        <?php $info = order_status_info($order['status']); $first = $order['items'][0] ?? null; ?>
+        <a href="/orders/<?= $order['id'] ?>" class="order-card flex justify-between items-center p-3 rounded-lg shadow hover:shadow-md transition-colors <?= $info['bg'] ?>" data-status="<?= $order['status'] ?>" data-id="<?= $order['id'] ?>">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="material-icons-round text-lg">shopping_bag</span>
+            <span class="font-semibold">#<?= $order['id'] ?>:</span>
+            <span>
+              <?php
+                $date = !empty($order['delivery_date']) ? date('d.m', strtotime($order['delivery_date'])) : date('d.m', strtotime($order['created_at']));
+                echo $date;
+                if (!empty($order['delivery_slot'])) echo ' ' . htmlspecialchars($order['delivery_slot']);
+              ?>
             </span>
-          </div>
-          <div class="mt-2">
-            <button type="button" class="toggle-items text-sm text-gray-600 flex items-center">
-              <span class="material-icons-round mr-1 text-base">inventory_2</span>
-              <?= count($order['items'] ?? []) ?> позиции
-            </button>
-            <ul class="items-list hidden mt-1 ml-5 text-sm list-disc text-gray-700">
-              <?php foreach (($order['items'] ?? []) as $it): ?>
-                <li><?= htmlspecialchars($it['product_name']) ?><?php if(!empty($it['variety'])): ?> «<?= htmlspecialchars($it['variety']) ?>»<?php endif; ?> — <?= $it['quantity'] ?> кг</li>
-              <?php endforeach; ?>
-            </ul>
-          </div>
-          <?php if (!empty($order['delivery_date'])): ?>
-            <?php $placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15'; ?>
-            <div class="mt-2 text-sm text-gray-600 flex items-center">
-              <span class="material-icons-round mr-1 text-base">local_shipping</span>
-              Доставка:
-              <?php if ($order['delivery_date'] === $placeholder): ?>
-                Ближайшая возможная дата
-              <?php else: ?>
-                <?= date('d.m.Y', strtotime($order['delivery_date'])) ?>
-              <?php endif; ?><?php if($order['delivery_slot']): ?>, <?= htmlspecialchars($order['delivery_slot']) ?><?php endif; ?>
-            </div>
-          <?php else: ?>
-            <button class="mt-2 text-sm text-blue-600 underline">Выбрать слот</button>
-          <?php endif; ?>
-          <?php if (!empty($order['address'])): ?>
-            <div class="mt-1 text-sm text-gray-600 flex items-center">
-              <span class="material-icons-round mr-1 text-base">location_on</span>
-              Адрес: <?= htmlspecialchars($order['address']) ?>
-            </div>
-          <?php endif; ?>
-          <div class="mt-3 font-semibold">Итого: <?= number_format($order['total_amount'], 0, '.', ' ') ?> ₽</div>
-          <div class="mt-3 flex flex-col sm:flex-row gap-2">
-            <a href="/orders/<?= $order['id'] ?>" class="px-3 py-2 bg-gray-100 rounded-lg text-sm text-center">Детали</a>
-            <button class="btn-repeat px-3 py-2 border rounded-lg text-sm" aria-label="Повторить заказ" data-id="<?= $order['id'] ?>">Повторить</button>
-            <?php if ($order['status'] === 'new'): ?>
-              <button class="btn-cancel px-3 py-2 border border-red-600 text-red-600 rounded-lg text-sm" aria-label="Отменить заказ" data-id="<?= $order['id'] ?>">Отменить</button>
+            <?php if ($first): ?>
+              <span><?= htmlspecialchars($first['product_name']) ?><?php if(!empty($first['variety'])): ?> «<?= htmlspecialchars($first['variety']) ?>»<?php endif; ?></span>
             <?php endif; ?>
+            <span><?= number_format($order['total_amount'], 0, '.', ' ') ?>₽</span>
+            <span class="order-date hidden"><?= date('d.m.Y H:i', strtotime($order['created_at'])) ?></span>
           </div>
-        </div>
+          <span class="status-badge text-sm px-2 py-0.5 rounded-full <?= status_classes($order['status']) ?>">
+            <?= order_status_info($order['status'])['label'] ?>
+          </span>
+        </a>
       <?php endforeach; ?>
     </div>
   </div>
@@ -97,12 +63,6 @@ function status_classes(string $status): string {
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.toggle-items').forEach(function(btn){
-      btn.addEventListener('click', function(){
-        const list = btn.nextElementSibling;
-        if (list) list.classList.toggle('hidden');
-      });
-    });
 
     const filter = document.getElementById('statusFilter');
     const search = document.getElementById('searchInput');
