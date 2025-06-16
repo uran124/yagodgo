@@ -210,6 +210,26 @@
       background: linear-gradient(135deg, #ff6b5a, #e55a4a) !important;
       box-shadow: 0 4px 12px rgba(255, 107, 90, 0.4);
     }
+
+    [data-theme='dark'] select {
+      background: #334155;
+      color: #f8fafc;
+      border-color: #475569;
+    }
+
+    [data-theme='dark'] select option {
+      background: #334155;
+      color: #f8fafc;
+    }
+
+    [data-theme='dark'] .status-btn {
+      background: #334155;
+      color: #f8fafc;
+    }
+
+    [data-theme='dark'] .status-btn:hover {
+      background: #475569;
+    }
   </style>
 </head>
 <body class="flex flex-col min-h-screen bg-gray-100 font-sans">

@@ -37,7 +37,15 @@
         $dateAttr = $o['delivery_date'] ? date('Y-m-d', strtotime($o['delivery_date'])) : '';
       ?>
       <tr data-status="<?= $o['status'] ?>" data-date="<?= $dateAttr ?>" class="border-b hover:bg-gray-50 cursor-pointer <?= $bg ?>" onclick="location.href='/admin/orders/<?= $o['id'] ?>'">
-        <td class="p-3 font-semibold">#<?= $o['id'] ?></td>
+        <?php
+          $numCls = match($o['status']) {
+            'new' => 'text-red-500',
+            'processing' => 'text-yellow-400',
+            'assigned' => 'text-green-500',
+            default => ''
+          };
+        ?>
+        <td class="p-3 font-semibold <?= $numCls ?>">#<?= $o['id'] ?></td>
         <td class="p-3 text-gray-600">
           <?php if ($o['delivery_date']): ?>
             <?= date('d.m', strtotime($o['delivery_date'])) ?>
