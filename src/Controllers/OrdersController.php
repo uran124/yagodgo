@@ -17,12 +17,13 @@ class OrdersController
     public function index(): void
     {
         $stmt = $this->pdo->query(
-            "SELECT o.id, u.name AS client_name, o.total_amount, o.status, o.created_at,\n" .
-            "       c.name AS courier_name, o.discount_applied, o.points_used, o.points_accrued\n" .
+            "SELECT o.id, o.status, o.total_amount, o.delivery_date, o.delivery_slot,\n" .
+            "       u.name AS client_name, u.phone, a.street AS address,\n" .
+            "       o.created_at\n" .
             "FROM orders o\n" .
             "JOIN users u ON u.id = o.user_id\n" .
-            "LEFT JOIN users c ON c.id = o.assigned_to\n" .
-            "ORDER BY o.created_at DESC"
+            "LEFT JOIN addresses a ON a.id = o.address_id\n" .
+            "ORDER BY FIELD(o.status,'new','processing','assigned','delivered','cancelled'), o.created_at DESC"
         );
         $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
