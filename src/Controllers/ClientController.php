@@ -875,10 +875,11 @@ public function showOrder(int $orderId): void
         );
         $awaiting = [];
         $rest = [];
+        $placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
         foreach ($orders as &$o) {
             $itemsStmt->execute([$o['id']]);
             $o['items'] = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
-            if (empty($o['delivery_date'])) {
+            if (empty($o['delivery_date']) || $o['delivery_date'] === $placeholder) {
                 $awaiting[] = $o;
             } else {
                 $rest[] = $o;
