@@ -1,4 +1,4 @@
-<?php /** @var array $orders @var string|null $userName */ ?>
+<?php /** @var array $orders @var array $ordersAwaiting @var string|null $userName */ ?>
 <?php
 function status_classes(string $status): string {
     return match($status) {
@@ -31,26 +31,53 @@ function status_classes(string $status): string {
       <input id="searchInput" type="search" placeholder="Поиск по №" class="border rounded-lg px-3 py-2 text-sm flex-1 sm:max-w-xs" />
     </div>
 
+    <?php if (!empty($ordersAwaiting)): ?>
+      <h2 class="font-semibold text-gray-800">Заказы ожидают поставки</h2>
+      <div class="space-y-2">
+        <?php foreach ($ordersAwaiting as $order): ?>
+          <?php $info = order_status_info($order['status']); ?>
+          <a href="/orders/<?= $order['id'] ?>" class="order-card flex justify-between items-center p-3 rounded-lg shadow hover:shadow-md transition-colors <?= $info['bg'] ?>" data-status="<?= $order['status'] ?>" data-id="<?= $order['id'] ?>">
+            <div class="flex flex-col flex-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="material-icons-round text-lg">shopping_bag</span>
+                <span class="font-semibold">#<?= $order['id'] ?>:</span>
+                <span class="order-date hidden"><?= date('d.m.Y H:i', strtotime($order['created_at'])) ?></span>
+              </div>
+              <?php foreach ($order['items'] as $idx => $it): ?>
+                <div class="flex items-center gap-2<?= $idx === 0 ? '' : ' pl-7' ?>">
+                  <span><?= htmlspecialchars($it['product_name']) ?><?php if(!empty($it['variety'])): ?> «<?= htmlspecialchars($it['variety']) ?>»<?php endif; ?><?php if(!empty($it['box_size']) && !empty($it['box_unit'])): ?> <?= $it['box_size'] . $it['box_unit'] ?><?php endif; ?>, <?= $it['quantity'] ?>шт, <?= number_format($it['quantity'] * $it['unit_price'], 0, '.', ' ') ?>₽</span>
+                </div>
+              <?php endforeach; ?>
+            </div>
+            <span class="status-badge text-sm px-2 py-0.5 rounded-full <?= status_classes($order['status']) ?>">
+              <?= order_status_info($order['status'])['label'] ?>
+            </span>
+          </a>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+
     <!-- Orders list -->
     <div id="ordersContainer" class="mt-4 space-y-2">
       <?php foreach ($orders as $order): ?>
-        <?php $info = order_status_info($order['status']); $first = $order['items'][0] ?? null; ?>
+        <?php $info = order_status_info($order['status']); ?>
         <a href="/orders/<?= $order['id'] ?>" class="order-card flex justify-between items-center p-3 rounded-lg shadow hover:shadow-md transition-colors <?= $info['bg'] ?>" data-status="<?= $order['status'] ?>" data-id="<?= $order['id'] ?>">
-          <div class="flex items-center gap-2 flex-wrap">
-            <span class="material-icons-round text-lg">shopping_bag</span>
-            <span class="font-semibold">#<?= $order['id'] ?>:</span>
-            <span>
-              <?php
-                $date = !empty($order['delivery_date']) ? date('d.m', strtotime($order['delivery_date'])) : date('d.m', strtotime($order['created_at']));
-                echo $date;
-                if (!empty($order['delivery_slot'])) echo ' ' . htmlspecialchars($order['delivery_slot']);
-              ?>
-            </span>
-            <?php if ($first): ?>
-              <span><?= htmlspecialchars($first['product_name']) ?><?php if(!empty($first['variety'])): ?> «<?= htmlspecialchars($first['variety']) ?>»<?php endif; ?></span>
-            <?php endif; ?>
-            <span><?= number_format($order['total_amount'], 0, '.', ' ') ?>₽</span>
-            <span class="order-date hidden"><?= date('d.m.Y H:i', strtotime($order['created_at'])) ?></span>
+          <div class="flex flex-col flex-1">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="material-icons-round text-lg">shopping_bag</span>
+              <span class="font-semibold">#<?= $order['id'] ?>:</span>
+              <span>
+                <?php if (!empty($order['delivery_date'])): ?>
+                  <?= date('d.m', strtotime($order['delivery_date'])) ?><?php if(!empty($order['delivery_slot'])): ?> <?= htmlspecialchars($order['delivery_slot']) ?><?php endif; ?>
+                <?php endif; ?>
+              </span>
+              <span class="order-date hidden"><?= date('d.m.Y H:i', strtotime($order['created_at'])) ?></span>
+            </div>
+            <?php foreach ($order['items'] as $idx => $it): ?>
+              <div class="flex items-center gap-2<?= $idx === 0 ? '' : ' pl-7' ?>">
+                <span><?= htmlspecialchars($it['product_name']) ?><?php if(!empty($it['variety'])): ?> «<?= htmlspecialchars($it['variety']) ?>»<?php endif; ?><?php if(!empty($it['box_size']) && !empty($it['box_unit'])): ?> <?= $it['box_size'] . $it['box_unit'] ?><?php endif; ?>, <?= $it['quantity'] ?>шт, <?= number_format($it['quantity'] * $it['unit_price'], 0, '.', ' ') ?>₽</span>
+              </div>
+            <?php endforeach; ?>
           </div>
           <span class="status-badge text-sm px-2 py-0.5 rounded-full <?= status_classes($order['status']) ?>">
             <?= order_status_info($order['status'])['label'] ?>
