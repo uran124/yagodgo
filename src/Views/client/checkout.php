@@ -95,13 +95,17 @@ $couponError     = $couponError     ?? null;
                   <select name="slot_id[<?= htmlspecialchars($dateKey) ?>]"
                           required
                           class="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 pr-10 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all bg-white">
-                    <?php for ($h = 10; $h < 21; $h++): 
-                      $next = $h + 1;
-                    ?>
-                      <option value="<?= "{$h}-{$next}" ?>">
-                        <?= sprintf('%02d:00–%02d:00', $h, $next) ?>
+                    <?php $slotOptions = [
+                      '09-12' => '09:00–12:00',
+                      '12-15' => '12:00–15:00',
+                      '15-18' => '15:00–18:00',
+                      '18-22' => '18:00–22:00'
+                    ]; ?>
+                    <?php foreach ($slotOptions as $value => $labelOpt): ?>
+                      <option value="<?= $value ?>">
+                        <?= $labelOpt ?>
                       </option>
-                    <?php endfor; ?>
+                    <?php endforeach; ?>
                   </select>
                   <span class="material-icons-round absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
                 </div>
