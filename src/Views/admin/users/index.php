@@ -1,11 +1,15 @@
 <?php /** @var array $users */ ?>
+<form method="get" class="mb-4 flex">
+  <input type="text" name="q" value="<?= htmlspecialchars($search ?? '') ?>" placeholder="Телефон или адрес" class="border rounded px-3 py-2 mr-2 flex-grow">
+  <button type="submit" class="bg-[#C86052] text-white px-4 py-2 rounded">Поиск</button>
+</form>
 <table class="min-w-full bg-white rounded shadow overflow-hidden">
   <thead class="bg-gray-200 text-gray-700">
     <tr>
       <th class="p-3 text-left font-semibold">ID</th>
       <th class="p-3 text-left font-semibold">Имя</th>
       <th class="p-3 text-left font-semibold">Телефон</th>
-      <th class="p-3 text-left font-semibold">Роль</th>
+      <th class="p-3 text-left font-semibold">Адрес</th>
       <th class="p-3 text-center font-semibold">Заблокирован</th>
     </tr>
   </thead>
@@ -21,11 +25,7 @@
         </div>
       </td>
       <td class="p-3 text-gray-600"><?= htmlspecialchars($u['phone']) ?></td>
-      <td class="p-3">
-        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?= $u['role'] === 'admin' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800' ?>">
-          <?= htmlspecialchars($u['role']) ?>
-        </span>
-      </td>
+      <td class="p-3 text-gray-600"><?= htmlspecialchars($u['address'] ?? '') ?></td>
       <td class="p-3 text-center">
         <form action="/admin/users/toggle-block" method="post" class="inline-block">
           <input type="hidden" name="id" value="<?= $u['id'] ?>">

@@ -145,31 +145,49 @@ class UsersController
      */
     public function index(): void
     {
-        try {
-            $stmt = $this->pdo->query(
-                "SELECT u.id, u.name, u.phone, u.role, u.created_at,
-                        u.referral_code, u.points_balance, u.is_blocked,
-                        ref.name AS referrer_name
-                 FROM users u
-                 LEFT JOIN users ref ON ref.id = u.referred_by
-                 ORDER BY u.created_at DESC"
-            );
-        } catch (\PDOException $e) {
-            // Совместимость с БД без поля is_blocked
-            $stmt = $this->pdo->query(
-                "SELECT u.id, u.name, u.phone, u.role, u.created_at,
-                        u.referral_code, u.points_balance,
-                        ref.name AS referrer_name
-                 FROM users u
-                 LEFT JOIN users ref ON ref.id = u.referred_by
-                 ORDER BY u.created_at DESC"
-            );
+        $search = trim($_GET['q'] ?? '');
+
+        $baseSql = "SELECT u.id, u.name, u.phone, u.role, u.created_at,
+                            u.referral_code, u.points_balance, u.is_blocked,
+                            (SELECT street FROM addresses WHERE user_id = u.id ORDER BY created_at DESC LIMIT 1) AS address,
+                            ref.name AS referrer_name
+                     FROM users u
+                     LEFT JOIN users ref ON ref.id = u.referred_by";
+
+        $params = [];
+        if ($search !== '') {
+            $baseSql .= " WHERE u.phone LIKE ? OR EXISTS(SELECT 1 FROM addresses a WHERE a.user_id = u.id AND a.street LIKE ?)";
+            $params[] = "%$search%";
+            $params[] = "%$search%";
         }
+        $baseSql .= " ORDER BY u.created_at DESC";
+
+        try {
+            $stmt = $this->pdo->prepare($baseSql);
+            $stmt->execute($params);
+        } catch (\PDOException $e) {
+            // База может не поддерживать поле is_blocked
+            $baseSql = "SELECT u.id, u.name, u.phone, u.role, u.created_at,
+                                u.referral_code, u.points_balance,
+                                (SELECT street FROM addresses WHERE user_id = u.id ORDER BY created_at DESC LIMIT 1) AS address,
+                                ref.name AS referrer_name
+                         FROM users u
+                         LEFT JOIN users ref ON ref.id = u.referred_by";
+            if ($search !== '') {
+                $baseSql .= " WHERE u.phone LIKE ? OR EXISTS(SELECT 1 FROM addresses a WHERE a.user_id = u.id AND a.street LIKE ?)";
+            }
+            $baseSql .= " ORDER BY u.created_at DESC";
+
+            $stmt = $this->pdo->prepare($baseSql);
+            $stmt->execute($params);
+        }
+
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         viewAdmin('users/index', [
-          'pageTitle' => 'Пользователи',
-          'users'     => $users,
+            'pageTitle' => 'Пользователи',
+            'users'     => $users,
+            'search'    => $search,
         ]);
     }
 
