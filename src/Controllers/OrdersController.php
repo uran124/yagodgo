@@ -111,7 +111,7 @@ class OrdersController
         if ($orderId && in_array($status, ['new','processing','assigned','delivered','cancelled'], true)) {
             // Получаем текущий статус и данные заказа
             $stmt = $this->pdo->prepare(
-                "SELECT status, user_id, total_amount, points_accrued FROM orders WHERE id = ?"
+                "SELECT status, user_id, total_amount, points_accrued, points_used FROM orders WHERE id = ?"
             );
             $stmt->execute([$orderId]);
             $order = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -173,6 +173,20 @@ class OrdersController
                     if ((int)$cnt->fetchColumn() === 0) {
                         $this->pdo->prepare("UPDATE users SET has_used_referral_coupon = 0 WHERE id = ?")
                                  ->execute([(int)$order['user_id']]);
+                    }
+
+                    if ($order['status'] !== 'cancelled') {
+                        $pointsBack = (int)$order['points_used'];
+                        if ($pointsBack > 0) {
+                            $this->pdo->prepare(
+                                "UPDATE users SET points_balance = points_balance + ? WHERE id = ?"
+                            )->execute([$pointsBack, (int)$order['user_id']]);
+
+                            $desc = "Возврат {$pointsBack} за отмену заказа №{$orderId}";
+                            $this->pdo->prepare(
+                                "INSERT INTO points_transactions (user_id, order_id, amount, transaction_type, description, created_at) VALUES (?, ?, ?, 'accrual', ?, NOW())"
+                            )->execute([(int)$order['user_id'], $orderId, $pointsBack, $desc]);
+                        }
                     }
                 }
             }
@@ -417,13 +431,28 @@ class OrdersController
     {
         $orderId = (int)($_POST['order_id'] ?? 0);
         if ($orderId) {
-            $stmt = $this->pdo->prepare("SELECT user_id FROM orders WHERE id = ?");
+            $stmt = $this->pdo->prepare("SELECT user_id, status, points_used FROM orders WHERE id = ?");
             $stmt->execute([$orderId]);
-            $userId = (int)$stmt->fetchColumn();
+            $order = $stmt->fetch(PDO::FETCH_ASSOC);
+            $userId = (int)($order['user_id'] ?? 0);
 
             $this->pdo->prepare("DELETE FROM order_items WHERE order_id = ?")->execute([$orderId]);
             $this->pdo->prepare("DELETE FROM points_transactions WHERE order_id = ?")->execute([$orderId]);
             $this->pdo->prepare("DELETE FROM orders WHERE id = ?")->execute([$orderId]);
+
+            if ($userId && ($order['status'] ?? '') !== 'cancelled') {
+                $pointsBack = (int)($order['points_used'] ?? 0);
+                if ($pointsBack > 0) {
+                    $this->pdo->prepare(
+                        "UPDATE users SET points_balance = points_balance + ? WHERE id = ?"
+                    )->execute([$pointsBack, $userId]);
+
+                    $desc = "Возврат {$pointsBack} за удаление заказа №{$orderId}";
+                    $this->pdo->prepare(
+                        "INSERT INTO points_transactions (user_id, order_id, amount, transaction_type, description, created_at) VALUES (?, ?, ?, 'accrual', ?, NOW())"
+                    )->execute([$userId, $orderId, $pointsBack, $desc]);
+                }
+            }
 
             if ($userId) {
                 $cnt = $this->pdo->prepare("SELECT COUNT(*) FROM orders WHERE user_id = ? AND status <> 'cancelled'");
