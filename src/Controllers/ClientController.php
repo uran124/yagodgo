@@ -860,22 +860,29 @@ public function showOrder(int $orderId): void
              FROM orders o
              LEFT JOIN addresses a ON a.id = o.address_id
              WHERE o.user_id = ?
-             ORDER BY o.created_at DESC"
+             ORDER BY o.id DESC"
         );
         $stmt->execute([$userId]);
         $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Подтягиваем позиции для каждого заказа
         $itemsStmt = $this->pdo->prepare(
-            "SELECT t.name AS product_name, p.variety, oi.quantity
+            "SELECT t.name AS product_name, p.variety, p.box_size, p.box_unit, oi.quantity, oi.unit_price
              FROM order_items oi
              JOIN products p ON p.id = oi.product_id
              JOIN product_types t ON t.id = p.product_type_id
              WHERE oi.order_id = ?"
         );
+        $awaiting = [];
+        $rest = [];
         foreach ($orders as &$o) {
             $itemsStmt->execute([$o['id']]);
             $o['items'] = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
+            if (empty($o['delivery_date'])) {
+                $awaiting[] = $o;
+            } else {
+                $rest[] = $o;
+            }
         }
 
         $debugData = [
@@ -884,9 +891,10 @@ public function showOrder(int $orderId): void
         ];
 
         view('client/orders', [
-            'orders'    => $orders,
-            'userName'  => $_SESSION['name'] ?? null,
-            'debugData' => $debugData,
+            'ordersAwaiting' => $awaiting,
+            'orders'         => $rest,
+            'userName'       => $_SESSION['name'] ?? null,
+            'debugData'      => $debugData,
         ]);
     }
 
