@@ -3,6 +3,9 @@
   <input type="text" name="q" value="<?= htmlspecialchars($search ?? '') ?>" placeholder="Телефон или адрес" class="border rounded px-3 py-2 mr-2 flex-grow">
   <button type="submit" class="bg-[#C86052] text-white px-4 py-2 rounded">Поиск</button>
 </form>
+<a href="/admin/users/edit" class="bg-[#C86052] text-white px-4 py-2 rounded mb-4 inline-flex items-center">
+  <span class="material-icons-round text-base mr-1">add</span> Добавить пользователя
+</a>
 <table class="min-w-full bg-white rounded shadow overflow-hidden">
   <thead class="bg-gray-200 text-gray-700">
     <tr>
