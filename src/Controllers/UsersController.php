@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use PDO;
 use App\Helpers\Auth;
+use App\Helpers\ReferralHelper;
 
 class UsersController
 {
@@ -12,6 +13,23 @@ class UsersController
     public function __construct(PDO $pdo)
     {
         $this->pdo = $pdo;
+    }
+
+    /**
+     * Нормализует телефон к формату 7XXXXXXXXXX
+     */
+    private function normalizePhone(string $raw): string
+    {
+        $digits = preg_replace('/\D+/', '', $raw);
+        if (strlen($digits) === 10) {
+            return '7' . $digits;
+        }
+        if (strlen($digits) === 11) {
+            $first = $digits[0];
+            $rest  = substr($digits, 1);
+            return ($first === '8' ? '7' : $first) . $rest;
+        }
+        return $digits;
     }
 
     /**
@@ -196,28 +214,31 @@ class UsersController
      */
     public function edit(): void
     {
-        $id = (int)($_GET['id'] ?? 0);
-        try {
-            $stmt = $this->pdo->prepare(
-                "SELECT id, name, phone, role, is_blocked
-                 FROM users
-                 WHERE id = ?"
-            );
-            $stmt->execute([$id]);
-        } catch (\PDOException $e) {
-            // Поля is_blocked может не быть в старой схеме
-            $stmt = $this->pdo->prepare(
-                "SELECT id, name, phone, role
-                 FROM users
-                 WHERE id = ?"
-            );
-            $stmt->execute([$id]);
+        $id   = (int)($_GET['id'] ?? 0);
+        $user = null;
+
+        if ($id) {
+            try {
+                $stmt = $this->pdo->prepare(
+                    "SELECT id, name, phone, role, is_blocked
+                     FROM users
+                     WHERE id = ?"
+                );
+                $stmt->execute([$id]);
+            } catch (\PDOException $e) {
+                $stmt = $this->pdo->prepare(
+                    "SELECT id, name, phone, role
+                     FROM users
+                     WHERE id = ?"
+                );
+                $stmt->execute([$id]);
+            }
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
         }
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
         viewAdmin('users/edit', [
-          'pageTitle' => 'Редактировать пользователя',
-          'user'      => $user,
+            'pageTitle' => $id ? 'Редактировать пользователя' : 'Добавить пользователя',
+            'user'      => $user,
         ]);
     }
 
@@ -226,25 +247,90 @@ class UsersController
      */
     public function save(): void
     {
-        $id        = (int)($_POST['id'] ?? 0);
-        $role      = $_POST['role'] ?? 'client';
-        $isBlocked = isset($_POST['is_blocked']) ? 1 : 0;
+        $id = (int)($_POST['id'] ?? 0);
 
-        try {
-            $stmt = $this->pdo->prepare(
-                "UPDATE users
-                 SET role = ?, is_blocked = ?
-                 WHERE id = ?"
-            );
-            $stmt->execute([$role, $isBlocked, $id]);
-        } catch (\PDOException $e) {
-            // База может не поддерживать поле is_blocked
-            $stmt = $this->pdo->prepare(
-                "UPDATE users
-                 SET role = ?
-                 WHERE id = ?"
-            );
-            $stmt->execute([$role, $id]);
+        if ($id) {
+            $role      = $_POST['role'] ?? 'client';
+            $isBlocked = isset($_POST['is_blocked']) ? 1 : 0;
+
+            try {
+                $stmt = $this->pdo->prepare(
+                    "UPDATE users
+                     SET role = ?, is_blocked = ?
+                     WHERE id = ?"
+                );
+                $stmt->execute([$role, $isBlocked, $id]);
+            } catch (\PDOException $e) {
+                $stmt = $this->pdo->prepare(
+                    "UPDATE users
+                     SET role = ?
+                     WHERE id = ?"
+                );
+                $stmt->execute([$role, $id]);
+            }
+        } else {
+            $nameRaw  = $_POST['name'] ?? '';
+            $phoneRaw = $_POST['phone'] ?? '';
+            $address  = trim($_POST['address'] ?? '');
+            $pinRaw   = $_POST['pin'] ?? '';
+            $invite   = trim($_POST['invite'] ?? '');
+
+            $name  = trim($nameRaw);
+            $phone = $this->normalizePhone($phoneRaw);
+            $pin   = trim($pinRaw);
+
+            if (
+                $name === '' ||
+                !preg_match('/^7\d{10}$/', $phone) ||
+                !preg_match('/^\d{4}$/', $pin) ||
+                $address === ''
+            ) {
+                header('Location: /admin/users/edit?error=Неверные+данные');
+                exit;
+            }
+
+            $referredBy = null;
+            if ($invite !== '') {
+                $stmt = $this->pdo->prepare("SELECT id FROM users WHERE referral_code = ?");
+                $stmt->execute([$invite]);
+                $found = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($found) {
+                    $referredBy = (int)$found['id'];
+                }
+            }
+
+            $refCode = ReferralHelper::generateUniqueCode($this->pdo, 8);
+            $pinHash = password_hash($pin, PASSWORD_DEFAULT);
+
+            try {
+                $this->pdo->beginTransaction();
+
+                $stmt = $this->pdo->prepare(
+                    "INSERT INTO users
+                        (role, name, phone, password_hash, referral_code, referred_by, has_used_referral_coupon, points_balance, created_at)
+                     VALUES ('client', ?, ?, ?, ?, ?, 0, 0, NOW())"
+                );
+                $stmt->execute([$name, $phone, $pinHash, $refCode, $referredBy]);
+                $newId = (int)$this->pdo->lastInsertId();
+
+                $stmt = $this->pdo->prepare(
+                    "INSERT INTO addresses (user_id, street, created_at) VALUES (?, ?, NOW())"
+                );
+                $stmt->execute([$newId, $address]);
+
+                if ($referredBy !== null) {
+                    $stmt = $this->pdo->prepare(
+                        "INSERT IGNORE INTO referrals (referrer_id, referred_id, created_at) VALUES (?, ?, NOW())"
+                    );
+                    $stmt->execute([$referredBy, $newId]);
+                }
+
+                $this->pdo->commit();
+            } catch (\Exception $e) {
+                $this->pdo->rollBack();
+                header('Location: /admin/users/edit?error=Ошибка+создания');
+                exit;
+            }
         }
 
         header('Location: /admin/users');
