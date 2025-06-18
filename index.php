@@ -109,6 +109,15 @@ function requireClient(): void
     }
 }
 
+// Вспомогательная функция для защиты админских маршрутов
+function requireAdmin(): void
+{
+    if (($_SESSION['role'] ?? '') !== 'admin') {
+        header('Location: /login');
+        exit;
+    }
+}
+
 // Информация о статусе заказа: название, классы бейджа и фона
 function order_status_info(string $status): array
 {
@@ -316,84 +325,109 @@ switch ("$method $uri") {
     // === АДМИН-МАРШРУТЫ ===
 
     case 'GET /admin/dashboard':
+        requireAdmin();
         (new App\Controllers\AdminController($pdo))->dashboard();
         break;
 
     case 'GET /admin/products':
+        requireAdmin();
         (new App\Controllers\ProductsController($pdo))->index();
         break;
     case 'GET /admin/products/edit':
+        requireAdmin();
         (new App\Controllers\ProductsController($pdo))->edit();
         break;
     case 'POST /admin/products/save':
+        requireAdmin();
         (new App\Controllers\ProductsController($pdo))->save();
         break;
     case 'POST /admin/products/toggle':
+        requireAdmin();
         (new App\Controllers\ProductsController($pdo))->toggle();
         break;
     case 'POST /admin/products/delete':
+        requireAdmin();
         (new App\Controllers\ProductsController($pdo))->delete();
         break;
 
     case 'GET /admin/orders':
+        requireAdmin();
         (new App\Controllers\OrdersController($pdo))->index();
         break;
     case (bool)preg_match('#^GET /admin/orders/(\d+)$#', "$method $uri", $m):
+        requireAdmin();
         (new App\Controllers\OrdersController($pdo))->show((int)$m[1]);
         break;
     case 'POST /admin/orders/assign':
+        requireAdmin();
         (new App\Controllers\OrdersController($pdo))->assign();
         break;
     case 'POST /admin/orders/status':
+        requireAdmin();
         (new App\Controllers\OrdersController($pdo))->updateStatus();
         break;
     case 'POST /admin/orders/delete':
+        requireAdmin();
         (new App\Controllers\OrdersController($pdo))->delete();
         break;
-        
+
     case 'GET /admin/slots':
+        requireAdmin();
         (new App\Controllers\SlotsController($pdo))->index();
         break;
     case 'GET /admin/slots/edit':
+        requireAdmin();
         (new App\Controllers\SlotsController($pdo))->edit();
         break;
     case 'POST /admin/slots/save':
+        requireAdmin();
         (new App\Controllers\SlotsController($pdo))->save();
         break;
     case 'POST /admin/slots/delete':
+        requireAdmin();
         (new App\Controllers\SlotsController($pdo))->delete();
         break;
 
     case 'GET /admin/coupons':
+        requireAdmin();
         (new App\Controllers\CouponsController($pdo))->index();
         break;
     case 'GET /admin/coupons/edit':
+        requireAdmin();
         (new App\Controllers\CouponsController($pdo))->edit();
         break;
     case 'POST /admin/coupons/save':
+        requireAdmin();
         (new App\Controllers\CouponsController($pdo))->save();
         break;
     case 'POST /admin/coupons/generate':
+        requireAdmin();
         (new App\Controllers\CouponsController($pdo))->generate();
         break;
 
     case 'GET /admin/users':
+        requireAdmin();
         (new App\Controllers\UsersController($pdo))->index();
         break;
     case 'GET /admin/users/edit':
+        requireAdmin();
         (new App\Controllers\UsersController($pdo))->edit();
         break;
     case 'POST /admin/users/save':
+        requireAdmin();
         (new App\Controllers\UsersController($pdo))->save();
         break;
     case 'POST /admin/users/toggle-block':
+        requireAdmin();
         (new App\Controllers\UsersController($pdo))->toggleBlock();
         break;
 
     case 'GET /admin/settings':
+        requireAdmin();
         (new App\Controllers\SettingsController($pdo))->index();
         break;
     case 'POST /admin/settings':
+        requireAdmin();
         (new App\Controllers\SettingsController($pdo))->save();
         break;
 
