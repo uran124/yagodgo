@@ -4,7 +4,7 @@
     <option value="">Все статусы</option>
     <option value="new">Новые</option>
     <option value="processing">Принятые</option>
-    <option value="assigned">Обработанные</option>
+    <option value="assigned">В работе</option>
     <option value="delivered">Выполненные</option>
     <option value="cancelled">Отмененные</option>
   </select>

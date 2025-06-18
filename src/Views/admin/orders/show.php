@@ -65,7 +65,7 @@
     ]; ?>
     <?php foreach ([
         'processing' => 'Принят',
-        'assigned'   => 'Обработан',
+        'assigned'   => 'В работе',
         'delivered'  => 'Выполнен',
         'cancelled'  => 'Отменен'
       ] as $st => $label): ?>
