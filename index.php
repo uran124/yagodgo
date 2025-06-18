@@ -124,7 +124,7 @@ function order_status_info(string $status): array
             'bg'    => 'bg-yellow-50',
         ],
         'assigned' => [
-            'label' => 'Обработан',
+            'label' => 'В работе',
             'badge' => 'bg-green-100 text-green-800',
             'bg'    => 'bg-green-50',
         ],
