@@ -735,8 +735,8 @@ public function cart(): void
 
         // (7.3) Вставляем позиции в order_items
         $stmtItem = $this->pdo->prepare(
-            "INSERT INTO order_items (order_id, product_id, quantity, unit_price)\n" .
-            "VALUES (?, ?, ?, ?)"
+            "INSERT INTO order_items (order_id, product_id, quantity, boxes, unit_price)\n" .
+            "VALUES (?, ?, ?, ?, ?)"
         );
         foreach ($block as $prodId => $data) {
             $kgQty   = $data['quantity'] * $data['box_size'];
@@ -747,6 +747,7 @@ public function cart(): void
                 $orderId,
                 $prodId,
                 $kgQty,
+                $data['quantity'],
                 $kgPrice,
             ]);
         }
@@ -843,9 +844,10 @@ public function showOrder(int $orderId): void
 
     // 3) Достаём позиции этого заказа
     $stmtItems = $this->pdo->prepare(
-      "SELECT 
+      "SELECT
          oi.product_id,
          oi.quantity,
+         oi.boxes,
          oi.unit_price,
          p.variety,
          t.name AS product_name
@@ -908,7 +910,7 @@ public function showOrder(int $orderId): void
 
         // Подтягиваем позиции для каждого заказа
         $itemsStmt = $this->pdo->prepare(
-            "SELECT t.name AS product_name, p.variety, p.box_size, p.box_unit, oi.quantity, oi.unit_price
+            "SELECT t.name AS product_name, p.variety, p.box_size, p.box_unit, oi.quantity, oi.boxes, oi.unit_price
              FROM order_items oi
              JOIN products p ON p.id = oi.product_id
              JOIN product_types t ON t.id = p.product_type_id

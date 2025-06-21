@@ -100,9 +100,9 @@ $discount = max(0, $rawSum - $order['total_amount']);
                   <span class="text-gray-600"><?= htmlspecialchars($it['variety']) ?></span>
                 <?php endif; ?>
               </div>
-              <?php $boxes = $it['box_size']>0 ? round($it['quantity']/$it['box_size'],1) : $it['quantity']; ?>
+              <?php $boxes = isset($it['boxes']) ? $it['boxes'] : ($it['box_size']>0 ? round($it['quantity']/$it['box_size'],1) : $it['quantity']); ?>
               <div class="text-sm text-gray-500 mt-1">
-                Количество: <?= htmlspecialchars($it['quantity']) ?> кг (≈<?= $boxes ?> ящ.)
+                Количество: <?= htmlspecialchars($it['quantity']) ?> кг (<?= $boxes ?> ящ.)
               </div>
             </div>
             <div class="text-right">

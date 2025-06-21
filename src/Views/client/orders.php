@@ -45,8 +45,8 @@ function status_classes(string $status): string {
               </div>
               <?php foreach ($order['items'] as $idx => $it): ?>
                 <div class="flex items-center gap-2<?= $idx === 0 ? '' : ' pl-7' ?>">
-                  <?php $boxes = $it['box_size']>0 ? round($it['quantity']/$it['box_size'],1) : $it['quantity']; ?>
-                  <span><?= htmlspecialchars($it['product_name']) ?><?php if(!empty($it['variety'])): ?> «<?= htmlspecialchars($it['variety']) ?>»<?php endif; ?><?php if(!empty($it['box_size']) && !empty($it['box_unit'])): ?> <?= $it['box_size'] . $it['box_unit'] ?><?php endif; ?>, <?= $it['quantity'] ?>кг (≈<?= $boxes ?> ящ.), <?= number_format($it['quantity'] * $it['unit_price'], 0, '.', ' ') ?>₽</span>
+                  <?php $boxes = isset($it['boxes']) ? $it['boxes'] : ($it['box_size']>0 ? round($it['quantity']/$it['box_size'],1) : $it['quantity']); ?>
+                  <span><?= htmlspecialchars($it['product_name']) ?><?php if(!empty($it['variety'])): ?> «<?= htmlspecialchars($it['variety']) ?>»<?php endif; ?><?php if(!empty($it['box_size']) && !empty($it['box_unit'])): ?> <?= $it['box_size'] . $it['box_unit'] ?><?php endif; ?>, <?= $it['quantity'] ?>кг (<?= $boxes ?> ящ.), <?= number_format($it['quantity'] * $it['unit_price'], 0, '.', ' ') ?>₽</span>
                 </div>
               <?php endforeach; ?>
             </div>
@@ -75,9 +75,9 @@ function status_classes(string $status): string {
               <span class="order-date hidden"><?= date('d.m.Y H:i', strtotime($order['created_at'])) ?></span>
             </div>
             <?php foreach ($order['items'] as $idx => $it): ?>
-              <?php $boxes = $it['box_size']>0 ? round($it['quantity']/$it['box_size'],1) : $it['quantity']; ?>
+              <?php $boxes = isset($it['boxes']) ? $it['boxes'] : ($it['box_size']>0 ? round($it['quantity']/$it['box_size'],1) : $it['quantity']); ?>
               <div class="flex items-center gap-2<?= $idx === 0 ? '' : ' pl-7' ?>">
-                <span><?= htmlspecialchars($it['product_name']) ?><?php if(!empty($it['variety'])): ?> «<?= htmlspecialchars($it['variety']) ?>»<?php endif; ?><?php if(!empty($it['box_size']) && !empty($it['box_unit'])): ?> <?= $it['box_size'] . $it['box_unit'] ?><?php endif; ?>, <?= $it['quantity'] ?>кг (≈<?= $boxes ?> ящ.), <?= number_format($it['quantity'] * $it['unit_price'], 0, '.', ' ') ?>₽</span>
+                <span><?= htmlspecialchars($it['product_name']) ?><?php if(!empty($it['variety'])): ?> «<?= htmlspecialchars($it['variety']) ?>»<?php endif; ?><?php if(!empty($it['box_size']) && !empty($it['box_unit'])): ?> <?= $it['box_size'] . $it['box_unit'] ?><?php endif; ?>, <?= $it['quantity'] ?>кг (<?= $boxes ?> ящ.), <?= number_format($it['quantity'] * $it['unit_price'], 0, '.', ' ') ?>₽</span>
               </div>
             <?php endforeach; ?>
           </div>

@@ -47,7 +47,7 @@ class OrdersController
         $order = $stmt->fetch(PDO::FETCH_ASSOC);
 
         $stmt = $this->pdo->prepare(
-            "SELECT oi.product_id, oi.quantity, oi.unit_price, t.name AS product_name, p.unit, p.variety, p.box_size, p.box_unit\n" .
+            "SELECT oi.product_id, oi.quantity, oi.boxes, oi.unit_price, t.name AS product_name, p.unit, p.variety, p.box_size, p.box_unit\n" .
             "FROM order_items oi\n" .
             "JOIN products p ON p.id = oi.product_id\n" .
             "JOIN product_types t ON t.id = p.product_type_id\n" .
@@ -292,10 +292,16 @@ class OrdersController
             $orderId = (int)$this->pdo->lastInsertId();
 
             $stmtItem = $this->pdo->prepare(
-                "INSERT INTO order_items (order_id, product_id, quantity, unit_price) VALUES (?, ?, ?, ?)"
+                "INSERT INTO order_items (order_id, product_id, quantity, boxes, unit_price) VALUES (?, ?, ?, ?, ?)"
             );
             foreach ($cartItems as $ci) {
-                $stmtItem->execute([$orderId, $ci['product_id'], $ci['quantity'], $ci['unit_price']]);
+                $stmtItem->execute([
+                    $orderId,
+                    $ci['product_id'],
+                    $ci['quantity'],
+                    $ci['quantity'],
+                    $ci['unit_price']
+                ]);
             }
 
             // Начисление бонусов по заказу
@@ -347,7 +353,7 @@ class OrdersController
 
         // Получаем первую позицию заказа (если их несколько, берём первую)
         $stmtItems = $this->pdo->prepare(
-            "SELECT t.name AS product, p.variety, p.unit, oi.quantity, oi.unit_price
+            "SELECT t.name AS product, p.variety, p.unit, oi.quantity, oi.boxes, oi.unit_price
              FROM order_items oi
              JOIN products p ON p.id = oi.product_id
              JOIN product_types t ON t.id = p.product_type_id
