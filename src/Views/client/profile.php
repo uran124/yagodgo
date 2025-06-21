@@ -2,6 +2,7 @@
 /**
  * @var array  $user          // ['id'=>..., 'name'=>..., 'phone'=>..., 'referral_code'=>..., 'points_balance'=>..., 'referred_by'=>...]
  * @var string $address
+ * @var array  $addresses
  * @var array  $transactions  // каждая транзакция ['id'=>..., 'amount'=>..., 'transaction_type'=>..., 'description'=>..., 'created_at'=>..., 'order_id'=>...]
  */
 ?>
@@ -35,21 +36,26 @@
             <?= htmlspecialchars($user['phone'] ?? 'Не указан') ?>
           </div>
         </div>
-        <form action="/profile" method="post" class="space-y-4">
-          <div class="flex items-start space-x-4">
-            <div class="w-12 h-12 bg-gradient-to-br from-orange-400 to-red-500 rounded-2xl flex items-center justify-center flex-shrink-0 mt-1">
-              <span class="material-icons-round text-white">home</span>
+        <div class="space-y-2">
+          <?php foreach ($addresses as $addr): ?>
+            <div class="border rounded-2xl p-3 <?= $addr['is_primary'] ? 'bg-emerald-50' : '' ?>">
+              <div class="font-semibold text-gray-800"><?= htmlspecialchars($addr['street']) ?></div>
+              <div class="text-sm text-gray-600"><?= htmlspecialchars($addr['recipient_name']) ?>, <?= htmlspecialchars($addr['recipient_phone']) ?></div>
+              <?php if (!$addr['is_primary']): ?>
+                <form action="/profile/set-primary" method="post" class="inline">
+                  <input type="hidden" name="id" value="<?= $addr['id'] ?>">
+                  <button class="text-emerald-600 text-sm">Сделать основным</button>
+                </form>
+                <form action="/profile/delete-address" method="post" class="inline ml-2">
+                  <input type="hidden" name="id" value="<?= $addr['id'] ?>">
+                  <button class="text-red-600 text-sm">Удалить</button>
+                </form>
+              <?php else: ?>
+                <span class="text-emerald-600 text-sm font-semibold">Основной</span>
+              <?php endif; ?>
             </div>
-            <textarea
-              name="address"
-              rows="3"
-              class="flex-1 border border-gray-300 rounded-2xl px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all resize-none"
-            ><?= htmlspecialchars($address) ?></textarea>
-          </div>
-          <div class="flex justify-end">
-            <button type="submit" class="bg-emerald-500 text-white px-4 py-2 rounded-lg hover:bg-emerald-600 transition">Обновить</button>
-          </div>
-        </form>
+          <?php endforeach; ?>
+        </div>
         <div class="flex items-center space-x-4">
           <div class="w-12 h-12 bg-gradient-to-br from-pink-400 to-red-500 rounded-2xl flex items-center justify-center flex-shrink-0">
             <span class="text-xl">🍓</span>
