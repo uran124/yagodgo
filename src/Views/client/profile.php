@@ -36,6 +36,10 @@
             <?= htmlspecialchars($user['phone'] ?? 'Не указан') ?>
           </div>
         </div>
+        <h3 class="text-lg font-semibold text-gray-800 mb-2 flex items-center">
+          <span class="material-icons-round mr-2 text-red-500">location_on</span>
+          Адрес доставки:
+        </h3>
         <div class="space-y-2">
           <?php foreach ($addresses as $addr): ?>
             <div class="border rounded-2xl p-3 <?= $addr['is_primary'] ? 'bg-emerald-50' : '' ?>">
@@ -55,14 +59,6 @@
               <?php endif; ?>
             </div>
           <?php endforeach; ?>
-        </div>
-        <div class="flex items-center space-x-4">
-          <div class="w-12 h-12 bg-gradient-to-br from-pink-400 to-red-500 rounded-2xl flex items-center justify-center flex-shrink-0">
-            <span class="text-xl">🍓</span>
-          </div>
-          <div class="flex-1 text-lg font-semibold text-gray-800">
-            <?= (int)$user['points_balance'] ?>
-          </div>
         </div>
       </div>
     </div>
@@ -115,26 +111,32 @@
           Бонусы
         </h2>
       </div>
-      <div class="p-6 space-y-4 text-gray-700 bg-gradient-to-br from-red-50 via-white to-pink-50">
-        <p>Подарите другу 10 % скидку на первый заказ и получайте клубнички за каждый его заказ!</p>
-        <p>Скопируйте ссылку и отправьте другу:</p>
-        <div class="flex items-center space-x-2">
-          <?php $refLink = "https://berrygo.ru/register?invite=" . urlencode($user['referral_code']); ?>
-          <input type="text" readonly value="<?= htmlspecialchars($refLink) ?>" class="flex-1 bg-white/80 rounded-lg px-3 py-2 text-sm text-gray-800 outline-none cursor-pointer" onclick="copyInviteLink()" title="Нажмите, чтобы скопировать">
-          <button onclick="copyInviteLink()" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-pink-500 transition">Копировать</button>
-        </div>
-        <p class="text-sm text-gray-500">Или используйте купон:</p>
-        <div class="flex items-center space-x-2">
-          <code class="bg-white/80 rounded-lg px-3 py-2 font-mono cursor-pointer" onclick="copyInviteCode()" title="Нажмите, чтобы скопировать">
-            <?= htmlspecialchars($user['referral_code']) ?>
-          </code>
-          <button onclick="copyInviteCode()" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-pink-500 transition">Копировать</button>
-        </div>
-        <div class="grid grid-cols-3 gap-4 pt-4">
-          <div class="text-center p-4 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl">
-            <div class="text-2xl font-bold text-emerald-600 mb-1"><?= $refStats['users'] ?></div>
-            <div class="text-xs text-gray-600">приглашено</div>
+        <div class="p-6 space-y-4 text-gray-700 bg-gradient-to-br from-red-50 via-white to-pink-50">
+          <div class="text-center">
+            <div class="text-sm text-gray-600 mb-1">Баланс</div>
+            <div class="text-4xl font-extrabold text-pink-600">
+              <?= (int)$user['points_balance'] ?> <span class="text-3xl">🍓</span>
+            </div>
           </div>
+          <p class="text-center">Подарите другу 10 % скидку на первый заказ и получайте клубнички за каждый его заказ!</p>
+          <p class="text-center">Скопируйте ссылку и отправьте другу:</p>
+          <?php $refLink = "https://berrygo.ru/register?invite=" . urlencode($user['referral_code']); ?>
+          <div class="text-center">
+            <button onclick="copyInviteLink()" class="bg-white/80 rounded-lg px-3 py-2 text-sm text-gray-800 hover:bg-pink-100 transition break-all">
+              <?= htmlspecialchars($refLink) ?>
+            </button>
+          </div>
+          <p class="text-sm text-gray-500 text-center">Или используйте купон:</p>
+          <div class="text-center">
+            <button onclick="copyInviteCode()" class="bg-white/80 rounded-lg px-3 py-2 font-mono text-sm hover:bg-pink-100 transition">
+              <?= htmlspecialchars($user['referral_code']) ?>
+            </button>
+          </div>
+          <div class="grid grid-cols-3 gap-4 pt-4">
+            <div class="text-center p-4 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl">
+              <div class="text-2xl font-bold text-emerald-600 mb-1"><?= $refStats['users'] ?></div>
+              <div class="text-xs text-gray-600">приглашено</div>
+            </div>
           <div class="text-center p-4 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl">
             <div class="text-2xl font-bold text-orange-600 mb-1"><?= $refStats['orders'] ?></div>
             <div class="text-xs text-gray-600">заказов</div>
