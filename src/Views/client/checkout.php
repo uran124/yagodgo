@@ -167,14 +167,18 @@ $couponError     = $couponError     ?? null;
             <span class="material-icons-round text-lg mr-2 align-middle">location_on</span>
             Адрес доставки
           </h3>
-          <div class="relative">
-            <input type="text"
-                   name="address_id[default]"
-                   required
-                   value="<?= htmlspecialchars($address) ?>"
-                   placeholder="Введите адрес доставки"
-                   class="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 pr-10 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all">
-            <span class="material-icons-round absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">place</span>
+          <div class="space-y-2">
+            <select name="address_id[default]" id="addressSelect" class="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none">
+              <?php foreach ($addresses as $a): ?>
+                <option value="<?= $a['id'] ?>" <?= $a['is_primary'] ? 'selected' : '' ?>><?= htmlspecialchars($a['street']) ?> (<?= htmlspecialchars($a['recipient_name']) ?>)</option>
+              <?php endforeach; ?>
+              <option value="new">Другой адрес</option>
+            </select>
+            <div id="newAddressBlock" class="space-y-2 hidden">
+              <input type="text" name="new_address" placeholder="Адрес" class="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none">
+              <input type="text" name="recipient_name" value="<?= htmlspecialchars($userName) ?>" placeholder="Имя получателя" class="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none">
+              <input type="tel" name="recipient_phone" value="<?= htmlspecialchars($addresses[0]['recipient_phone'] ?? '') ?>" placeholder="Телефон" class="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none">
+            </div>
           </div>
         </div>
 
@@ -266,3 +270,19 @@ $couponError     = $couponError     ?? null;
 
   </div>
 </main>
+
+<script>
+  const select = document.getElementById('addressSelect');
+  const block = document.getElementById('newAddressBlock');
+  function toggleBlock() {
+    if (select.value === 'new') {
+      block.classList.remove('hidden');
+    } else {
+      block.classList.add('hidden');
+    }
+  }
+  if (select) {
+    select.addEventListener('change', toggleBlock);
+    toggleBlock();
+  }
+</script>

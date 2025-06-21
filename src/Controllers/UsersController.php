@@ -58,17 +58,16 @@ class UsersController
             exit;
         }
 
-        // 2) Получаем текущий адрес пользователя (последний по дате)
+        // 2) Получаем все адреса пользователя, первый — основной
         $stmt = $this->pdo->prepare(
-            "SELECT street 
-             FROM addresses 
-             WHERE user_id = ? 
-             ORDER BY created_at DESC 
-             LIMIT 1"
+            "SELECT id, street, recipient_name, recipient_phone, is_primary
+             FROM addresses
+             WHERE user_id = ?
+             ORDER BY is_primary DESC, created_at ASC"
         );
         $stmt->execute([$user['id']]);
-        $addressRow = $stmt->fetch(PDO::FETCH_ASSOC);
-        $address = $addressRow['street'] ?? '';
+        $addresses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $address = $addresses[0]['street'] ?? '';
 
         // 3) История баллов (points_transactions)
         $stmt = $this->pdo->prepare(
@@ -121,6 +120,7 @@ class UsersController
         view('client/profile', [
             'user'         => $user,
             'address'      => $address,
+            'addresses'    => $addresses,
             'transactions' => $transactions,
             'activeOrders' => $activeOrders,
             'refStats'     => [
@@ -148,11 +148,27 @@ class UsersController
             exit;
         }
 
+        // Получаем имя и телефон пользователя
+        $stmtUser = $this->pdo->prepare("SELECT name, phone FROM users WHERE id = ?");
+        $stmtUser->execute([$authUser['id']]);
+        $userInfo = $stmtUser->fetch(PDO::FETCH_ASSOC) ?: ['name' => '', 'phone' => ''];
+
+        // Определяем, есть ли уже основной адрес
+        $stmtCheck = $this->pdo->prepare("SELECT COUNT(*) FROM addresses WHERE user_id = ? AND is_primary = 1");
+        $stmtCheck->execute([$authUser['id']]);
+        $isPrimary = $stmtCheck->fetchColumn() == 0 ? 1 : 0;
+
         $stmt = $this->pdo->prepare(
-            "INSERT INTO addresses (user_id, street, created_at)
-             VALUES (?, ?, NOW())"
+            "INSERT INTO addresses (user_id, street, recipient_name, recipient_phone, is_primary, created_at)
+             VALUES (?, ?, ?, ?, ?, NOW())"
         );
-        $stmt->execute([$authUser['id'], $address]);
+        $stmt->execute([
+            $authUser['id'],
+            $address,
+            $userInfo['name'],
+            $userInfo['phone'],
+            $isPrimary
+        ]);
 
         header('Location: /profile?success=Адрес+сохранён');
         exit;
@@ -314,9 +330,9 @@ class UsersController
                 $newId = (int)$this->pdo->lastInsertId();
 
                 $stmt = $this->pdo->prepare(
-                    "INSERT INTO addresses (user_id, street, created_at) VALUES (?, ?, NOW())"
+                    "INSERT INTO addresses (user_id, street, recipient_name, recipient_phone, is_primary, created_at) VALUES (?, ?, ?, ?, 1, NOW())"
                 );
-                $stmt->execute([$newId, $address]);
+                $stmt->execute([$newId, $address, $name, $phone]);
 
                 if ($referredBy !== null) {
                     $stmt = $this->pdo->prepare(
@@ -334,6 +350,41 @@ class UsersController
         }
 
         header('Location: /admin/users');
+        exit;
+    }
+
+    public function setPrimaryAddress(): void
+    {
+        $authUser = Auth::user();
+        if (!$authUser) {
+            header('Location: /login');
+            exit;
+        }
+
+        $id = (int)($_POST['id'] ?? 0);
+        if ($id) {
+            $this->pdo->prepare(
+                "UPDATE addresses SET is_primary = CASE WHEN id = ? THEN 1 ELSE 0 END WHERE user_id = ?"
+            )->execute([$id, $authUser['id']]);
+        }
+        header('Location: /profile');
+        exit;
+    }
+
+    public function deleteAddress(): void
+    {
+        $authUser = Auth::user();
+        if (!$authUser) {
+            header('Location: /login');
+            exit;
+        }
+
+        $id = (int)($_POST['id'] ?? 0);
+        if ($id) {
+            $this->pdo->prepare("DELETE FROM addresses WHERE id = ? AND user_id = ?")
+                 ->execute([$id, $authUser['id']]);
+        }
+        header('Location: /profile');
         exit;
     }
 

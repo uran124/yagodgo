@@ -23,6 +23,23 @@ class ClientController
         $_SESSION['cart_total'] = (float)$stmt->fetchColumn();
     }
 
+    /**
+     * Нормализует телефон к формату 7XXXXXXXXXX
+     */
+    private function normalizePhone(string $raw): string
+    {
+        $digits = preg_replace('/\D+/', '', $raw);
+        if (strlen($digits) === 10) {
+            return '7' . $digits;
+        }
+        if (strlen($digits) === 11) {
+            $first = $digits[0];
+            $rest  = substr($digits, 1);
+            return ($first === '8' ? '7' : $first) . $rest;
+        }
+        return $digits;
+    }
+
     /** Главная страница */
     public function home(): void
     {
@@ -483,9 +500,12 @@ public function cart(): void
         $finalTotal = $subtotal - $pointsDiscountTotal - $couponPercentAmount;
     
         // 8) Берём текущий адрес пользователя
-        $addrStmt = $this->pdo->prepare("SELECT street FROM addresses WHERE user_id = ?");
+        $addrStmt = $this->pdo->prepare(
+            "SELECT id, street, recipient_name, recipient_phone, is_primary FROM addresses WHERE user_id = ? ORDER BY is_primary DESC, created_at ASC"
+        );
         $addrStmt->execute([$userId]);
-        $address = $addrStmt->fetchColumn() ?: '';
+        $addresses = $addrStmt->fetchAll(PDO::FETCH_ASSOC);
+        $address = $addresses[0]['street'] ?? '';
     
         // 9) Собираем debug-данные
         $debugData = [
@@ -514,6 +534,7 @@ public function cart(): void
             'finalTotal'       => $finalTotal,
             'lockCoupon'       => $prefilledReferral !== '',
             'address'          => $address,
+            'addresses'        => $addresses,
             'userName'         => $_SESSION['name'] ?? null,
             'today'            => date('Y-m-d'),
             'debugData'        => $debugData,
@@ -653,10 +674,20 @@ public function cart(): void
     // 8) Обрабатываем адреса: для каждой даты либо свой, либо default
     $postedAddresses = $_POST['address_id'] ?? [];
     $defaultAddress  = $postedAddresses['default'] ?? '';
+    $newStreet       = trim($_POST['new_address'] ?? '');
+    $recipientName   = trim($_POST['recipient_name'] ?? ($_SESSION['name'] ?? ''));
+    $recipientPhone  = $this->normalizePhone($_POST['recipient_phone'] ?? '');
+
     $addressIds = [];
     foreach ($itemsByDate as $dateKey => $_) {
         $addrInput = $postedAddresses[$dateKey] ?? $defaultAddress;
-        $addressIds[$dateKey] = $this->ensureAddress($userId, $addrInput);
+        if ($addrInput === 'new' && $newStreet !== '') {
+            $addressIds[$dateKey] = $this->ensureAddress($userId, $newStreet, $recipientName, $recipientPhone);
+        } elseif (is_numeric($addrInput)) {
+            $addressIds[$dateKey] = (int)$addrInput;
+        } else {
+            $addressIds[$dateKey] = $this->ensureAddress($userId, $addrInput, $recipientName, $recipientPhone);
+        }
     }
 
     // 9) СОЗДАЁМ ЗАКАЗЫ ПО КАЖДОЙ ДАТЕ, учитываем дату и слот
@@ -836,17 +867,20 @@ public function showOrder(int $orderId): void
 
 
     /** Обновить/вставить адрес */
-    private function ensureAddress(int $userId, string $street): int
+    private function ensureAddress(int $userId, string $street, string $name, string $phone): int
     {
-        $stmt = $this->pdo->prepare("SELECT id FROM addresses WHERE user_id = ?");
-        $stmt->execute([$userId]);
+        $stmt = $this->pdo->prepare(
+            "SELECT id FROM addresses WHERE user_id = ? AND street = ? AND recipient_name = ? AND recipient_phone = ?"
+        );
+        $stmt->execute([$userId, $street, $name, $phone]);
         if ($id = $stmt->fetchColumn()) {
-            $this->pdo->prepare("UPDATE addresses SET street = ? WHERE id = ?")
-                      ->execute([$street, $id]);
-            return $id;
+            return (int)$id;
         }
-        $this->pdo->prepare("INSERT INTO addresses (user_id,street,created_at) VALUES (?, ?, NOW())")
-                  ->execute([$userId, $street]);
+
+        $this->pdo->prepare(
+            "INSERT INTO addresses (user_id, street, recipient_name, recipient_phone, is_primary, created_at) VALUES (?, ?, ?, ?, 0, NOW())"
+        )->execute([$userId, $street, $name, $phone]);
+
         return (int)$this->pdo->lastInsertId();
     }
 
@@ -907,7 +941,9 @@ public function showOrder(int $orderId): void
         $stmt = $this->pdo->prepare("SELECT name, phone FROM users WHERE id = ?");
         $stmt->execute([$userId]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
-        $addr = $this->pdo->prepare("SELECT street FROM addresses WHERE user_id = ?");
+        $addr = $this->pdo->prepare(
+            "SELECT street FROM addresses WHERE user_id = ? AND is_primary = 1 LIMIT 1"
+        );
         $addr->execute([$userId]);
         $address = $addr->fetchColumn() ?: '';
 
@@ -931,7 +967,10 @@ public function showOrder(int $orderId): void
         requireClient();
         $userId  = $_SESSION['user_id'];
         $address = trim($_POST['address'] ?? '');
-        $this->ensureAddress($userId, $address);
+        $stmt = $this->pdo->prepare("SELECT phone FROM users WHERE id = ?");
+        $stmt->execute([$userId]);
+        $phone = $stmt->fetchColumn() ?: '';
+        $this->ensureAddress($userId, $address, $_SESSION['name'] ?? '', $phone);
         header('Location: /profile');
         exit;
     }

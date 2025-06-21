@@ -111,10 +111,10 @@ public function register(): void
 
         // 2) Сохраняем адрес
         $stmt = $this->pdo->prepare("
-            INSERT INTO addresses (user_id, street, created_at)
-            VALUES (?, ?, NOW())
+            INSERT INTO addresses (user_id, street, recipient_name, recipient_phone, is_primary, created_at)
+            VALUES (?, ?, ?, ?, 1, NOW())
         ");
-        $stmt->execute([$userId, $address]);
+        $stmt->execute([$userId, $address, $name, $phone]);
 
         // 3) Если есть пригласивший, фиксируем связь в таблице referrals
         if ($referredBy !== null) {

@@ -270,6 +270,14 @@ switch ("$method $uri") {
         requireClient();
         (new App\Controllers\UsersController($pdo))->saveAddress();
         break;
+    case 'POST /profile/set-primary':
+        requireClient();
+        (new App\Controllers\UsersController($pdo))->setPrimaryAddress();
+        break;
+    case 'POST /profile/delete-address':
+        requireClient();
+        (new App\Controllers\UsersController($pdo))->deleteAddress();
+        break;
 
     case 'GET /checkout':
         requireClient();
