@@ -531,7 +531,7 @@
 
         <!-- Ссылка-приглашение -->
         <div class="relative flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
-            <?php $inviteLink = "https://berrygo.ru/register?invite=" . urlencode($_SESSION['referral_code'] ?? ''); ?>
+            <?php $inviteLink = "https://berrygo.ru/?invite=" . urlencode($_SESSION['referral_code'] ?? ''); ?>
             <input
               id="inviteLinkInput"
               type="text"
