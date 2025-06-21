@@ -46,6 +46,7 @@ $smsConfig = require __DIR__ . '/config/sms.php';
 // Общие константы
 $constants = require __DIR__ . '/config/constants.php';
 define('PLACEHOLDER_DATE', $constants['placeholder_date']);
+define('BOX_MARKUP', $constants['box_markup']);
 // -----
 
 
@@ -381,6 +382,10 @@ switch ("$method $uri") {
     case 'POST /admin/orders/status':
         requireAdmin();
         (new App\Controllers\OrdersController($pdo))->updateStatus();
+        break;
+    case 'POST /admin/orders/update-item':
+        requireAdmin();
+        (new App\Controllers\OrdersController($pdo))->updateItemQuantity();
         break;
     case 'POST /admin/orders/delete':
         requireAdmin();

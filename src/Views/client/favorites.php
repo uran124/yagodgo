@@ -29,10 +29,29 @@
             <div class="text-sm"><?= htmlspecialchars($p['box_size']) ?> <?= htmlspecialchars($p['box_unit']) ?></div>
           </div>
 
+          <?php
+            $base   = floatval($p['price'] ?? 0);
+            $sale   = floatval($p['sale_price'] ?? 0);
+            $box    = floatval($p['box_size'] ?? 0);
+            $useKg  = $sale > 0 ? $sale : $base;
+            $boxPrice = $useKg * $box + BOX_MARKUP;
+            $kgPrice  = $box > 0 ? round($boxPrice / $box, 2) : 0;
+            $regularBox = $base * $box + BOX_MARKUP;
+          ?>
           <div class="flex justify-between items-baseline mb-3">
-            <div class="text-lg font-bold"><?= htmlspecialchars($p['price']) ?> ₽/ящик</div>
-            <?php $unitPrice = $p['box_size']>0?round($p['price']/$p['box_size'],2):0; ?>
-            <div class="text-sm text-gray-500">≈ <?= htmlspecialchars($unitPrice) ?> ₽/кг</div>
+            <?php if ($sale > 0): ?>
+              <div class="text-sm text-gray-400 line-through">
+                <?= number_format($regularBox, 0, '.', ' ') ?> ₽/ящик
+              </div>
+              <div class="text-lg font-bold text-red-600">
+                <?= number_format($boxPrice, 0, '.', ' ') ?> ₽/ящик
+              </div>
+            <?php else: ?>
+              <div class="text-lg font-bold">
+                <?= number_format($boxPrice, 0, '.', ' ') ?> ₽/ящик
+              </div>
+            <?php endif; ?>
+            <div class="text-sm text-gray-500"><?= htmlspecialchars($kgPrice) ?> ₽/кг</div>
           </div>
 
           <form action="/cart/add" method="post" class="mt-auto flex">

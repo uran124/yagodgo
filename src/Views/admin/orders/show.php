@@ -17,16 +17,21 @@
   <div class="bg-white p-4 rounded shadow space-y-1">
     <?php foreach ($items as $it): ?>
       <?php $lineCost = $it['quantity'] * $it['unit_price']; ?>
-      <div class="flex justify-between py-1">
+      <div class="flex justify-between items-center py-1">
         <span>
           <?= htmlspecialchars($it['product_name']) ?>
           <?php if (!empty($it['variety'])): ?> <?= htmlspecialchars($it['variety']) ?><?php endif; ?>
           <?php if (!empty($it['box_size']) && !empty($it['box_unit'])): ?>
             <?= ' ' . $it['box_size'] . ' ' . htmlspecialchars($it['box_unit']) ?>
           <?php endif; ?>
-          × <?= $it['quantity'] ?>
         </span>
-        <span><?= number_format($lineCost, 0, '.', ' ') ?> ₽</span>
+        <form action="/admin/orders/update-item" method="post" class="flex items-center space-x-2">
+          <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
+          <input type="hidden" name="product_id" value="<?= $it['product_id'] ?>">
+          <input type="number" name="quantity" value="<?= $it['quantity'] ?>" step="0.01" class="w-20 border px-1 py-0.5 rounded"> кг
+          <button type="submit" class="bg-[#C86052] text-white px-2 py-1 rounded">OK</button>
+          <span class="ml-2"><?= number_format($lineCost, 0, '.', ' ') ?> ₽</span>
+        </form>
       </div>
     <?php endforeach; ?>
 

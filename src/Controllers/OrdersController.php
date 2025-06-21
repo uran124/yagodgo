@@ -47,7 +47,7 @@ class OrdersController
         $order = $stmt->fetch(PDO::FETCH_ASSOC);
 
         $stmt = $this->pdo->prepare(
-            "SELECT oi.quantity, oi.unit_price, t.name AS product_name, p.unit, p.variety, p.box_size, p.box_unit\n" .
+            "SELECT oi.product_id, oi.quantity, oi.unit_price, t.name AS product_name, p.unit, p.variety, p.box_size, p.box_unit\n" .
             "FROM order_items oi\n" .
             "JOIN products p ON p.id = oi.product_id\n" .
             "JOIN product_types t ON t.id = p.product_type_id\n" .
@@ -466,6 +466,30 @@ class OrdersController
             }
         }
         header('Location: /admin/orders');
+        exit;
+    }
+
+    // Обновление количества товара в заказе (POST, админ)
+    public function updateItemQuantity(): void
+    {
+        $orderId   = (int)($_POST['order_id'] ?? 0);
+        $productId = (int)($_POST['product_id'] ?? 0);
+        $qty       = (float)($_POST['quantity'] ?? 0);
+        if ($orderId && $productId && $qty > 0) {
+            $this->pdo->prepare(
+                "UPDATE order_items SET quantity = ? WHERE order_id = ? AND product_id = ?"
+            )->execute([$qty, $orderId, $productId]);
+
+            $stmt = $this->pdo->prepare(
+                "SELECT SUM(quantity * unit_price) FROM order_items WHERE order_id = ?"
+            );
+            $stmt->execute([$orderId]);
+            $total = (float)$stmt->fetchColumn();
+            $this->pdo->prepare(
+                "UPDATE orders SET total_amount = ? WHERE id = ?"
+            )->execute([$total, $orderId]);
+        }
+        header('Location: /admin/orders/' . $orderId);
         exit;
     }
 }
