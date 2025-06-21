@@ -24,14 +24,16 @@
   $placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
     $showDate = $d !== null && $d !== $placeholder;
     $active    = (int)($p['is_active']    ?? 0);
-    $price     = floatval($p['price']     ?? 0);
-    $sale      = floatval($p['sale_price']?? 0);
+    $price     = floatval($p['price']     ?? 0); // base price per kg
+    $sale      = floatval($p['sale_price']?? 0); // sale price per kg
     $boxSize   = floatval($p['box_size']  ?? 0);
     $boxUnit   = $p['box_unit']           ?? '';
-    // Рассчитываем цену за единицу (кг/л)
-    $unitPrice = $boxSize > 0
-      ? round($price / $boxSize, 2)
-      : 0;
+
+    $effectiveKg = $sale > 0 ? $sale : $price;
+    $priceBox   = $effectiveKg * $boxSize + BOX_MARKUP;
+    $pricePerKg = $boxSize > 0 ? round($priceBox / $boxSize, 2) : 0;
+    $regularBox = $price * $boxSize + BOX_MARKUP;
+    $regularKg  = $boxSize > 0 ? round($regularBox / $boxSize, 2) : 0;
   ?>
   <div class="relative">
     <?php if ($hasImage): ?>
@@ -107,23 +109,23 @@
         <!-- Акционная цена -->
         <div class="flex items-baseline space-x-2 mb-3">
           <div class="text-xs sm:text-sm text-gray-400 line-through">
-            <?= number_format($price, 0, '.', ' ') ?> ₽/ящик
+            <?= number_format($regularBox, 0, '.', ' ') ?> ₽/ящик
           </div>
           <div class="text-lg sm:text-xl font-bold text-red-600">
-            <?= number_format($sale, 0, '.', ' ') ?> ₽/ящик
+            <?= number_format($priceBox, 0, '.', ' ') ?> ₽/ящик
           </div>
         </div>
         <div class="text-xs sm:text-sm text-gray-400 mb-3">
-          ≈ <?= htmlspecialchars($unitPrice) ?> ₽/кг
+          <?= htmlspecialchars($pricePerKg) ?> ₽/кг
         </div>
       <?php else: ?>
         <!-- Обычная цена -->
         <div class="flex justify-between items-center mb-3">
           <div class="text-xl sm:text-2xl font-bold text-gray-800">
-            <?= number_format($price, 0, '.', ' ') ?> ₽/ящик
+            <?= number_format($regularBox, 0, '.', ' ') ?> ₽/ящик
           </div>
           <div class="text-xs sm:text-sm text-gray-400">
-            ≈ <?= htmlspecialchars($unitPrice) ?> ₽/кг
+            <?= htmlspecialchars($regularKg) ?> ₽/кг
           </div>
         </div>
       <?php endif; ?>

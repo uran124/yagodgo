@@ -263,15 +263,17 @@ public function cart(): void
 
         if ($productId && $quantity > 0) {
             $priceStmt = $this->pdo->prepare(
-                "SELECT price, sale_price FROM products WHERE id = ?"
+                "SELECT price, sale_price, box_size FROM products WHERE id = ?"
             );
             $priceStmt->execute([$productId]);
             $row = $priceStmt->fetch(PDO::FETCH_ASSOC);
-            $price = 0.0;
+            $priceBox = 0.0;
             if ($row) {
-                $sale    = (float)($row['sale_price'] ?? 0);
-                $regular = (float)($row['price'] ?? 0);
-                $price   = $sale > 0 ? $sale : $regular;
+                $sale    = (float)($row['sale_price'] ?? 0); // per kg
+                $regular = (float)($row['price'] ?? 0);      // per kg
+                $boxSize = (float)($row['box_size'] ?? 0);
+                $kgPrice = $sale > 0 ? $sale : $regular;
+                $priceBox = $kgPrice * $boxSize + BOX_MARKUP;
             }
 
             $this->pdo->prepare(
@@ -279,7 +281,7 @@ public function cart(): void
                 " VALUES (?, ?, ?, ?)" .
                 " ON DUPLICATE KEY UPDATE quantity = quantity + VALUES(quantity)," .
                 " unit_price = VALUES(unit_price)"
-            )->execute([$userId, $productId, $quantity, $price]);
+            )->execute([$userId, $productId, $quantity, $priceBox]);
         }
 
         $this->refreshCartTotal();
@@ -574,8 +576,9 @@ public function cart(): void
             $itemsByDate[$dateKey] = [];
         }
         $itemsByDate[$dateKey][$pid] = [
-            'quantity'   => $it['quantity'],
-            'unit_price' => $it['unit_price'],
+            'quantity'   => $it['quantity'],     // boxes
+            'unit_price' => $it['unit_price'],   // price per box
+            'box_size'   => $it['box_size'],
         ];
     }
 
@@ -736,11 +739,15 @@ public function cart(): void
             "VALUES (?, ?, ?, ?)"
         );
         foreach ($block as $prodId => $data) {
+            $kgQty   = $data['quantity'] * $data['box_size'];
+            $kgPrice = $data['box_size'] > 0
+                ? $data['unit_price'] / $data['box_size']
+                : $data['unit_price'];
             $stmtItem->execute([
                 $orderId,
                 $prodId,
-                $data['quantity'],
-                $data['unit_price'],
+                $kgQty,
+                $kgPrice,
             ]);
         }
 

@@ -70,9 +70,9 @@
     </p>
   </div>
 
-  <!-- Акционная цена -->
+  <!-- Акционная цена за кг -->
   <div>
-    <label class="block mb-1">Акционная цена (₽)<span class="text-gray-500 text-sm ml-1">(0 — без акции)</span></label>
+    <label class="block mb-1">Акционная цена за кг (₽)<span class="text-gray-500 text-sm ml-1">(0 — без акции)</span></label>
     <input name="sale_price" type="number" step="0.01"
            value="<?= htmlspecialchars($product['sale_price'] ?? 0) ?>"
            class="w-full border px-2 py-1 rounded">
@@ -103,9 +103,9 @@
     <?php endif; ?>
   </div>
 
-  <!-- Цена -->
+  <!-- Цена за кг -->
   <div>
-    <label class="block mb-1">Цена (₽)</label>
+    <label class="block mb-1">Цена за кг (₽)</label>
     <input name="price" type="number" step="0.01"
            value="<?= htmlspecialchars($product['price'] ?? '') ?>"
            class="w-full border px-2 py-1 rounded" required>
