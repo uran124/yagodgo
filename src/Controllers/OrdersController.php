@@ -438,7 +438,7 @@ class OrdersController
 
             $this->pdo->prepare("DELETE FROM order_items WHERE order_id = ?")->execute([$orderId]);
             $this->pdo->prepare("DELETE FROM points_transactions WHERE order_id = ?")->execute([$orderId]);
-            $this->pdo->prepare("DELETE FROM orders WHERE id = ?")->execute([$orderId]);
+
 
             if ($userId && ($order['status'] ?? '') !== 'cancelled') {
                 $pointsBack = (int)($order['points_used'] ?? 0);
@@ -453,6 +453,8 @@ class OrdersController
                     )->execute([$userId, $orderId, $pointsBack, $desc]);
                 }
             }
+
+            $this->pdo->prepare("DELETE FROM orders WHERE id = ?")->execute([$orderId]);
 
             if ($userId) {
                 $cnt = $this->pdo->prepare("SELECT COUNT(*) FROM orders WHERE user_id = ? AND status <> 'cancelled'");
