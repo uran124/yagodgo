@@ -6,6 +6,14 @@ error_reporting(E_ALL);
 // Запуск сессии
 session_start();
 
+// Сохраняем пригласительный код из URL в сессию (если передан)
+if (isset($_GET['invite'])) {
+    $invite = trim((string)$_GET['invite']);
+    if ($invite !== '') {
+        $_SESSION['invite_code'] = $invite;
+    }
+}
+
 // 1) Подключаем конфигурацию БД и создаём PDO
 $dbConfig = require __DIR__ . '/config/database.php';
 $dsn = "mysql:host={$dbConfig['host']};dbname={$dbConfig['dbname']};charset={$dbConfig['charset']}";

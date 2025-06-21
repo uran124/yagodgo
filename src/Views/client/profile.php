@@ -120,7 +120,7 @@
           </div>
           <p class="text-center">Подарите другу 10 % скидку на первый заказ и получайте клубнички за каждый его заказ!</p>
           <p class="text-center">Скопируйте ссылку и отправьте другу:</p>
-          <?php $refLink = "https://berrygo.ru/register?invite=" . urlencode($user['referral_code']); ?>
+          <?php $refLink = "https://berrygo.ru/?invite=" . urlencode($user['referral_code']); ?>
           <div class="text-center">
             <button onclick="copyInviteLink()" class="bg-white/80 rounded-lg px-3 py-2 text-sm text-gray-800 hover:bg-pink-100 transition break-all">
               <?= htmlspecialchars($refLink) ?>

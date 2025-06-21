@@ -141,6 +141,7 @@ public function register(): void
     $_SESSION['points_balance'] = 0;
 
     unset($_SESSION['reg_verified'], $_SESSION['reg_phone'], $_SESSION['reg_code']);
+    unset($_SESSION['invite_code']);
 
     header('Location: /');
     exit;

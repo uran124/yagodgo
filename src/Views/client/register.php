@@ -30,8 +30,8 @@
     <?php endif; ?>
 
     <?php
-      // Берём значение invite из GET-параметра (раньше был ref)
-      $invite_from_get = trim($_GET['invite'] ?? '');
+      // Берём пригласительный код из GET-параметра или из сессии
+      $invite_from_get = trim($_GET['invite'] ?? ($_SESSION['invite_code'] ?? ''));
     ?>
 
     <!-- Форма регистрации -->
