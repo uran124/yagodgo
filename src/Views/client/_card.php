@@ -17,10 +17,11 @@
 <?php $search = mb_strtolower(($p['product'] ?? '') . ' ' . ($p['variety'] ?? ''), 'UTF-8'); ?>
 <div class="product-card bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col hover:shadow-2xl transition-shadow duration-200 h-full" data-search="<?= htmlspecialchars($search) ?>">
   <?php 
-    $img       = $p['image_path']        ?? '/assets/placeholder.png';
-    $today     = date('Y-m-d');
-    $d         = $p['delivery_date']     ?? null;
-    $placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
+  $img       = trim($p['image_path'] ?? '');
+  $hasImage  = $img !== '';
+  $today     = date('Y-m-d');
+  $d         = $p['delivery_date']     ?? null;
+  $placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
     $showDate = $d !== null && $d !== $placeholder;
     $active    = (int)($p['is_active']    ?? 0);
     $price     = floatval($p['price']     ?? 0);
@@ -33,9 +34,16 @@
       : 0;
   ?>
   <div class="relative">
-    <img src="<?= htmlspecialchars($img) ?>"
-         alt="<?= htmlspecialchars($p['product'] ?? '') ?>"
-         class="w-full object-cover h-40 sm:h-48">
+    <?php if ($hasImage): ?>
+      <img src="<?= htmlspecialchars($img) ?>"
+           alt="<?= htmlspecialchars($p['product'] ?? '') ?>"
+           class="w-full object-cover h-40 sm:h-48">
+    <?php else: ?>
+      <div class="w-full h-40 sm:h-48 bg-pink-50 flex flex-col items-center justify-center">
+        <span class="material-icons-round text-4xl text-pink-400 mb-1">image</span>
+        <span class="text-pink-700 text-sm">изображение подгружается</span>
+      </div>
+    <?php endif; ?>
 
     <?php if (!$active): ?>
       <!-- Товар отключён в админке -->
