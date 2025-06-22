@@ -31,24 +31,17 @@ $discount = max(0, $rawSum - $order['total_amount']);
       <div class="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-y-12 translate-x-12"></div>
       <div class="absolute bottom-0 left-0 w-16 h-16 bg-white/10 rounded-full translate-y-8 -translate-x-8"></div>
       
-      <div class="relative z-10 flex justify-between items-center">
-        <div>
-          <h2 class="text-2xl font-bold mb-2">📦 Заказ №<?= htmlspecialchars($order['id']) ?></h2>
-          <?php $info = order_status_info($order['status']); ?>
-          <p class="text-white/80 text-sm">
-            <?= date('d.m.Y H:i', strtotime($order['created_at'])) ?>
-            • Статус:
-            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium <?= $info['badge'] ?>">
-              <?= $info['label'] ?>
-            </span>
-          </p>
+      <div class="relative z-10 space-y-1">
+        <?php $info = order_status_info($order['status']); ?>
+        <div class="flex justify-between items-center">
+          <h2 class="text-2xl font-bold">📦 Заказ №<?= htmlspecialchars($order['id']) ?></h2>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium <?= $info['badge'] ?>">
+            <?= $info['label'] ?>
+          </span>
         </div>
-        <?php if ($userName): ?>
-          <div class="flex items-center space-x-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
-            <span class="material-icons-round text-lg">person</span>
-            <span class="font-medium"><?= htmlspecialchars($userName) ?></span>
-          </div>
-        <?php endif; ?>
+        <p class="text-white/80 text-sm">
+          <?= date('d.m.Y H:i', strtotime($order['created_at'])) ?>
+        </p>
       </div>
     </section>
   </div>
@@ -62,23 +55,30 @@ $discount = max(0, $rawSum - $order['total_amount']);
         Доставка
       </h3>
       <p class="text-gray-700 mb-2 flex items-center">
-        <span class="material-icons-round align-middle mr-2">location_on</span>
-        <?= htmlspecialchars($order['address']) ?>
-      </p>
-      <p class="text-gray-700 mb-2 flex items-center">
         <span class="material-icons-round align-middle mr-2">calendar_today</span>
         <?php $placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15'; ?>
-        Дата:
         <?php if ($order['delivery_date'] === $placeholder): ?>
           Ближайшая возможная дата
         <?php else: ?>
-          <?= date('d.m.Y', strtotime($order['delivery_date'])) ?>
+          <?= date('d.m.Y', strtotime($order['delivery_date'])) ?> <?= htmlspecialchars($order['delivery_slot']) ?>
         <?php endif; ?>
       </p>
-      <p class="text-gray-700 flex items-center">
-        <span class="material-icons-round align-middle mr-2">schedule</span>
-        Слот: <?= htmlspecialchars($order['delivery_slot']) ?>
+      <p class="text-gray-700 mb-2 flex items-center">
+        <span class="material-icons-round align-middle mr-2">location_on</span>
+        <?= htmlspecialchars($order['address']) ?>
       </p>
+      <?php if (!empty($order['recipient_name']) || !empty($order['recipient_phone'])): ?>
+      <p class="text-gray-700 mb-2 flex items-center">
+        <span class="material-icons-round align-middle mr-2">person</span>
+        <?= htmlspecialchars($order['recipient_name'] ?? '') ?><?php if (!empty($order['recipient_phone'])): ?>, <?= htmlspecialchars($order['recipient_phone']) ?><?php endif; ?>
+      </p>
+      <?php endif; ?>
+      <?php if (!empty($order['comment'])): ?>
+      <p class="text-gray-700 flex items-center">
+        <span class="material-icons-round align-middle mr-2">comment</span>
+        <?= nl2br(htmlspecialchars($order['comment'])) ?>
+      </p>
+      <?php endif; ?>
     </div>
 
     <!-- Блок со списком товаров -->
@@ -93,23 +93,14 @@ $discount = max(0, $rawSum - $order['total_amount']);
             $lineCost = $it['quantity'] * $it['unit_price'];
           ?>
           <li class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
-            <div class="flex-1">
-              <div class="font-medium text-gray-800">
-                <?= htmlspecialchars($it['product_name']) ?>
-                <?php if (!empty($it['variety'])): ?>
-                  <span class="text-gray-600"><?= htmlspecialchars($it['variety']) ?></span>
-                <?php endif; ?>
-              </div>
-              <?php $boxes = isset($it['boxes']) ? $it['boxes'] : ($it['box_size']>0 ? round($it['quantity']/$it['box_size'],1) : $it['quantity']); ?>
-              <div class="text-sm text-gray-500 mt-1">
-                Количество: <?= htmlspecialchars($it['quantity']) ?> кг (<?= $boxes ?> ящ.)
-              </div>
-            </div>
-            <div class="text-right">
-              <div class="font-semibold text-gray-800">
-                <?= number_format($lineCost, 0, '.', ' ') ?> ₽
-              </div>
-            </div>
+            <?php $boxes = isset($it['boxes']) ? $it['boxes'] : ($it['box_size']>0 ? round($it['quantity']/$it['box_size'],1) : $it['quantity']); ?>
+            <span class="text-gray-800">
+              <?= htmlspecialchars($it['product_name']) ?><?php if (!empty($it['variety'])): ?> <span class="text-gray-600"><?= htmlspecialchars($it['variety']) ?></span><?php endif; ?>
+              x<?= $boxes ?> (<?= htmlspecialchars($it['quantity']) ?> кг)
+            </span>
+            <span class="font-semibold text-gray-800">
+              <?= number_format($lineCost, 0, '.', ' ') ?> ₽
+            </span>
           </li>
         <?php endforeach; ?>
       </ul>
@@ -122,34 +113,30 @@ $discount = max(0, $rawSum - $order['total_amount']);
         </span>
       </div>
 
-      <?php if ($coupon): ?>
-        <div class="flex justify-between items-center mt-2">
-          <span class="font-medium text-gray-700">
-            Купон <?= htmlspecialchars($coupon['code']) ?>:
-            <?php if ($coupon['type'] === 'discount'): ?>
-              скидка <?= htmlspecialchars($coupon['discount']) ?>%
-            <?php else: ?>
-              <?= htmlspecialchars($coupon['points']) ?> клубничек
-            <?php endif; ?>
-          </span>
-        </div>
-      <?php endif; ?>
-
-      <?php if ($pointsFromBalance > 0): ?>
-        <div class="flex justify-between items-center mt-2">
+      <div class="mt-4 space-y-1">
+        <h4 class="font-semibold text-gray-800">Примененные скидки:</h4>
+        <?php if ($pointsFromBalance > 0): ?>
+        <div class="flex justify-between items-center">
           <span class="font-medium text-pink-600 flex items-center">
             <span class="text-2xl mr-1">🍓</span>
             Списано клубничек
           </span>
-          <span class="text-pink-600 font-semibold">
-            <?= number_format($pointsFromBalance, 0, '.', ' ') ?>
+          <span class="text-pink-600 font-semibold">-<?= number_format($pointsFromBalance, 0, '.', ' ') ?></span>
+        </div>
+        <?php endif; ?>
+        <?php if ($coupon): ?>
+        <div class="flex justify-between items-center">
+          <span class="font-medium text-gray-700">Промокод <?= htmlspecialchars($coupon['code']) ?></span>
+          <span class="font-medium text-gray-700">
+            <?php if ($coupon['type'] === 'discount'): ?>-<?= htmlspecialchars($coupon['discount']) ?>%<?php else: ?>-<?= htmlspecialchars($coupon['points']) ?><?php endif; ?>
           </span>
         </div>
-      <?php endif; ?>
+        <?php endif; ?>
+      </div>
 
       <!-- Окончательная сумма -->
       <div class="flex justify-between items-center pt-4 border-t border-gray-200 mt-4">
-        <span class="font-semibold text-gray-800 text-lg">Итог к оплате:</span>
+        <span class="font-semibold text-gray-800 text-lg">Стоимость заказа:</span>
         <span class="font-bold text-2xl text-gray-800">
           <?= number_format($order['total_amount'], 0, '.', ' ') ?> ₽
         </span>
