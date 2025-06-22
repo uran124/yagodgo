@@ -111,11 +111,11 @@
         </div>
 
         <div>
-          <label class="block text-sm text-gray-600 mb-1">Дата доставки</label>
+          <label class="block text-sm text-gray-600 font-bold mb-1">Выберите дату доставки</label>
           <select name="delivery_date[<?= $it['product_id'] ?>]"
                   form="checkoutForm"
                   <?= empty($options) ? 'disabled' : 'required' ?>
-                  class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-red-500 focus:ring-2 focus:ring-red-500/20 focus:outline-none transition-all bg-white shadow-sm">
+                  class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-red-500 focus:ring-2 focus:ring-red-500/20 focus:outline-none transition-all bg-green-50 shadow-sm">
             <?php if (!empty($options)): ?>
               <?php foreach ($options as $opt): ?>
                 <option value="<?= htmlspecialchars($opt['value']) ?>">
@@ -134,23 +134,7 @@
     <!-- Итоговая секция -->
     <div class="px-4 mt-8">
       <div class="bg-white rounded-3xl shadow-2xl p-6 border border-gray-100">
-        <!-- Сводка заказа -->
-        <div class="mb-6">
-          <h3 class="text-xl font-bold text-gray-800 mb-4 text-center">📋 Сводка заказа</h3>
-          
-          <div class="space-y-3 mb-4">
-            <div class="flex justify-between items-center py-2 border-b border-gray-100">
-              <span class="text-gray-600">Товаров в корзине:</span>
-              <span class="font-semibold"><?= count($items) ?> шт.</span>
-            </div>
-            <div class="flex justify-between items-center py-2">
-              <span class="text-lg font-semibold text-gray-800">Итого к оплате:</span>
-              <span class="text-2xl font-bold bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">
-                <?= number_format($totalAmount, 0, '.', ' ') ?> ₽
-              </span>
-            </div>
-          </div>
-        </div>
+
         
         <div class="flex justify-between items-center space-x-4">
           <a href="/catalog"
