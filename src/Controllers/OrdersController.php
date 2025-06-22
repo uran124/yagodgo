@@ -383,7 +383,7 @@ class OrdersController
             $deliveryText = 'Ближайшая возможная дата';
         }
         if ($deliverySlot !== '') {
-            $deliveryText .= ' ' . $deliverySlot;
+            $deliveryText .= ' ' . format_slot($deliverySlot);
         }
 
         $line1 = $order['phone'] . ', ' . $order['name'];

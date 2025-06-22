@@ -164,6 +164,20 @@ function order_status_info(string $status): array
     };
 }
 
+// Преобразует слот вида "09-12" в формат "09:00 - 12:00"
+function format_slot(?string $slot): string
+{
+    if (!$slot) {
+        return '';
+    }
+    if (preg_match('/^(\d{1,2})-(\d{1,2})$/', $slot, $m)) {
+        $from = str_pad($m[1], 2, '0', STR_PAD_LEFT) . ':00';
+        $to   = str_pad($m[2], 2, '0', STR_PAD_LEFT) . ':00';
+        return "$from - $to";
+    }
+    return $slot;
+}
+
 switch ("$method $uri") {
 
 
