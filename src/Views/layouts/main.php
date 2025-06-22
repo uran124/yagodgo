@@ -234,7 +234,7 @@
   <?php endif; ?>
   
   <!-- Install PWA Banner -->
-  <div id="installWrapper" class="w-full berry-gradient text-white text-center py-4 shadow-lg">
+  <div id="installWrapper" class="mt-16 w-full berry-gradient text-white text-center py-4 shadow-lg">
     <button id="installBtn" class="install-pulse text-lg font-semibold px-8 py-3 bg-white text-red-500 rounded-2xl shadow-lg inline-flex items-center space-x-3 hover:shadow-xl transition-all">
       <span class="material-icons-round">download</span>
       <span>Установить BerryGo</span>
