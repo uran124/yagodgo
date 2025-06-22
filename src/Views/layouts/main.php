@@ -633,6 +633,21 @@
   });
 </script>
 
+<script>
+  // Scroll arrows for product rows on desktop
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.scroll-wrapper').forEach(wrapper => {
+      const row = wrapper.querySelector('.scroll-row');
+      wrapper.querySelectorAll('button[data-dir]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const dir = btn.dataset.dir === 'left' ? -1 : 1;
+          row.scrollBy({left: dir * row.clientWidth, behavior: 'smooth'});
+        });
+      });
+    });
+  });
+</script>
+
 
 
 
