@@ -73,6 +73,17 @@ class OrdersController
             );
             $cStmt->execute([$order['coupon_code']]);
             $couponInfo = $cStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+            if (!$couponInfo) {
+                $rStmt = $this->pdo->prepare("SELECT id FROM users WHERE referral_code = ?");
+                $rStmt->execute([$order['coupon_code']]);
+                if ($rStmt->fetch()) {
+                    $couponInfo = [
+                        'code' => $order['coupon_code'],
+                        'type' => 'discount',
+                        'discount' => 10,
+                    ];
+                }
+            }
             if ($couponInfo && $couponInfo['type'] === 'points') {
                 $pointsFromBalance = max(0, $pointsFromBalance - (int)$couponInfo['points']);
             }
@@ -490,10 +501,39 @@ class OrdersController
                 "SELECT SUM(quantity * unit_price) FROM order_items WHERE order_id = ?"
             );
             $stmt->execute([$orderId]);
-            $total = (float)$stmt->fetchColumn();
+            $rawTotal = (float)$stmt->fetchColumn();
+
+            $oStmt = $this->pdo->prepare(
+                "SELECT points_used, coupon_code FROM orders WHERE id = ?"
+            );
+            $oStmt->execute([$orderId]);
+            $oRow = $oStmt->fetch(PDO::FETCH_ASSOC);
+            $pointsUsed = (int)($oRow['points_used'] ?? 0);
+
+            $discountApplied = 0;
+            $couponCode = $oRow['coupon_code'] ?? '';
+            if ($couponCode !== '') {
+                $cStmt = $this->pdo->prepare(
+                    "SELECT type, discount, points FROM coupons WHERE code = ?"
+                );
+                $cStmt->execute([$couponCode]);
+                $coupon = $cStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+                if ($coupon) {
+                    if ($coupon['type'] === 'discount') {
+                        $percent = (float)$coupon['discount'];
+                        $discountApplied = (int) floor(($rawTotal - $pointsUsed) * ($percent / 100));
+                    }
+                } else {
+                    // реферальный код даёт скидку 10%
+                    $discountApplied = (int) floor(($rawTotal - $pointsUsed) * 0.10);
+                }
+            }
+
+            $finalTotal = $rawTotal - $pointsUsed - $discountApplied;
+
             $this->pdo->prepare(
-                "UPDATE orders SET total_amount = ? WHERE id = ?"
-            )->execute([$total, $orderId]);
+                "UPDATE orders SET total_amount = ?, discount_applied = ? WHERE id = ?"
+            )->execute([$finalTotal, $discountApplied, $orderId]);
         }
         header('Location: /admin/orders/' . $orderId);
         exit;
