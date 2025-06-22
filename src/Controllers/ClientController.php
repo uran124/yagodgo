@@ -830,6 +830,17 @@ public function showOrder(int $orderId): void
         );
         $cStmt->execute([$order['coupon_code']]);
         $couponInfo = $cStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        if (!$couponInfo) {
+            $rStmt = $this->pdo->prepare("SELECT id FROM users WHERE referral_code = ?");
+            $rStmt->execute([$order['coupon_code']]);
+            if ($rStmt->fetch()) {
+                $couponInfo = [
+                    'code' => $order['coupon_code'],
+                    'type' => 'discount',
+                    'discount' => 10,
+                ];
+            }
+        }
         if ($couponInfo && $couponInfo['type'] === 'points') {
             $pointsFromBalance = max(0, $pointsFromBalance - (int)$couponInfo['points']);
         }
