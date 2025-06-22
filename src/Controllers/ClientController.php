@@ -796,17 +796,12 @@ public function showOrder(int $orderId): void
 
     // 1) Получаем данные о заказе
     $stmt = $this->pdo->prepare(
-      "SELECT 
-         o.id,
-         o.user_id,
-         o.address_id,
-         o.status,
-         o.total_amount,
-         o.delivery_date,
-         o.delivery_slot,
-         o.created_at,
+      "SELECT
+         o.*,
          u.name AS client_name,
-         a.street AS address
+         a.street AS address,
+         a.recipient_name,
+         a.recipient_phone
        FROM orders o
        JOIN users u ON u.id = o.user_id
        LEFT JOIN addresses a ON a.id = o.address_id
