@@ -80,6 +80,10 @@ function status_classes(string $status): string {
                 <span><?= htmlspecialchars($it['product_name']) ?><?php if(!empty($it['variety'])): ?> «<?= htmlspecialchars($it['variety']) ?>»<?php endif; ?><?php if(!empty($it['box_size']) && !empty($it['box_unit'])): ?> <?= $it['box_size'] . $it['box_unit'] ?><?php endif; ?>, <?= $it['quantity'] ?>кг (<?= $boxes ?> ящ.), <?= number_format($it['quantity'] * $it['unit_price'], 0, '.', ' ') ?>₽</span>
               </div>
             <?php endforeach; ?>
+            <div class="flex justify-between items-center pt-1 border-t border-gray-200 mt-1 font-semibold">
+              <span>Стоимость заказа:</span>
+              <span><?= number_format($order['total_amount'], 0, '.', ' ') ?> ₽</span>
+            </div>
           </div>
           <span class="status-badge text-sm px-2 py-0.5 rounded-full <?= status_classes($order['status']) ?>">
             <?= order_status_info($order['status'])['label'] ?>
