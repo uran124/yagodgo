@@ -69,7 +69,7 @@ function status_classes(string $status): string {
               <span class="font-semibold">#<?= $order['id'] ?>:</span>
               <span>
                 <?php if (!empty($order['delivery_date'])): ?>
-                  <?= date('d.m', strtotime($order['delivery_date'])) ?><?php if(!empty($order['delivery_slot'])): ?> <?= htmlspecialchars($order['delivery_slot']) ?><?php endif; ?>
+                  <?= date('d.m', strtotime($order['delivery_date'])) ?><?php if(!empty($order['delivery_slot'])): ?> <?= htmlspecialchars(format_slot($order['delivery_slot'])) ?><?php endif; ?>
                 <?php endif; ?>
               </span>
               <span class="order-date hidden"><?= date('d.m.Y H:i', strtotime($order['created_at'])) ?></span>

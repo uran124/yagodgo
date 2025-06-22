@@ -52,10 +52,10 @@
         <td class="p-3 text-gray-600"><?= date('d.m H:i', strtotime($o['created_at'])) ?></td>
         <td class="p-3 text-gray-600">
           <?php if ($o['delivery_date']): ?>
-            <?= date('d.m', strtotime($o['delivery_date'])) ?> <?= htmlspecialchars($o['delivery_slot']) ?>
+            <?= date('d.m', strtotime($o['delivery_date'])) ?> <?= htmlspecialchars(format_slot($o['delivery_slot'])) ?>
           <?php endif; ?>
         </td>
-        <td class="p-3 text-gray-600"><?= htmlspecialchars($o['delivery_slot']) ?></td>
+        <td class="p-3 text-gray-600"><?= htmlspecialchars(format_slot($o['delivery_slot'])) ?></td>
         <td class="p-3 text-gray-600"><?= htmlspecialchars($o['client_name']) ?></td>
         <td class="p-3 text-gray-600"><?= htmlspecialchars($o['phone']) ?></td>
         <td class="p-3 text-gray-600"><?= htmlspecialchars($o['address']) ?></td>
