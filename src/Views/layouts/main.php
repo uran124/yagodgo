@@ -149,17 +149,18 @@
 
   <!-- Header -->
 <header class="fixed top-0 left-0 right-0 glass-effect flex items-center justify-between p-4 z-20 border-b border-white/20">
-  <a href="/" id="logoLink" class="group flex items-center space-x-3" style="display:none;">
+  <a href="/" id="logoLink" class="flex items-center space-x-3">
     <div class="w-10 h-10 berry-gradient rounded-2xl flex items-center justify-center floating-animation">
       <img src="/assets/berrygo_strawberry.svg" alt="BerryGo" class="w-6 h-6 filter brightness-0 invert">
     </div>
-    <span class="font-bold text-xl bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">BerryGo</span>
+    <span id="logoText" class="font-bold text-xl bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent" style="display:none;">BerryGo</span>
   </a>
-  <button id="installLogoBtn" class="group flex items-center space-x-3 install-pulse" style="display:none;">
-    <div class="w-10 h-10 berry-gradient rounded-2xl flex items-center justify-center floating-animation">
-      <img src="/assets/berrygo_strawberry.svg" alt="BerryGo" class="w-6 h-6 filter brightness-0 invert">
+  <button id="installLogoBtn" class="install-pulse flex flex-col items-center ml-2" style="display:none;">
+    <span id="installLogoBtnText" class="font-bold text-xs text-red-600 text-center leading-tight transition-opacity duration-500">BerryGo</span>
+    <div class="flex space-x-1 mt-1">
+      <img src="/assets/googleplay.svg" alt="Google Play" class="w-4 h-4">
+      <img src="/assets/apple.svg" alt="App Store" class="w-4 h-4">
     </div>
-    <span id="installLogoBtnText" class="font-bold text-xl bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent transition-opacity duration-500">BerryGo</span>
   </button>
 
   <div class="flex items-center space-x-3">
@@ -355,18 +356,18 @@
     let deferredPrompt = null;
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 
-    const logoLink = document.getElementById('logoLink');
+    const logoText = document.getElementById('logoText');
     const installLogoBtn = document.getElementById('installLogoBtn');
     const installLogoBtnText = document.getElementById('installLogoBtnText');
 
     function showInstalled() {
-      if (logoLink) logoLink.style.display = 'flex';
+      if (logoText) logoText.style.display = 'inline';
       if (installLogoBtn) installLogoBtn.style.display = 'none';
     }
 
     function showInstall() {
       if (installLogoBtn) installLogoBtn.style.display = 'flex';
-      if (logoLink) logoLink.style.display = 'none';
+      if (logoText) logoText.style.display = 'none';
     }
 
     window.addEventListener('beforeinstallprompt', (e) => {
@@ -393,7 +394,7 @@
         if (!installLogoBtnText) return;
         installLogoBtnText.classList.add('opacity-0');
         setTimeout(() => {
-          installLogoBtnText.textContent = alt ? 'BerryGo' : 'Установите приложение';
+          installLogoBtnText.innerHTML = alt ? 'BerryGo' : 'Установите<br>приложение';
           installLogoBtnText.classList.remove('opacity-0');
           alt = !alt;
         }, 500);
