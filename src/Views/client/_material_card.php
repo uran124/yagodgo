@@ -1,7 +1,7 @@
 <?php
 /** @var array $material */
 ?>
-<a href="/content/<?= urlencode($material['alias']) ?>/<?= $material['id'] ?>" class="block bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-shadow duration-200 h-full overflow-hidden">
+<a href="/content/<?= urlencode($material['cat_alias']) ?>/<?= urlencode($material['mat_alias']) ?>" class="block bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-shadow duration-200 h-full overflow-hidden">
   <?php if (!empty($material['image_path'])): ?>
     <img src="<?= htmlspecialchars($material['image_path']) ?>" alt="<?= htmlspecialchars($material['title']) ?>" class="w-full h-40 object-cover">
   <?php endif; ?>

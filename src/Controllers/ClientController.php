@@ -109,7 +109,8 @@ class ClientController
         )->fetchAll(PDO::FETCH_ASSOC);
 
         $materials = $this->pdo->query(
-            "SELECT m.id, m.title, m.short_desc, m.image_path, c.alias
+            "SELECT m.id, m.alias AS mat_alias, m.title, m.short_desc, m.image_path,
+                    c.alias AS cat_alias
                FROM materials m
                JOIN content_categories c ON c.id = m.category_id
                ORDER BY m.id DESC
@@ -1029,15 +1030,15 @@ public function showOrder(int $orderId): void
     }
 
     /** Показ одного материала */
-    public function showMaterial(int $id): void
+    public function showMaterial(string $categoryAlias, string $alias): void
     {
         $stmt = $this->pdo->prepare(
             "SELECT m.*, c.alias AS category_alias
                FROM materials m
                JOIN content_categories c ON c.id = m.category_id
-               WHERE m.id = ?"
+               WHERE m.alias = ? AND c.alias = ?"
         );
-        $stmt->execute([$id]);
+        $stmt->execute([$alias, $categoryAlias]);
         $material = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$material) {
             http_response_code(404);
@@ -1045,8 +1046,27 @@ public function showOrder(int $orderId): void
             return;
         }
 
+        $products = [];
+        foreach (['product1_id','product2_id','product3_id'] as $f) {
+            $pid = $material[$f] ?? null;
+            if ($pid) {
+                $pStmt = $this->pdo->prepare(
+                    "SELECT p.id, t.name AS product, p.variety, p.description, p.origin_country,
+                            p.box_size, p.box_unit, p.price, p.sale_price, p.is_active,
+                            p.image_path, p.delivery_date
+                       FROM products p
+                       JOIN product_types t ON t.id = p.product_type_id
+                       WHERE p.id = ?"
+                );
+                $pStmt->execute([$pid]);
+                $prod = $pStmt->fetch(PDO::FETCH_ASSOC);
+                if ($prod) { $products[] = $prod; }
+            }
+        }
+
         view('client/material', [
             'material'    => $material,
+            'products'    => $products,
             'breadcrumbs' => [
                 ['label' => $material['category_alias'], 'url' => '/content/' . $material['category_alias']],
                 ['label' => $material['title']]

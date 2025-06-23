@@ -1,4 +1,5 @@
 <?php /** @var array $material */ ?>
+<?php /** @var array $products */ ?>
 <main class="bg-gradient-to-br from-orange-50 via-white to-pink-50 min-h-screen pb-24">
   <article class="max-w-screen-md mx-auto px-4 pt-6 space-y-4">
     <h1 class="text-3xl font-bold text-gray-800 mb-4">
@@ -17,5 +18,19 @@
         <?= nl2br(htmlspecialchars($material['text'])) ?>
       </div>
     <?php endif; ?>
+
+    <?php if (!empty($products)): ?>
+      <h2 class="text-2xl font-bold text-gray-800 mt-6 mb-4">Товары из статьи</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <?php foreach ($products as $p): ?>
+          <?php include __DIR__ . '/_card.php'; ?>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+
+    <div class="mt-8 flex justify-center space-x-4">
+      <a href="/" class="bg-gradient-to-r from-red-500 to-pink-500 text-white px-6 py-3 rounded-xl hover:from-pink-500 hover:to-red-500 transition">На главную</a>
+      <a href="/catalog" class="bg-gradient-to-r from-red-500 to-pink-500 text-white px-6 py-3 rounded-xl hover:from-pink-500 hover:to-red-500 transition">В каталог</a>
+    </div>
   </article>
 </main>

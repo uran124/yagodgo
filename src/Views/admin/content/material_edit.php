@@ -20,6 +20,10 @@
     <input name="title" type="text" value="<?= htmlspecialchars($material['title'] ?? '') ?>" class="w-full border px-2 py-1 rounded" required>
   </div>
   <div>
+    <label class="block mb-1">Алиас</label>
+    <input name="alias" type="text" value="<?= htmlspecialchars($material['alias'] ?? '') ?>" class="w-full border px-2 py-1 rounded" required>
+  </div>
+  <div>
     <label class="block mb-1">Короткое описание</label>
     <textarea name="short_desc" rows="2" class="w-full border px-2 py-1 rounded"><?= htmlspecialchars($material['short_desc'] ?? '') ?></textarea>
   </div>

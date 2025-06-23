@@ -111,6 +111,7 @@ class ContentController
         $id         = $_POST['id'] ?? null;
         $categoryId = (int)($_POST['category_id'] ?? 0);
         $title      = trim($_POST['title'] ?? '');
+        $alias      = trim($_POST['alias'] ?? '');
         $shortDesc  = trim($_POST['short_desc'] ?? '');
         $text       = trim($_POST['text'] ?? '');
         $metaTitle  = trim($_POST['meta_title'] ?? '');
@@ -155,17 +156,17 @@ class ContentController
         }
 
         if ($id) {
-            $sql = "UPDATE materials SET category_id=?, title=?, short_desc=?, text=?, meta_title=?, meta_description=?, meta_keywords=?, product1_id=?, product2_id=?, product3_id=?";
-            $params = [$categoryId, $title, $shortDesc, $text, $metaTitle, $metaDesc, $metaKeys, $prod1, $prod2, $prod3];
+            $sql = "UPDATE materials SET category_id=?, title=?, alias=?, short_desc=?, text=?, meta_title=?, meta_description=?, meta_keywords=?, product1_id=?, product2_id=?, product3_id=?";
+            $params = [$categoryId, $title, $alias, $shortDesc, $text, $metaTitle, $metaDesc, $metaKeys, $prod1, $prod2, $prod3];
             if ($imagePath) { $sql .= ", image_path=?"; $params[] = $imagePath; }
             $sql .= " WHERE id=?";
             $params[] = (int)$id;
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute($params);
         } else {
-            $columns = "category_id,title,short_desc,text,meta_title,meta_description,meta_keywords,product1_id,product2_id,product3_id";
-            $placeholders = "?,?,?,?,?,?,?,?,?,?";
-            $params = [$categoryId,$title,$shortDesc,$text,$metaTitle,$metaDesc,$metaKeys,$prod1,$prod2,$prod3];
+            $columns = "category_id,title,alias,short_desc,text,meta_title,meta_description,meta_keywords,product1_id,product2_id,product3_id";
+            $placeholders = "?,?,?,?,?,?,?,?,?,?,?";
+            $params = [$categoryId,$title,$alias,$shortDesc,$text,$metaTitle,$metaDesc,$metaKeys,$prod1,$prod2,$prod3];
             if ($imagePath) { $columns .= ",image_path"; $placeholders .= ",?"; $params[] = $imagePath; }
             $sql = "INSERT INTO materials ($columns) VALUES ($placeholders)";
             $stmt = $this->pdo->prepare($sql);
