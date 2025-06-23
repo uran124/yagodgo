@@ -440,6 +440,31 @@ switch ("$method $uri") {
         (new App\Controllers\CouponsController($pdo))->generate();
         break;
 
+    case 'GET /admin/content':
+        requireAdmin();
+        (new App\Controllers\ContentController($pdo))->categories();
+        break;
+    case 'GET /admin/content/category/edit':
+        requireAdmin();
+        (new App\Controllers\ContentController($pdo))->editCategory();
+        break;
+    case 'POST /admin/content/category/save':
+        requireAdmin();
+        (new App\Controllers\ContentController($pdo))->saveCategory();
+        break;
+    case 'GET /admin/content/materials':
+        requireAdmin();
+        (new App\Controllers\ContentController($pdo))->materials();
+        break;
+    case 'GET /admin/content/materials/edit':
+        requireAdmin();
+        (new App\Controllers\ContentController($pdo))->editMaterial();
+        break;
+    case 'POST /admin/content/materials/save':
+        requireAdmin();
+        (new App\Controllers\ContentController($pdo))->saveMaterial();
+        break;
+
     case 'GET /admin/users':
         requireAdmin();
         (new App\Controllers\UsersController($pdo))->index();
