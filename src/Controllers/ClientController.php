@@ -1033,7 +1033,7 @@ public function showOrder(int $orderId): void
     public function showMaterial(string $categoryAlias, string $alias): void
     {
         $stmt = $this->pdo->prepare(
-            "SELECT m.*, c.alias AS category_alias
+            "SELECT m.*, c.alias AS category_alias, c.name AS category_name
                FROM materials m
                JOIN content_categories c ON c.id = m.category_id
                WHERE m.alias = ? AND c.alias = ?"
@@ -1068,7 +1068,10 @@ public function showOrder(int $orderId): void
             'material'    => $material,
             'products'    => $products,
             'breadcrumbs' => [
-                ['label' => $material['category_alias'], 'url' => '/content/' . $material['category_alias']],
+                [
+                    'label' => $material['category_name'],
+                    'url'   => '/content/' . $material['category_alias']
+                ],
                 ['label' => $material['title']]
             ],
         ]);
