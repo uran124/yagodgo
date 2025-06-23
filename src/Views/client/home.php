@@ -147,6 +147,28 @@
     </div>
   </section>
 
+  <!-- Материалы -->
+  <?php if (!empty($materials)): ?>
+  <section class="px-4 mb-8">
+    <h2 class="text-2xl font-bold text-gray-800 mb-4">📚 Полезные материалы</h2>
+    <div class="scroll-wrapper relative">
+      <button data-dir="left" class="hidden md:flex items-center justify-center w-8 h-8 absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
+        <span class="material-icons-round text-gray-600">chevron_left</span>
+      </button>
+      <button data-dir="right" class="hidden md:flex items-center justify-center w-8 h-8 absolute right-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
+        <span class="material-icons-round text-gray-600">chevron_right</span>
+      </button>
+      <div class="scroll-row flex space-x-4 overflow-x-auto pb-2 no-scrollbar snap-x snap-mandatory">
+        <?php foreach ($materials as $m): ?>
+          <div class="flex-none w-[66vw] sm:w-1/2 md:w-1/3 snap-start h-full">
+            <?php $material = $m; include __DIR__ . '/_material_card.php'; ?>
+          </div>
+        <?php endforeach; ?>
+      </div>
+    </div>
+  </section>
+  <?php endif; ?>
+
   <!-- Преимущества -->
   <section class="px-4 mb-8">
     <div class="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-3xl p-8">

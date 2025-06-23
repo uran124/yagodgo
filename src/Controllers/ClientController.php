@@ -108,10 +108,19 @@ class ClientController
              LIMIT 10"
         )->fetchAll(PDO::FETCH_ASSOC);
 
+        $materials = $this->pdo->query(
+            "SELECT m.id, m.title, m.short_desc, m.image_path, c.alias
+               FROM materials m
+               JOIN content_categories c ON c.id = m.category_id
+               ORDER BY m.id DESC
+               LIMIT 10"
+        )->fetchAll(PDO::FETCH_ASSOC);
+
         view('client/home', [
             'saleProducts'    => $sale,
             'inStockProducts' => $inStock,
             'preorderProducts'=> $preorder,
+            'materials'       => $materials,
             'userName'        => $_SESSION['name'] ?? null,
         ]);
     }
@@ -1016,6 +1025,32 @@ public function showOrder(int $orderId): void
             'favorites' => $favorites,
             'userName'  => $_SESSION['name'] ?? null,
             'debugData' => $debugData,
+        ]);
+    }
+
+    /** Показ одного материала */
+    public function showMaterial(int $id): void
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT m.*, c.alias AS category_alias
+               FROM materials m
+               JOIN content_categories c ON c.id = m.category_id
+               WHERE m.id = ?"
+        );
+        $stmt->execute([$id]);
+        $material = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$material) {
+            http_response_code(404);
+            echo 'Материал не найден';
+            return;
+        }
+
+        view('client/material', [
+            'material'    => $material,
+            'breadcrumbs' => [
+                ['label' => $material['category_alias'], 'url' => '/content/' . $material['category_alias']],
+                ['label' => $material['title']]
+            ],
         ]);
     }
 }

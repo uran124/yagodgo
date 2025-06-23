@@ -243,6 +243,33 @@
 
   <!-- Контент -->
   <div class="pt-16">
+    <?php if ($path !== '/') : ?>
+      <?php
+        $crumbs = $breadcrumbs ?? [];
+        if (empty($crumbs)) {
+            $segments = array_filter(explode('/', trim($path, '/')));
+            $accum = '';
+            foreach ($segments as $i => $seg) {
+                $accum .= '/' . $seg;
+                $label = ($i === count($segments)-1 && !empty($meta['h1'])) ? $meta['h1'] : $seg;
+                $crumbs[] = ['label' => $label, 'url' => $i < count($segments)-1 ? $accum : null];
+            }
+        }
+      ?>
+      <nav class="px-4 pb-2 text-sm text-gray-500" aria-label="Breadcrumb">
+        <a href="/" class="text-red-500 hover:underline">BerryGO</a>
+        <?php foreach ($crumbs as $bc): ?>
+          <span class="mx-1">/</span>
+          <?php if (!empty($bc['url'])): ?>
+            <a href="<?= htmlspecialchars($bc['url']) ?>" class="hover:underline">
+              <?= htmlspecialchars($bc['label']) ?>
+            </a>
+          <?php else: ?>
+            <?= htmlspecialchars($bc['label']) ?>
+          <?php endif; ?>
+        <?php endforeach; ?>
+      </nav>
+    <?php endif; ?>
     <?= $content ?>
     <?php if (!empty($meta['text'])): ?>
       <div class="hidden lg:block max-w-screen-lg mx-auto px-4 pb-24 text-gray-700 text-sm">
