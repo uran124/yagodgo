@@ -244,6 +244,7 @@
         <a href="/admin/products" class="hover:underline">Товары</a>
         <a href="/admin/slots" class="hover:underline">Слоты</a>
         <a href="/admin/coupons" class="hover:underline">Промокоды</a>
+        <a href="/admin/content" class="hover:underline">Контент</a>
         <a href="/admin/users" class="hover:underline">Пользователи</a>
         <a href="/admin/settings" class="hover:underline">Настройки</a>
       </nav>
@@ -280,6 +281,10 @@
       <a href="/admin/coupons" class="flex items-center p-2 mb-2 rounded hover:bg-gray-200">
         <span class="material-icons-round mr-2">local_offer</span>
         <span class="menu-text">Промокоды</span>
+      </a>
+      <a href="/admin/content" class="flex items-center p-2 mb-2 rounded hover:bg-gray-200">
+        <span class="material-icons-round mr-2">article</span>
+        <span class="menu-text">Контент</span>
       </a>
       <a href="/admin/users" class="flex items-center p-2 mb-2 rounded hover:bg-gray-200">
         <span class="material-icons-round mr-2">people</span>
