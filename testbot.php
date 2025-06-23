@@ -4,6 +4,7 @@
 $telegramConfig = require __DIR__ . '/config/telegram.php';
 $botToken     = $telegramConfig['bot_token'];
 $chatId       = $telegramConfig['admin_chat_id'];
+$topicId      = $telegramConfig['admin_topic_id'] ?? null;
 
 // Файл лога для отладки
 $logFile = __DIR__ . '/telegram_testbot.log';
@@ -18,6 +19,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['message'])) {
         'chat_id' => $chatId,
         'text'    => $text,
     ];
+    if ($topicId !== null) {
+        $data['message_thread_id'] = (int)$topicId;
+    }
     $options = [
         'http' => [
             'header'  => "Content-Type: application/json\r\n",
