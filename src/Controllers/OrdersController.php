@@ -409,11 +409,16 @@ class OrdersController
         $text = $line1 . "\n" . $line2 . "\n" . $line3;
 
         $url = "https://api.telegram.org/bot{$token}/sendMessage";
-        $payload = json_encode([
+        $payloadData = [
             'chat_id'    => $chatId,
             'text'       => $text,
             'parse_mode' => 'Markdown',
-        ], JSON_UNESCAPED_UNICODE);
+        ];
+        if (!empty($cfg['admin_topic_id'])) {
+            $payloadData['message_thread_id'] = (int)$cfg['admin_topic_id'];
+        }
+
+        $payload = json_encode($payloadData, JSON_UNESCAPED_UNICODE);
 
         // Инициализируем cURL
         $ch = curl_init($url);

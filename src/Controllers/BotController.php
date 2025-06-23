@@ -11,6 +11,7 @@ class BotController
     protected \PDO $pdo;
     protected array $config;
     protected int|string|array $adminChatId;
+    protected int|null $adminTopicId = null;
 
     public function __construct(\PDO $pdo, array $telegramConfig)
     {
@@ -21,7 +22,8 @@ class BotController
         $this->telegram = new Api($this->config['bot_token']);
 
         // chat_id администратора или группы — может быть строкой или массивом
-        $this->adminChatId = $this->config['admin_chat_id'];
+        $this->adminChatId  = $this->config['admin_chat_id'];
+        $this->adminTopicId = $this->config['admin_topic_id'] ?? null;
     }
 
     /**
@@ -391,20 +393,22 @@ class BotController
                      "[Посмотреть в админке](https://berrygo.ru/admin/orders/{$orderId})";
 
         // Проверяем, может быть, admin_chat_id — массив, тогда шлём всем
+        $params = [
+            'text'       => $textAdmin,
+            'parse_mode' => 'Markdown',
+        ];
+        if ($this->adminTopicId !== null) {
+            $params['message_thread_id'] = $this->adminTopicId;
+        }
+
         if (is_array($this->adminChatId)) {
             foreach ($this->adminChatId as $chat) {
-                $this->telegram->sendMessage([
-                    'chat_id'    => $chat,
-                    'text'       => $textAdmin,
-                    'parse_mode' => 'Markdown',
-                ]);
+                $params['chat_id'] = $chat;
+                $this->telegram->sendMessage($params);
             }
         } else {
-            $this->telegram->sendMessage([
-                'chat_id'    => $this->adminChatId,
-                'text'       => $textAdmin,
-                'parse_mode' => 'Markdown',
-            ]);
+            $params['chat_id'] = $this->adminChatId;
+            $this->telegram->sendMessage($params);
         }
 
         // 7) Отправляем подтверждение клиенту
