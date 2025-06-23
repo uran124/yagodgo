@@ -149,12 +149,18 @@
 
   <!-- Header -->
 <header class="fixed top-0 left-0 right-0 glass-effect flex items-center justify-between p-4 z-20 border-b border-white/20">
-  <a href="/" class="group flex items-center space-x-3">
+  <a href="/" id="logoLink" class="group flex items-center space-x-3" style="display:none;">
     <div class="w-10 h-10 berry-gradient rounded-2xl flex items-center justify-center floating-animation">
       <img src="/assets/berrygo_strawberry.svg" alt="BerryGo" class="w-6 h-6 filter brightness-0 invert">
     </div>
     <span class="font-bold text-xl bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">BerryGo</span>
   </a>
+  <button id="installLogoBtn" class="group flex items-center space-x-3 install-pulse" style="display:none;">
+    <div class="w-10 h-10 berry-gradient rounded-2xl flex items-center justify-center floating-animation">
+      <img src="/assets/berrygo_strawberry.svg" alt="BerryGo" class="w-6 h-6 filter brightness-0 invert">
+    </div>
+    <span id="installLogoBtnText" class="font-bold text-xl bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent transition-opacity duration-500">BerryGo</span>
+  </button>
 
   <div class="flex items-center space-x-3">
     <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
@@ -233,13 +239,7 @@
   </aside>
   <?php endif; ?>
   
-  <!-- Install PWA Banner -->
-  <div id="installWrapper" class="mt-16 w-full berry-gradient text-white text-center py-4 shadow-lg">
-    <button id="installBtn" class="install-pulse text-lg font-semibold px-8 py-3 bg-white text-red-500 rounded-2xl shadow-lg inline-flex items-center space-x-3 hover:shadow-xl transition-all">
-      <span class="material-icons-round">download</span>
-      <span>Установить BerryGo</span>
-    </button>
-  </div>
+  <!-- Install PWA Banner (replaced by logo button) -->
 
   <!-- Контент -->
   <div class="pt-16">
@@ -355,36 +355,57 @@
     let deferredPrompt = null;
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 
+    const logoLink = document.getElementById('logoLink');
+    const installLogoBtn = document.getElementById('installLogoBtn');
+    const installLogoBtnText = document.getElementById('installLogoBtnText');
+
+    function showInstalled() {
+      if (logoLink) logoLink.style.display = 'flex';
+      if (installLogoBtn) installLogoBtn.style.display = 'none';
+    }
+
+    function showInstall() {
+      if (installLogoBtn) installLogoBtn.style.display = 'flex';
+      if (logoLink) logoLink.style.display = 'none';
+    }
+
     window.addEventListener('beforeinstallprompt', (e) => {
       if (isStandalone) return;
       e.preventDefault();
       deferredPrompt = e;
-      const wrapper = document.getElementById('installWrapper');
-      if (wrapper) wrapper.style.display = 'block';
+      showInstall();
     });
 
     window.addEventListener('appinstalled', () => {
       console.log('✅ Приложение установлено');
-      const wrapper = document.getElementById('installWrapper');
-      if (wrapper) wrapper.remove();
+      showInstalled();
     });
 
     document.addEventListener('DOMContentLoaded', () => {
-      const installBtn = document.getElementById('installBtn');
-      const wrapper = document.getElementById('installWrapper');
-
-      if (isStandalone && wrapper) {
-        wrapper.remove();
-        return;
+      if (isStandalone) {
+        showInstalled();
+      } else {
+        showInstall();
       }
 
-      installBtn?.addEventListener('click', () => {
+      let alt = false;
+      setInterval(() => {
+        if (!installLogoBtnText) return;
+        installLogoBtnText.classList.add('opacity-0');
+        setTimeout(() => {
+          installLogoBtnText.textContent = alt ? 'BerryGo' : 'Установите приложение';
+          installLogoBtnText.classList.remove('opacity-0');
+          alt = !alt;
+        }, 500);
+      }, 3000);
+
+      installLogoBtn?.addEventListener('click', () => {
         if (deferredPrompt) {
           deferredPrompt.prompt();
           deferredPrompt.userChoice.then((choiceResult) => {
             if (choiceResult.outcome === 'accepted') {
               console.log('✅ Пользователь установил приложение');
-              wrapper.remove();
+              showInstalled();
             } else {
               console.log('❌ Пользователь отказался от установки');
             }
