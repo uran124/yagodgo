@@ -279,8 +279,8 @@ switch ("$method $uri") {
         (new App\Controllers\ClientController($pdo))->showOrder($orderId);
         break;
 
-    case (bool) preg_match('#^GET /content/[^/]+/(\d+)$#', "$method $uri", $m):
-        (new App\Controllers\ClientController($pdo))->showMaterial((int)$m[1]);
+    case (bool) preg_match('#^GET /content/([^/]+)/([^/]+)$#', "$method $uri", $m):
+        (new App\Controllers\ClientController($pdo))->showMaterial($m[1], $m[2]);
         break;
 
     case 'GET /favorites':

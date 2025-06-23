@@ -8,6 +8,7 @@ CREATE TABLE content_categories (
 CREATE TABLE materials (
     id INT AUTO_INCREMENT PRIMARY KEY,
     category_id INT NOT NULL,
+    alias VARCHAR(255) NOT NULL,
     image_path VARCHAR(255) DEFAULT NULL,
     title VARCHAR(255) NOT NULL,
     short_desc TEXT,
@@ -20,5 +21,6 @@ CREATE TABLE materials (
     product3_id INT DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY alias (alias),
     FOREIGN KEY (category_id) REFERENCES content_categories(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
