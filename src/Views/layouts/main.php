@@ -683,6 +683,39 @@
   });
 </script>
 
+<script>
+  // Dots navigation for materials carousel
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.dots-carousel').forEach(wrapper => {
+      const row = wrapper.querySelector('.scroll-row');
+      const dotsContainer = wrapper.querySelector('.dots');
+      const slides = row.children.length;
+      for (let i = 0; i < slides; i++) {
+        const dot = document.createElement('button');
+        dot.className = 'w-2 h-2 rounded-full bg-gray-300';
+        if (i === 0) dot.classList.replace('bg-gray-300', 'bg-gray-700');
+        dotsContainer.appendChild(dot);
+        dot.addEventListener('click', () => {
+          row.scrollTo({left: i * row.clientWidth, behavior: 'smooth'});
+        });
+      }
+
+      row.addEventListener('scroll', () => {
+        const index = Math.round(row.scrollLeft / row.clientWidth);
+        dotsContainer.querySelectorAll('button').forEach((d, idx) => {
+          if (idx === index) {
+            d.classList.add('bg-gray-700');
+            d.classList.remove('bg-gray-300');
+          } else {
+            d.classList.add('bg-gray-300');
+            d.classList.remove('bg-gray-700');
+          }
+        });
+      });
+    });
+  });
+</script>
+
 
 
 
