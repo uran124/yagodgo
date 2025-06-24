@@ -38,7 +38,6 @@
   <!-- Материалы -->
   <?php if (!empty($materials)): ?>
   <section class="px-4 mb-8 hidden md:block">
-    <h2 class="text-2xl font-bold text-gray-800 mb-4">📚 Полезные материалы</h2>
     <div class="scroll-wrapper relative dots-carousel">
       <div class="scroll-row flex space-x-4 overflow-x-auto pb-2 no-scrollbar snap-x snap-mandatory">
         <?php foreach ($materials as $m): ?>
@@ -90,7 +89,7 @@
 
   <!-- Sale Products -->
   <section class="px-4 mb-8">
-    <h2 class="text-2xl font-bold text-gray-800 mb-4">💥 Товары со скидкой</h2>
+    <h2 class="text-2xl font-bold text-gray-800 mb-4">💥 Наши спецпредложения</h2>
     <div class="scroll-wrapper relative">
       <button data-dir="left" class="hidden md:flex items-center justify-center w-8 h-8 absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
         <span class="material-icons-round text-gray-600">chevron_left</span>
@@ -174,7 +173,7 @@
             <span class="material-icons-round text-2xl text-white">flash_on</span>
           </div>
           <h3 class="font-semibold text-gray-800 mb-2">Быстрая доставка</h3>
-          <p class="text-sm text-gray-600">Доставляем свежие ягоды за 1 час по всему Бишкеку</p>
+          <p class="text-sm text-gray-600">Доставляем свежие ягоды за 1 час по Красноярску</p>
         </div>
         
         <div class="text-center">
