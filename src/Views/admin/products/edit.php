@@ -43,6 +43,11 @@
     <textarea name="description" rows="3"
               class="w-full border px-2 py-1 rounded"><?= htmlspecialchars($product['description'] ?? '') ?></textarea>
   </div>
+  <div>
+    <label class="block mb-1">Подробное описание</label>
+    <textarea name="full_description" rows="5"
+              class="w-full border px-2 py-1 rounded"><?= htmlspecialchars($product['full_description'] ?? '') ?></textarea>
+  </div>
 
   <!-- Размер ящика -->
   <div class="flex items-center space-x-2">

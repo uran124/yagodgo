@@ -37,9 +37,11 @@
   ?>
   <div class="relative">
     <?php if ($hasImage): ?>
-      <img src="<?= htmlspecialchars($img) ?>"
-           alt="<?= htmlspecialchars($p['product'] ?? '') ?>"
-           class="w-full object-cover h-40 sm:h-48">
+      <a href="/product/<?= $p['id'] ?>">
+        <img src="<?= htmlspecialchars($img) ?>"
+             alt="<?= htmlspecialchars($p['product'] ?? '') ?>"
+             class="w-full object-cover h-40 sm:h-48">
+      </a>
     <?php else: ?>
       <div class="w-full h-40 sm:h-48 bg-pink-50 flex flex-col items-center justify-center">
         <span class="material-icons-round text-4xl text-pink-400 mb-1">image</span>
@@ -84,13 +86,15 @@
     <div class="mb-2">
       <?php $boxLabel = htmlspecialchars($boxSize . ' ' . $boxUnit); ?>
       <h3 class="text-base sm:text-lg font-semibold text-gray-800">
-        <?= htmlspecialchars($p['product']      ?? '') ?>
-        <?php if (!empty($p['variety'])): ?>
-          <?= ' ' . htmlspecialchars($p['variety']) ?>
-        <?php endif; ?>
-        <?php if ($boxSize > 0 && $boxUnit !== ''): ?>
-          <?= ' (' . $boxLabel . ')' ?>
-        <?php endif; ?>
+        <a href="/product/<?= $p['id'] ?>" class="hover:underline">
+          <?= htmlspecialchars($p['product']      ?? '') ?>
+          <?php if (!empty($p['variety'])): ?>
+            <?= ' ' . htmlspecialchars($p['variety']) ?>
+          <?php endif; ?>
+          <?php if ($boxSize > 0 && $boxUnit !== ''): ?>
+            <?= ' (' . $boxLabel . ')' ?>
+          <?php endif; ?>
+        </a>
       </h3>
     </div>
 

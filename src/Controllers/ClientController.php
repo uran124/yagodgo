@@ -1076,4 +1076,50 @@ public function showOrder(int $orderId): void
             ],
         ]);
     }
+
+    public function showProduct(int $id): void
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT p.*, t.name AS product FROM products p JOIN product_types t ON t.id = p.product_type_id WHERE p.id = ?"
+        );
+        $stmt->execute([$id]);
+        $product = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$product) {
+            http_response_code(404);
+            echo 'Товар не найден';
+            return;
+        }
+
+        view('client/product', [
+            'product' => $product,
+            'breadcrumbs' => [
+                ['label' => 'Товар', 'url' => '/catalog'],
+                ['label' => ($product['variety'] ?: $product['product']) . ' ' . $product['box_size'] . ' ' . $product['box_unit']]
+            ],
+        ]);
+    }
+
+    public function showProductType(int $id): void
+    {
+        $stmt = $this->pdo->prepare("SELECT * FROM product_types WHERE id = ?");
+        $stmt->execute([$id]);
+        $type = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$type) {
+            http_response_code(404);
+            echo 'Категория не найдена';
+            return;
+        }
+
+        $pStmt = $this->pdo->prepare(
+            "SELECT p.id, t.name AS product, p.variety, p.description, p.origin_country, p.box_size, p.box_unit, p.price, p.sale_price, p.is_active, p.image_path, p.delivery_date FROM products p JOIN product_types t ON t.id = p.product_type_id WHERE p.product_type_id = ? AND p.is_active = 1"
+        );
+        $pStmt->execute([$id]);
+        $products = $pStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        view('client/catalog', [
+            'products'    => $products,
+            'meta'        => ['h1' => $type['h1'] ?? $type['name'], 'text' => $type['text'] ?? ''],
+            'breadcrumbs' => [ ['label' => $type['name']] ],
+        ]);
+    }
 }
