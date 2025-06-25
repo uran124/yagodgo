@@ -27,3 +27,21 @@
     </div>
   </article>
 </main>
+<script>
+window.dataLayer = window.dataLayer || [];
+window.dataLayer.push({
+  ecommerce: {
+    currencyCode: 'RUB',
+    detail: {
+      products: [{
+        id: '<?= $product['id'] ?>',
+        name: '<?= addslashes($product['product'] . ($product['variety'] ? ' ' . $product['variety'] : '')) ?>',
+        price: <?= ($product['sale_price']>0?
+            ($product['sale_price']*$product['box_size']+BOX_MARKUP):
+            ($product['price']*$product['box_size']+BOX_MARKUP)) ?>,
+        quantity: 1
+      }]
+    }
+  }
+});
+</script>

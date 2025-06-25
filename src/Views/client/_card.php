@@ -136,7 +136,7 @@
 
       <!-- Кнопка «В корзину» или «Войдите» -->
       <?php if ((string)($_SESSION['role'] ?? '') === 'client' && $active): ?>
-        <form action="/cart/add" method="post" class="flex items-center space-x-2">
+        <form action="/cart/add" method="post" class="flex items-center space-x-2 add-to-cart-form" data-id="<?= $p['id'] ?>" data-name="<?= htmlspecialchars($p['product'] . ($p['variety'] ? ' ' . $p['variety'] : '')) ?>" data-price="<?= $priceBox ?>">
           <input type="hidden" name="product_id" value="<?= $p['id'] ?>">
           <div class="flex items-center space-x-2">
             <button type="button"

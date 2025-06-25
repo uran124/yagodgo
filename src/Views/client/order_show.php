@@ -159,3 +159,23 @@ $discount = max(0, $rawSum - $order['total_amount']);
 
   </div>
 </main>
+<script>
+window.dataLayer = window.dataLayer || [];
+window.dataLayer.push({
+  ecommerce: {
+    currencyCode: 'RUB',
+    purchase: {
+      actionField: { id: '<?= $order['id'] ?>' },
+      products: [
+        <?php foreach ($items as $idx => $it): ?>{
+          id: '<?= $it['product_id'] ?>',
+          name: '<?= addslashes($it['product_name'] . ($it['variety'] ? ' ' . $it['variety'] : '')) ?>',
+          price: <?= $it['unit_price'] ?>,
+          quantity: <?= $it['quantity'] ?>
+        }<?= $idx + 1 < count($items) ? ',' : '' ?>
+        <?php endforeach; ?>
+      ]
+    }
+  }
+});
+</script>
