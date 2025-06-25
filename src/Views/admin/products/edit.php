@@ -48,6 +48,27 @@
     <textarea name="full_description" rows="5"
               class="w-full border px-2 py-1 rounded"><?= htmlspecialchars($product['full_description'] ?? '') ?></textarea>
   </div>
+  <div>
+    <label class="block mb-1">Состав</label>
+    <div id="composition-fields">
+      <?php
+      $composition = [];
+      if (!empty($product['composition'])) {
+          $dec = json_decode($product['composition'], true);
+          if (is_array($dec)) {
+              $composition = $dec;
+          }
+      }
+      if (!$composition) { $composition = ['']; }
+      foreach ($composition as $c): ?>
+        <div class="flex items-center mb-2">
+          <input type="text" name="composition[]" value="<?= htmlspecialchars($c) ?>" class="flex-1 border px-2 py-1 rounded" />
+          <button type="button" class="ml-2 text-red-600 remove-composition"><span class="material-icons-round">delete</span></button>
+        </div>
+      <?php endforeach; ?>
+    </div>
+    <button type="button" id="add-composition" class="mt-2 text-[#C86052] flex items-center"><span class="material-icons-round mr-1">add</span>Добавить компонент</button>
+  </div>
 
   <!-- Размер ящика -->
   <div class="flex items-center space-x-2">
@@ -129,3 +150,17 @@
     Сохранить
   </button>
 </form>
+<script>
+  document.getElementById('add-composition').addEventListener('click', function () {
+    const container = document.getElementById('composition-fields');
+    const div = document.createElement('div');
+    div.className = 'flex items-center mb-2';
+    div.innerHTML = '<input type="text" name="composition[]" class="flex-1 border px-2 py-1 rounded" /> <button type="button" class="ml-2 text-red-600 remove-composition"><span class="material-icons-round">delete</span></button>';
+    container.appendChild(div);
+  });
+  document.getElementById('composition-fields').addEventListener('click', function(e){
+    if(e.target.closest('.remove-composition')){
+      e.target.closest('.flex').remove();
+    }
+  });
+</script>

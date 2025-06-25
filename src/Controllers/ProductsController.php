@@ -105,6 +105,8 @@ class ProductsController
         $variety       = trim($_POST['variety'] ?? '');
         $description   = trim($_POST['description'] ?? '');
         $fullDesc      = trim($_POST['full_description'] ?? '');
+        $compositionArr = array_filter(array_map('trim', $_POST['composition'] ?? []));
+        $compositionJson = $compositionArr ? json_encode(array_values($compositionArr), JSON_UNESCAPED_UNICODE) : null;
         $manufacturer  = trim($_POST['manufacturer'] ?? '');
         $originCountry = trim($_POST['origin_country'] ?? '');
         $boxSize       = (float)($_POST['box_size'] ?? 0);
@@ -176,6 +178,7 @@ class ProductsController
                         variety         = ?,
                         description     = ?,
                         full_description= ?,
+                        composition     = ?,
                         manufacturer    = ?,
                         origin_country  = ?,
                         box_size        = ?,
@@ -187,7 +190,7 @@ class ProductsController
                         delivery_date   = ?,
                         is_active       = ?";
             $params = [
-                $typeId, $variety, $description, $fullDesc, $manufacturer,
+                $typeId, $variety, $description, $fullDesc, $compositionJson, $manufacturer,
                 $originCountry, $boxSize, $boxUnit,
                 $unit, $price, $salePrice, $stockBoxes,
                 $deliveryDate, $isActive
@@ -206,11 +209,11 @@ class ProductsController
 
         } else {
             // INSERT
-            $columns      = "product_type_id,variety,description,full_description,manufacturer,origin_country,box_size,box_unit,unit,price,sale_price,stock_boxes,delivery_date,is_active";
-            // 14 placeholders corresponding to the columns above
-            $placeholders = "?,?,?,?,?,?,?,?,?,?,?,?,?,?";
+            $columns      = "product_type_id,variety,description,full_description,composition,manufacturer,origin_country,box_size,box_unit,unit,price,sale_price,stock_boxes,delivery_date,is_active";
+            // 15 placeholders corresponding to the columns above
+            $placeholders = "?,?,?,?,?,?,?,?,?,?,?,?,?,?,?";
             $params       = [
-                $typeId, $variety, $description, $fullDesc, $manufacturer,
+                $typeId, $variety, $description, $fullDesc, $compositionJson, $manufacturer,
                 $originCountry, $boxSize, $boxUnit,
                 $unit, $price, $salePrice, $stockBoxes,
                 $deliveryDate, $isActive
