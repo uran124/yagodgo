@@ -54,7 +54,7 @@
             <div class="text-sm text-gray-500"><?= htmlspecialchars($kgPrice) ?> ₽/кг</div>
           </div>
 
-          <form action="/cart/add" method="post" class="mt-auto flex">
+          <form action="/cart/add" method="post" class="mt-auto flex add-to-cart-form" data-id="<?= $p['id'] ?>" data-name="<?= htmlspecialchars($p['product'] . ($p['variety'] ? ' ' . $p['variety'] : '')) ?>" data-price="<?= $boxPrice ?>">
             <input type="hidden" name="product_id" value="<?= $p['id'] ?>">
             <input type="number" name="quantity" value="1" min="1" step="1"
                    class="w-20 border border-gray-300 px-2 py-1 rounded-l text-center">
