@@ -15,7 +15,7 @@
  */
 ?>
 <?php $search = mb_strtolower(($p['product'] ?? '') . ' ' . ($p['variety'] ?? ''), 'UTF-8'); ?>
-<div class="product-card bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col hover:shadow-2xl transition-shadow duration-200 h-full" data-search="<?= htmlspecialchars($search) ?>">
+<div class="product-card bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col hover:shadow-2xl transition-shadow duration-200 h-full max-w-[350px]" data-search="<?= htmlspecialchars($search) ?>">
   <?php 
   $img       = trim($p['image_path'] ?? '');
   $hasImage  = $img !== '';
@@ -134,27 +134,27 @@
       <?php if ((string)($_SESSION['role'] ?? '') === 'client' && $active): ?>
         <form action="/cart/add" method="post" class="flex items-center space-x-2">
           <input type="hidden" name="product_id" value="<?= $p['id'] ?>">
-          <div class="flex items-center border border-gray-200 rounded-lg overflow-hidden">
+          <div class="flex items-center space-x-2">
             <button type="button"
-                    class="px-3 py-1 bg-gray-100 hover:bg-gray-200 transition-colors"
+                    class="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full"
                     onclick="let inp=this.nextElementSibling; if(+inp.value>1) inp.value=+inp.value-1;">
-              −
+              <span class="material-icons-round text-gray-600 text-base">remove</span>
             </button>
-            <input type="number" 
-                   name="quantity" 
-                   value="1" 
-                   min="1" 
+            <input type="number"
+                   name="quantity"
+                   value="1"
+                   min="1"
                    step="1"
-                   class="w-10 text-center outline-none" />
+                   class="w-12 text-center border border-gray-200 rounded-md" />
             <button type="button"
-                    class="px-3 py-1 bg-gray-100 hover:bg-gray-200 transition-colors"
+                    class="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full"
                     onclick="let inp=this.previousElementSibling; inp.value=+inp.value+1;">
-              +
+              <span class="material-icons-round text-gray-600 text-base">add</span>
             </button>
           </div>
-          
+
           <button type="submit"
-                  class="ml-2 bg-gradient-to-r from-red-500 to-pink-500 text-white px-3 py-2 rounded-lg hover:from-pink-500 hover:to-red-500 transition-all flex items-center">
+                  class="ml-2 bg-gradient-to-r from-red-500 to-pink-500 text-white px-2 py-2 rounded-lg hover:from-pink-500 hover:to-red-500 transition-all flex items-center text-sm">
             <span class="material-icons-round text-base mr-1">shopping_cart</span>
             В корзину
           </button>
