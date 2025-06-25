@@ -242,6 +242,7 @@
         <a href="/admin/dashboard" class="hover:underline">Dashboard</a>
         <a href="/admin/orders" class="hover:underline">Заказы</a>
         <a href="/admin/products" class="hover:underline">Товары</a>
+        <a href="/admin/product-types" class="hover:underline">Категории</a>
         <a href="/admin/slots" class="hover:underline">Слоты</a>
         <a href="/admin/coupons" class="hover:underline">Промокоды</a>
         <a href="/admin/content" class="hover:underline">Контент</a>
@@ -273,6 +274,10 @@
       <a href="/admin/products" class="flex items-center p-2 mb-2 rounded hover:bg-gray-200">
         <span class="material-icons-round mr-2">inventory_2</span>
         <span class="menu-text">Товары</span>
+      </a>
+      <a href="/admin/product-types" class="flex items-center p-2 mb-2 rounded hover:bg-gray-200">
+        <span class="material-icons-round mr-2">category</span>
+        <span class="menu-text">Категории</span>
       </a>
       <a href="/admin/slots" class="flex items-center p-2 mb-2 rounded hover:bg-gray-200">
         <span class="material-icons-round mr-2">calendar_today</span>

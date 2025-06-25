@@ -104,6 +104,7 @@ class ProductsController
         $typeId        = (int)($_POST['product_type_id'] ?? 0);
         $variety       = trim($_POST['variety'] ?? '');
         $description   = trim($_POST['description'] ?? '');
+        $fullDesc      = trim($_POST['full_description'] ?? '');
         $manufacturer  = trim($_POST['manufacturer'] ?? '');
         $originCountry = trim($_POST['origin_country'] ?? '');
         $boxSize       = (float)($_POST['box_size'] ?? 0);
@@ -174,6 +175,7 @@ class ProductsController
                         product_type_id = ?,
                         variety         = ?,
                         description     = ?,
+                        full_description= ?,
                         manufacturer    = ?,
                         origin_country  = ?,
                         box_size        = ?,
@@ -185,7 +187,7 @@ class ProductsController
                         delivery_date   = ?,
                         is_active       = ?";
             $params = [
-                $typeId, $variety, $description, $manufacturer,
+                $typeId, $variety, $description, $fullDesc, $manufacturer,
                 $originCountry, $boxSize, $boxUnit,
                 $unit, $price, $salePrice, $stockBoxes,
                 $deliveryDate, $isActive
@@ -204,11 +206,11 @@ class ProductsController
 
         } else {
             // INSERT
-            $columns      = "product_type_id,variety,description,manufacturer,origin_country,box_size,box_unit,unit,price,sale_price,stock_boxes,delivery_date,is_active";
-            // 13 placeholders corresponding to the columns above
-            $placeholders = "?,?,?,?,?,?,?,?,?,?,?,?,?";
+            $columns      = "product_type_id,variety,description,full_description,manufacturer,origin_country,box_size,box_unit,unit,price,sale_price,stock_boxes,delivery_date,is_active";
+            // 14 placeholders corresponding to the columns above
+            $placeholders = "?,?,?,?,?,?,?,?,?,?,?,?,?,?";
             $params       = [
-                $typeId, $variety, $description, $manufacturer,
+                $typeId, $variety, $description, $fullDesc, $manufacturer,
                 $originCountry, $boxSize, $boxUnit,
                 $unit, $price, $salePrice, $stockBoxes,
                 $deliveryDate, $isActive
