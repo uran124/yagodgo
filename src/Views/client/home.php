@@ -39,9 +39,9 @@
   <?php if (!empty($materials)): ?>
   <section class="px-4 mb-8 hidden md:block">
     <div class="scroll-wrapper relative dots-carousel">
-      <div class="scroll-row flex space-x-4 overflow-x-auto pb-2 no-scrollbar snap-x snap-mandatory">
+      <div class="scroll-row flex space-x-4 overflow-x-auto pb-2 no-scrollbar snap-x snap-mandatory eq-row">
         <?php foreach ($materials as $m): ?>
-          <div class="flex-none w-[60vw] snap-start h-full">
+          <div class="flex-none w-[40vw] max-w-[415px] snap-start h-full">
             <?php $material = $m; include __DIR__ . '/_material_card.php'; ?>
           </div>
         <?php endforeach; ?>
