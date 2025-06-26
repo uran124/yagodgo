@@ -180,6 +180,7 @@ class ClientController
             'types'     => $types,
             'userName'  => $_SESSION['name'] ?? null,
             'debugData' => $debugData,
+            'breadcrumbs' => [ ['label' => 'Каталог'] ],
         ]);
     }
 
@@ -1094,12 +1095,19 @@ public function showOrder(int $orderId): void
         ]);
     }
 
-    public function showProduct(string $alias): void
+    public function showProduct(string $alias, ?string $typeAlias = null): void
     {
-        $stmt = $this->pdo->prepare(
-            "SELECT p.*, t.name AS product, t.alias AS type_alias FROM products p JOIN product_types t ON t.id = p.product_type_id WHERE p.alias = ? OR p.id = ?"
-        );
-        $stmt->execute([$alias, $alias]);
+        $query = "SELECT p.*, t.name AS product, t.alias AS type_alias
+                  FROM products p
+                  JOIN product_types t ON t.id = p.product_type_id
+                  WHERE (p.alias = ? OR p.id = ?)";
+        $params = [$alias, $alias];
+        if ($typeAlias !== null) {
+            $query .= " AND t.alias = ?";
+            $params[] = $typeAlias;
+        }
+        $stmt = $this->pdo->prepare($query);
+        $stmt->execute($params);
         $product = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$product) {
             http_response_code(404);
@@ -1110,8 +1118,12 @@ public function showOrder(int $orderId): void
         view('client/product', [
             'product' => $product,
             'breadcrumbs' => [
-                ['label' => 'Товар', 'url' => '/catalog'],
-                ['label' => ($product['variety'] ?: $product['product']) . ' ' . $product['box_size'] . ' ' . $product['box_unit']]
+                ['label' => 'Каталог', 'url' => '/catalog'],
+                [
+                    'label' => $product['type_alias'],
+                    'url'   => '/catalog/' . $product['type_alias']
+                ],
+                ['label' => $product['alias']]
             ],
         ]);
     }
@@ -1141,7 +1153,10 @@ public function showOrder(int $orderId): void
             'products'    => $products,
             'types'       => $types,
             'meta'        => ['h1' => $type['h1'] ?? $type['name'], 'text' => $type['text'] ?? ''],
-            'breadcrumbs' => [ ['label' => $type['name']] ],
+            'breadcrumbs' => [
+                ['label' => 'Каталог', 'url' => '/catalog'],
+                ['label' => $type['alias']]
+            ],
         ]);
     }
 }

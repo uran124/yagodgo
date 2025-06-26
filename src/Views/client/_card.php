@@ -37,7 +37,7 @@
   ?>
   <div class="relative">
     <?php if ($hasImage): ?>
-      <a href="/product/<?= urlencode($p['alias']) ?>">
+      <a href="/catalog/<?= urlencode($p['type_alias']) ?>/<?= urlencode($p['alias']) ?>">
         <img src="<?= htmlspecialchars($img) ?>"
              alt="<?= htmlspecialchars($p['product'] ?? '') ?>"
              class="w-full object-cover h-40 sm:h-48">
@@ -86,7 +86,7 @@
     <div class="mb-2">
       <?php $boxLabel = htmlspecialchars($boxSize . ' ' . $boxUnit); ?>
       <h3 class="text-base sm:text-lg font-semibold text-gray-800">
-        <a href="/product/<?= urlencode($p['alias']) ?>" class="hover:underline">
+        <a href="/catalog/<?= urlencode($p['type_alias']) ?>/<?= urlencode($p['alias']) ?>" class="hover:underline">
           <?= htmlspecialchars($p['product']      ?? '') ?>
           <?php if (!empty($p['variety'])): ?>
             <?= ' ' . htmlspecialchars($p['variety']) ?>

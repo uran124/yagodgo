@@ -256,7 +256,7 @@
         }
       ?>
       <nav class="px-4 pb-2 text-sm text-gray-500 mt-4" aria-label="Breadcrumb">
-        <a href="/" class="text-red-500 hover:underline">BerryGO</a>
+        <a href="/" class="text-red-500 hover:underline">Главная</a>
         <?php foreach ($crumbs as $bc): ?>
           <span class="mx-1">/</span>
           <?php if (!empty($bc['url'])): ?>
