@@ -6,50 +6,52 @@
  */ ?>
 
 <main class="bg-gradient-to-br from-orange-50 via-white to-pink-50 min-h-screen pb-24">
-  
-  <!-- Hero Section -->
-  <div class="pt-6 px-4">
-    <section class="relative overflow-hidden bg-gradient-to-br from-red-500 via-pink-500 to-rose-400 text-white rounded-3xl shadow-2xl p-8 mb-6">
-      <!-- Декоративные элементы -->
-      <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
-      <div class="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-12 -translate-x-12"></div>
-      
-      <div class="relative z-10 text-center">
-        
-        <div class="mb-6">
-          <h1 class="text-4xl font-bold mb-3 leading-tight">
-            Добро пожаловать в 
-            <span class="bg-gradient-to-r from-yellow-200 to-orange-200 bg-clip-text text-transparent">BerryGo</span>
-          </h1>
-          <p class="text-lg opacity-90 mb-2">Свежие ягоды и фрукты из Киргизии</p>
-          <p class="text-sm opacity-75">🚀 Доставка за час • 🍓 100% натуральные • ❄️ Всегда свежие</p>
-        </div>
-        
-        <a href="/catalog"
-           class="inline-flex items-center px-8 py-4 bg-white text-red-500 font-semibold rounded-2xl hover:bg-gray-50 transition-all shadow-lg hover:shadow-xl hover:scale-105 space-x-3">
-          <span class="material-icons-round">store</span>
-          <span>Открыть каталог</span>
-          <span class="material-icons-round">arrow_forward</span>
-        </a>
-      </div>
-    </section>
-  </div>
 
-  <!-- Материалы -->
-  <?php if (!empty($materials)): ?>
-  <section class="px-4 mb-8 hidden md:block">
-    <div class="scroll-wrapper relative dots-carousel">
-      <div class="scroll-row flex space-x-4 overflow-x-auto pb-2 no-scrollbar snap-x snap-mandatory eq-row">
-        <?php foreach ($materials as $m): ?>
-          <div class="flex-none w-[40vw] max-w-[415px] snap-start h-full">
-            <?php $material = $m; include __DIR__ . '/_material_card.php'; ?>
+  <div class="pt-6 px-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <section class="relative overflow-hidden bg-gradient-to-br from-red-500 via-pink-500 to-rose-400 text-white rounded-3xl shadow-2xl p-8 mb-6 lg:col-span-2">
+        <!-- Декоративные элементы -->
+        <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
+        <div class="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-12 -translate-x-12"></div>
+
+        <div class="relative z-10 text-center">
+
+          <div class="mb-6">
+            <h1 class="text-4xl font-bold mb-3 leading-tight">
+              Добро пожаловать в
+              <span class="bg-gradient-to-r from-yellow-200 to-orange-200 bg-clip-text text-transparent">BerryGo</span>
+            </h1>
+            <p class="text-lg opacity-90 mb-2">Свежие ягоды и фрукты из Киргизии</p>
+            <p class="text-sm opacity-75">🚀 Доставка за час • 🍓 100% натуральные • ❄️ Всегда свежие</p>
           </div>
-        <?php endforeach; ?>
-      </div>
-      <div class="dots flex justify-center mt-2 space-x-2"></div>
+
+          <a href="/catalog"
+             class="inline-flex items-center px-8 py-4 bg-white text-red-500 font-semibold rounded-2xl hover:bg-gray-50 transition-all shadow-lg hover:shadow-xl hover:scale-105 space-x-3">
+            <span class="material-icons-round">store</span>
+            <span>Открыть каталог</span>
+            <span class="material-icons-round">arrow_forward</span>
+          </a>
+        </div>
+      </section>
+
+      <?php if (!empty($materials)): ?>
+      <section class="hidden md:block lg:col-span-1">
+        <div class="embla embla-news embla--fade">
+          <div class="embla__viewport">
+            <div class="embla__container eq-row">
+              <?php foreach ($materials as $m): ?>
+                <div class="embla__slide">
+                  <?php $material = $m; include __DIR__ . '/_material_card.php'; ?>
+                </div>
+              <?php endforeach; ?>
+            </div>
+          </div>
+          <div class="embla__dots flex justify-center mt-2 space-x-2"></div>
+        </div>
+      </section>
+      <?php endif; ?>
     </div>
-  </section>
-  <?php endif; ?>
+  </div>
   <!-- Быстрые категории 
   <section class="px-4 mb-8">
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -90,24 +92,26 @@
   <!-- Sale Products -->
   <section class="px-4 mb-8">
     <h2 class="text-2xl font-bold text-gray-800 mb-4">💥 Наши спецпредложения</h2>
-    <div class="scroll-wrapper relative">
+    <div class="embla drag-free has-arrows relative">
       <button data-dir="left" class="hidden md:flex items-center justify-center w-8 h-8 absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
         <span class="material-icons-round text-gray-600">chevron_left</span>
       </button>
       <button data-dir="right" class="hidden md:flex items-center justify-center w-8 h-8 absolute right-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
         <span class="material-icons-round text-gray-600">chevron_right</span>
       </button>
-      <div class="scroll-row flex space-x-4 overflow-x-auto pb-2 no-scrollbar snap-x snap-mandatory eq-row">
-        <?php foreach ($saleProducts as $p): ?>
-          <div class="flex-none w-[66vw] sm:w-1/2 md:w-1/3 snap-start h-full">
-            <?php include __DIR__ . '/_card.php'; ?>
+      <div class="embla__viewport">
+        <div class="embla__container space-x-4 pb-2 no-scrollbar eq-row">
+          <?php foreach ($saleProducts as $p): ?>
+            <div class="embla__slide flex-none w-[66vw] sm:w-1/2 md:w-1/3">
+              <?php include __DIR__ . '/_card.php'; ?>
+            </div>
+          <?php endforeach; ?>
+          <div class="embla__slide flex-none w-[66vw] sm:w-1/2 md:w-1/3">
+            <div class="h-full flex items-center justify-center bg-red-50 rounded-2xl shadow-lg p-4 text-center">
+              <p class="text-sm font-semibold text-red-800">Акционная клубника в Красноярске: купите спелую фермерскую ягоду со скидкой до 25 %! Лучшие сорта Клери и Черный принц по невероятно выгодным ценам. Успейте заказать сегодня — акция действует до конца недели, пока ягоды не разобрали! 🍓</p>
+            </div>
           </div>
-        <?php endforeach; ?>
-        <div class="flex-none w-[66vw] sm:w-1/2 md:w-1/3 snap-start h-full">
-        <div class="h-full flex items-center justify-center bg-red-50 rounded-2xl shadow-lg p-4 text-center">
-          <p class="text-sm font-semibold text-red-800">Акционная клубника в Красноярске: купите спелую фермерскую ягоду со скидкой до 25 %! Лучшие сорта Клери и Черный принц по невероятно выгодным ценам. Успейте заказать сегодня — акция действует до конца недели, пока ягоды не разобрали! 🍓</p>
         </div>
-      </div>
       </div>
     </div>
   </section>
@@ -115,24 +119,26 @@
   <!-- In Stock Products -->
   <section class="px-4 mb-8">
     <h2 class="text-2xl font-bold text-gray-800 mb-4">📦 В наличии</h2>
-    <div class="scroll-wrapper relative">
+    <div class="embla drag-free has-arrows relative">
       <button data-dir="left" class="hidden md:flex items-center justify-center w-8 h-8 absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
         <span class="material-icons-round text-gray-600">chevron_left</span>
       </button>
       <button data-dir="right" class="hidden md:flex items-center justify-center w-8 h-8 absolute right-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
         <span class="material-icons-round text-gray-600">chevron_right</span>
       </button>
-      <div class="scroll-row flex space-x-4 overflow-x-auto pb-2 no-scrollbar snap-x snap-mandatory eq-row">
-        <?php foreach ($inStockProducts as $p): ?>
-          <div class="flex-none w-[66vw] sm:w-1/2 md:w-1/3 snap-start h-full">
-            <?php include __DIR__ . '/_card.php'; ?>
+      <div class="embla__viewport">
+        <div class="embla__container space-x-4 pb-2 no-scrollbar eq-row">
+          <?php foreach ($inStockProducts as $p): ?>
+            <div class="embla__slide flex-none w-[66vw] sm:w-1/2 md:w-1/3">
+              <?php include __DIR__ . '/_card.php'; ?>
+            </div>
+          <?php endforeach; ?>
+          <div class="embla__slide flex-none w-[66vw] sm:w-1/2 md:w-1/3">
+            <div class="h-full flex items-center justify-center bg-green-50 rounded-2xl shadow-lg p-4 text-center">
+              <p class="text-sm font-semibold text-green-800">Клубника в наличии в Красноярске: мгновенная доставка за 24 ч — прямо с фермы к вашему столу! Сорта Клери и Черный принц в фасовках от 1 кг. Купите клубнику онлайн с удобной оплатой и гарантий качества каждой ягодки. 🍓🚀</p>
+            </div>
           </div>
-        <?php endforeach; ?>
-        <div class="flex-none w-[66vw] sm:w-1/2 md:w-1/3 snap-start h-full">
-        <div class="h-full flex items-center justify-center bg-green-50 rounded-2xl shadow-lg p-4 text-center">
-          <p class="text-sm font-semibold text-green-800">Клубника в наличии в Красноярске: мгновенная доставка за 24 ч — прямо с фермы к вашему столу! Сорта Клери и Черный принц в фасовках от 1 кг. Купите клубнику онлайн с удобной оплатой и гарантий качества каждой ягодки. 🍓🚀</p>
         </div>
-      </div>
       </div>
     </div>
   </section>
@@ -140,24 +146,26 @@
   <!-- Preorder Products -->
   <section class="px-4 mb-8">
     <h2 class="text-2xl font-bold text-gray-800 mb-4">🛒 Под заказ</h2>
-    <div class="scroll-wrapper relative">
+    <div class="embla drag-free has-arrows relative">
       <button data-dir="left" class="hidden md:flex items-center justify-center w-8 h-8 absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
         <span class="material-icons-round text-gray-600">chevron_left</span>
       </button>
       <button data-dir="right" class="hidden md:flex items-center justify-center w-8 h-8 absolute right-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
         <span class="material-icons-round text-gray-600">chevron_right</span>
       </button>
-      <div class="scroll-row flex space-x-4 overflow-x-auto pb-2 no-scrollbar snap-x snap-mandatory eq-row">
-        <?php foreach ($preorderProducts as $p): ?>
-          <div class="flex-none w-[66vw] sm:w-1/2 md:w-1/3 snap-start h-full">
-            <?php include __DIR__ . '/_card.php'; ?>
+      <div class="embla__viewport">
+        <div class="embla__container space-x-4 pb-2 no-scrollbar eq-row">
+          <?php foreach ($preorderProducts as $p): ?>
+            <div class="embla__slide flex-none w-[66vw] sm:w-1/2 md:w-1/3">
+              <?php include __DIR__ . '/_card.php'; ?>
+            </div>
+          <?php endforeach; ?>
+          <div class="embla__slide flex-none w-[66vw] sm:w-1/2 md:w-1/3">
+            <div class="h-full flex items-center justify-center bg-blue-50 rounded-2xl shadow-lg p-4 text-center">
+              <p class="text-sm font-semibold text-blue-800">Клубника другие ягоды и фрукты под заказ с доставкой в Красноярске: эксклюзивные сорта и объёмы от 1 кг. Идеально для праздников, корпоративов и подарков! Заранее выберите свой идеальный набор — индивидуальная упаковка, свежесть гарантирована, доставка в удобное время. 🍓✨</p>
+            </div>
           </div>
-        <?php endforeach; ?>
-        <div class="flex-none w-[66vw] sm:w-1/2 md:w-1/3 snap-start h-full">
-        <div class="h-full flex items-center justify-center bg-blue-50 rounded-2xl shadow-lg p-4 text-center">
-          <p class="text-sm font-semibold text-blue-800">Клубника другие ягоды и фрукты под заказ с доставкой в Красноярске: эксклюзивные сорта и объёмы от 1 кг. Идеально для праздников, корпоративов и подарков! Заранее выберите свой идеальный набор — индивидуальная упаковка, свежесть гарантирована, доставка в удобное время. 🍓✨</p>
         </div>
-      </div>
       </div>
     </div>
   </section>

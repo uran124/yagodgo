@@ -119,8 +119,8 @@ class ClientController
                     c.alias AS cat_alias
                FROM materials m
                JOIN content_categories c ON c.id = m.category_id
-               ORDER BY m.id DESC
-               LIMIT 10"
+               ORDER BY m.created_at DESC
+               LIMIT 5"
         )->fetchAll(PDO::FETCH_ASSOC);
 
         view('client/home', [
