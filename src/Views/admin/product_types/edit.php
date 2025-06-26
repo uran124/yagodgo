@@ -8,6 +8,10 @@
     <input name="name" type="text" value="<?= htmlspecialchars($type['name'] ?? '') ?>" class="w-full border px-2 py-1 rounded" required>
   </div>
   <div>
+    <label class="block mb-1">Алиас</label>
+    <input name="alias" type="text" value="<?= htmlspecialchars($type['alias'] ?? '') ?>" class="w-full border px-2 py-1 rounded" required>
+  </div>
+  <div>
     <label class="block mb-1">Meta title</label>
     <input name="meta_title" type="text" value="<?= htmlspecialchars($type['meta_title'] ?? '') ?>" class="w-full border px-2 py-1 rounded">
   </div>

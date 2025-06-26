@@ -108,7 +108,7 @@
     <div class="flex justify-center space-x-4 pt-4">
       <a href="/" class="bg-gradient-to-r from-red-500 to-pink-500 text-white px-6 py-3 rounded-xl hover:from-pink-500 hover:to-red-500 transition">На главную</a>
       <a href="/catalog" class="bg-gradient-to-r from-red-500 to-pink-500 text-white px-6 py-3 rounded-xl hover:from-pink-500 hover:to-red-500 transition">В каталог</a>
-      <a href="/type/<?= $product['product_type_id'] ?>" class="bg-gradient-to-r from-red-500 to-pink-500 text-white px-6 py-3 rounded-xl hover:from-pink-500 hover:to-red-500 transition">В раздел <?= htmlspecialchars($product['product']) ?></a>
+      <a href="/type/<?= urlencode($product['type_alias']) ?>" class="bg-gradient-to-r from-red-500 to-pink-500 text-white px-6 py-3 rounded-xl hover:from-pink-500 hover:to-red-500 transition">В раздел <?= htmlspecialchars($product['product']) ?></a>
     </div>
   </article>
 </main>

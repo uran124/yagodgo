@@ -15,7 +15,7 @@
  */
 ?>
 <?php $search = mb_strtolower(($p['product'] ?? '') . ' ' . ($p['variety'] ?? ''), 'UTF-8'); ?>
-<div class="product-card bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col hover:shadow-2xl transition-shadow duration-200 h-full max-w-[350px]" data-search="<?= htmlspecialchars($search) ?>">
+<div class="product-card bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col hover:shadow-2xl transition-shadow duration-200 h-full max-w-[350px]" data-search="<?= htmlspecialchars($search) ?>" data-type="<?= htmlspecialchars($p['type_alias'] ?? '') ?>" data-sale="<?= ($p['sale_price'] ?? 0) > 0 ? '1' : '0' ?>">
   <?php 
   $img       = trim($p['image_path'] ?? '');
   $hasImage  = $img !== '';
@@ -37,7 +37,7 @@
   ?>
   <div class="relative">
     <?php if ($hasImage): ?>
-      <a href="/product/<?= $p['id'] ?>">
+      <a href="/product/<?= urlencode($p['alias']) ?>">
         <img src="<?= htmlspecialchars($img) ?>"
              alt="<?= htmlspecialchars($p['product'] ?? '') ?>"
              class="w-full object-cover h-40 sm:h-48">
@@ -86,7 +86,7 @@
     <div class="mb-2">
       <?php $boxLabel = htmlspecialchars($boxSize . ' ' . $boxUnit); ?>
       <h3 class="text-base sm:text-lg font-semibold text-gray-800">
-        <a href="/product/<?= $p['id'] ?>" class="hover:underline">
+        <a href="/product/<?= urlencode($p['alias']) ?>" class="hover:underline">
           <?= htmlspecialchars($p['product']      ?? '') ?>
           <?php if (!empty($p['variety'])): ?>
             <?= ' ' . htmlspecialchars($p['variety']) ?>

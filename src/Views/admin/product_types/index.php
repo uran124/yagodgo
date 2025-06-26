@@ -6,6 +6,7 @@
   <thead class="bg-gray-200 text-gray-700">
     <tr>
       <th class="p-3 text-left font-semibold">Название</th>
+      <th class="p-3 text-left font-semibold">Алиас</th>
       <th class="p-3 text-center font-semibold">Редактировать</th>
     </tr>
   </thead>
@@ -13,6 +14,7 @@
     <?php foreach ($types as $t): ?>
     <tr class="border-b hover:bg-gray-50 transition-all duration-200">
       <td class="p-3 text-gray-600"><?= htmlspecialchars($t['name']) ?></td>
+      <td class="p-3 text-gray-600"><?= htmlspecialchars($t['alias']) ?></td>
       <td class="p-3 text-center">
         <a href="/admin/product-types/edit?id=<?= $t['id'] ?>" class="text-[#C86052] hover:underline">Редактировать</a>
       </td>

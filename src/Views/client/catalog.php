@@ -13,12 +13,14 @@
                class="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all text-gray-700 placeholder-gray-400">
         <span class="material-icons-round absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">search</span>
       </div>
-      <div class="flex space-x-2 overflow-x-auto pb-2">
-        <button class="flex-shrink-0 px-4 py-2 bg-red-500 text-white rounded-full text-sm font-medium hover:bg-red-600 transition-colors">Все</button>
-        <button class="flex-shrink-0 px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-200 transition-colors">🍓 Ягоды</button>
-        <button class="flex-shrink-0 px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-200 transition-colors">🍑 Фрукты</button>
-        <button class="flex-shrink-0 px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-200 transition-colors">🥝 Экзотика</button>
-        <button class="flex-shrink-0 px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-200 transition-colors">💰 Акции</button>
+      <div class="flex space-x-2 overflow-x-auto pb-2" id="quickFilters">
+        <button data-filter="all" class="flex-shrink-0 px-4 py-2 bg-red-500 text-white rounded-full text-sm font-medium hover:bg-red-600 transition-colors">Все</button>
+        <button data-filter="sale" class="flex-shrink-0 px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-200 transition-colors">Акции</button>
+        <?php foreach (($types ?? []) as $t): ?>
+          <button data-filter="<?= htmlspecialchars($t['alias']) ?>" class="flex-shrink-0 px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-200 transition-colors">
+            <?= htmlspecialchars($t['name']) ?>
+          </button>
+        <?php endforeach; ?>
       </div>
     </div>
   </div>
@@ -51,17 +53,33 @@
       const search = document.getElementById('catalogSearch');
       const container = document.getElementById('productsContainer');
       const allCards = Array.from(container.querySelectorAll('.product-card'));
+      const filterButtons = document.querySelectorAll('#quickFilters [data-filter]');
+      let currentFilter = 'all';
 
       function applyFilter() {
         const term = search.value.trim().toLowerCase();
-        const cards = allCards
-          .filter(c => c.dataset.search.includes(term))
-          .sort((a, b) => a.dataset.search.localeCompare(b.dataset.search, 'ru'));
+        const cards = allCards.filter(c => {
+          const matchesTerm = c.dataset.search.includes(term);
+          const matchesFilter = currentFilter === 'all'
+            ? true
+            : currentFilter === 'sale'
+              ? c.dataset.sale === '1'
+              : c.dataset.type === currentFilter;
+          return matchesTerm && matchesFilter;
+        }).sort((a, b) => a.dataset.search.localeCompare(b.dataset.search, 'ru'));
         container.innerHTML = '';
         cards.forEach(c => container.appendChild(c));
       }
 
       search.addEventListener('input', applyFilter);
+      filterButtons.forEach(btn => btn.addEventListener('click', () => {
+        filterButtons.forEach(b => b.classList.remove('bg-red-500', 'text-white'));
+        filterButtons.forEach(b => b.classList.add('bg-gray-100', 'text-gray-700'));
+        btn.classList.remove('bg-gray-100', 'text-gray-700');
+        btn.classList.add('bg-red-500', 'text-white');
+        currentFilter = btn.dataset.filter;
+        applyFilter();
+      }));
     });
   </script>
 
