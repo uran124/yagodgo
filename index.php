@@ -513,6 +513,27 @@ switch ("$method $uri") {
         (new App\Controllers\UsersController($pdo))->toggleBlock();
         break;
 
+    case 'GET /admin/apps':
+        requireAdmin();
+        (new App\Controllers\AppsController($pdo))->index();
+        break;
+    case 'POST /admin/apps/sitemap/toggle':
+        requireAdmin();
+        (new App\Controllers\AppsController($pdo))->toggleSitemap();
+        break;
+    case 'GET /admin/apps/sitemap':
+        requireAdmin();
+        (new App\Controllers\AppsController($pdo))->sitemapSettings();
+        break;
+    case 'POST /admin/apps/sitemap/generate':
+        requireAdmin();
+        (new App\Controllers\AppsController($pdo))->generateSitemap();
+        break;
+    case 'POST /admin/apps/sitemap/toggle-item':
+        requireAdmin();
+        (new App\Controllers\AppsController($pdo))->toggleItem();
+        break;
+
     case 'GET /admin/settings':
         requireAdmin();
         (new App\Controllers\SettingsController($pdo))->index();
