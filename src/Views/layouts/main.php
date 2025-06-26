@@ -431,7 +431,41 @@
       });
     });
   </script>
-  
+
+<script>
+  // Enable mouse drag scrolling for carousels
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.scroll-row').forEach(row => {
+      let isDown = false;
+      let startX;
+      let scrollLeft;
+
+      const start = x => {
+        isDown = true;
+        startX = x;
+        scrollLeft = row.scrollLeft;
+      };
+
+      const move = x => {
+        if (!isDown) return;
+        row.scrollLeft = scrollLeft - (x - startX);
+      };
+
+      row.addEventListener('mousedown', e => start(e.pageX));
+      row.addEventListener('mousemove', e => {
+        if (!isDown) return;
+        e.preventDefault();
+        move(e.pageX);
+      });
+      window.addEventListener('mouseup', () => { isDown = false; });
+
+      row.addEventListener('touchstart', e => start(e.touches[0].pageX));
+      row.addEventListener('touchmove', e => move(e.touches[0].pageX));
+      window.addEventListener('touchend', () => { isDown = false; });
+    });
+  });
+</script>
+
   
   
       
