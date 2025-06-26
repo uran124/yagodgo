@@ -40,3 +40,13 @@ ALTER TABLE products
   ADD COLUMN alias VARCHAR(255) NOT NULL AFTER product_type_id,
   ADD UNIQUE KEY alias (alias);
 ```
+### Sitemap automation
+
+Run `bin/generate_sitemap.php` regularly to refresh `sitemap.xml`. On hosting with cron add a task:
+
+```
+0 8 * * * php /path/to/project/bin/generate_sitemap.php
+```
+
+The schedule assumes cron uses the Asia/Krasnoyarsk time zone. If the server works in UTC set `0 1 * * *` instead.
+
