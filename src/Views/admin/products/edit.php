@@ -36,6 +36,12 @@
            value="<?= htmlspecialchars($product['variety'] ?? '') ?>"
            class="w-full border px-2 py-1 rounded">
   </div>
+  <div>
+    <label class="block mb-1">Алиас</label>
+    <input name="alias" type="text"
+           value="<?= htmlspecialchars($product['alias'] ?? '') ?>"
+           class="w-full border px-2 py-1 rounded" required>
+  </div>
 
   <!-- Описание -->
   <div>

@@ -7,6 +7,7 @@
   <thead class="bg-gray-200 text-gray-700">
     <tr>
       <th class="p-3 text-left font-semibold">Продукт</th>
+      <th class="p-3 text-left font-semibold">Алиас</th>
       <th class="p-3 text-left font-semibold">Сорт</th>
       <th class="p-3 text-left font-semibold">Вес ящика</th>
       <th class="p-3 text-left font-semibold">Цена</th>
@@ -22,6 +23,9 @@
           <a href="/admin/products/edit?id=<?= $p['id'] ?>" class="text-[#C86052] hover:underline">
             <?= htmlspecialchars($p['product']) ?>
           </a>
+        </td>
+        <td class="p-3 text-gray-600">
+          <?= htmlspecialchars($p['alias']) ?>
         </td>
         <td class="p-3 text-gray-600"><?= htmlspecialchars($p['variety']) ?></td>
         <td class="p-3 text-gray-600">

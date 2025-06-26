@@ -282,11 +282,11 @@ switch ("$method $uri") {
     case (bool) preg_match('#^GET /content/([^/]+)/([^/]+)$#', "$method $uri", $m):
         (new App\Controllers\ClientController($pdo))->showMaterial($m[1], $m[2]);
         break;
-    case (bool) preg_match('#^GET /product/(\d+)$#', "$method $uri", $m):
-        (new App\Controllers\ClientController($pdo))->showProduct((int)$m[1]);
+    case (bool) preg_match('#^GET /product/([^/]+)$#', "$method $uri", $m):
+        (new App\Controllers\ClientController($pdo))->showProduct($m[1]);
         break;
-    case (bool) preg_match('#^GET /type/(\d+)$#', "$method $uri", $m):
-        (new App\Controllers\ClientController($pdo))->showProductType((int)$m[1]);
+    case (bool) preg_match('#^GET /type/([^/]+)$#', "$method $uri", $m):
+        (new App\Controllers\ClientController($pdo))->showProductType($m[1]);
         break;
 
     case 'GET /favorites':

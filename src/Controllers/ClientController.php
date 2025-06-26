@@ -47,7 +47,9 @@ class ClientController
 
         $sale = $this->pdo->query(
             "SELECT p.id,
+                    p.alias,
                     t.name AS product,
+                    t.alias AS type_alias,
                     p.variety,
                     p.description,
                     p.origin_country,
@@ -67,7 +69,9 @@ class ClientController
 
         $inStock = $this->pdo->query(
             "SELECT p.id,
+                    p.alias,
                     t.name AS product,
+                    t.alias AS type_alias,
                     p.variety,
                     p.description,
                     p.origin_country,
@@ -89,7 +93,9 @@ class ClientController
 
         $preorder = $this->pdo->query(
             "SELECT p.id,
+                    p.alias,
                     t.name AS product,
+                    t.alias AS type_alias,
                     p.variety,
                     p.description,
                     p.origin_country,
@@ -133,7 +139,9 @@ class ClientController
         $all = $this->pdo->query(
             "SELECT
                  p.id,
+                 p.alias,
                  t.name        AS product,
+                 t.alias       AS type_alias,
                  p.variety,
                  p.description,
                  p.origin_country,
@@ -157,6 +165,10 @@ class ClientController
                COALESCE(p.delivery_date, '9999-12-31'),
                p.id DESC"
         )->fetchAll(PDO::FETCH_ASSOC);
+
+        $types = $this->pdo->query(
+            "SELECT id, name, alias FROM product_types ORDER BY name"
+        )->fetchAll(PDO::FETCH_ASSOC);
     
         $debugData = [
             'productsCount' => count($all),
@@ -165,6 +177,7 @@ class ClientController
     
         view('client/catalog', [
             'products'  => $all,
+            'types'     => $types,
             'userName'  => $_SESSION['name'] ?? null,
             'debugData' => $debugData,
         ]);
@@ -387,15 +400,17 @@ public function cart(): void
     
         // 1) Получаем все товары из корзины вместе с основной информацией
         $stmt = $this->pdo->prepare(
-            "SELECT 
-                ci.product_id, 
-                ci.quantity, 
+            "SELECT
+                ci.product_id,
+                ci.quantity,
                 ci.unit_price,
-                p.variety, 
-                t.name AS product, 
-                p.box_size, 
-                p.box_unit, 
-                p.image_path 
+                p.variety,
+                p.alias,
+                t.name AS product,
+                t.alias AS type_alias,
+                p.box_size,
+                p.box_unit,
+                p.image_path
              FROM cart_items ci
              JOIN products p ON p.id = ci.product_id
              JOIN product_types t ON t.id = p.product_type_id
@@ -568,7 +583,7 @@ public function cart(): void
     // 1) Получаем товары из корзины
     $stmt = $this->pdo->prepare(
       "SELECT ci.product_id, ci.quantity, ci.unit_price,
-              p.box_size, p.box_unit, t.name AS product, p.variety
+              p.box_size, p.box_unit, t.name AS product, t.alias AS type_alias, p.alias, p.variety
        FROM cart_items ci
        JOIN products p ON p.id = ci.product_id
        JOIN product_types t ON t.id = p.product_type_id
@@ -866,7 +881,9 @@ public function showOrder(int $orderId): void
          oi.boxes,
          oi.unit_price,
          p.variety,
-         t.name AS product_name
+         p.alias,
+         t.name AS product_name,
+         t.alias AS type_alias
        FROM order_items oi
        JOIN products p ON p.id = oi.product_id
        JOIN product_types t ON t.id = p.product_type_id
@@ -926,7 +943,7 @@ public function showOrder(int $orderId): void
 
         // Подтягиваем позиции для каждого заказа
         $itemsStmt = $this->pdo->prepare(
-            "SELECT t.name AS product_name, p.variety, p.box_size, p.box_unit, oi.quantity, oi.boxes, oi.unit_price
+            "SELECT t.name AS product_name, t.alias AS type_alias, p.variety, p.alias, p.box_size, p.box_unit, oi.quantity, oi.boxes, oi.unit_price
              FROM order_items oi
              JOIN products p ON p.id = oi.product_id
              JOIN product_types t ON t.id = p.product_type_id
@@ -1006,7 +1023,7 @@ public function showOrder(int $orderId): void
         requireClient();
         $userId = $_SESSION['user_id'];
         $stmt = $this->pdo->prepare(
-            "SELECT p.id, t.name AS product, p.variety, p.origin_country,
+            "SELECT p.id, p.alias, t.name AS product, t.alias AS type_alias, p.variety, p.origin_country,
                     p.box_size, p.box_unit, p.price, p.image_path
              FROM favorites f
              JOIN products p ON p.id = f.product_id
@@ -1051,7 +1068,7 @@ public function showOrder(int $orderId): void
             $pid = $material[$f] ?? null;
             if ($pid) {
                 $pStmt = $this->pdo->prepare(
-                    "SELECT p.id, t.name AS product, p.variety, p.description, p.origin_country,
+                    "SELECT p.id, p.alias, t.name AS product, t.alias AS type_alias, p.variety, p.description, p.origin_country,
                             p.box_size, p.box_unit, p.price, p.sale_price, p.is_active,
                             p.image_path, p.delivery_date
                        FROM products p
@@ -1077,12 +1094,12 @@ public function showOrder(int $orderId): void
         ]);
     }
 
-    public function showProduct(int $id): void
+    public function showProduct(string $alias): void
     {
         $stmt = $this->pdo->prepare(
-            "SELECT p.*, t.name AS product FROM products p JOIN product_types t ON t.id = p.product_type_id WHERE p.id = ?"
+            "SELECT p.*, t.name AS product, t.alias AS type_alias FROM products p JOIN product_types t ON t.id = p.product_type_id WHERE p.alias = ? OR p.id = ?"
         );
-        $stmt->execute([$id]);
+        $stmt->execute([$alias, $alias]);
         $product = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$product) {
             http_response_code(404);
@@ -1099,10 +1116,10 @@ public function showOrder(int $orderId): void
         ]);
     }
 
-    public function showProductType(int $id): void
+    public function showProductType(string $alias): void
     {
-        $stmt = $this->pdo->prepare("SELECT * FROM product_types WHERE id = ?");
-        $stmt->execute([$id]);
+        $stmt = $this->pdo->prepare("SELECT * FROM product_types WHERE alias = ? OR id = ?");
+        $stmt->execute([$alias, $alias]);
         $type = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$type) {
             http_response_code(404);
@@ -1111,13 +1128,18 @@ public function showOrder(int $orderId): void
         }
 
         $pStmt = $this->pdo->prepare(
-            "SELECT p.id, t.name AS product, p.variety, p.description, p.origin_country, p.box_size, p.box_unit, p.price, p.sale_price, p.is_active, p.image_path, p.delivery_date FROM products p JOIN product_types t ON t.id = p.product_type_id WHERE p.product_type_id = ? AND p.is_active = 1"
+            "SELECT p.id, p.alias, t.name AS product, t.alias AS type_alias, p.variety, p.description, p.origin_country, p.box_size, p.box_unit, p.price, p.sale_price, p.is_active, p.image_path, p.delivery_date FROM products p JOIN product_types t ON t.id = p.product_type_id WHERE p.product_type_id = ? AND p.is_active = 1"
         );
-        $pStmt->execute([$id]);
+        $pStmt->execute([$type['id']]);
         $products = $pStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $types = $this->pdo->query(
+            "SELECT id, name, alias FROM product_types ORDER BY name"
+        )->fetchAll(PDO::FETCH_ASSOC);
 
         view('client/catalog', [
             'products'    => $products,
+            'types'       => $types,
             'meta'        => ['h1' => $type['h1'] ?? $type['name'], 'text' => $type['text'] ?? ''],
             'breadcrumbs' => [ ['label' => $type['name']] ],
         ]);

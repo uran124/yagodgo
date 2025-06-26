@@ -43,6 +43,7 @@ class ProductTypesController
     {
         $id      = $_POST['id'] ?? null;
         $name    = trim($_POST['name'] ?? '');
+        $alias   = trim($_POST['alias'] ?? '');
         $metaT   = trim($_POST['meta_title'] ?? '');
         $metaD   = trim($_POST['meta_description'] ?? '');
         $metaK   = trim($_POST['meta_keywords'] ?? '');
@@ -52,14 +53,14 @@ class ProductTypesController
 
         if ($id) {
             $stmt = $this->pdo->prepare(
-                "UPDATE product_types SET name=?, meta_title=?, meta_description=?, meta_keywords=?, h1=?, short_description=?, text=? WHERE id=?"
+                "UPDATE product_types SET name=?, alias=?, meta_title=?, meta_description=?, meta_keywords=?, h1=?, short_description=?, text=? WHERE id=?"
             );
-            $stmt->execute([$name, $metaT, $metaD, $metaK, $h1, $short, $text, (int)$id]);
+            $stmt->execute([$name, $alias, $metaT, $metaD, $metaK, $h1, $short, $text, (int)$id]);
         } else {
             $stmt = $this->pdo->prepare(
-                "INSERT INTO product_types (name, meta_title, meta_description, meta_keywords, h1, short_description, text) VALUES (?,?,?,?,?,?,?)"
+                "INSERT INTO product_types (name, alias, meta_title, meta_description, meta_keywords, h1, short_description, text) VALUES (?,?,?,?,?,?,?,?)"
             );
-            $stmt->execute([$name, $metaT, $metaD, $metaK, $h1, $short, $text]);
+            $stmt->execute([$name, $alias, $metaT, $metaD, $metaK, $h1, $short, $text]);
         }
         header('Location: /admin/product-types');
         exit;
