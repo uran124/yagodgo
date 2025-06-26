@@ -1120,10 +1120,10 @@ public function showOrder(int $orderId): void
             'breadcrumbs' => [
                 ['label' => 'Каталог', 'url' => '/catalog'],
                 [
-                    'label' => $product['type_alias'],
+                    'label' => $product['product'],
                     'url'   => '/catalog/' . $product['type_alias']
                 ],
-                ['label' => $product['alias']]
+                ['label' => $product['variety']]
             ],
         ]);
     }
@@ -1155,7 +1155,7 @@ public function showOrder(int $orderId): void
             'meta'        => ['h1' => $type['h1'] ?? $type['name'], 'text' => $type['text'] ?? ''],
             'breadcrumbs' => [
                 ['label' => 'Каталог', 'url' => '/catalog'],
-                ['label' => $type['alias']]
+                ['label' => $type['name']]
             ],
         ]);
     }
