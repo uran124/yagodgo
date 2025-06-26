@@ -135,6 +135,44 @@
       scrollbar-width: none;
     }
 
+    .embla {
+      overflow: hidden;
+    }
+    .embla__container {
+      display: flex;
+    }
+    .embla__slide {
+      position: relative;
+      min-width: 100%;
+    }
+    .embla--fade {
+      position: relative;
+    }
+    .embla--fade .embla__container {
+      display: block;
+    }
+    .embla--fade .embla__slide {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+    .embla--fade .embla__slide.is-selected {
+      position: relative;
+      opacity: 1;
+    }
+    .embla__dots button {
+      width: 8px;
+      height: 8px;
+      border-radius: 9999px;
+      background: #d1d5db;
+    }
+    .embla__dots button.is-active {
+      background: #374151;
+    }
+
   </style>
 
   
@@ -702,51 +740,47 @@
   });
 </script>
 
+<script src="https://cdn.jsdelivr.net/npm/embla-carousel@8/embla-carousel.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/embla-carousel-autoplay@6/embla-carousel-autoplay.umd.js"></script>
 <script>
-  // Scroll arrows for product rows on desktop
   document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.scroll-wrapper').forEach(wrapper => {
-      const row = wrapper.querySelector('.scroll-row');
-      wrapper.querySelectorAll('button[data-dir]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const dir = btn.dataset.dir === 'left' ? -1 : 1;
-          row.scrollBy({left: dir * row.clientWidth, behavior: 'smooth'});
-        });
-      });
+    // Drag free carousels
+    document.querySelectorAll('.embla.drag-free').forEach(wrapper => {
+      const viewport = wrapper.querySelector('.embla__viewport');
+      const embla = EmblaCarousel(viewport, { dragFree: true });
+      const prev = wrapper.querySelector('[data-dir="left"]');
+      const next = wrapper.querySelector('[data-dir="right"]');
+      if (prev && next) {
+        prev.addEventListener('click', () => embla.scrollPrev());
+        next.addEventListener('click', () => embla.scrollNext());
+      }
     });
-  });
-</script>
 
-<script>
-  // Dots navigation for materials carousel
-  document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.dots-carousel').forEach(wrapper => {
-      const row = wrapper.querySelector('.scroll-row');
-      const dotsContainer = wrapper.querySelector('.dots');
-      const slides = row.children.length;
-      for (let i = 0; i < slides; i++) {
-        const dot = document.createElement('button');
-        dot.className = 'w-2 h-2 rounded-full bg-gray-300';
-        if (i === 0) dot.classList.replace('bg-gray-300', 'bg-gray-700');
-        dotsContainer.appendChild(dot);
-        dot.addEventListener('click', () => {
-          row.scrollTo({left: i * row.clientWidth, behavior: 'smooth'});
+    // News fade carousel
+    const news = document.querySelector('.embla-news');
+    if (news) {
+      const viewport = news.querySelector('.embla__viewport');
+      const dotsContainer = news.querySelector('.embla__dots');
+      const embla = EmblaCarousel(viewport, { loop: true }, [EmblaCarouselAutoplay({ delay: 4000, stopOnInteraction: false })]);
+      const slides = embla.slideNodes();
+      const dots = slides.map((_, i) => {
+        const b = document.createElement('button');
+        b.addEventListener('click', () => embla.scrollTo(i));
+        dotsContainer.appendChild(b);
+        return b;
+      });
+      function update() {
+        const index = embla.selectedScrollSnap();
+        slides.forEach((s, i) => {
+          s.classList.toggle('is-selected', i === index);
+        });
+        dots.forEach((d, i) => {
+          d.classList.toggle('is-active', i === index);
         });
       }
-
-      row.addEventListener('scroll', () => {
-        const index = Math.round(row.scrollLeft / row.clientWidth);
-        dotsContainer.querySelectorAll('button').forEach((d, idx) => {
-          if (idx === index) {
-            d.classList.add('bg-gray-700');
-            d.classList.remove('bg-gray-300');
-          } else {
-            d.classList.add('bg-gray-300');
-            d.classList.remove('bg-gray-700');
-          }
-        });
-      });
-    });
+      embla.on('select', update);
+      update();
+    }
   });
 </script>
 
