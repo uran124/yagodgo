@@ -163,6 +163,15 @@
       position: relative;
       opacity: 1;
     }
+    .embla__controls {
+      display: flex;
+      justify-content: center;
+      margin-top: 0.5rem;
+    }
+    .embla__dots {
+      display: flex;
+      gap: 0.5rem;
+    }
     .embla__dots button {
       width: 8px;
       height: 8px;

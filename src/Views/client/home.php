@@ -46,7 +46,9 @@
               <?php endforeach; ?>
             </div>
           </div>
-          <div class="embla__dots flex justify-center mt-2 space-x-2"></div>
+          <div class="embla__controls">
+            <div class="embla__dots"></div>
+          </div>
         </div>
       </section>
       <?php endif; ?>
