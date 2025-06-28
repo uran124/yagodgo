@@ -534,6 +534,19 @@ switch ("$method $uri") {
         (new App\Controllers\AppsController($pdo))->toggleItem();
         break;
 
+    case 'GET /admin/apps/seo':
+        requireAdmin();
+        (new App\Controllers\SeoController($pdo))->index();
+        break;
+    case 'GET /admin/apps/seo/edit':
+        requireAdmin();
+        (new App\Controllers\SeoController($pdo))->edit();
+        break;
+    case 'POST /admin/apps/seo/save':
+        requireAdmin();
+        (new App\Controllers\SeoController($pdo))->save();
+        break;
+
     case 'GET /admin/settings':
         requireAdmin();
         (new App\Controllers\SettingsController($pdo))->index();
