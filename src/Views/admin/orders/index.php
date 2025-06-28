@@ -1,4 +1,9 @@
 <?php /** @var array $orders */ ?>
+<?php if (!empty($_GET['msg'])): ?>
+  <div class="mb-4 p-3 rounded bg-green-50 text-green-800 border border-green-200">
+    <?= htmlspecialchars($_GET['msg']) ?>
+  </div>
+<?php endif; ?>
 <div class="mb-4 flex flex-col md:flex-row md:items-end md:justify-between gap-2">
   <select id="statusFilter" class="border rounded px-3 py-2 text-sm">
     <option value="">Все статусы</option>
