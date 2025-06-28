@@ -63,7 +63,7 @@ class SeoController
         switch ($type) {
             case 'product':
                 $stmt = $this->pdo->prepare(
-                    "SELECT id, meta_title, meta_description, meta_keywords,
+                    "SELECT p.id, p.meta_title, p.meta_description, p.meta_keywords,
                             CONCAT(t.alias,'/',p.alias) AS path
                      FROM products p
                      JOIN product_types t ON t.id = p.product_type_id
