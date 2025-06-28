@@ -1125,6 +1125,11 @@ public function showOrder(int $orderId): void
                 ],
                 ['label' => $product['variety']]
             ],
+            'meta' => [
+                'title'       => $product['meta_title'] ?? '',
+                'description' => $product['meta_description'] ?? '',
+                'keywords'    => $product['meta_keywords'] ?? ''
+            ]
         ]);
     }
 

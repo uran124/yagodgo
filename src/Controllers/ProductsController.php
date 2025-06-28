@@ -110,6 +110,9 @@ class ProductsController
         $fullDesc      = trim($_POST['full_description'] ?? '');
         $compositionArr = array_filter(array_map('trim', $_POST['composition'] ?? []));
         $compositionJson = $compositionArr ? json_encode(array_values($compositionArr), JSON_UNESCAPED_UNICODE) : null;
+        $metaTitle      = trim($_POST['meta_title'] ?? '');
+        $metaDesc       = trim($_POST['meta_description'] ?? '');
+        $metaKeys       = trim($_POST['meta_keywords'] ?? '');
         $manufacturer  = trim($_POST['manufacturer'] ?? '');
         $originCountry = trim($_POST['origin_country'] ?? '');
         $boxSize       = (float)($_POST['box_size'] ?? 0);
@@ -183,6 +186,9 @@ class ProductsController
                         description     = ?,
                         full_description= ?,
                         composition     = ?,
+                        meta_title      = ?,
+                        meta_description= ?,
+                        meta_keywords   = ?,
                         manufacturer    = ?,
                         origin_country  = ?,
                         box_size        = ?,
@@ -194,8 +200,9 @@ class ProductsController
                         delivery_date   = ?,
                         is_active       = ?";
             $params = [
-                $typeId, $alias, $variety, $description, $fullDesc, $compositionJson, $manufacturer,
-                $originCountry, $boxSize, $boxUnit,
+                $typeId, $alias, $variety, $description, $fullDesc, $compositionJson,
+                $metaTitle, $metaDesc, $metaKeys,
+                $manufacturer, $originCountry, $boxSize, $boxUnit,
                 $unit, $price, $salePrice, $stockBoxes,
                 $deliveryDate, $isActive
             ];
@@ -213,12 +220,13 @@ class ProductsController
 
         } else {
             // INSERT
-            $columns      = "product_type_id,alias,variety,description,full_description,composition,manufacturer,origin_country,box_size,box_unit,unit,price,sale_price,stock_boxes,delivery_date,is_active";
-            // 16 placeholders corresponding to the columns above
-            $placeholders = "?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?";
+            $columns      = "product_type_id,alias,variety,description,full_description,composition,meta_title,meta_description,meta_keywords,manufacturer,origin_country,box_size,box_unit,unit,price,sale_price,stock_boxes,delivery_date,is_active";
+            // 19 placeholders corresponding to the columns above
+            $placeholders = "?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?";
             $params       = [
-                $typeId, $alias, $variety, $description, $fullDesc, $compositionJson, $manufacturer,
-                $originCountry, $boxSize, $boxUnit,
+                $typeId, $alias, $variety, $description, $fullDesc, $compositionJson,
+                $metaTitle, $metaDesc, $metaKeys,
+                $manufacturer, $originCountry, $boxSize, $boxUnit,
                 $unit, $price, $salePrice, $stockBoxes,
                 $deliveryDate, $isActive
             ];
