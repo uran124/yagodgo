@@ -16,3 +16,8 @@
   </div>
   <a href="/admin/apps/sitemap" class="text-[#C86052] hover:underline mt-4 inline-block">Настройки</a>
 </div>
+
+<div class="bg-white p-4 rounded shadow mt-6">
+  <h2 class="text-lg font-semibold mb-2">SEO</h2>
+  <a href="/admin/apps/seo" class="text-[#C86052] hover:underline">Открыть</a>
+</div>
