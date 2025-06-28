@@ -70,7 +70,10 @@ class SeoController
                      WHERE p.id = ?"
                 );
                 $stmt->execute([$id]);
-                $data = $stmt->fetch(PDO::FETCH_ASSOC);
+                $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($row !== false) {
+                    $data = $row;
+                }
                 break;
             case 'product_type':
                 $stmt = $this->pdo->prepare(
@@ -78,7 +81,10 @@ class SeoController
                             alias AS path FROM product_types WHERE id = ?"
                 );
                 $stmt->execute([$id]);
-                $data = $stmt->fetch(PDO::FETCH_ASSOC);
+                $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($row !== false) {
+                    $data = $row;
+                }
                 break;
             case 'material':
                 $stmt = $this->pdo->prepare(
@@ -89,7 +95,10 @@ class SeoController
                      WHERE m.id = ?"
                 );
                 $stmt->execute([$id]);
-                $data = $stmt->fetch(PDO::FETCH_ASSOC);
+                $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($row !== false) {
+                    $data = $row;
+                }
                 break;
             case 'category':
                 $stmt = $this->pdo->prepare(
@@ -97,7 +106,10 @@ class SeoController
                             alias AS path FROM content_categories WHERE id = ?"
                 );
                 $stmt->execute([$id]);
-                $data = $stmt->fetch(PDO::FETCH_ASSOC);
+                $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($row !== false) {
+                    $data = $row;
+                }
                 break;
             case 'page':
                 $stmt = $this->pdo->prepare(
@@ -105,7 +117,9 @@ class SeoController
                 );
                 $stmt->execute([$page]);
                 $row = $stmt->fetch(PDO::FETCH_ASSOC);
-                if ($row) { $data = $row; }
+                if ($row !== false) {
+                    $data = $row;
+                }
                 break;
         }
 
