@@ -86,11 +86,11 @@ if (file_exists($vendorAutoload)) {
 // Функция для рендеринга админских шаблонов
 function viewAdmin(string $template, array $data = []): void
 {
+    $pageTitle = $data['pageTitle'] ?? '';
     extract($data, EXTR_SKIP);
     ob_start();
     require __DIR__ . "/src/Views/admin/{$template}.php";
     $content = ob_get_clean();
-    $pageTitle = $data['pageTitle'] ?? '';
     require __DIR__ . '/src/Views/layouts/admin_main.php';
 }
 
