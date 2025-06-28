@@ -46,6 +46,12 @@ class OrdersController
         $stmt->execute([$id]);
         $order = $stmt->fetch(PDO::FETCH_ASSOC);
 
+        if (!$order) {
+            $msg = urlencode("Заказ {$id} удалён");
+            header("Location: /admin/orders?msg={$msg}");
+            exit;
+        }
+
         $stmt = $this->pdo->prepare(
             "SELECT oi.product_id, oi.quantity, oi.boxes, oi.unit_price, t.name AS product_name, p.unit, p.variety, p.box_size, p.box_unit\n" .
             "FROM order_items oi\n" .
