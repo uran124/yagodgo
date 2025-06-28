@@ -2,6 +2,7 @@
   $points = (int)($_SESSION['points_balance'] ?? 0);
 
   /** Метаданные страницы */
+  $pageMeta = $meta ?? [];
   global $pdo;
   $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?? '/';
   $slugMap = [
@@ -29,6 +30,9 @@
               $meta = $row;
           }
       }
+  }
+  if (!empty($pageMeta)) {
+      $meta = array_merge($meta, array_filter($pageMeta, static fn($v) => $v !== null && $v !== ''));
   }
 ?>
 <!DOCTYPE html>

@@ -42,6 +42,24 @@
            value="<?= htmlspecialchars($product['alias'] ?? '') ?>"
            class="w-full border px-2 py-1 rounded" required>
   </div>
+  <div>
+    <label class="block mb-1">Meta title</label>
+    <input name="meta_title" type="text"
+           value="<?= htmlspecialchars($product['meta_title'] ?? '') ?>"
+           class="w-full border px-2 py-1 rounded">
+  </div>
+  <div>
+    <label class="block mb-1">Meta description</label>
+    <input name="meta_description" type="text"
+           value="<?= htmlspecialchars($product['meta_description'] ?? '') ?>"
+           class="w-full border px-2 py-1 rounded">
+  </div>
+  <div>
+    <label class="block mb-1">Meta keywords</label>
+    <input name="meta_keywords" type="text"
+           value="<?= htmlspecialchars($product['meta_keywords'] ?? '') ?>"
+           class="w-full border px-2 py-1 rounded">
+  </div>
 
   <!-- Описание -->
   <div>
