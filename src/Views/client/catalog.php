@@ -1,9 +1,28 @@
-<?php /** @var array $products @var string|null $userName */ ?>
+<?php
+/** @var array $products */
+/** @var array $meta */
+/** @var string $short_description */
+/** @var bool $hideFilters */
+?>
 
 <main class="bg-gradient-to-br from-orange-50 via-white to-pink-50 min-h-screen pb-24">
 
+  <?php if (!empty($meta['h1']) || !empty($short_description)): ?>
+    <div class="max-w-screen-lg mx-auto px-4 pt-6 pb-4 text-gray-700 space-y-2">
+      <?php if (!empty($meta['h1'])): ?>
+        <h1 class="text-2xl font-bold">
+          <?= htmlspecialchars($meta['h1']) ?>
+        </h1>
+      <?php endif; ?>
+      <?php if (!empty($short_description)): ?>
+        <p class="text-sm">
+          <?= nl2br(htmlspecialchars($short_description)) ?>
+        </p>
+      <?php endif; ?>
+    </div>
+  <?php endif; ?>
 
-
+  <?php if (empty($hideFilters)): ?>
   <!-- Поле поиска и фильтры -->
   <div class="px-4 mb-6">
     <div class="bg-white rounded-2xl shadow-lg p-4 space-y-4">
@@ -24,6 +43,7 @@
       </div>
     </div>
   </div>
+  <?php endif; ?>
 
   <!-- Сетка товаров -->
   <div class="px-4">
@@ -48,6 +68,13 @@
     <?php endif; ?>
   </div>
 
+  <?php if (!empty($meta['text'])): ?>
+    <div class="max-w-screen-lg mx-auto px-4 py-6 text-gray-700 text-sm">
+      <p><?= nl2br(htmlspecialchars($meta['text'])) ?></p>
+    </div>
+  <?php endif; ?>
+
+  <?php if (empty($hideFilters)): ?>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const search = document.getElementById('catalogSearch');
@@ -82,5 +109,6 @@
       }));
     });
   </script>
+  <?php endif; ?>
 
 </main>
