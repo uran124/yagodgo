@@ -186,6 +186,20 @@
       background: #374151;
     }
 
+    .embla-news {
+      position: relative;
+    }
+    .embla-news .embla__controls {
+      position: absolute;
+      right: 0.5rem;
+      bottom: 0.5rem;
+      margin-top: 0;
+      justify-content: flex-end;
+    }
+    .embla-news .embla__dots {
+      justify-content: flex-end;
+    }
+
   </style>
 
   
@@ -755,8 +769,9 @@
   });
 </script>
 
-<script src="https://cdn.jsdelivr.net/npm/embla-carousel@8/embla-carousel.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/embla-carousel-autoplay@6/embla-carousel-autoplay.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/embla-carousel@8/embla-carousel.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/embla-carousel-autoplay@6/embla-carousel-autoplay.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/embla-carousel-fade@8/embla-carousel-fade.umd.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     // Drag free carousels
@@ -776,7 +791,10 @@
     if (news) {
       const viewport = news.querySelector('.embla__viewport');
       const dotsContainer = news.querySelector('.embla__dots');
-      const embla = EmblaCarousel(viewport, { loop: true }, [EmblaCarouselAutoplay({ delay: 4000, stopOnInteraction: false })]);
+      const embla = EmblaCarousel(viewport, { loop: true }, [
+        EmblaCarouselAutoplay({ delay: 4000, stopOnInteraction: false }),
+        EmblaCarouselFade()
+      ]);
       const slides = embla.slideNodes();
       const dots = slides.map((_, i) => {
         const b = document.createElement('button');
