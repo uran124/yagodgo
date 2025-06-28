@@ -1150,18 +1150,22 @@ public function showOrder(int $orderId): void
         $pStmt->execute([$type['id']]);
         $products = $pStmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $types = $this->pdo->query(
-            "SELECT id, name, alias FROM product_types ORDER BY name"
-        )->fetchAll(PDO::FETCH_ASSOC);
-
         view('client/catalog', [
-            'products'    => $products,
-            'types'       => $types,
-            'meta'        => ['h1' => $type['h1'] ?? $type['name'], 'text' => $type['text'] ?? ''],
+            'products'          => $products,
+            'meta'             => [
+                'title'       => $type['meta_title']       ?? '',
+                'description' => $type['meta_description'] ?? '',
+                'keywords'    => $type['meta_keywords']    ?? '',
+                'h1'          => $type['h1']              ?? $type['name'],
+                'text'        => $type['text']            ?? '',
+            ],
+            'short_description' => $type['short_description'] ?? '',
             'breadcrumbs' => [
                 ['label' => 'Каталог', 'url' => '/catalog'],
                 ['label' => $type['name']]
             ],
+            'hideFilters'  => true,
+            'showMetaText' => false,
         ]);
     }
 }

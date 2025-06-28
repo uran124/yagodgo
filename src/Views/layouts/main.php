@@ -321,8 +321,10 @@
       </nav>
     <?php endif; ?>
     <?= $content ?>
-    <?php if (!empty($meta['text'])): ?>
-      <div class="hidden lg:block max-w-screen-lg mx-auto px-4 pb-24 text-gray-700 text-sm">
+    <?php
+      $showMetaText = $showMetaText ?? true;
+      if (!empty($meta['text']) && $showMetaText): ?>
+      <div class="max-w-screen-lg mx-auto px-4 pb-24 text-gray-700 text-sm">
         <?php if (!empty($meta['h1'])): ?>
           <h1 class="text-2xl font-bold mb-4"><?= htmlspecialchars($meta['h1']) ?></h1>
         <?php endif; ?>
