@@ -94,6 +94,17 @@ function viewAdmin(string $template, array $data = []): void
     require __DIR__ . '/src/Views/layouts/admin_main.php';
 }
 
+// Render manager templates (reuse admin views with manager layout)
+function viewManager(string $template, array $data = []): void
+{
+    $pageTitle = $data['pageTitle'] ?? '';
+    extract($data, EXTR_SKIP);
+    ob_start();
+    require __DIR__ . "/src/Views/admin/{$template}.php";
+    $content = ob_get_clean();
+    require __DIR__ . '/src/Views/layouts/manager_main.php';
+}
+
 // Функция для рендеринга клиентских шаблонов
 function view(string $template, array $data = []): void
 {
@@ -122,6 +133,16 @@ function requireClient(): void
 function requireAdmin(): void
 {
     if (($_SESSION['role'] ?? '') !== 'admin') {
+        header('Location: /login');
+        exit;
+    }
+}
+
+// Manager access (manager or admin)
+function requireManager(): void
+{
+    $role = $_SESSION['role'] ?? '';
+    if (!in_array($role, ['manager', 'admin'], true)) {
         header('Location: /login');
         exit;
     }
@@ -554,6 +575,74 @@ switch ("$method $uri") {
     case 'POST /admin/settings':
         requireAdmin();
         (new App\Controllers\SettingsController($pdo))->save();
+        break;
+
+    // === ROUTES FOR MANAGERS ===
+    case 'GET /manager/dashboard':
+        requireManager();
+        (new App\Controllers\AdminController($pdo))->dashboard();
+        break;
+    case 'GET /manager/orders':
+        requireManager();
+        (new App\Controllers\OrdersController($pdo))->index();
+        break;
+    case (bool)preg_match('#^GET /manager/orders/(\d+)$#', "$method $uri", $m):
+        requireManager();
+        (new App\Controllers\OrdersController($pdo))->show((int)$m[1]);
+        break;
+    case 'POST /manager/orders/assign':
+        requireManager();
+        (new App\Controllers\OrdersController($pdo))->assign();
+        break;
+    case 'POST /manager/orders/status':
+        requireManager();
+        (new App\Controllers\OrdersController($pdo))->updateStatus();
+        break;
+    case 'POST /manager/orders/update-item':
+        requireManager();
+        (new App\Controllers\OrdersController($pdo))->updateItemQuantity();
+        break;
+    case 'POST /manager/orders/delete':
+        requireManager();
+        (new App\Controllers\OrdersController($pdo))->delete();
+        break;
+
+    case 'GET /manager/products':
+        requireManager();
+        (new App\Controllers\ProductsController($pdo))->index();
+        break;
+    case 'GET /manager/products/edit':
+        requireManager();
+        (new App\Controllers\ProductsController($pdo))->edit();
+        break;
+    case 'POST /manager/products/save':
+        requireManager();
+        (new App\Controllers\ProductsController($pdo))->save();
+        break;
+    case 'POST /manager/products/toggle':
+        requireManager();
+        (new App\Controllers\ProductsController($pdo))->toggle();
+        break;
+    case 'POST /manager/products/delete':
+        requireManager();
+        (new App\Controllers\ProductsController($pdo))->delete();
+        break;
+
+    case 'GET /manager/users':
+        requireManager();
+        (new App\Controllers\UsersController($pdo))->index();
+        break;
+    case 'GET /manager/users/edit':
+        requireManager();
+        (new App\Controllers\UsersController($pdo))->edit();
+        break;
+    case 'POST /manager/users/save':
+        requireManager();
+        (new App\Controllers\UsersController($pdo))->save();
+        break;
+    case 'POST /manager/users/toggle-block':
+        requireManager();
+        (new App\Controllers\UsersController($pdo))->toggleBlock();
         break;
 
     // Любые другие запросы — 404

@@ -229,6 +229,8 @@
   <div class="flex items-center space-x-3">
     <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
       <button id="adminToggle" class="material-icons-round text-2xl text-gray-600 hover:text-emerald-500 transition-colors p-2 hover:bg-emerald-50 rounded-xl">settings</button>
+    <?php elseif (($_SESSION['role'] ?? '') === 'manager'): ?>
+      <button id="managerToggle" class="material-icons-round text-2xl text-gray-600 hover:text-emerald-500 transition-colors p-2 hover:bg-emerald-50 rounded-xl">manage_accounts</button>
     <?php endif; ?>
 
     <?php if (!empty($_SESSION['user_id'])): ?>
@@ -297,6 +299,33 @@
       </a>
       <a href="/admin/users" class="flex items-center p-4 hover:bg-gradient-to-r hover:from-teal-50 hover:to-cyan-50 rounded-2xl transition-all group">
         <span class="material-icons-round mr-3 text-teal-500 group-hover:scale-110 transition-transform">people</span> 
+        <span class="font-medium">Пользователи</span>
+      </a>
+    </nav>
+  </aside>
+  <?php endif; ?>
+
+  <!-- Manager sidebar (off-canvas) -->
+  <?php if (($_SESSION['role'] ?? '') === 'manager'): ?>
+  <aside
+    id="managerSidebar"
+    class="fixed top-0 right-0 h-full w-80 glass-effect shadow-2xl transform translate-x-full transition-transform duration-300 z-30 border-l border-white/20"
+  >
+    <div class="p-6 font-bold text-xl border-b border-gray-100 fresh-gradient text-white rounded-tr-xl">
+      <span class="material-icons-round mr-2">manage_accounts</span>
+      Менеджер
+    </div>
+    <nav class="p-4 space-y-1">
+      <a href="/manager/orders" class="flex items-center p-4 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 rounded-2xl transition-all group">
+        <span class="material-icons-round mr-3 text-blue-500 group-hover:scale-110 transition-transform">receipt_long</span>
+        <span class="font-medium">Заказы</span>
+      </a>
+      <a href="/manager/products" class="flex items-center p-4 hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 rounded-2xl transition-all group">
+        <span class="material-icons-round mr-3 text-purple-500 group-hover:scale-110 transition-transform">inventory_2</span>
+        <span class="font-medium">Товары</span>
+      </a>
+      <a href="/manager/users" class="flex items-center p-4 hover:bg-gradient-to-r hover:from-teal-50 hover:to-cyan-50 rounded-2xl transition-all group">
+        <span class="material-icons-round mr-3 text-teal-500 group-hover:scale-110 transition-transform">people</span>
         <span class="font-medium">Пользователи</span>
       </a>
     </nav>
@@ -440,6 +469,20 @@
       document.addEventListener('click', (e) => {
         if (!adminSidebar.contains(e.target) && !adminToggle.contains(e.target)) {
           adminSidebar.classList.add('translate-x-full');
+        }
+      });
+    }
+
+    // Manager sidebar
+    const managerToggle = document.getElementById('managerToggle');
+    const managerSidebar = document.getElementById('managerSidebar');
+    if (managerToggle && managerSidebar) {
+      managerToggle.addEventListener('click', () => {
+        managerSidebar.classList.toggle('translate-x-full');
+      });
+      document.addEventListener('click', (e) => {
+        if (!managerSidebar.contains(e.target) && !managerToggle.contains(e.target)) {
+          managerSidebar.classList.add('translate-x-full');
         }
       });
     }
