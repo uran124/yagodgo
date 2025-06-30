@@ -48,6 +48,7 @@
         <option value="client" <?= $user['role']==='client'?'selected':'' ?>>Клиент</option>
         <option value="courier" <?= $user['role']==='courier'?'selected':'' ?>>Курьер</option>
         <option value="admin" <?= $user['role']==='admin'?'selected':'' ?>>Админ</option>
+        <option value="manager" <?= $user['role']==='manager'?'selected':'' ?>>Менеджер</option>
       </select>
     </div>
     <div class="flex items-center space-x-2">
