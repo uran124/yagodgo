@@ -538,6 +538,10 @@ switch ("$method $uri") {
         requireAdmin();
         (new App\Controllers\UsersController($pdo))->toggleBlock();
         break;
+    case 'POST /admin/users/reset-balance':
+        requireAdmin();
+        (new App\Controllers\UsersController($pdo))->resetRubBalance();
+        break;
 
     case 'GET /admin/apps':
         requireAdmin();
