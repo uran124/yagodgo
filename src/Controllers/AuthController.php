@@ -102,9 +102,9 @@ public function register(): void
         // 1) Вставляем нового пользователя
         $stmt = $this->pdo->prepare("
             INSERT INTO users 
-                (role, name, phone, password_hash, referral_code, referred_by, has_used_referral_coupon, points_balance, created_at)
+                (role, name, phone, password_hash, referral_code, referred_by, has_used_referral_coupon, points_balance, rub_balance, created_at)
             VALUES 
-                ('client', ?, ?, ?, ?, ?, 0, 0, NOW())
+                ('client', ?, ?, ?, ?, ?, 0, 0, 0, NOW())
         ");
         $stmt->execute([$name, $phone, $pinHash, $newCode, $referredBy]);
         $userId = (int)$this->pdo->lastInsertId();
@@ -140,6 +140,7 @@ public function register(): void
     // Новый пользователь получает баланс 0 при регистрации
     $_SESSION['points_balance'] = 0;
 
+    $_SESSION['rub_balance'] = 0;
     unset($_SESSION['reg_verified'], $_SESSION['reg_phone'], $_SESSION['reg_code']);
     unset($_SESSION['invite_code']);
 
@@ -174,7 +175,7 @@ public function register(): void
         }
 
         $stmt = $this->pdo->prepare(
-            "SELECT id, role, password_hash, name, referral_code, points_balance
+            "SELECT id, role, password_hash, name, referral_code, points_balance, rub_balance
              FROM users
              WHERE phone = ?"
         );
@@ -185,6 +186,7 @@ public function register(): void
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['role']    = $user['role'];
             $_SESSION['name']    = $user['name'];
+            $_SESSION['rub_balance'] = (int)$user['rub_balance'];
             $_SESSION['points_balance'] = (int)$user['points_balance'];
             $_SESSION['referral_code']  = $user['referral_code'];
             

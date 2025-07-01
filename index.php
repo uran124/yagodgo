@@ -31,11 +31,11 @@ try {
 }
 
 if (!empty($_SESSION['user_id'])) {
-    $stmtBalance = $pdo->prepare("SELECT points_balance FROM users WHERE id = ?");
+    $stmtBalance = $pdo->prepare("SELECT points_balance, rub_balance FROM users WHERE id = ?");
     $stmtBalance->execute([ $_SESSION['user_id'] ]);
-    // Если пользователь найден, сохраняем баланс в сессию
-    $bal = $stmtBalance->fetchColumn();
-    $_SESSION['points_balance'] = $bal !== false ? (int)$bal : 0;
+    $bal = $stmtBalance->fetch(PDO::FETCH_ASSOC);
+    $_SESSION['points_balance'] = $bal !== false ? (int)$bal['points_balance'] : 0;
+    $_SESSION['rub_balance'] = $bal !== false ? (int)$bal['rub_balance'] : 0;
 }
 
 // -------------------------------------------------------
@@ -128,7 +128,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 function requireClient(): void
 {
     $role = $_SESSION['role'] ?? '';
-    if (!in_array($role, ['client','admin'], true)) {
+    if (!in_array($role, ['client','partner','admin'], true)) {
         header('Location: /login');
         exit;
     }

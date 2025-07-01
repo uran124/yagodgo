@@ -423,7 +423,7 @@
       </li>
       
       <!-- Мои заказы -->
-      <?php if ($role === 'client'): ?>
+      <?php if (in_array($role, ['client','partner'])): ?>
         <li class="flex-1 mx-1">
           <a href="/orders" class="nav-item flex flex-col items-center py-3 px-2 rounded-2xl transition-all <?= isActive('/orders') ?>">
             <span class="material-icons-round text-xl mb-1">receipt_long</span>
@@ -440,7 +440,7 @@
       <?php endif; ?>
 
       <!-- Профиль -->
-      <?php if ($role === 'client'): ?>
+      <?php if (in_array($role, ['client','partner'])): ?>
         <li class="flex-1">
           <a href="/profile" class="nav-item flex flex-col items-center py-3 px-2 rounded-2xl transition-all <?= isActive('/profile') ?>">
             <span class="material-icons-round text-xl mb-1">person</span>

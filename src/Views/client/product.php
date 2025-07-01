@@ -75,7 +75,7 @@
             </div>
           <?php endif; ?>
 
-          <?php if ((string)($_SESSION['role'] ?? '') === 'client' && $active): ?>
+          <?php if (in_array((string)($_SESSION['role'] ?? ''), ['client','partner']) && $active): ?>
             <form action="/cart/add" method="post" class="flex items-center space-x-2 add-to-cart-form" data-id="<?= $product['id'] ?>" data-name="<?= htmlspecialchars($product['product'] . ($product['variety'] ? ' ' . $product['variety'] : '')) ?>" data-price="<?= $priceBox ?>">
               <input type="hidden" name="product_id" value="<?= $product['id'] ?>">
               <div class="flex items-center space-x-2">
