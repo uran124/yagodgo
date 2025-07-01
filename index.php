@@ -91,7 +91,12 @@ function viewAdmin(string $template, array $data = []): void
     ob_start();
     require __DIR__ . "/src/Views/admin/{$template}.php";
     $content = ob_get_clean();
-    require __DIR__ . '/src/Views/layouts/admin_main.php';
+    $role = $_SESSION['role'] ?? '';
+    if ($role === 'manager') {
+        require __DIR__ . '/src/Views/layouts/manager_main.php';
+    } else {
+        require __DIR__ . '/src/Views/layouts/admin_main.php';
+    }
 }
 
 // Render manager templates (reuse admin views with manager layout)

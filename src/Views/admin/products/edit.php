@@ -6,7 +6,8 @@
  * @var string     $box_unit
  */
 ?>
-<form action="/admin/products/save" method="post" enctype="multipart/form-data"
+<?php $isManager = ($_SESSION['role'] ?? '') === 'manager'; $base = $isManager ? '/manager' : '/admin'; ?>
+<form action="<?= $base ?>/products/save" method="post" enctype="multipart/form-data"
       class="bg-white p-6 rounded shadow max-w-lg mx-auto">
 
   <?php if (!empty($product['id'])): ?>
@@ -32,7 +33,7 @@
           </option>
         <?php endforeach; ?>
       </select>
-      <a href="/admin/product-types/edit" class="ml-2 text-[#C86052] hover:underline">
+      <a href="<?= $base ?>/product-types/edit" class="ml-2 text-[#C86052] hover:underline">
         Добавить
       </a>
     </div>

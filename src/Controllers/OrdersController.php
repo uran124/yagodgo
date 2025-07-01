@@ -13,23 +13,36 @@ class OrdersController
         $this->pdo = $pdo;
     }
 
-    // Список заказов (админ)
+    // Список заказов (админ/менеджер)
     public function index(): void
     {
-        $stmt = $this->pdo->query(
-            "SELECT o.id, o.status, o.total_amount, o.delivery_date, o.delivery_slot,\n" .
-            "       u.name AS client_name, u.phone, a.street AS address,\n" .
-            "       o.created_at\n" .
-            "FROM orders o\n" .
-            "JOIN users u ON u.id = o.user_id\n" .
-            "LEFT JOIN addresses a ON a.id = o.address_id\n" .
-            "ORDER BY FIELD(o.status,'new','processing','assigned','delivered','cancelled'), o.created_at DESC"
-        );
+        $managerId = isset($_GET['manager']) ? (int)$_GET['manager'] : 0;
+
+        $sql = "SELECT o.id, o.status, o.total_amount, o.delivery_date, o.delivery_slot,\n" .
+               "       u.name AS client_name, u.phone, a.street AS address,\n" .
+               "       o.created_at\n" .
+               "FROM orders o\n" .
+               "JOIN users u ON u.id = o.user_id\n" .
+               "LEFT JOIN addresses a ON a.id = o.address_id";
+        $params = [];
+        if ($managerId > 0) {
+            $sql .= " WHERE u.referred_by = ?";
+            $params[] = $managerId;
+        }
+        $sql .= " ORDER BY FIELD(o.status,'new','processing','assigned','delivered','cancelled'), o.created_at DESC";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
         $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        $managersStmt = $this->pdo->query("SELECT id, name FROM users WHERE role = 'manager' ORDER BY name");
+        $managers = $managersStmt->fetchAll(PDO::FETCH_ASSOC);
+
         viewAdmin('orders/index', [
-            'pageTitle' => 'Заказы',
-            'orders'    => $orders,
+            'pageTitle'       => 'Заказы',
+            'orders'          => $orders,
+            'managers'       => $managers,
+            'selectedManager' => $managerId,
         ]);
     }
 

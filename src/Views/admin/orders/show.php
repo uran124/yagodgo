@@ -1,4 +1,5 @@
 <?php /** @var array $order @var array $items */ ?>
+<?php $isManager = ($_SESSION['role'] ?? '') === 'manager'; $base = $isManager ? '/manager' : '/admin'; ?>
 <div class="space-y-4">
   <div class="flex justify-between items-center bg-white p-4 rounded shadow">
     <div class="flex flex-wrap items-center gap-2">
@@ -25,7 +26,7 @@
             <?= ' ' . $it['box_size'] . ' ' . htmlspecialchars($it['box_unit']) ?>
           <?php endif; ?>
         </span>
-        <form action="/admin/orders/update-item" method="post" class="flex items-center space-x-2">
+        <form action="<?= $base ?>/orders/update-item" method="post" class="flex items-center space-x-2">
           <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
           <input type="hidden" name="product_id" value="<?= $it['product_id'] ?>">
           <input type="number" name="quantity" value="<?= $it['quantity'] ?>" step="0.01" class="w-20 border px-1 py-0.5 rounded"> кг
@@ -74,19 +75,19 @@
         'delivered'  => 'Выполнен',
         'cancelled'  => 'Отменен'
       ] as $st => $label): ?>
-      <form action="/admin/orders/status" method="post">
+      <form action="<?= $base ?>/orders/status" method="post">
         <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
         <input type="hidden" name="status" value="<?= $st ?>">
         <button class="px-3 py-1 rounded text-white <?= $btnClasses[$st] ?>" type="submit"><?= $label ?></button>
       </form>
     <?php endforeach; ?>
-    <form class="ml-auto" action="/admin/orders/delete" method="post" onsubmit="return confirm('Удалить этот заказ?');">
+    <form class="ml-auto" action="<?= $base ?>/orders/delete" method="post" onsubmit="return confirm('Удалить этот заказ?');">
       <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
       <button class="px-3 py-1 rounded text-white bg-red-700 hover:bg-red-800" type="submit">Удалить</button>
     </form>
   </div>
 
   <div>
-    <a href="/admin/orders" class="inline-block px-4 py-2 rounded text-white bg-purple-700 hover:bg-purple-800">Вернуться к заказам</a>
+    <a href="<?= $base ?>/orders" class="inline-block px-4 py-2 rounded text-white bg-purple-700 hover:bg-purple-800">Вернуться к заказам</a>
   </div>
 </div>

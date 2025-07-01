@@ -1,4 +1,7 @@
 <?php /** @var array $orders */ ?>
+<?php $isManager = ($_SESSION['role'] ?? '') === 'manager'; ?>
+<?php $base = $isManager ? '/manager' : '/admin'; ?>
+<?php $managers = $managers ?? []; $selectedManager = $selectedManager ?? 0; ?>
 <?php if (!empty($_GET['msg'])): ?>
   <div class="mb-4 p-3 rounded bg-green-50 text-green-800 border border-green-200">
     <?= htmlspecialchars($_GET['msg']) ?>
@@ -13,6 +16,14 @@
     <option value="delivered">Выполненные</option>
     <option value="cancelled">Отмененные</option>
   </select>
+  <?php if ($isManager || !empty($managers)): ?>
+    <select id="managerFilter" class="border rounded px-3 py-2 text-sm">
+      <option value="">Все менеджеры</option>
+      <?php foreach ($managers as $m): ?>
+        <option value="<?= $m['id'] ?>" <?= $selectedManager == $m['id'] ? 'selected' : '' ?>><?= htmlspecialchars($m['name']) ?></option>
+      <?php endforeach; ?>
+    </select>
+  <?php endif; ?>
   <div class="flex items-center gap-2">
     <button id="todayBtn" class="px-3 py-2 bg-gray-200 rounded text-sm">Сегодня</button>
     <button id="tomorrowBtn" class="px-3 py-2 bg-gray-200 rounded text-sm">Завтра</button>
@@ -44,7 +55,7 @@
         $createdAttr = date('Y-m-d H:i', strtotime($o['created_at']));
         $deliveryAttr = $o['delivery_date'] ? date('Y-m-d', strtotime($o['delivery_date'])) : '';
       ?>
-      <tr data-status="<?= $o['status'] ?>" data-date="<?= $dateAttr ?>" data-created="<?= $createdAttr ?>" data-id="<?= $o['id'] ?>" data-delivery="<?= $deliveryAttr ?>" class="border-b hover:bg-gray-50 cursor-pointer <?= $bg ?>" onclick="location.href='/admin/orders/<?= $o['id'] ?>'">
+      <tr data-status="<?= $o['status'] ?>" data-date="<?= $dateAttr ?>" data-created="<?= $createdAttr ?>" data-id="<?= $o['id'] ?>" data-delivery="<?= $deliveryAttr ?>" class="border-b hover:bg-gray-50 cursor-pointer <?= $bg ?>" onclick="location.href='<?= $base ?>/orders/<?= $o['id'] ?>'">
         <?php
           $numCls = match($o['status']) {
             'new' => 'text-red-500',
@@ -78,6 +89,7 @@
     const todayBtn = document.getElementById('todayBtn');
     const tomorrowBtn = document.getElementById('tomorrowBtn');
     const clearDate = document.getElementById('clearDate');
+    const managerFilter = document.getElementById('managerFilter');
     let rows = document.querySelectorAll('#ordersTable tr');
 
     function applyFilters() {
@@ -117,6 +129,13 @@
       dateFrom.value = '';
       dateTo.value = '';
       applyFilters();
+    });
+
+    managerFilter?.addEventListener('change', () => {
+      const val = managerFilter.value;
+      const params = new URLSearchParams(window.location.search);
+      if (val) { params.set('manager', val); } else { params.delete('manager'); }
+      window.location.search = params.toString();
     });
 
     document.querySelectorAll('th.sortable').forEach(th => {
