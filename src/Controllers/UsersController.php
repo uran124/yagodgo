@@ -46,7 +46,8 @@ class UsersController
 
         // 1) Извлекаем полный набор полей пользователя из БД
         $stmt = $this->pdo->prepare(
-            "SELECT u.id, u.name, u.phone, u.referral_code, u.points_balance, u.referred_by
+            "SELECT u.id, u.name, u.phone, u.role, u.referral_code,
+                    u.points_balance, u.rub_balance, u.referred_by
              FROM users u
              WHERE u.id = ?"
         );
@@ -182,7 +183,7 @@ class UsersController
         $search = trim($_GET['q'] ?? '');
 
         $baseSql = "SELECT u.id, u.name, u.phone, u.role, u.created_at,
-                            u.referral_code, u.points_balance, u.is_blocked,
+                            u.referral_code, u.points_balance, u.rub_balance, u.is_blocked,
                             (SELECT street FROM addresses WHERE user_id = u.id ORDER BY created_at DESC LIMIT 1) AS address,
                             ref.name AS referrer_name
                      FROM users u
@@ -202,7 +203,7 @@ class UsersController
         } catch (\PDOException $e) {
             // База может не поддерживать поле is_blocked
             $baseSql = "SELECT u.id, u.name, u.phone, u.role, u.created_at,
-                                u.referral_code, u.points_balance,
+                                u.referral_code, u.points_balance, u.rub_balance,
                                 (SELECT street FROM addresses WHERE user_id = u.id ORDER BY created_at DESC LIMIT 1) AS address,
                                 ref.name AS referrer_name
                          FROM users u
@@ -236,14 +237,14 @@ class UsersController
         if ($id) {
             try {
                 $stmt = $this->pdo->prepare(
-                    "SELECT id, name, phone, role, is_blocked
+                    "SELECT id, name, phone, role, is_blocked, rub_balance
                      FROM users
                      WHERE id = ?"
                 );
                 $stmt->execute([$id]);
             } catch (\PDOException $e) {
                 $stmt = $this->pdo->prepare(
-                    "SELECT id, name, phone, role
+                    "SELECT id, name, phone, role, rub_balance
                      FROM users
                      WHERE id = ?"
                 );
@@ -402,6 +403,18 @@ class UsersController
             }
         }
         header('Location: /admin/users');
+        exit;
+    }
+
+    // Сброс баланса партнёра (после выплаты)
+    public function resetRubBalance(): void
+    {
+        $id = (int)($_POST['id'] ?? 0);
+        if ($id) {
+            $this->pdo->prepare("UPDATE users SET rub_balance = 0 WHERE id = ?")
+                 ->execute([$id]);
+        }
+        header('Location: /admin/users/edit?id=' . $id);
         exit;
     }
 }

@@ -57,6 +57,18 @@
       <input type="checkbox" name="is_blocked" value="1" <?= !empty($user['is_blocked']) ? 'checked' : '' ?>>
       <span>Заблокирован</span>
     </div>
+    <?php if (!empty($user['rub_balance'])): ?>
+    <div>
+      <div class="mb-1">Баланс, ₽</div>
+      <div class="flex items-center space-x-2">
+        <span class="font-mono text-lg"><?= (int)$user['rub_balance'] ?></span>
+        <form action="<?= $base ?>/users/reset-balance" method="post" class="inline">
+          <input type="hidden" name="id" value="<?= $user['id'] ?>">
+          <button type="submit" class="px-2 py-1 bg-[#C86052] text-white rounded text-sm">Выплачено</button>
+        </form>
+      </div>
+    </div>
+    <?php endif; ?>
     <button type="submit" class="bg-[#C86052] text-white px-4 py-2 rounded">Сохранить</button>
   </form>
 <?php endif; ?>

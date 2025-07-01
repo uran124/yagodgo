@@ -4,8 +4,9 @@
  * @var string $address
  * @var array  $addresses
  * @var array  $transactions  // каждая транзакция ['id'=>..., 'amount'=>..., 'transaction_type'=>..., 'description'=>..., 'created_at'=>..., 'order_id'=>...]
- */
+*/
 ?>
+<?php $isPartner = ($user['role'] ?? ($_SESSION['role'] ?? '')) === 'partner'; ?>
 
 <main class="bg-gradient-to-br from-orange-50 via-white to-pink-50 min-h-screen pb-24">
 
@@ -114,9 +115,18 @@
         <div class="p-6 space-y-4 text-gray-700 bg-gradient-to-br from-red-50 via-white to-pink-50">
           <div class="text-center">
             <div class="text-sm text-gray-600 mb-1">Баланс</div>
-            <div class="text-4xl font-extrabold text-pink-600">
-              <?= (int)$user['points_balance'] ?> <span class="text-3xl">🍓</span>
-            </div>
+            <?php if ($isPartner): ?>
+              <div class="text-4xl font-extrabold text-pink-600">
+                <?= (int)$user['points_balance'] + (int)$user['rub_balance'] ?> ₽
+              </div>
+              <div class="pt-2">
+                <button class="bg-[#C86052] text-white px-4 py-2 rounded">Запросить выплату</button>
+              </div>
+            <?php else: ?>
+              <div class="text-4xl font-extrabold text-pink-600">
+                <?= (int)$user['points_balance'] ?> <span class="text-3xl">🍓</span>
+              </div>
+            <?php endif; ?>
           </div>
           <p class="text-center">Подарите другу 10 % скидку на первый заказ и получайте клубнички за каждый его заказ!</p>
           <p class="text-center">Скопируйте ссылку и отправьте другу:</p>
