@@ -230,6 +230,21 @@
     [data-theme='dark'] .status-btn:hover {
       background: #475569;
     }
+
+    /* Mobile optimizations */
+    @media (max-width: 768px) {
+      table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+        width: 100%;
+      }
+    }
+
+    /* Remove tap highlight from menu buttons */
+    #sidebar a {
+      -webkit-tap-highlight-color: transparent;
+    }
   </style>
 </head>
 <body class="flex flex-col min-h-screen bg-gray-100 font-sans">
@@ -262,45 +277,45 @@
   </header>
 
   <!-- Sidebar for small screens -->
-  <aside id="sidebar" class="md:hidden fixed top-16 left-0 w-64 bg-white shadow-md transform -translate-x-full transition-transform duration-300 z-40">
+  <aside id="sidebar" class="md:hidden fixed top-16 left-0 w-64 max-w-[90%] bg-white shadow-md transform -translate-x-full transition-transform duration-300 z-40">
     <nav class="p-4">
-      <a href="/admin/dashboard" class="flex items-center p-2 mb-2 rounded hover:bg-gray-200">
+      <a href="/admin/dashboard" class="flex items-center p-2 mb-2 rounded">
         <span class="material-icons-round mr-2">dashboard</span>
         <span class="menu-text">Dashboard</span>
       </a>
-      <a href="/admin/orders" class="flex items-center p-2 mb-2 rounded hover:bg-gray-200">
+      <a href="/admin/orders" class="flex items-center p-2 mb-2 rounded">
         <span class="material-icons-round mr-2">receipt_long</span>
         <span class="menu-text">Заказы</span>
       </a>
-      <a href="/admin/products" class="flex items-center p-2 mb-2 rounded hover:bg-gray-200">
+      <a href="/admin/products" class="flex items-center p-2 mb-2 rounded">
         <span class="material-icons-round mr-2">inventory_2</span>
         <span class="menu-text">Товары</span>
       </a>
-      <a href="/admin/product-types" class="flex items-center p-2 mb-2 rounded hover:bg-gray-200">
+      <a href="/admin/product-types" class="flex items-center p-2 mb-2 rounded">
         <span class="material-icons-round mr-2">category</span>
         <span class="menu-text">Категории</span>
       </a>
-      <a href="/admin/slots" class="flex items-center p-2 mb-2 rounded hover:bg-gray-200">
+      <a href="/admin/slots" class="flex items-center p-2 mb-2 rounded">
         <span class="material-icons-round mr-2">calendar_today</span>
         <span class="menu-text">Слоты</span>
       </a>
-      <a href="/admin/coupons" class="flex items-center p-2 mb-2 rounded hover:bg-gray-200">
+      <a href="/admin/coupons" class="flex items-center p-2 mb-2 rounded">
         <span class="material-icons-round mr-2">local_offer</span>
         <span class="menu-text">Промокоды</span>
       </a>
-      <a href="/admin/content" class="flex items-center p-2 mb-2 rounded hover:bg-gray-200">
+      <a href="/admin/content" class="flex items-center p-2 mb-2 rounded">
         <span class="material-icons-round mr-2">article</span>
         <span class="menu-text">Контент</span>
       </a>
-      <a href="/admin/users" class="flex items-center p-2 mb-2 rounded hover:bg-gray-200">
+      <a href="/admin/users" class="flex items-center p-2 mb-2 rounded">
         <span class="material-icons-round mr-2">people</span>
         <span class="menu-text">Пользователи</span>
       </a>
-      <a href="/admin/apps" class="flex items-center p-2 mb-2 rounded hover:bg-gray-200">
+      <a href="/admin/apps" class="flex items-center p-2 mb-2 rounded">
         <span class="material-icons-round mr-2">apps</span>
         <span class="menu-text">Приложения</span>
       </a>
-      <a href="/admin/settings" class="flex items-center p-2 rounded hover:bg-gray-200">
+      <a href="/admin/settings" class="flex items-center p-2 rounded">
         <span class="material-icons-round mr-2">settings</span>
         <span class="menu-text">Настройки</span>
       </a>
