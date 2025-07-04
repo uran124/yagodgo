@@ -93,7 +93,7 @@
               <form action="/cart/remove" method="post" class="remove-from-cart-form" data-id="<?= $it['product_id'] ?>" data-name="<?= htmlspecialchars($it['product']) ?><?php if (!empty($it['variety'])): ?> <?= htmlspecialchars($it['variety']) ?><?php endif; ?>" data-price="<?= $unitPriceToUse ?>" data-qty="<?= $it['quantity'] ?>">
                 <input type="hidden" name="product_id" value="<?= $it['product_id'] ?>">
                 <button type="submit" class="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full">
-                  <span class="material-icons-round text-gray-600">delete</span>
+                  <span class="material-icons-round text-gray-600">delete_outline</span>
                 </button>
               </form>
             <?php endif; ?>
