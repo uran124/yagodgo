@@ -288,7 +288,6 @@ switch ("$method $uri") {
 
     // Защищённые маршруты — клиенты
     case 'GET /catalog':
-        requireClient();
         (new App\Controllers\ClientController($pdo))->catalog();
         break;
 
@@ -309,11 +308,9 @@ switch ("$method $uri") {
         (new App\Controllers\ClientController($pdo))->showMaterial($m[1], $m[2]);
         break;
     case (bool) preg_match('#^GET /catalog/([^/]+)/([^/]+)$#', "$method $uri", $m):
-        requireClient();
         (new App\Controllers\ClientController($pdo))->showProduct($m[2], $m[1]);
         break;
     case (bool) preg_match('#^GET /catalog/([^/]+)$#', "$method $uri", $m):
-        requireClient();
         (new App\Controllers\ClientController($pdo))->showProductType($m[1]);
         break;
     case (bool) preg_match('#^GET /product/([^/]+)$#', "$method $uri", $m):
