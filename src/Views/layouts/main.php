@@ -147,7 +147,6 @@
     }
     .embla__slide {
       position: relative;
-      min-width: 100%;
     }
     .embla--fade {
       position: relative;
@@ -219,11 +218,11 @@
       <img src="/assets/berrygo_strawberry.svg" alt="BerryGo" class="w-6 h-6 filter brightness-0 invert">
     </div>
   </a>
-  <button id="installLogoBtn" class="group flex flex-col items-center text-center space-y-0 install-pulse" style="display:none;">
+  <button id="installLogoBtn" class="group flex flex-row items-center text-center space-x-1 install-pulse" style="display:none;">
     <span id="installLogoBtnText" class="font-bold text-sm leading-tight bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent transition-opacity duration-500">
       Установите<br>приложение
     </span>
-    <span class="material-icons-round text-red-500 mt-1">install_mobile</span>
+    <span class="material-icons-round text-red-500">install_mobile</span>
   </button>
 
   <div class="flex items-center space-x-3">
