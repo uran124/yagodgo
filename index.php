@@ -120,6 +120,16 @@ function view(string $template, array $data = []): void
     require __DIR__ . '/src/Views/layouts/main.php';
 }
 
+// Simplified layout for auth pages
+function viewAuth(string $template, array $data = []): void
+{
+    extract($data, EXTR_SKIP);
+    ob_start();
+    require __DIR__ . "/src/Views/{$template}.php";
+    $content = ob_get_clean();
+    require __DIR__ . '/src/Views/layouts/auth.php';
+}
+
 // 4) Простая маршрутизация по URI и методу
 $uri    = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $method = $_SERVER['REQUEST_METHOD'];
@@ -241,7 +251,7 @@ switch ("$method $uri") {
 
     // Регистрация
     case 'GET /register':
-        view('client/register', [
+        viewAuth('client/register', [
             'error' => $_GET['error'] ?? null
         ]);
         break;
@@ -251,7 +261,7 @@ switch ("$method $uri") {
 
     // Логин
     case 'GET /login':
-        view('client/login', [
+        viewAuth('client/login', [
             'error' => $_GET['error'] ?? null
         ]);
         break;
