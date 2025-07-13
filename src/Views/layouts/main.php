@@ -334,7 +334,7 @@
   <!-- Install PWA Banner (replaced by logo button) -->
 
   <!-- Контент -->
-  <div class="pt-16">
+  <div class="pt-16 pb-24">
     <?php if ($path !== '/') : ?>
       <?php
         $crumbs = $breadcrumbs ?? [];
