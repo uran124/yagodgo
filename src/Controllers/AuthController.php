@@ -259,7 +259,7 @@ public function register(): void
     // Страница восстановления PIN
     public function showResetPinForm(): void
     {
-        view('client/reset_pin', [
+        viewAuth('client/reset_pin', [
             'error' => $_GET['error'] ?? null,
         ]);
     }
