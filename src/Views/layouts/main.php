@@ -457,6 +457,59 @@
     </ul>
   </nav>
 
+  <footer class="hidden md:block glass-effect border-t border-white/20 mt-8">
+    <div class="max-w-screen-xl mx-auto py-8 px-6 grid grid-cols-2 lg:grid-cols-4 gap-8 text-sm text-gray-700">
+      <div>
+        <h3 class="font-semibold mb-2">О компании</h3>
+        <p class="mb-1">berryGo — доставка ягод и фруктов по Красноярску</p>
+        <p class="mb-1">Адрес: Красноярск, ул. 9 Мая, 73</p>
+        <p class="mb-1">Время работы: Пн–Вс 9:00–21:00</p>
+        <p class="mb-1">Телефон:
+          <a href="tel:+79029237794" class="text-red-500 hover:underline">+7 902 923‑77‑94</a>
+        </p>
+        <p>E-mail:
+          <a href="mailto:support@berrygo.ru" class="text-red-500 hover:underline">support@berrygo.ru</a>
+        </p>
+      </div>
+      <div>
+        <h3 class="font-semibold mb-2">Покупателям</h3>
+        <ul class="space-y-1">
+          <li><a href="#" class="hover:underline">Доставка и оплата</a></li>
+          <li><a href="#" class="hover:underline">Частые вопросы (FAQ)</a></li>
+          <li><a href="#" class="hover:underline">Оставить отзыв</a></li>
+          <li><a href="#" class="hover:underline">Политика конфиденциальности</a></li>
+          <li><a href="#" class="hover:underline">Обработка персональных данных</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="font-semibold mb-2">Мы в сети</h3>
+        <ul class="space-y-1">
+          <li>
+            <a href="https://t.me/klubnikovoe" target="_blank" rel="noopener" class="hover:underline">
+              Telegram-канал @klubnikovoe
+            </a>
+          </li>
+          <li>
+            <a href="https://t.me/klubnikovoe_bot" target="_blank" rel="noopener" class="hover:underline">
+              Бот для заказов @klubnikovoe_bot
+            </a>
+          </li>
+          <li><a href="#" class="hover:underline">VK / Instagram</a></li>
+          <li><a href="#" class="hover:underline">Стикеры Telegram</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="font-semibold mb-2">Информация</h3>
+        <ul class="space-y-1">
+          <li><a href="/sitemap.xml" class="hover:underline">Карта сайта</a></li>
+          <li><a href="#" class="hover:underline">Реквизиты (ИП, ИНН, ОГРНИП)</a></li>
+          <li>© berryGo, 2023–2025</li>
+          <li>Разработка: berryGo team</li>
+        </ul>
+      </div>
+    </div>
+  </footer>
+
   <script>
     // Admin sidebar
     const adminToggle = document.getElementById('adminToggle');
