@@ -1,6 +1,6 @@
 <?php /**
  * @var array $saleProducts
- * @var array $inStockProducts
+ * @var array $regularProducts
  * @var array $preorderProducts
  * @var string|null $userName
  */ ?>
@@ -118,9 +118,9 @@
     </div>
   </section>
 
-  <!-- In Stock Products -->
+  <!-- Regular Delivery Products -->
   <section class="px-4 mb-8">
-    <h2 class="text-2xl font-bold text-gray-800 mb-4">📦 В наличии</h2>
+    <h2 class="text-2xl font-bold text-gray-800 mb-4">🚚 Регулярные поставки</h2>
     <div class="embla drag-free has-arrows relative">
       <button data-dir="left" class="hidden md:flex items-center justify-center w-8 h-8 absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
         <span class="material-icons-round text-gray-600">chevron_left</span>
@@ -130,7 +130,7 @@
       </button>
       <div class="embla__viewport">
         <div class="embla__container space-x-4 pb-2 no-scrollbar eq-row">
-          <?php foreach ($inStockProducts as $p): ?>
+          <?php foreach ($regularProducts as $p): ?>
             <div class="embla__slide flex-none w-[66vw] sm:w-1/2 md:w-1/3">
               <?php include __DIR__ . '/_card.php'; ?>
             </div>
@@ -147,7 +147,7 @@
 
   <!-- Preorder Products -->
   <section class="px-4 mb-8">
-    <h2 class="text-2xl font-bold text-gray-800 mb-4">🛒 Под заказ</h2>
+    <h2 class="text-2xl font-bold text-gray-800 mb-4">🛒 Товары под заказ</h2>
     <div class="embla drag-free has-arrows relative">
       <button data-dir="left" class="hidden md:flex items-center justify-center w-8 h-8 absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
         <span class="material-icons-round text-gray-600">chevron_left</span>

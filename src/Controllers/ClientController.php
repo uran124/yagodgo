@@ -43,8 +43,6 @@ class ClientController
     /** Главная страница */
     public function home(): void
     {
-        $today = date('Y-m-d');
-
         $sale = $this->pdo->query(
             "SELECT p.id,
                     p.alias,
@@ -67,7 +65,7 @@ class ClientController
              LIMIT 10"
         )->fetchAll(PDO::FETCH_ASSOC);
 
-        $inStock = $this->pdo->query(
+        $regular = $this->pdo->query(
             "SELECT p.id,
                     p.alias,
                     t.name AS product,
@@ -86,7 +84,6 @@ class ClientController
              JOIN product_types t ON t.id = p.product_type_id
              WHERE p.is_active = 1
                AND p.delivery_date IS NOT NULL
-               AND p.delivery_date <= '$today'
              ORDER BY p.id DESC
              LIMIT 10"
         )->fetchAll(PDO::FETCH_ASSOC);
@@ -109,7 +106,7 @@ class ClientController
              FROM products p
              JOIN product_types t ON t.id = p.product_type_id
              WHERE p.is_active = 1
-               AND (p.delivery_date IS NULL OR p.delivery_date > '$today')
+               AND p.delivery_date IS NULL
              ORDER BY p.id DESC
              LIMIT 10"
         )->fetchAll(PDO::FETCH_ASSOC);
@@ -124,9 +121,9 @@ class ClientController
         )->fetchAll(PDO::FETCH_ASSOC);
 
         view('client/home', [
-            'saleProducts'    => $sale,
-            'inStockProducts' => $inStock,
-            'preorderProducts'=> $preorder,
+            'saleProducts'     => $sale,
+            'regularProducts'  => $regular,
+            'preorderProducts' => $preorder,
             'materials'       => $materials,
             'userName'        => $_SESSION['name'] ?? null,
         ]);
