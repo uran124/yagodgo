@@ -34,7 +34,7 @@
       </div>
       <div class="flex space-x-2 overflow-x-auto pb-2" id="quickFilters">
         <button data-filter="all" class="flex-shrink-0 px-4 py-2 bg-red-500 text-white rounded-full text-sm font-medium hover:bg-red-600 transition-colors">Все</button>
-        <button data-filter="sale" class="flex-shrink-0 px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-200 transition-colors">Акции</button>
+        <button data-filter="sale" class="flex-shrink-0 px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-200 transition-colors">Спецпредложения</button>
         <?php foreach (($types ?? []) as $t): ?>
           <button data-filter="<?= htmlspecialchars($t['alias']) ?>" class="flex-shrink-0 px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-200 transition-colors">
             <?= htmlspecialchars($t['name']) ?>
