@@ -1,10 +1,36 @@
 <?php
   $pageMeta = $meta ?? [];
-  $meta = array_merge([
-    'title' => 'BerryGo',
+  global $pdo;
+  $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?? '/';
+  $slugMap = [
+    '/'          => 'home',
+    '/catalog'   => 'catalog',
+    '/about'     => 'about_app',
+    '/about_app' => 'about_app',
+    '/contacts'  => 'contacts',
+  ];
+  $pageSlug = $slugMap[$path] ?? trim($path, '/');
+
+  $meta = [
+    'title'       => 'BerryGo',
     'description' => '',
-    'keywords' => '',
-  ], array_filter($pageMeta, static fn($v) => $v !== null && $v !== ''));
+    'keywords'    => '',
+    'h1'          => '',
+    'text'        => '',
+  ];
+
+  if (isset($pdo)) {
+      $stmt = $pdo->prepare('SELECT title, description, keywords, h1, text FROM metadata WHERE page = ? LIMIT 1');
+      if ($stmt->execute([$pageSlug])) {
+          $row = $stmt->fetch(PDO::FETCH_ASSOC);
+          if ($row) {
+              $meta = $row;
+          }
+      }
+  }
+  if (!empty($pageMeta)) {
+      $meta = array_merge($meta, array_filter($pageMeta, static fn($v) => $v !== null && $v !== ''));
+  }
 ?>
 <!DOCTYPE html>
 <html lang="ru">
