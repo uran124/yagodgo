@@ -50,3 +50,15 @@ Run `bin/generate_sitemap.php` regularly to refresh `sitemap.xml`. On hosting wi
 
 The schedule assumes cron uses the Asia/Krasnoyarsk time zone. If the server works in UTC set `0 1 * * *` instead.
 
+
+### System page metadata
+
+Use the `metadata` table to customize meta tags for built-in pages. These pages have no records yet, so insert all fields explicitly:
+
+```sql
+INSERT INTO metadata (page, title, description, keywords, h1, text) VALUES
+  ('register',  'Регистрация – BerryGo', 'Создайте аккаунт для заказа свежих ягод', '', 'Регистрация', ''),
+  ('reset-pin', 'Сброс PIN – BerryGo', 'Восстановите код доступа к приложению', '', 'Сброс PIN', ''),
+  ('login',     'Вход – BerryGo', 'Авторизуйтесь для доступа к личному кабинету', '', 'Вход', '');
+```
+
