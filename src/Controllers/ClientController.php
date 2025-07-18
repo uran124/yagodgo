@@ -1082,6 +1082,11 @@ public function showOrder(int $orderId): void
         view('client/material', [
             'material'    => $material,
             'products'    => $products,
+            'meta'        => [
+                'title'       => $material['meta_title']       ?? '',
+                'description' => $material['meta_description'] ?? '',
+                'keywords'    => $material['meta_keywords']    ?? '',
+            ],
             'breadcrumbs' => [
                 [
                     'label' => $material['category_name'],
