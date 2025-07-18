@@ -45,8 +45,23 @@
     <meta name="keywords" content="<?= htmlspecialchars($meta['keywords']) ?>">
   <?php endif; ?>
 
+  <!-- Favicon и основные иконки -->
   <link rel="icon" href="/assets/images/favicon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="/assets/images/favicon.svg">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/icon-192.png">
+
+  <!-- Иконки для Android / PWA -->
+  <link rel="icon" type="image/png" sizes="72x72" href="/assets/images/icon-72.png">
+  <link rel="icon" type="image/png" sizes="96x96" href="/assets/images/icon-96.png">
+  <link rel="icon" type="image/png" sizes="128x128" href="/assets/images/icon-128.png">
+  <link rel="icon" type="image/png" sizes="144x144" href="/assets/images/icon-144.png">
+  <link rel="icon" type="image/png" sizes="152x152" href="/assets/images/icon-152.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/images/icon-192.png">
+  <link rel="icon" type="image/png" sizes="384x384" href="/assets/images/icon-384.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/assets/images/icon-512.png">
+
+  <!-- PWA maskable icons -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/images/icon-192-maskable.png" purpose="maskable">
+  <link rel="icon" type="image/png" sizes="512x512" href="/assets/images/icon-512-maskable.png" purpose="maskable">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
