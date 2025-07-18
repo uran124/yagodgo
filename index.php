@@ -47,6 +47,7 @@ $smsConfig = require __DIR__ . '/config/sms.php';
 $constants = require __DIR__ . '/config/constants.php';
 define('PLACEHOLDER_DATE', $constants['placeholder_date']);
 define('BOX_MARKUP', $constants['box_markup']);
+define('DISCOUNT_FACTOR', $constants['discount_factor']);
 // -----
 
 

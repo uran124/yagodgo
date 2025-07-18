@@ -30,9 +30,9 @@
     $boxUnit   = $p['box_unit']           ?? '';
 
     $effectiveKg = $sale > 0 ? $sale : $price;
-    $priceBox   = $effectiveKg * $boxSize + BOX_MARKUP;
+    $priceBox   = ($effectiveKg * $boxSize + BOX_MARKUP) * DISCOUNT_FACTOR;
     $pricePerKg = $boxSize > 0 ? round($priceBox / $boxSize, 2) : 0;
-    $regularBox = $price * $boxSize + BOX_MARKUP;
+    $regularBox = ($price * $boxSize + BOX_MARKUP) * DISCOUNT_FACTOR;
     $regularKg  = $boxSize > 0 ? round($regularBox / $boxSize, 2) : 0;
   ?>
   <div class="relative">
