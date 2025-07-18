@@ -82,6 +82,11 @@ class ProductsController
             $product = $stmt->fetch(PDO::FETCH_ASSOC);
         }
 
+        $priceBox = null;
+        if ($product && !empty($product['box_size'])) {
+            $priceBox = ($product['price'] * $product['box_size'] + BOX_MARKUP) * DISCOUNT_FACTOR;
+        }
+
         // Список типов
         $types = $this->pdo
             ->query("SELECT id, name FROM product_types ORDER BY name")
@@ -94,6 +99,7 @@ class ProductsController
             'box_size'      => $product['box_size']      ?? 0,
             'box_unit'      => $product['box_unit']      ?? 'кг',
             'delivery_date' => $product['delivery_date'] ?? null,
+            'price_box'     => $priceBox,
         ]);
     }
 
@@ -120,7 +126,12 @@ class ProductsController
         $boxUnit       = ($boxUnitRaw === 'л' ? 'л' : 'кг');
         $unitRaw       = $_POST['unit'] ?? 'кг';
         $unit          = ($unitRaw === 'л' ? 'л' : 'кг');
-        $price         = (float)$_POST['price'];
+        $priceBoxInput = (float)$_POST['price']; // desired box price with discount
+        if ($boxSize > 0) {
+            $price = ($priceBoxInput / DISCOUNT_FACTOR - BOX_MARKUP) / $boxSize;
+        } else {
+            $price = 0.0;
+        }
         $salePrice     = (float)($_POST['sale_price'] ?? 0);
         $stockBoxes    = (float)$_POST['stock_boxes'];
         $isActive      = isset($_POST['is_active']) ? 1 : 0;

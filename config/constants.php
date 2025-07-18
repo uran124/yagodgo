@@ -1,6 +1,8 @@
 <?php
 return [
     'placeholder_date' => '2025-05-15',
-    // Extra charge added to each box when calculating retail price
-    'box_markup' => 300,
+    // Доплата к цене коробки перед применением скидки
+    'box_markup'      => 10,
+    // Коэффициент применения скидки (24% -> 0.76)
+    'discount_factor' => 0.76,
 ];

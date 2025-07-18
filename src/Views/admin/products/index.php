@@ -41,7 +41,12 @@
         <td class="p-3 text-gray-600">
           <?= $p['box_size'] ?> <?= htmlspecialchars($p['box_unit']) ?>
         </td>
-        <td class="p-3 text-gray-600"><?= $p['price'] ?> ₽/<?= $p['unit'] ?></td>
+        <?php
+          $displayPrice = ($p['price'] * $p['box_size'] + BOX_MARKUP) * DISCOUNT_FACTOR;
+        ?>
+        <td class="p-3 text-gray-600">
+          <?= number_format($displayPrice, 2, '.', ' ') ?> ₽/ящик
+        </td>
         <?php if (!$isManager): ?>
         <td class="p-3 text-gray-600"><?= $p['stock_boxes'] ?></td>
         <?php endif; ?>

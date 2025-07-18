@@ -294,7 +294,7 @@ public function cart(): void
                 $regular = (float)($row['price'] ?? 0);      // per kg
                 $boxSize = (float)($row['box_size'] ?? 0);
                 $kgPrice = $sale > 0 ? $sale : $regular;
-                $priceBox = $kgPrice * $boxSize + BOX_MARKUP;
+                $priceBox = ($kgPrice * $boxSize + BOX_MARKUP) * DISCOUNT_FACTOR;
             }
 
             $this->pdo->prepare(
