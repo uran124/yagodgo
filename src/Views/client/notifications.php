@@ -5,6 +5,9 @@
       <span class="material-icons-round">telegram</span>
       <span class="font-semibold">Подключить уведомления</span>
     </a>
+    <p class="text-center text-gray-600 text-sm">
+      После перехода нажмите <strong>Start</strong> в Telegram и поделитесь своим номером телефона.
+    </p>
 
     <div class="bg-white rounded-3xl shadow divide-y divide-gray-100">
       <?php
