@@ -60,5 +60,15 @@ window.dataLayer = window.dataLayer || [];
         });
       });
     });
+
+    document.querySelectorAll('[data-edit-date]').forEach(function (badge) {
+      badge.addEventListener('click', function () {
+        var id = badge.getAttribute('data-edit-date');
+        var form = document.querySelector('[data-date-form="' + id + '"]');
+        if (form) {
+          form.classList.toggle('hidden');
+        }
+      });
+    });
   });
 </script>

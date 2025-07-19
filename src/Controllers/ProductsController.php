@@ -280,4 +280,19 @@ class ProductsController
         header('Location: /admin/products');
         exit;
     }
+
+    // Обновление даты поставки товара
+    public function updateDeliveryDate(): void
+    {
+        $id = (int)($_POST['id'] ?? 0);
+        $raw = trim($_POST['delivery_date'] ?? '');
+        $date = $raw !== '' ? $raw : null;
+        if ($id) {
+            $stmt = $this->pdo->prepare("UPDATE products SET delivery_date = ? WHERE id = ?");
+            $stmt->execute([$date, $id]);
+        }
+        $base = ($_SESSION['role'] ?? '') === 'manager' ? '/manager/products' : '/admin/products';
+        header('Location: ' . $base);
+        exit;
+    }
 }

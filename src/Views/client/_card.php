@@ -38,6 +38,9 @@
     $priceBox   = $effectiveKg * $boxSize;
     $pricePerKg = round($effectiveKg, 2);
     $regularBox = $price * $boxSize;
+    $role     = $_SESSION['role'] ?? '';
+    $isStaff  = in_array($role, ['admin','manager'], true);
+    $basePath = $role === 'manager' ? '/manager' : '/admin';
     $regularKg  = round($price, 2);
   ?>
   <div class="relative">
@@ -62,17 +65,27 @@
     <?php else: ?>
       <!-- Бейджик даты / наличия -->
       <?php if ($showDate && $d <= $today): ?>
-        <span class="absolute top-3 left-3 bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded-full">
+        <span class="absolute top-3 left-3 bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded-full <?= $isStaff ? 'cursor-pointer' : '' ?>" <?= $isStaff ? 'data-edit-date="' . $p['id'] . '"' : '' ?>>
           В наличии
         </span>
       <?php elseif ($showDate): ?>
-        <span class="absolute top-3 left-3 bg-orange-100 text-orange-800 text-xs font-semibold px-2 py-1 rounded-full">
+        <span class="absolute top-3 left-3 bg-orange-100 text-orange-800 text-xs font-semibold px-2 py-1 rounded-full <?= $isStaff ? 'cursor-pointer' : '' ?>" <?= $isStaff ? 'data-edit-date="' . $p['id'] . '"' : '' ?>>
           <?= date('d.m.Y', strtotime($d)) ?>
         </span>
       <?php else: ?>
-        <span class="absolute top-3 left-3 bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded-full">
+        <span class="absolute top-3 left-3 bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded-full <?= $isStaff ? 'cursor-pointer' : '' ?>" <?= $isStaff ? 'data-edit-date="' . $p['id'] . '"' : '' ?>>
           Ближайшая возможная дата
         </span>
+      <?php endif; ?>
+
+      <?php if ($isStaff): ?>
+        <div class="absolute top-10 left-3 bg-white border rounded shadow p-2 z-10 hidden" data-date-form="<?= $p['id'] ?>">
+          <form action="<?= $basePath ?>/products/update-date" method="post" class="flex items-center space-x-2">
+            <input type="hidden" name="id" value="<?= $p['id'] ?>">
+            <input type="date" name="delivery_date" value="<?= htmlspecialchars($d ?? '') ?>" class="border px-1 py-1 rounded text-sm">
+            <button type="submit" class="bg-blue-500 text-white rounded px-2 py-1 text-xs">Обновить</button>
+          </form>
+        </div>
       <?php endif; ?>
 
       <!-- Бейджик скидки (если есть) -->
