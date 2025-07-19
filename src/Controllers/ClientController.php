@@ -1041,6 +1041,15 @@ public function showOrder(int $orderId): void
             'debugData' => $debugData,
         ]);
     }
+    /** Настройки уведомлений */
+    public function notifications(): void
+    {
+        requireClient();
+        view('client/notifications', [
+            'userName' => $_SESSION['name'] ?? null,
+        ]);
+    }
+
 
     /** Показ одного материала */
     public function showMaterial(string $categoryAlias, string $alias): void

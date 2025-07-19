@@ -402,15 +402,7 @@
   ?>
   
   <nav class="fixed bottom-0 left-0 w-full glass-effect border-t border-white/20 shadow-2xl z-20">
-    <ul class="flex justify-between px-2 py-2">
-      <!-- Главная -->
-      <li class="flex-1 mr-1">
-        <a href="/" class="nav-item flex flex-col items-center py-3 px-2 rounded-2xl transition-all <?= isActive('/') ?>">
-          <span class="material-icons-round text-xl mb-1">home</span>
-          <span class="text-xs font-medium">Главная</span>
-        </a>
-      </li>
-      
+    <ul class="flex justify-between px-2 py-2">      
       <!-- Каталог -->
       <li class="flex-1 mx-1">
         <a href="/catalog" class="nav-item flex flex-col items-center py-3 px-2 rounded-2xl transition-all <?= isActive('/catalog') ?>">
@@ -449,6 +441,23 @@
           <div class="nav-item flex flex-col items-center py-3 px-2 rounded-2xl text-gray-400">
             <span class="material-icons-round text-xl mb-1">receipt_long</span>
             <span class="text-xs font-medium">Заказы</span>
+          </div>
+        </li>
+      <?php endif; ?>
+
+      <!-- Уведомления -->
+      <?php if (in_array($role, ['client','partner'])): ?>
+        <li class="flex-1 mx-1">
+          <a href="/notifications" class="nav-item flex flex-col items-center py-3 px-2 rounded-2xl transition-all <?= isActive('/notifications') ?>">
+            <span class="material-icons-round text-xl mb-1">notifications</span>
+            <span class="text-xs font-medium">Уведомления</span>
+          </a>
+        </li>
+      <?php else: ?>
+        <li class="flex-1 mx-1">
+          <div class="nav-item flex flex-col items-center py-3 px-2 rounded-2xl text-gray-400">
+            <span class="material-icons-round text-xl mb-1">notifications</span>
+            <span class="text-xs font-medium">Уведомления</span>
           </div>
         </li>
       <?php endif; ?>
