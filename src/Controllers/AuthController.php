@@ -4,16 +4,22 @@ namespace App\Controllers;
 use PDO;
 use App\Helpers\ReferralHelper;
 use App\Helpers\SmsRu;
+use App\Helpers\TelegramSender;
+use App\Helpers\MailSender;
 
 class AuthController
 {
     private PDO $pdo;
     private array $smsConfig;
+    private array $telegramConfig;
+    private array $emailConfig;
 
-    public function __construct(PDO $pdo, array $smsConfig = [])
+    public function __construct(PDO $pdo, array $smsConfig = [], array $telegramConfig = [], array $emailConfig = [])
     {
         $this->pdo = $pdo;
         $this->smsConfig = $smsConfig;
+        $this->telegramConfig = $telegramConfig;
+        $this->emailConfig = $emailConfig;
     }
 
     /**
@@ -202,6 +208,8 @@ public function register(): void
     public function sendRegistrationCode(): void
     {
         $phone = $this->normalizePhone($_POST['phone'] ?? '');
+        $method = $_POST['method'] ?? 'sms';
+        $email  = trim($_POST['email'] ?? '');
         header('Content-Type: application/json');
 
         if (!preg_match('/^7\d{10}$/', $phone)) {
@@ -237,8 +245,27 @@ public function register(): void
         $code = random_int(1000, 9999);
         $_SESSION['reg_phone'] = $phone;
         $_SESSION['reg_code'] = $code;
-        $sms = new SmsRu($this->smsConfig['api_id'] ?? '');
-        $ok = $sms->send($phone, "Код подтверждения: {$code}");
+
+        $ok = false;
+        if ($method === 'telegram') {
+            $stmt = $this->pdo->prepare("SELECT chat_id FROM users WHERE phone = ? AND chat_id IS NOT NULL");
+            $stmt->execute([$phone]);
+            $chat = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($chat && $chat['chat_id']) {
+                $tg = new TelegramSender($this->telegramConfig['bot_token'] ?? '');
+                $topicId = $this->telegramConfig['admin_topic_id'] ?? null;
+                $ok = $tg->send($chat['chat_id'], "Код подтверждения: {$code}", $topicId);
+            }
+        } elseif ($method === 'email') {
+            if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $mailer = new MailSender($this->emailConfig['from'] ?? 'noreply@example.com');
+                $ok = $mailer->send($email, 'Код подтверждения', "Код подтверждения: {$code}");
+            }
+        } else {
+            $sms = new SmsRu($this->smsConfig['api_id'] ?? '');
+            $ok = $sms->send($phone, "Код подтверждения: {$code}");
+        }
+
         echo json_encode(['success' => $ok]);
     }
 
