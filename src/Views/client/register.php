@@ -47,10 +47,16 @@
             </div>
             <input id="phone" name="phone" type="tel" maxlength="10" inputmode="numeric" pattern="\d{10}" placeholder="902 923 7794" required class="w-full pl-16 sm:pl-20 pr-3 sm:pr-4 py-2.5 sm:py-3 md:py-4 text-sm sm:text-base md:text-lg border-2 border-gray-100 rounded-2xl focus:border-red-500 focus:ring-2 focus:ring-red-100 outline-none transition-all text-gray-800 placeholder-gray-400">
           </div>
+          <div class="relative">
+            <div class="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 flex items-center">
+              <span class="material-icons-round text-red-500 mr-1 sm:mr-2 text-lg sm:text-xl">mail</span>
+            </div>
+            <input id="email" type="email" placeholder="you@example.com" class="w-full pl-12 sm:pl-16 pr-3 sm:pr-4 py-2.5 sm:py-3 md:py-4 text-sm sm:text-base md:text-lg border-2 border-gray-100 rounded-2xl focus:border-red-500 focus:ring-2 focus:ring-red-100 outline-none transition-all text-gray-800 placeholder-gray-400">
+          </div>
           <div class="flex space-x-2">
             <button type="button" id="sendRegCode" class="flex-1 bg-red-500 text-white py-2 rounded-2xl">по SMS</button>
-            <button type="button" class="flex-1 bg-blue-500 text-white py-2 rounded-2xl">Telegram</button>
-            <button type="button" class="flex-1 bg-gray-500 text-white py-2 rounded-2xl">e-mail</button>
+            <button type="button" id="sendRegCodeTg" class="flex-1 bg-blue-500 text-white py-2 rounded-2xl">Telegram</button>
+            <button type="button" id="sendRegCodeEmail" class="flex-1 bg-gray-500 text-white py-2 rounded-2xl">e-mail</button>
           </div>
           <div id="codeRegBlock" class="hidden space-y-2">
             <div class="flex space-x-1.5 sm:space-x-2 justify-center">
@@ -227,15 +233,28 @@ phoneInput.addEventListener('input', function() {
 });
 
 const sendRegBtn = document.getElementById('sendRegCode');
+const sendRegBtnTg = document.getElementById('sendRegCodeTg');
+const sendRegBtnEmail = document.getElementById('sendRegCodeEmail');
+const emailInput = document.getElementById('email');
 const codeRegBlock = document.getElementById('codeRegBlock');
 const regCodeInputs = document.querySelectorAll('input[data-reg-code]');
 const extraFields = document.getElementById('extraFields');
 const tgLink = document.getElementById('tgLink');
 
-sendRegBtn.addEventListener('click', () => {
+sendRegBtn.addEventListener('click', () => sendCode('sms'));
+sendRegBtnTg.addEventListener('click', () => sendCode('telegram'));
+sendRegBtnEmail.addEventListener('click', () => sendCode('email'));
+
+function sendCode(method) {
   const phone = phoneInput.value.replace(/\D/g, '');
   if (phone.length !== 10) { alert('Введите номер'); return; }
-  fetch('/api/send-reg-code', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'phone='+phone})
+  let body = 'phone=' + phone + '&method=' + method;
+  if (method === 'email') {
+    const email = emailInput.value.trim();
+    if (!email) { alert('Введите email'); return; }
+    body += '&email=' + encodeURIComponent(email);
+  }
+  fetch('/api/send-reg-code', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body})
     .then(r => r.json())
     .then(d => {
       if (d.blocked) {
@@ -259,7 +278,7 @@ sendRegBtn.addEventListener('click', () => {
         regCodeInputs[0].focus();
       }
     });
-});
+}
 
 function verifyRegCode() {
   const code = Array.from(regCodeInputs).map(i => i.value).join('');

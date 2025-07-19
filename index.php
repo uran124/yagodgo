@@ -43,6 +43,8 @@ if (!empty($_SESSION['user_id'])) {
 $telegramConfig = require __DIR__ . '/config/telegram.php';
 // Конфиг SMS.RU
 $smsConfig = require __DIR__ . '/config/sms.php';
+// Конфиг почты
+$emailConfig = require __DIR__ . '/config/email.php';
 // Общие константы
 $constants = require __DIR__ . '/config/constants.php';
 define('PLACEHOLDER_DATE', $constants['placeholder_date']);
@@ -272,7 +274,7 @@ switch ("$method $uri") {
 
     // СМС подтверждения при регистрации
     case 'POST /api/send-reg-code':
-        (new App\Controllers\AuthController($pdo, $smsConfig))->sendRegistrationCode();
+        (new App\Controllers\AuthController($pdo, $smsConfig, $telegramConfig, $emailConfig))->sendRegistrationCode();
         break;
     case 'POST /api/verify-reg-code':
         (new App\Controllers\AuthController($pdo, $smsConfig))->verifyRegistrationCode();
