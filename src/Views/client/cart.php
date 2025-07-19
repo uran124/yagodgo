@@ -111,7 +111,7 @@
         </div>
 
         <div>
-          <label class="block text-sm text-gray-600 font-bold mb-1">Выберите дату доставки</label>
+          <label class="block text-sm text-gray-600 font-bold mb-1">Выберите дату получения</label>
           <select name="delivery_date[<?= $it['product_id'] ?>]"
                   form="checkoutForm"
                   <?= empty($options) ? 'disabled' : 'required' ?>

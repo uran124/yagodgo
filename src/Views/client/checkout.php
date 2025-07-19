@@ -3,7 +3,7 @@
  * @var array        $groups           // сгруппированные по дате доставки товары
  * @var float        $subtotal         // исходная сумма без учёта баллов
  * @var int          $pointsBalance    // сколько баллов (клубничек) есть у пользователя
- * @var int          $pointsToUse      // сколько баллов автоматически списывается (до 30% от суммы)
+ * @var int          $pointsToUse      // сколько баллов автоматически списывается
  * @var string|null  $couponCode       // введённый промокод
  * @var array|null   $couponInfo       // информация о применённом купоне
  * @var float        $finalTotal       // итоговая сумма после всех скидок
@@ -89,7 +89,7 @@ $couponError     = $couponError     ?? null;
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-3">
                   <span class="material-icons-round text-sm mr-1 align-middle">schedule</span>
-                  Время доставки (<?= $label ?>)
+                  Время получения (<?= $label ?>)
                 </label>
                 <div class="relative">
                   <select name="slot_id[<?= htmlspecialchars($dateKey) ?>]"
@@ -274,6 +274,24 @@ $couponError     = $couponError     ?? null;
 <script>
   const select = document.getElementById('addressSelect');
   const block = document.getElementById('newAddressBlock');
+  function applyPickup() {
+    if (!select) return;
+    const enabled = localStorage.getItem('pickupEnabled') === '1';
+    let opt = select.querySelector('option[value="pickup"]');
+    if (enabled) {
+      if (!opt) {
+        opt = document.createElement('option');
+        opt.value = 'pickup';
+        opt.textContent = 'Самовывоз 9 мая 73';
+        select.prepend(opt);
+      }
+      select.value = 'pickup';
+      block.classList.add('hidden');
+    } else if (opt) {
+      if (opt.selected) select.selectedIndex = 0;
+      opt.remove();
+    }
+  }
   function toggleBlock() {
     if (select.value === 'new') {
       block.classList.remove('hidden');
@@ -283,6 +301,7 @@ $couponError     = $couponError     ?? null;
   }
   if (select) {
     select.addEventListener('change', toggleBlock);
+    applyPickup();
     toggleBlock();
   }
 </script>

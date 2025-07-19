@@ -944,6 +944,45 @@
       
 
   
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const toggles = document.querySelectorAll('.pickup-toggle');
+    if (toggles.length === 0) return;
+    const cards = document.querySelectorAll('.product-card');
+    let state = localStorage.getItem('pickupEnabled') === '1';
+    toggles.forEach(t => t.checked = state);
+
+    function format(num) {
+      return num.toLocaleString('ru-RU');
+    }
+
+    function update() {
+      const mul = state ? 0.8 : 1;
+      cards.forEach(c => {
+        const baseBox = parseFloat(c.dataset.baseBox);
+        const baseKg = parseFloat(c.dataset.baseKg);
+        if (!isNaN(baseBox)) {
+          const el = c.querySelector('.box-price');
+          if (el) el.textContent = format(Math.round(baseBox * mul)) + ' ₽/ящик';
+        }
+        if (!isNaN(baseKg)) {
+          const el2 = c.querySelector('.kg-price');
+          if (el2) el2.textContent = format(Math.round(baseKg * mul)) + ' ₽/кг';
+        }
+      });
+    }
+
+    update();
+
+    toggles.forEach(t => t.addEventListener('change', e => {
+      state = e.target.checked;
+      localStorage.setItem('pickupEnabled', state ? '1' : '0');
+      toggles.forEach(other => { if (other !== e.target) other.checked = state; });
+      update();
+    }));
+  });
+</script>
+
 <?php include __DIR__ . '/scripts.php'; ?>
 </body>
 </html>
