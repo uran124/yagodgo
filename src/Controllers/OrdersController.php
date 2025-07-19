@@ -253,7 +253,7 @@ class OrdersController
         }
 
         $currentPoints = $user['points_balance'] ?? 0;
-        $maxPointsUse  = (int)floor($subtotal * 0.30);
+        $maxPointsUse  = (int)$subtotal;
 
         include __DIR__ . '/../../src/Views/client/checkout.php';
     }
@@ -291,7 +291,7 @@ class OrdersController
             }
 
             $pointsUsed = 0;
-            $maxPointsUse = (int)floor(($totalAmount - $discount) * 0.30);
+            $maxPointsUse = (int)($totalAmount - $discount);
             if (!empty($_POST['use_points']) && $user['points_balance'] > 0) {
                 $requested = intval($_POST['points_to_use'] ?? 0);
                 $pointsUsed = min($requested, $maxPointsUse, $user['points_balance']);

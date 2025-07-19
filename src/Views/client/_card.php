@@ -15,7 +15,12 @@
  */
 ?>
 <?php $search = mb_strtolower(($p['product'] ?? '') . ' ' . ($p['variety'] ?? ''), 'UTF-8'); ?>
-<div class="product-card bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col hover:shadow-2xl transition-shadow duration-200 h-full max-w-[350px]" data-search="<?= htmlspecialchars($search) ?>" data-type="<?= htmlspecialchars($p['type_alias'] ?? '') ?>" data-sale="<?= ($p['sale_price'] ?? 0) > 0 ? '1' : '0' ?>">
+<div class="product-card bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col hover:shadow-2xl transition-shadow duration-200 h-full max-w-[350px]"
+     data-search="<?= htmlspecialchars($search) ?>"
+     data-type="<?= htmlspecialchars($p['type_alias'] ?? '') ?>"
+     data-sale="<?= ($p['sale_price'] ?? 0) > 0 ? '1' : '0' ?>"
+     data-base-box="<?= $sale > 0 ? $priceBox : $regularBox ?>"
+     data-base-kg="<?= $sale > 0 ? $pricePerKg : $regularKg ?>">
   <?php 
   $img       = trim($p['image_path'] ?? '');
   $hasImage  = $img !== '';
@@ -99,13 +104,23 @@
     </div>
 
     <!-- Описание (если есть) -->
-    <?php if (!empty($p['description'])): ?>
-      <p class="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 flex-1">
-        <?= htmlspecialchars($p['description']) ?>
-      </p>
-    <?php else: ?>
-      <div class="flex-1"></div>
-    <?php endif; ?>
+
+<?php if (!empty($p['description'])): ?>
+  <p class="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 flex-1">
+    <?= htmlspecialchars($p['description']) ?>
+  </p>
+<?php else: ?>
+  <div class="flex-1"></div>
+<?php endif; ?>
+
+    <!-- Самовывоз toggle -->
+    <div class="flex items-center justify-between mb-3">
+      <span class="text-sm text-gray-600 font-semibold">Самовывоз -20%</span>
+      <label class="inline-flex relative items-center cursor-pointer">
+        <input type="checkbox" class="sr-only peer pickup-toggle">
+        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-pink-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-500"></div>
+      </label>
+    </div>
 
     <!-- Блок цены -->
     <div class="mt-auto">
@@ -115,20 +130,20 @@
           <div class="text-xs sm:text-sm text-gray-400 line-through">
             <?= number_format($regularBox, 0, '.', ' ') ?> ₽/ящик
           </div>
-          <div class="text-lg sm:text-xl font-bold text-red-600">
+          <div class="text-lg sm:text-xl font-bold text-red-600 box-price">
             <?= number_format($priceBox, 0, '.', ' ') ?> ₽/ящик
           </div>
         </div>
-        <div class="text-xs sm:text-sm text-gray-400 mb-3">
+        <div class="text-xs sm:text-sm text-gray-400 mb-3 kg-price">
           <?= htmlspecialchars($pricePerKg) ?> ₽/кг
         </div>
       <?php else: ?>
         <!-- Обычная цена -->
         <div class="flex justify-between items-center mb-3">
-          <div class="text-xl sm:text-2xl font-bold text-gray-800">
+          <div class="text-xl sm:text-2xl font-bold text-gray-800 box-price">
             <?= number_format($regularBox, 0, '.', ' ') ?> ₽/ящик
           </div>
-          <div class="text-xs sm:text-sm text-gray-400">
+          <div class="text-xs sm:text-sm text-gray-400 kg-price">
             <?= htmlspecialchars($regularKg) ?> ₽/кг
           </div>
         </div>

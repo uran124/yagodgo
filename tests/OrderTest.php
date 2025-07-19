@@ -21,7 +21,7 @@ class OrderTest extends TestCase
 
     public function testCalculateMaxPointsUsage(): void
     {
-        $this->assertSame(30, \App\Models\Order::calculateMaxPointsUsage(100));
+        $this->assertSame(100, \App\Models\Order::calculateMaxPointsUsage(100));
     }
 
     public function testCalculatePersonalBonus(): void

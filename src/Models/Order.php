@@ -28,10 +28,10 @@ class Order extends Model
         return (int) floor($sum * 0.10);
     }
 
-    // Метод для подсчёта максимума списания баллов (30% от суммы после скидки)
+    // Метод для подсчёта максимума списания баллов (без ограничений)
     public static function calculateMaxPointsUsage(int $sumAfterDiscount): int
     {
-        return (int) floor($sumAfterDiscount * 0.30);
+        return (int) $sumAfterDiscount;
     }
 
     // Метод для подсчёта личного начисления (5% от суммы после списания баллов)

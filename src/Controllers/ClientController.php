@@ -378,7 +378,7 @@ public function cart(): void
     /**
      * Форма подтверждения (checkout):
      * - группирует товары по дате
-     * - рассчитывает, сколько баллов можно списать (до 30 % от общей суммы)
+     * - рассчитывает, сколько баллов можно списать
      * - передаёт в шаблон: группы, subtotal, баланс баллов, сколько списать, сумма после списания, адрес
      */
     public function checkout(): void
@@ -512,9 +512,8 @@ public function cart(): void
             }
         }
     
-        // 6) Рассчитываем, сколько баллов можно списать (до 30% от суммы)
-        $maxAllowedByPercent = (int)floor($subtotal * 0.30);
-        $pointsToUse = min($pointsBalance, $maxAllowedByPercent);
+        // 6) Рассчитываем, сколько баллов можно списать (не более суммы заказа)
+        $pointsToUse = min($pointsBalance, (int)$subtotal);
 
         // 7) Итог после применения купона и баллов
         $pointsDiscountTotal = min($pointsToUse + $couponPoints, $subtotal);
@@ -664,9 +663,8 @@ public function cart(): void
         }
     }
 
-    // 5) Считаем, сколько баллов списать (до 30% от суммы)
-    $maxPossible  = floor($allTotal * 0.3);
-    $pointsToUse  = min($pointsBalance, $maxPossible);
+    // 5) Считаем, сколько баллов списать (не более суммы заказа)
+    $pointsToUse  = min($pointsBalance, $allTotal);
 
     $this->pdo->beginTransaction();
 
