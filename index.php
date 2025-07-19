@@ -307,6 +307,11 @@ switch ("$method $uri") {
         requireClient();
         (new App\Controllers\ClientController($pdo))->orders();
         break;
+
+    case 'GET /notifications':
+        requireClient();
+        (new App\Controllers\ClientController($pdo))->notifications();
+        break;
     
     // Добавляем прямо ниже, например:
     case (bool) preg_match('#^GET /orders/(\d+)$#', "$method $uri", $matches):
