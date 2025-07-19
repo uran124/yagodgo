@@ -144,7 +144,7 @@ public function register(): void
     unset($_SESSION['reg_verified'], $_SESSION['reg_phone'], $_SESSION['reg_code']);
     unset($_SESSION['invite_code']);
 
-    header('Location: /');
+    header('Location: /notifications');
     exit;
 }
 
