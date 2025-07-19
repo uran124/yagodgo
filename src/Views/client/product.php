@@ -1,22 +1,24 @@
 <?php /** @var array $product */ ?>
 <main class="bg-gradient-to-br from-orange-50 via-white to-pink-50 min-h-screen pb-24">
-  <article class="max-w-screen-md mx-auto px-4 pt-6 space-y-6">
+  <article class="max-w-screen-md mx-auto px-4 pt-6 space-y-6" itemscope itemtype="https://schema.org/Product">
     <div class="md:flex md:space-x-6">
       <div class="md:w-1/2 mb-4 md:mb-0">
         <?php if (!empty($product['image_path'])): ?>
-          <img src="<?= htmlspecialchars($product['image_path']) ?>" alt="<?= htmlspecialchars($product['product']) ?>" class="w-full rounded-2xl shadow-lg">
+          <img src="<?= htmlspecialchars($product['image_path']) ?>" alt="<?= htmlspecialchars($product['product']) ?>" class="w-full rounded-2xl shadow-lg" itemprop="image">
         <?php endif; ?>
       </div>
       <div class="md:w-1/2 space-y-4">
-        <h1 class="text-3xl font-bold text-gray-800">
+        <h1 class="text-3xl font-bold text-gray-800" itemprop="name">
           <?= htmlspecialchars($product['product']) ?>
           <?php if (!empty($product['variety'])): ?>
             <?= ' ' . htmlspecialchars($product['variety']) ?>
           <?php endif; ?>
+
           <?php if (!empty($product['box_size'])): ?>
             <?= ' (' . htmlspecialchars($product['box_size'] . ' ' . $product['box_unit']) . ')' ?>
           <?php endif; ?>
         </h1>
+        <meta itemprop="brand" content="<?= htmlspecialchars($product['manufacturer'] ?? 'BerryGo') ?>">
         <?php
         $comp = [];
         if (!empty($product['composition'])) {
@@ -35,7 +37,7 @@
         <?php endif; ?>
         <?php $desc = $product['full_description'] !== '' ? $product['full_description'] : ($product['description'] ?? ''); ?>
         <?php if ($desc !== ''): ?>
-          <p class="text-gray-700 text-lg">
+          <p class="text-gray-700 text-lg" itemprop="description">
             <?= nl2br(htmlspecialchars($desc)) ?>
           </p>
         <?php endif; ?>
@@ -74,6 +76,12 @@
               </div>
             </div>
           <?php endif; ?>
+
+          <div itemprop="offers" itemscope itemtype="https://schema.org/Offer">
+            <meta itemprop="price" content="<?= number_format($priceBox, 2, '.', '') ?>">
+            <meta itemprop="priceCurrency" content="RUB">
+            <link itemprop="availability" href="<?= $active ? 'http://schema.org/InStock' : 'http://schema.org/OutOfStock' ?>">
+          </div>
 
           <?php if (in_array((string)($_SESSION['role'] ?? ''), ['client','partner']) && $active): ?>
             <form action="/cart/add" method="post" class="flex items-center space-x-2 add-to-cart-form" data-id="<?= $product['id'] ?>" data-name="<?= htmlspecialchars($product['product'] . ($product['variety'] ? ' ' . $product['variety'] : '')) ?>" data-price="<?= $priceBox ?>">
