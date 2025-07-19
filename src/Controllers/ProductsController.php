@@ -291,7 +291,16 @@ class ProductsController
             $stmt = $this->pdo->prepare("UPDATE products SET delivery_date = ? WHERE id = ?");
             $stmt->execute([$date, $id]);
         }
-        $base = ($_SESSION['role'] ?? '') === 'manager' ? '/manager/products' : '/admin/products';
+        // Determine where to redirect after updating
+        $refererPath = parse_url($_SERVER['HTTP_REFERER'] ?? '', PHP_URL_PATH) ?? '';
+        if (preg_match('#^/(admin|manager)/#', $refererPath)) {
+            $base = ($_SESSION['role'] ?? '') === 'manager'
+                ? '/manager/products'
+                : '/admin/products';
+        } else {
+            $base = '/';
+        }
+
         header('Location: ' . $base);
         exit;
     }
