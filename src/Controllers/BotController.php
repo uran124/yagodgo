@@ -62,6 +62,12 @@ class BotController
         // 1) Сначала проверяем, есть ли запись о пользователе в БД (по telegram_id)
         $user = $this->findUserByTelegramId($telegramId);
 
+        // Если пользователь найден, обновляем chat_id при необходимости
+        if ($user && ((int)($user['chat_id'] ?? 0) !== $chatId)) {
+            $stmt = $this->pdo->prepare("UPDATE users SET chat_id = ? WHERE id = ?");
+            $stmt->execute([$chatId, (int)$user['id']]);
+        }
+
         // Если пользователь ещё не передал контакт, но жмёт /start или что-то ещё
         if (!$user) {
             // Если пользователь прислал контакт
@@ -179,13 +185,15 @@ class BotController
 
         if (!$existing) {
             // Создаём новую запись в users
-            $stmtIns = $this->pdo->prepare("INSERT INTO users (name, phone, telegram_id, role) VALUES (?, ?, ?, 'client')");
-            $stmtIns->execute([$firstName, $phone, $telegramId]);
+            $stmtIns = $this->pdo->prepare(
+                "INSERT INTO users (name, phone, telegram_id, chat_id, role) VALUES (?, ?, ?, ?, 'client')"
+            );
+            $stmtIns->execute([$firstName, $phone, $telegramId, $chatId]);
             $userId = (int)$this->pdo->lastInsertId();
         } else {
-            // Обновляем telegram_id у существующего пользователя
-            $stmtUpd = $this->pdo->prepare("UPDATE users SET telegram_id = ? WHERE id = ?");
-            $stmtUpd->execute([$telegramId, (int)$existing['id']]);
+            // Обновляем telegram_id и chat_id у существующего пользователя
+            $stmtUpd = $this->pdo->prepare("UPDATE users SET telegram_id = ?, chat_id = ? WHERE id = ?");
+            $stmtUpd->execute([$telegramId, $chatId, (int)$existing['id']]);
             $userId = (int)$existing['id'];
         }
 

@@ -1,0 +1,9 @@
+CREATE TABLE notifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(100) NOT NULL,
+    description VARCHAR(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+ALTER TABLE users
+  ADD COLUMN chat_id BIGINT DEFAULT NULL,
+  ADD COLUMN subscribed_notifications VARCHAR(255) DEFAULT '';

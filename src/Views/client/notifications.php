@@ -1,7 +1,7 @@
 <?php /** @var string|null $userName */ ?>
 <main class="bg-gradient-to-br from-orange-50 via-white to-pink-50 min-h-screen pb-24">
   <div class="px-4 pt-6 space-y-6">
-    <a href="https://t.me/BerryGoBot" class="flex items-center justify-center space-x-2 bg-blue-500 text-white rounded-2xl py-3 shadow-lg hover:bg-blue-600 transition">
+    <a href="https://t.me/YagodgoBot" class="flex items-center justify-center space-x-2 bg-blue-500 text-white rounded-2xl py-3 shadow-lg hover:bg-blue-600 transition">
       <span class="material-icons-round">telegram</span>
       <span class="font-semibold">Подключить уведомления</span>
     </a>
