@@ -41,6 +41,15 @@
             <?= nl2br(htmlspecialchars($desc)) ?>
           </p>
         <?php endif; ?>
+
+        <!-- Самовывоз toggle -->
+        <div class="flex items-center justify-between mb-3 bg-gray-50 rounded px-2 py-1">
+          <span class="text-sm text-gray-600 font-semibold">Самовывоз -20%</span>
+          <label class="inline-flex relative items-center cursor-pointer">
+            <input type="checkbox" class="sr-only peer pickup-toggle">
+            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-pink-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-500"></div>
+          </label>
+        </div>
         <?php
         $active = (int)($product['is_active'] ?? 0);
         $price  = floatval($product['price'] ?? 0);
@@ -53,25 +62,25 @@
         $regularBox = $price * $boxSize;
         $regularKg  = round($price, 2);
         ?>
-        <div class="space-y-3">
+        <div class="space-y-3 product-card" data-base-box="<?= $sale > 0 ? $priceBox : $regularBox ?>" data-base-kg="<?= $sale > 0 ? $pricePerKg : $regularKg ?>">
           <?php if ($sale > 0): ?>
             <div class="flex items-baseline space-x-2">
               <div class="text-sm text-gray-400 line-through">
                 <?= number_format($regularBox, 0, '.', ' ') ?> ₽/ящик
               </div>
-              <div class="text-xl font-bold text-red-600">
+              <div class="text-xl font-bold text-red-600 box-price">
                 <?= number_format($priceBox, 0, '.', ' ') ?> ₽/ящик
               </div>
             </div>
-            <div class="text-sm text-gray-400">
+            <div class="text-sm text-gray-400 kg-price">
               <?= htmlspecialchars($pricePerKg) ?> ₽/кг
             </div>
           <?php else: ?>
             <div class="flex justify-between items-center">
-              <div class="text-2xl font-bold text-gray-800">
+              <div class="text-2xl font-bold text-gray-800 box-price">
                 <?= number_format($regularBox, 0, '.', ' ') ?> ₽/ящик
               </div>
-              <div class="text-sm text-gray-400">
+              <div class="text-sm text-gray-400 kg-price">
                 <?= htmlspecialchars($regularKg) ?> ₽/кг
               </div>
             </div>
