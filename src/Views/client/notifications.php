@@ -1,12 +1,13 @@
 <?php /** @var string|null $userName */ ?>
+<?php /** @var string|null $tgStart */ ?>
 <main class="bg-gradient-to-br from-orange-50 via-white to-pink-50 min-h-screen pb-24">
   <div class="px-4 pt-6 space-y-6">
-    <a href="https://t.me/YagodgoBot" class="flex items-center justify-center space-x-2 bg-blue-500 text-white rounded-2xl py-3 shadow-lg hover:bg-blue-600 transition">
+    <a href="https://t.me/YagodgoBot<?= $tgStart ? '?start=' . $tgStart : '' ?>" class="flex items-center justify-center space-x-2 bg-blue-500 text-white rounded-2xl py-3 shadow-lg hover:bg-blue-600 transition">
       <span class="material-icons-round">telegram</span>
       <span class="font-semibold">Подключить уведомления</span>
     </a>
     <p class="text-center text-gray-600 text-sm">
-      После перехода нажмите <strong>Start</strong> в Telegram и поделитесь своим номером телефона.
+      После перехода нажмите <strong>Start</strong> в Telegram.
     </p>
 
     <div class="bg-white rounded-3xl shadow divide-y divide-gray-100">

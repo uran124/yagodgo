@@ -1045,8 +1045,14 @@ public function showOrder(int $orderId): void
     public function notifications(): void
     {
         requireClient();
+        $userId = $_SESSION['user_id'];
+        $stmt = $this->pdo->prepare("SELECT phone FROM users WHERE id = ?");
+        $stmt->execute([$userId]);
+        $phone = $stmt->fetchColumn();
+        $tgStart = $phone ? $phone : null;
         view('client/notifications', [
             'userName' => $_SESSION['name'] ?? null,
+            'tgStart'  => $tgStart,
         ]);
     }
 

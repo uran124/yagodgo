@@ -62,6 +62,20 @@ class BotController
         // 1) Сначала проверяем, есть ли запись о пользователе в БД (по telegram_id)
         $user = $this->findUserByTelegramId($telegramId);
 
+        // Если пользователь открывает бота по ссылке вида ...?start=PHONE
+        // и в базе нет записи по telegram_id, пробуем сопоставить его по номеру
+        if (!$user && preg_match('/^\/start\s+(\d{11})$/', $text, $m)) {
+            $phone = $m[1];
+            $stmt  = $this->pdo->prepare("SELECT id FROM users WHERE phone = ?");
+            $stmt->execute([$phone]);
+            $byPhone = $stmt->fetch(\PDO::FETCH_ASSOC);
+            if ($byPhone) {
+                $stmtUpd = $this->pdo->prepare("UPDATE users SET telegram_id = ?, chat_id = ? WHERE id = ?");
+                $stmtUpd->execute([$telegramId, $chatId, (int)$byPhone['id']]);
+                $user = $this->findUserByTelegramId($telegramId);
+            }
+        }
+
         // Если пользователь найден, обновляем chat_id при необходимости
         if ($user && ((int)($user['chat_id'] ?? 0) !== $chatId)) {
             $stmt = $this->pdo->prepare("UPDATE users SET chat_id = ? WHERE id = ?");
@@ -82,7 +96,7 @@ class BotController
 
         // Если пользователь есть, обрабатываем команды
         switch (true) {
-            case $text === '/start':
+            case preg_match('/^\/start(?:\s+\S+)?$/', $text):
                 $this->showMainMenu($chatId);
                 break;
 

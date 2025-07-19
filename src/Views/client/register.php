@@ -156,11 +156,11 @@
     </div>
 
     <div class="text-center mt-3 sm:mt-4 space-y-1">
-      <a href="https://t.me/YagodgoBot" class="inline-flex items-center px-4 sm:px-6 py-2 sm:py-3 bg-blue-500 text-white rounded-2xl font-medium hover:bg-blue-600 transition-all shadow-lg hover:shadow-xl space-x-1 sm:space-x-2 text-xs sm:text-sm">
+      <a id="tgLink" href="https://t.me/YagodgoBot" class="inline-flex items-center px-4 sm:px-6 py-2 sm:py-3 bg-blue-500 text-white rounded-2xl font-medium hover:bg-blue-600 transition-all shadow-lg hover:shadow-xl space-x-1 sm:space-x-2 text-xs sm:text-sm">
         <span class="material-icons-round text-lg sm:text-xl">telegram</span>
         <span>Получать уведомления</span>
       </a>
-      <p class="text-gray-600 text-xs sm:text-sm">После перехода нажмите <strong>Start</strong> и отправьте свой номер телефона.</p>
+      <p class="text-gray-600 text-xs sm:text-sm">После перехода нажмите <strong>Start</strong> в Telegram.</p>
     </div>
 
   </div>
@@ -226,6 +226,7 @@ const sendRegBtn = document.getElementById('sendRegCode');
 const codeRegBlock = document.getElementById('codeRegBlock');
 const regCodeInputs = document.querySelectorAll('input[data-reg-code]');
 const extraFields = document.getElementById('extraFields');
+const tgLink = document.getElementById('tgLink');
 
 sendRegBtn.addEventListener('click', () => {
   const phone = phoneInput.value.replace(/\D/g, '');
@@ -266,6 +267,7 @@ function verifyRegCode() {
         extraFields.disabled = false;
         extraFields.classList.remove('opacity-50');
         document.getElementById('phoneBlock').classList.add('hidden');
+        tgLink.href = 'https://t.me/YagodgoBot?start=7' + phone;
       } else {
         alert('Неверный код');
         regCodeInputs.forEach(i => i.value = '');
