@@ -14,35 +14,35 @@
  *   - delivery_date    (строка 'Y-m-d' или null)
  */
 ?>
-<?php $search = mb_strtolower(($p['product'] ?? '') . ' ' . ($p['variety'] ?? ''), 'UTF-8'); ?>
+<?php
+$search = mb_strtolower(($p['product'] ?? '') . ' ' . ($p['variety'] ?? ''), 'UTF-8');
+$img       = trim($p['image_path'] ?? '');
+$hasImage  = $img !== '';
+$today     = date('Y-m-d');
+$d         = $p['delivery_date']     ?? null;
+$placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
+$showDate = $d !== null && $d !== $placeholder;
+$active    = (int)($p['is_active']    ?? 0);
+$price     = floatval($p['price']     ?? 0); // base price per kg
+$sale      = floatval($p['sale_price']?? 0); // sale price per kg
+$boxSize   = floatval($p['box_size']  ?? 0);
+$boxUnit   = $p['box_unit']           ?? '';
+
+$effectiveKg = $sale > 0 ? $sale : $price;
+$priceBox   = $effectiveKg * $boxSize;
+$pricePerKg = round($effectiveKg, 2);
+$regularBox = $price * $boxSize;
+$role     = $_SESSION['role'] ?? '';
+$isStaff  = in_array($role, ['admin','manager'], true);
+$basePath = $role === 'manager' ? '/manager' : '/admin';
+$regularKg  = round($price, 2);
+?>
 <div class="product-card bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col hover:shadow-2xl transition-shadow duration-200 h-full max-w-[350px]"
      data-search="<?= htmlspecialchars($search) ?>"
      data-type="<?= htmlspecialchars($p['type_alias'] ?? '') ?>"
      data-sale="<?= ($p['sale_price'] ?? 0) > 0 ? '1' : '0' ?>"
      data-base-box="<?= $sale > 0 ? $priceBox : $regularBox ?>"
      data-base-kg="<?= $sale > 0 ? $pricePerKg : $regularKg ?>">
-  <?php 
-  $img       = trim($p['image_path'] ?? '');
-  $hasImage  = $img !== '';
-  $today     = date('Y-m-d');
-  $d         = $p['delivery_date']     ?? null;
-  $placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
-    $showDate = $d !== null && $d !== $placeholder;
-    $active    = (int)($p['is_active']    ?? 0);
-    $price     = floatval($p['price']     ?? 0); // base price per kg
-    $sale      = floatval($p['sale_price']?? 0); // sale price per kg
-    $boxSize   = floatval($p['box_size']  ?? 0);
-    $boxUnit   = $p['box_unit']           ?? '';
-
-    $effectiveKg = $sale > 0 ? $sale : $price;
-    $priceBox   = $effectiveKg * $boxSize;
-    $pricePerKg = round($effectiveKg, 2);
-    $regularBox = $price * $boxSize;
-    $role     = $_SESSION['role'] ?? '';
-    $isStaff  = in_array($role, ['admin','manager'], true);
-    $basePath = $role === 'manager' ? '/manager' : '/admin';
-    $regularKg  = round($price, 2);
-  ?>
   <div class="relative">
     <?php if ($hasImage): ?>
       <a href="/catalog/<?= urlencode($p['type_alias']) ?>/<?= urlencode($p['alias']) ?>">
