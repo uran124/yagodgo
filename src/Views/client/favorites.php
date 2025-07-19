@@ -34,9 +34,9 @@
             $sale   = floatval($p['sale_price'] ?? 0);
             $box    = floatval($p['box_size'] ?? 0);
             $useKg  = $sale > 0 ? $sale : $base;
-            $boxPrice = ($useKg * $box + BOX_MARKUP) * DISCOUNT_FACTOR;
-            $kgPrice  = $box > 0 ? round($boxPrice / $box, 2) : 0;
-            $regularBox = ($base * $box + BOX_MARKUP) * DISCOUNT_FACTOR;
+            $boxPrice = $useKg * $box;
+            $kgPrice  = round($useKg, 2);
+            $regularBox = $base * $box;
           ?>
           <div class="flex justify-between items-baseline mb-3">
             <?php if ($sale > 0): ?>
