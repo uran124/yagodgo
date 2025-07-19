@@ -47,7 +47,11 @@
             </div>
             <input id="phone" name="phone" type="tel" maxlength="10" inputmode="numeric" pattern="\d{10}" placeholder="902 923 7794" required class="w-full pl-16 sm:pl-20 pr-3 sm:pr-4 py-2.5 sm:py-3 md:py-4 text-sm sm:text-base md:text-lg border-2 border-gray-100 rounded-2xl focus:border-red-500 focus:ring-2 focus:ring-red-100 outline-none transition-all text-gray-800 placeholder-gray-400">
           </div>
-          <button type="button" id="sendRegCode" class="w-full bg-red-500 text-white py-2 rounded-2xl">Подтвердить</button>
+          <div class="flex space-x-2">
+            <button type="button" id="sendRegCode" class="flex-1 bg-red-500 text-white py-2 rounded-2xl">по SMS</button>
+            <button type="button" class="flex-1 bg-blue-500 text-white py-2 rounded-2xl">Telegram</button>
+            <button type="button" class="flex-1 bg-gray-500 text-white py-2 rounded-2xl">e-mail</button>
+          </div>
           <div id="codeRegBlock" class="hidden space-y-2">
             <div class="flex space-x-1.5 sm:space-x-2 justify-center">
               <?php for ($i=0;$i<4;$i++): ?>
