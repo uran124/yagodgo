@@ -46,10 +46,10 @@
         $boxSize = floatval($product['box_size'] ?? 0);
         $boxUnit = $product['box_unit'] ?? '';
         $effectiveKg = $sale > 0 ? $sale : $price;
-        $priceBox   = ($effectiveKg * $boxSize + BOX_MARKUP) * DISCOUNT_FACTOR;
-        $pricePerKg = $boxSize > 0 ? round($priceBox / $boxSize, 2) : 0;
-        $regularBox = ($price * $boxSize + BOX_MARKUP) * DISCOUNT_FACTOR;
-        $regularKg  = $boxSize > 0 ? round($regularBox / $boxSize, 2) : 0;
+        $priceBox   = $effectiveKg * $boxSize;
+        $pricePerKg = round($effectiveKg, 2);
+        $regularBox = $price * $boxSize;
+        $regularKg  = round($price, 2);
         ?>
         <div class="space-y-3">
           <?php if ($sale > 0): ?>
@@ -122,8 +122,8 @@ window.dataLayer.push({
         id: '<?= $product['id'] ?>',
         name: '<?= addslashes($product['product'] . ($product['variety'] ? ' ' . $product['variety'] : '')) ?>',
         price: <?= ($product['sale_price']>0?
-            (($product['sale_price']*$product['box_size']+BOX_MARKUP)*DISCOUNT_FACTOR):
-            (($product['price']*$product['box_size']+BOX_MARKUP)*DISCOUNT_FACTOR)) ?>,
+            ($product['sale_price']*$product['box_size']):
+            ($product['price']*$product['box_size'])) ?>,
         quantity: 1
       }]
     }
