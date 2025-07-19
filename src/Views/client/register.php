@@ -148,10 +148,17 @@
     <!-- Вход -->
     <div class="text-center mt-3 sm:mt-6">
 
-      <a href="/login" 
+      <a href="/login"
          class="inline-flex items-center px-4 sm:px-6 py-2 sm:py-3 bg-white border-2 border-gray-200 rounded-2xl font-medium text-gray-700 hover:border-red-200 hover:text-red-500 transition-all shadow-lg hover:shadow-xl space-x-1 sm:space-x-2 text-xs sm:text-sm">
         <span class="material-icons-round text-lg sm:text-xl">login</span>
         <span>Войти в аккаунт</span>
+      </a>
+    </div>
+
+    <div class="text-center mt-3 sm:mt-4">
+      <a href="https://t.me/YagodgoBot" class="inline-flex items-center px-4 sm:px-6 py-2 sm:py-3 bg-blue-500 text-white rounded-2xl font-medium hover:bg-blue-600 transition-all shadow-lg hover:shadow-xl space-x-1 sm:space-x-2 text-xs sm:text-sm">
+        <span class="material-icons-round text-lg sm:text-xl">telegram</span>
+        <span>Получать уведомления</span>
       </a>
     </div>
 
