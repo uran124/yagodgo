@@ -29,7 +29,7 @@
       <?php endif; ?>
       <td class="p-3">
         <div class="flex items-center">
-            <a href="<?= $base ?>/users/edit?id=<?= $u['id'] ?>" class="">
+            <a href="<?= $base ?>/users/<?= $u['id'] ?>" class="">
                 <span class="font-medium"><?= htmlspecialchars($u['name']) ?></span>
             </a>
         </div>
@@ -37,11 +37,9 @@
       <td class="p-3 text-gray-600"><?= htmlspecialchars($u['phone']) ?></td>
       <td class="p-3 text-gray-600"><?= htmlspecialchars($u['address'] ?? '') ?></td>
       <td class="p-3 text-gray-600">
-        <?php if (($u['points_balance'] ?? 0) > 0): ?>
-          <span><?= (int)$u['points_balance'] ?> 🍓</span><br>
-        <?php endif; ?>
+        <span><?= (int)($u['points_balance'] ?? 0) ?> 🍓</span>
         <?php if (($u['rub_balance'] ?? 0) > 0): ?>
-          <span><?= (int)$u['rub_balance'] ?> ₽</span>
+          <br><span><?= (int)$u['rub_balance'] ?> ₽</span>
         <?php endif; ?>
       </td>
       <td class="p-3 text-center">

@@ -545,6 +545,10 @@ switch ("$method $uri") {
         requireAdmin();
         (new App\Controllers\UsersController($pdo))->index();
         break;
+    case (bool)preg_match('#^GET /admin/users/(\d+)$#', "$method $uri", $m):
+        requireAdmin();
+        (new App\Controllers\UsersController($pdo))->show((int)$m[1]);
+        break;
     case 'GET /admin/users/edit':
         requireAdmin();
         (new App\Controllers\UsersController($pdo))->edit();
@@ -663,6 +667,10 @@ switch ("$method $uri") {
     case 'GET /manager/users':
         requireManager();
         (new App\Controllers\UsersController($pdo))->index();
+        break;
+    case (bool)preg_match('#^GET /manager/users/(\d+)$#', "$method $uri", $m):
+        requireManager();
+        (new App\Controllers\UsersController($pdo))->show((int)$m[1]);
         break;
     case 'GET /manager/users/edit':
         requireManager();
