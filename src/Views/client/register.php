@@ -248,13 +248,13 @@ sendRegBtnEmail.addEventListener('click', () => sendCode('email'));
 function sendCode(method) {
   const phone = phoneInput.value.replace(/\D/g, '');
   if (phone.length !== 10) { alert('Введите номер'); return; }
-  let body = 'phone=' + phone + '&method=' + method;
+  let payload = 'phone=' + phone + '&method=' + method;
   if (method === 'email') {
     const email = emailInput.value.trim();
     if (!email) { alert('Введите email'); return; }
-    body += '&email=' + encodeURIComponent(email);
+    payload += '&email=' + encodeURIComponent(email);
   }
-  fetch('/api/send-reg-code', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body})
+  fetch('/api/send-reg-code', {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: payload})
     .then(r => r.json())
     .then(d => {
       if (d.blocked) {
