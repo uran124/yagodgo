@@ -141,7 +141,7 @@ class OrdersController
         if ($orderId && in_array($status, ['new','processing','assigned','delivered','cancelled'], true)) {
             // Получаем текущий статус и данные заказа
             $stmt = $this->pdo->prepare(
-                "SELECT status, user_id, total_amount, points_accrued, points_used FROM orders WHERE id = ?"
+                "SELECT status, user_id, total_amount, points_accrued, manager_points_accrued, points_used FROM orders WHERE id = ?"
             );
             $stmt->execute([$orderId]);
             $order = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -172,6 +172,7 @@ class OrdersController
                         $refId = (int)($refStmt->fetchColumn() ?: 0);
                         if ($refId) {
                             $refBonus = (int) floor($sum * 0.03);
+                            $managerBonus = 0;
                             if ($refBonus > 0) {
                                 $this->pdo->prepare(
                                     "UPDATE users SET points_balance = points_balance + ? WHERE id = ?"
@@ -182,9 +183,27 @@ class OrdersController
                                     "INSERT INTO points_transactions (user_id, order_id, amount, transaction_type, description, created_at) VALUES (?, ?, ?, 'accrual', ?, NOW())"
                                 )->execute([$refId, $orderId, $refBonus, $refDesc]);
 
+                                // Проверяем, есть ли у пригласившего свой пригласивший (менеджер)
+                                $mgrStmt = $this->pdo->prepare("SELECT referred_by FROM users WHERE id = ?");
+                                $mgrStmt->execute([$refId]);
+                                $mgrId = (int)($mgrStmt->fetchColumn() ?: 0);
+                                if ($mgrId) {
+                                    $managerBonus = (int) floor($sum * 0.03);
+                                    if ($managerBonus > 0) {
+                                        $this->pdo->prepare(
+                                            "UPDATE users SET points_balance = points_balance + ? WHERE id = ?"
+                                        )->execute([$managerBonus, $mgrId]);
+
+                                        $mgrDesc = "Менеджерский бонус за заказ №{$orderId}";
+                                        $this->pdo->prepare(
+                                            "INSERT INTO points_transactions (user_id, order_id, amount, transaction_type, description, created_at) VALUES (?, ?, ?, 'accrual', ?, NOW())"
+                                        )->execute([$mgrId, $orderId, $managerBonus, $mgrDesc]);
+                                    }
+                                }
+
                                 $this->pdo->prepare(
-                                    "UPDATE orders SET points_accrued = ? WHERE id = ?"
-                                )->execute([$refBonus, $orderId]);
+                                    "UPDATE orders SET points_accrued = ?, manager_points_accrued = ? WHERE id = ?"
+                                )->execute([$refBonus, $managerBonus, $orderId]);
                             }
                         }
                     }

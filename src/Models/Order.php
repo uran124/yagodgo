@@ -15,7 +15,7 @@ class Order extends Model
     protected $fillable = [
         'user_id', 'address_id', 'slot_id', 'assigned_to',
         'status', 'total_amount', 'discount_applied',
-        'points_used', 'points_accrued', 'coupon_code', 'created_at'
+        'points_used', 'points_accrued', 'manager_points_accrued', 'coupon_code', 'created_at'
     ];
 
     public function user()
