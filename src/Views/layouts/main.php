@@ -446,7 +446,7 @@
       <?php endif; ?>
 
       <!-- Уведомления -->
-      <?php if (in_array($role, ['client','partner'])): ?>
+      <?php if ($role === 'admin'): ?>
         <li class="flex-1 mx-1">
           <a href="/notifications" class="nav-item flex flex-col items-center py-3 px-2 rounded-2xl transition-all <?= isActive('/notifications') ?>">
             <span class="material-icons-round text-xl mb-1">notifications</span>
