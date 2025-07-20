@@ -1,9 +1,9 @@
 const CACHE_NAME = "berrygo-cache-v2";
 const urlsToCache = [
-  "/",
-  "/manifest.json",
-  "/assets/images/icon-192.png",
-  "/assets/images/icon-512.png",
+  ".",
+  "manifest.json",
+  "assets/images/icon-192.png",
+  "assets/images/icon-512.png",
 ];
 
 self.addEventListener("install", (event) => {

@@ -49,22 +49,22 @@
   <?php endif; ?>
   
   <!-- Favicon и основные иконки -->
-  <link rel="icon" href="/assets/images/favicon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/icon-192.png">
+  <link rel="icon" href="assets/images/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/images/icon-192.png">
 
   <!-- Иконки для Android / PWA -->
-  <link rel="icon" type="image/png" sizes="72x72" href="/assets/images/icon-72.png">
-  <link rel="icon" type="image/png" sizes="96x96" href="/assets/images/icon-96.png">
-  <link rel="icon" type="image/png" sizes="128x128" href="/assets/images/icon-128.png">
-  <link rel="icon" type="image/png" sizes="144x144" href="/assets/images/icon-144.png">
-  <link rel="icon" type="image/png" sizes="152x152" href="/assets/images/icon-152.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="/assets/images/icon-192.png">
-  <link rel="icon" type="image/png" sizes="384x384" href="/assets/images/icon-384.png">
-  <link rel="icon" type="image/png" sizes="512x512" href="/assets/images/icon-512.png">
+  <link rel="icon" type="image/png" sizes="72x72" href="assets/images/icon-72.png">
+  <link rel="icon" type="image/png" sizes="96x96" href="assets/images/icon-96.png">
+  <link rel="icon" type="image/png" sizes="128x128" href="assets/images/icon-128.png">
+  <link rel="icon" type="image/png" sizes="144x144" href="assets/images/icon-144.png">
+  <link rel="icon" type="image/png" sizes="152x152" href="assets/images/icon-152.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/images/icon-192.png">
+  <link rel="icon" type="image/png" sizes="384x384" href="assets/images/icon-384.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="assets/images/icon-512.png">
 
   <!-- PWA maskable icons -->
-  <link rel="icon" type="image/png" sizes="192x192" href="/assets/images/icon-192-maskable.png" purpose="maskable">
-  <link rel="icon" type="image/png" sizes="512x512" href="/assets/images/icon-512-maskable.png" purpose="maskable">
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/images/icon-192-maskable.png" purpose="maskable">
+  <link rel="icon" type="image/png" sizes="512x512" href="assets/images/icon-512-maskable.png" purpose="maskable">
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -74,7 +74,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
   
-  <link rel="manifest" href="/manifest.json">
+  <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#FF6B6B">
   <meta name="mobile-web-app-capable" content="yes">
   
@@ -219,7 +219,9 @@
 
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/service-worker.js');
+      const swPath = window.location.pathname.replace(/[^\/]*$/, '') + 'service-worker.js';
+      navigator.serviceWorker.register(swPath)
+        .catch(e => console.error('Service worker registration failed:', e));
     }
   </script>
 </head>
@@ -229,7 +231,7 @@
 <header class="fixed top-0 left-0 right-0 glass-effect flex items-center justify-between p-4 z-20 border-b border-white/20">
   <a href="/" id="logoLink" class="flex items-center">
     <div class="w-10 h-10 berry-gradient rounded-2xl flex items-center justify-center floating-animation">
-      <img src="/assets/berrygo_strawberry.svg" alt="BerryGo" class="w-6 h-6 filter brightness-0 invert">
+      <img src="assets/berrygo_strawberry.svg" alt="BerryGo" class="w-6 h-6 filter brightness-0 invert">
     </div>
   </a>
   <button id="installLogoBtn" class="group flex flex-row items-center text-center space-x-1 install-pulse" style="display:none;">
