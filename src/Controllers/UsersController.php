@@ -227,6 +227,37 @@ class UsersController
     }
 
     /**
+     * Детальная информация о пользователе и история клубничек
+     */
+    public function show(int $id): void
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT id, name, phone, points_balance, rub_balance FROM users WHERE id = ?"
+        );
+        $stmt->execute([$id]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$user) {
+            header('Location: /admin/users');
+            exit;
+        }
+
+        $tStmt = $this->pdo->prepare(
+            "SELECT id, amount, transaction_type, description, order_id, created_at
+             FROM points_transactions
+             WHERE user_id = ?
+             ORDER BY created_at DESC"
+        );
+        $tStmt->execute([$id]);
+        $transactions = $tStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        viewAdmin('users/show', [
+            'pageTitle'    => 'Пользователь #' . $id,
+            'user'         => $user,
+            'transactions' => $transactions,
+        ]);
+    }
+
+    /**
      * Форма редактирования пользователя (админ)
      */
     public function edit(): void
