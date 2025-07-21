@@ -219,8 +219,7 @@
 
   <script>
     if ('serviceWorker' in navigator) {
-      const swPath = window.location.pathname.replace(/[^\/]*$/, '') + 'service-worker.js';
-      navigator.serviceWorker.register(swPath)
+      navigator.serviceWorker.register('/service-worker.js')
         .catch(e => console.error('Service worker registration failed:', e));
     }
   </script>
