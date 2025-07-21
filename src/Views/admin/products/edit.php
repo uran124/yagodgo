@@ -164,11 +164,11 @@
       <?php endif; ?>
     </div>
 
-    <!-- Цена за ящик с учётом скидки -->
+    <!-- Цена за кг/л -->
     <div>
-      <label class="block mb-1">Цена за ящик (₽)</label>
+      <label class="block mb-1">Цена за кг или л (₽)</label>
       <input name="price" type="number" step="0.01"
-             value="<?= htmlspecialchars($price_box ?? '') ?>"
+             value="<?= htmlspecialchars($price_kg ?? '') ?>"
              class="w-full border px-2 py-1 rounded" required>
     </div>
 
