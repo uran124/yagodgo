@@ -123,7 +123,11 @@ class OrdersController
     public function create(): void
     {
         $stmt = $this->pdo->query(
-            "SELECT p.id, t.name AS product, p.variety, p.price, p.image_path FROM products p JOIN product_types t ON t.id = p.product_type_id WHERE p.is_active = 1 ORDER BY t.name"
+            "SELECT p.id, t.name AS product, p.variety, p.price, p.image_path, p.box_size, p.box_unit
+             FROM products p
+             JOIN product_types t ON t.id = p.product_type_id
+             WHERE p.is_active = 1
+             ORDER BY t.name"
         );
         $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
