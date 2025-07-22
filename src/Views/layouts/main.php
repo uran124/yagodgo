@@ -342,6 +342,10 @@
         <span class="material-icons-round mr-3 text-teal-500 group-hover:scale-110 transition-transform">people</span>
         <span class="font-medium">Пользователи</span>
       </a>
+      <a href="/manager/profile" class="flex items-center p-4 hover:bg-gradient-to-r hover:from-red-50 hover:to-orange-50 rounded-2xl transition-all group">
+        <span class="material-icons-round mr-3 text-red-500 group-hover:scale-110 transition-transform">account_circle</span>
+        <span class="font-medium">Профиль</span>
+      </a>
     </nav>
   </aside>
   <?php endif; ?>

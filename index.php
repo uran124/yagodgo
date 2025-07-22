@@ -630,6 +630,10 @@ switch ("$method $uri") {
         requireManager();
         (new App\Controllers\AdminController($pdo))->dashboard();
         break;
+    case 'GET /manager/profile':
+        requireManager();
+        (new App\Controllers\UsersController($pdo))->managerProfile();
+        break;
     case 'GET /manager/orders':
         requireManager();
         (new App\Controllers\OrdersController($pdo))->index();
