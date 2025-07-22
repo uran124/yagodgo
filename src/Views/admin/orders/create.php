@@ -26,7 +26,14 @@
     </div>
     <div id="newBlock" class="space-y-2 hidden">
       <input type="text" name="new_name" placeholder="Имя" class="border px-2 py-1 rounded w-56">
-      <input type="tel" name="new_phone" placeholder="Телефон 7XXXXXXXXXX" class="border px-2 py-1 rounded w-56">
+      <input
+        type="tel"
+        name="new_phone"
+        placeholder="Телефон XXXXXXXXXX"
+        maxlength="10"
+        inputmode="numeric"
+        pattern="\d{10}"
+        class="border px-2 py-1 rounded w-56">
       <input type="password" name="new_pin" placeholder="PIN" maxlength="4" class="border px-2 py-1 rounded w-32">
       <input type="text" name="new_address" placeholder="Адрес" class="border px-2 py-1 rounded w-full">
     </div>
