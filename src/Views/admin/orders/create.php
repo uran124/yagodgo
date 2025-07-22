@@ -85,7 +85,7 @@
     <div id="itemsList" class="space-y-1 text-sm"></div>
     <div id="summary" class="space-y-1 text-sm">
       <div class="flex justify-between"><span>Стоимость товаров:</span> <span id="sumSubtotal">0</span></div>
-      <div id="rowPickup" class="flex justify-between hidden"><span>Самовывоз -10%</span> <span id="sumPickup">0</span></div>
+      <div id="rowPickup" class="flex justify-between hidden"><span>Самовывоз -20%</span> <span id="sumPickup">0</span></div>
       <div id="rowReferral" class="flex justify-between hidden"><span>Скидка -10%</span> <span id="sumReferral">0</span></div>
       <div class="flex justify-between font-semibold border-t pt-1"><span>Итого:</span> <span id="sumTotal">0</span></div>
     </div>
@@ -212,7 +212,7 @@
     let total = subtotal;
     const pickup = pickupChk.checked;
     if (pickup) {
-      const d = subtotal * 0.1;
+      const d = subtotal * 0.2;
       pickupEl.textContent = '-' + d.toFixed(2);
       pickupRow.classList.remove('hidden');
       total -= d;
@@ -228,8 +228,11 @@
     } else {
       refRow.classList.add('hidden');
     }
-    const points = parseFloat(pointsInput ? pointsInput.value : 0) || 0;
-    total -= points;
+    let points = parseFloat(pointsInput ? pointsInput.value : 0) || 0;
+    const maxUse = Math.min(points, total);
+    if (pointsInput) pointsInput.value = maxUse;
+    pointsAmount.textContent = maxUse;
+    total -= maxUse;
     totalEl.textContent = total.toFixed(2) + ' ₽';
   }
 

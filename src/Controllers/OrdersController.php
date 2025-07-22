@@ -250,7 +250,7 @@ class OrdersController
         }
 
         if (isset($_POST['pickup'])) {
-            $total = (int)floor($total * 0.9);
+            $total = (int)floor($total * 0.8);
         }
 
         if ($referralDiscount) {
