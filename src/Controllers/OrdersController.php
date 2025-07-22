@@ -134,10 +134,14 @@ class OrdersController
         $slotsStmt = $this->pdo->query("SELECT id, date, time_from, time_to FROM delivery_slots ORDER BY date, time_from");
         $slots = $slotsStmt->fetchAll(PDO::FETCH_ASSOC);
 
+        $debugData = $_SESSION['debug_order_data'] ?? [];
+        unset($_SESSION['debug_order_data']);
+
         viewAdmin('orders/create', [
             'pageTitle' => 'Создать заказ',
             'products'  => $products,
             'slots'     => $slots,
+            'debugData' => $debugData,
         ]);
     }
 
@@ -153,6 +157,13 @@ class OrdersController
             $address = trim($_POST['new_address'] ?? '');
             $pin   = trim($_POST['new_pin'] ?? '');
             if ($name === '' || !preg_match('/^7\d{10}$/', $phone) || !preg_match('/^\d{4}$/', $pin)) {
+                $_SESSION['debug_order_data'] = [
+                    'name'    => $name,
+                    'phone'   => $phone,
+                    'address' => $address,
+                    'pin'     => $pin,
+                    'raw'     => $_POST,
+                ];
                 header('Location: /admin/orders/create?error=invalid+user');
                 exit;
             }
