@@ -62,7 +62,8 @@
           </div>
           <div class="flex items-center space-x-1">
             <button type="button" class="dec px-2 bg-gray-200 rounded" data-target="item<?= $p['id'] ?>">-</button>
-            <input id="item<?= $p['id'] ?>" data-price="<?= $p['price'] ?>" type="number" step="0.01" name="items[<?= $p['id'] ?>]" value="0" class="qty border px-1 py-0.5 rounded w-16 text-center">
+            <?php $n = $p['product'] . ($p['variety'] ? ' '.$p['variety'] : '') . (!empty($p['box_size']) && !empty($p['box_unit']) ? ' '.$p['box_size'].' '.$p['box_unit'] : ''); ?>
+            <input id="item<?= $p['id'] ?>" data-price="<?= $p['price'] ?>" data-name="<?= htmlspecialchars($n) ?>" type="number" step="1" min="0" name="items[<?= $p['id'] ?>]" value="0" class="qty border px-1 py-0.5 rounded w-16 text-center">
             <button type="button" class="inc px-2 bg-gray-200 rounded" data-target="item<?= $p['id'] ?>">+</button>
           </div>
         </div>
@@ -74,6 +75,7 @@
   <!-- Шаг 3 -->
   <div id="step3" class="bg-white p-4 rounded shadow space-y-2 hidden">
     <h2 class="font-semibold mb-2">Шаг 3. Подтверждение</h2>
+    <div id="itemsList" class="space-y-1 text-sm"></div>
     <div id="summary" class="space-y-1 text-sm">
       <div class="flex justify-between"><span>Стоимость товаров:</span> <span id="sumSubtotal">0</span></div>
       <div id="rowPickup" class="flex justify-between hidden"><span>Самовывоз -10%</span> <span id="sumPickup">0</span></div>
@@ -84,9 +86,9 @@
       <label>Купон:</label>
       <input type="text" name="coupon_code" class="border px-2 py-1 rounded">
     </div>
-    <div>
-      <label>Списать баллы:</label>
-      <input type="number" name="points" id="pointsInput" class="border px-2 py-1 rounded w-24" value="0">
+    <div id="pointsRow" class="hidden">
+      <label>Списано баллов: <span id="pointsAmount">0</span></label>
+      <input type="hidden" name="points" id="pointsInput" value="0">
     </div>
     <button type="submit" class="bg-[#C86052] text-white px-4 py-2 rounded">Создать заказ</button>
   </div>
@@ -98,10 +100,16 @@
   document.getElementById('modeExist').addEventListener('change', ()=>{
     existBlock.classList.remove('hidden');
     newBlock.classList.add('hidden');
+    pointsRow.classList.add('hidden');
+    pointsInput.value = 0;
+    pointsAmount.textContent = '0';
   });
   document.getElementById('modeNew').addEventListener('change', ()=>{
     existBlock.classList.add('hidden');
     newBlock.classList.remove('hidden');
+    pointsRow.classList.add('hidden');
+    pointsInput.value = 0;
+    pointsAmount.textContent = '0';
   });
 
   document.getElementById('toStep2').addEventListener('click', ()=>{
@@ -128,6 +136,9 @@
   const refEl = document.getElementById('sumReferral');
   const totalEl = document.getElementById('sumTotal');
   const pointsInput = document.getElementById('pointsInput');
+  const pointsRow = document.getElementById('pointsRow');
+  const pointsAmount = document.getElementById('pointsAmount');
+  const itemsList = document.getElementById('itemsList');
   search.addEventListener('input', ()=>{
     const term = search.value.replace(/\D/g,'');
     if (term.length < 3) { sugg.classList.add('hidden'); return; }
@@ -143,6 +154,10 @@
             document.getElementById('userId').value=u.id;
             sugg.classList.add('hidden');
             loadAddresses(u.id);
+            pointsInput.value = u.points_balance || 0;
+            pointsAmount.textContent = u.points_balance || 0;
+            pointsRow.classList.remove('hidden');
+            updateSummary();
           });
           sugg.appendChild(li);
         });
@@ -174,9 +189,16 @@
 
   function updateSummary() {
     let subtotal = 0;
+    itemsList.innerHTML = '';
     qtyInputs.forEach(i => {
-      const q = parseFloat(i.value) || 0;
+      const q = parseInt(i.value) || 0;
       const price = parseFloat(i.dataset.price);
+      if (q > 0) {
+        const row = document.createElement('div');
+        row.className = 'flex justify-between';
+        row.innerHTML = '<span>'+i.dataset.name+' × '+q+'</span><span>'+(price*q).toFixed(2)+' ₽</span>';
+        itemsList.appendChild(row);
+      }
       subtotal += q * price;
     });
     subtotalEl.textContent = subtotal.toFixed(2) + ' ₽';

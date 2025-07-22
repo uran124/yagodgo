@@ -459,7 +459,7 @@ class UsersController
         }
 
         $stmt = $this->pdo->prepare(
-            "SELECT id, name, phone FROM users WHERE phone LIKE ? ORDER BY phone LIMIT 5"
+            "SELECT id, name, phone, points_balance FROM users WHERE phone LIKE ? ORDER BY phone LIMIT 5"
         );
         $stmt->execute([ $term . '%' ]);
         $res = $stmt->fetchAll(PDO::FETCH_ASSOC);
