@@ -634,6 +634,14 @@ switch ("$method $uri") {
         requireManager();
         (new App\Controllers\OrdersController($pdo))->index();
         break;
+    case 'GET /manager/orders/create':
+        requireManager();
+        (new App\Controllers\OrdersController($pdo))->create();
+        break;
+    case 'POST /manager/orders/create':
+        requireManager();
+        (new App\Controllers\OrdersController($pdo))->storeManual();
+        break;
     case (bool)preg_match('#^GET /manager/orders/(\d+)$#', "$method $uri", $m):
         requireManager();
         (new App\Controllers\OrdersController($pdo))->show((int)$m[1]);
