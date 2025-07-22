@@ -11,6 +11,7 @@
  * @var string       $today            // сегодняшняя дата в формате Y-m-d
  * @var string       $address          // текущий адрес доставки пользователя
  * @var string|null  $couponError      // сообщение об ошибке купона
+ * @var array        $slots            // доступные временные слоты
  */
 
 // Подставляем значения по умолчанию, чтобы не было «undefined variable»
@@ -25,6 +26,7 @@ $userName        = $userName        ?? null;
 $today           = $today           ?? date('Y-m-d');
 $address         = $address         ?? '';
 $couponError     = $couponError     ?? null;
+$slots           = $slots           ?? [];
 ?>
 
 <main class="bg-gradient-to-br from-orange-50 via-white to-pink-50 min-h-screen pb-24">
@@ -95,15 +97,10 @@ $couponError     = $couponError     ?? null;
                   <select name="slot_id[<?= htmlspecialchars($dateKey) ?>]"
                           required
                           class="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 pr-10 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all bg-white">
-                    <?php $slotOptions = [
-                      '09-12' => '09:00–12:00',
-                      '12-15' => '12:00–15:00',
-                      '15-18' => '15:00–18:00',
-                      '18-22' => '18:00–22:00'
-                    ]; ?>
-                    <?php foreach ($slotOptions as $value => $labelOpt): ?>
+                    <?php foreach ($slots as $slot): ?>
+                      <?php $value = sprintf('%02d-%02d', (int)substr($slot['time_from'], 0, 2), (int)substr($slot['time_to'], 0, 2)); ?>
                       <option value="<?= $value ?>">
-                        <?= $labelOpt ?>
+                        <?= htmlspecialchars($slot['time_from'] . ' - ' . $slot['time_to']) ?>
                       </option>
                     <?php endforeach; ?>
                   </select>
