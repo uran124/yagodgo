@@ -3,6 +3,7 @@ namespace App\Controllers;
 
 use PDO;
 use App\Helpers\Auth;
+use App\Helpers\ReferralHelper;
 
 class OrdersController
 {
@@ -116,6 +117,128 @@ class OrdersController
             'coupon'       => $couponInfo,
             'pointsFromBalance' => $pointsFromBalance,
         ]);
+    }
+
+    // Форма создания заказа вручную (админ)
+    public function create(): void
+    {
+        $stmt = $this->pdo->query(
+            "SELECT p.id, t.name AS product, p.variety, p.price, p.image_path FROM products p JOIN product_types t ON t.id = p.product_type_id WHERE p.is_active = 1 ORDER BY t.name"
+        );
+        $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $slotsStmt = $this->pdo->query("SELECT id, date, time_from, time_to FROM delivery_slots ORDER BY date, time_from");
+        $slots = $slotsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        viewAdmin('orders/create', [
+            'pageTitle' => 'Создать заказ',
+            'products'  => $products,
+            'slots'     => $slots,
+        ]);
+    }
+
+    // Сохранить заказ (POST, админ)
+    public function storeManual(): void
+    {
+        $userId = 0;
+        $isNew  = ($_POST['user_mode'] ?? '') === 'new';
+
+        if ($isNew) {
+            $name  = trim($_POST['new_name'] ?? '');
+            $phone = preg_replace('/\D+/', '', $_POST['new_phone'] ?? '');
+            $address = trim($_POST['new_address'] ?? '');
+            $pin   = trim($_POST['new_pin'] ?? '');
+            if ($name === '' || !preg_match('/^7\d{10}$/', $phone) || !preg_match('/^\d{4}$/', $pin)) {
+                header('Location: /admin/orders/create?error=invalid+user');
+                exit;
+            }
+
+            $refCode = ReferralHelper::generateUniqueCode($this->pdo, 8);
+            $managerId = $_SESSION['user_id'] ?? null;
+            $pinHash = password_hash($pin, PASSWORD_DEFAULT);
+
+            $this->pdo->beginTransaction();
+            $stmt = $this->pdo->prepare(
+                "INSERT INTO users (role, name, phone, password_hash, referral_code, referred_by, has_used_referral_coupon, points_balance, created_at) VALUES ('client', ?, ?, ?, ?, ?, 0, 0, NOW())"
+            );
+            $stmt->execute([$name, $phone, $pinHash, $refCode, $managerId]);
+            $userId = (int)$this->pdo->lastInsertId();
+
+            if ($address !== '') {
+                $stmtA = $this->pdo->prepare(
+                    "INSERT INTO addresses (user_id, street, recipient_name, recipient_phone, is_primary, created_at) VALUES (?, ?, ?, ?, 1, NOW())"
+                );
+                $stmtA->execute([$userId, $address, $name, $phone]);
+                $addressId = (int)$this->pdo->lastInsertId();
+            } else {
+                $addressId = null;
+            }
+
+            if ($managerId) {
+                $this->pdo->prepare(
+                    "INSERT IGNORE INTO referrals (referrer_id, referred_id, created_at) VALUES (?, ?, NOW())"
+                )->execute([$managerId, $userId]);
+            }
+            $this->pdo->commit();
+            $referralDiscount = true;
+        } else {
+            $userId = (int)($_POST['user_id'] ?? 0);
+            $addressId = $_POST['address_id'] ?? null;
+            $referralDiscount = false;
+        }
+
+        if ($userId <= 0) {
+            header('Location: /admin/orders/create?error=user');
+            exit;
+        }
+
+        $slotId = $_POST['slot_id'] ?? null;
+        $deliveryDate = $_POST['delivery_date'] ?? null;
+
+        $items = $_POST['items'] ?? [];
+        if (!$items) {
+            header('Location: /admin/orders/create?error=empty');
+            exit;
+        }
+
+        $total = 0;
+        $stmtPrice = $this->pdo->prepare("SELECT price FROM products WHERE id = ?");
+        foreach ($items as $pid => $qty) {
+            $qty = (float)$qty;
+            if ($qty <= 0) continue;
+            $stmtPrice->execute([$pid]);
+            $price = (float)$stmtPrice->fetchColumn();
+            $total += $price * $qty;
+        }
+
+        if (isset($_POST['pickup'])) {
+            $total = (int)floor($total * 0.9);
+        }
+
+        if ($referralDiscount) {
+            $total = (int)floor($total * 0.9);
+            $this->pdo->prepare("UPDATE users SET has_used_referral_coupon = 1 WHERE id = ?")->execute([$userId]);
+        }
+
+        $stmt = $this->pdo->prepare(
+            "INSERT INTO orders (user_id, address_id, slot_id, status, total_amount, discount_applied, points_used, points_accrued, delivery_date, delivery_slot, created_at) VALUES (?, ?, ?, 'new', ?, 0, 0, 0, ?, '', NOW())"
+        );
+        $stmt->execute([$userId, $addressId, $slotId, $total, $deliveryDate]);
+        $orderId = (int)$this->pdo->lastInsertId();
+
+        $stmtItem = $this->pdo->prepare(
+            "INSERT INTO order_items (order_id, product_id, quantity, boxes, unit_price) VALUES (?, ?, ?, ?, ?)"
+        );
+        foreach ($items as $pid => $qty) {
+            $qty = (float)$qty;
+            if ($qty <= 0) continue;
+            $stmtPrice->execute([$pid]);
+            $price = (float)$stmtPrice->fetchColumn();
+            $stmtItem->execute([$orderId, $pid, $qty, $qty, $price]);
+        }
+
+        header('Location: /admin/orders/' . $orderId);
+        exit;
     }
 
     // Назначить курьера (POST, админ)

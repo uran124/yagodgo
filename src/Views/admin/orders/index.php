@@ -31,6 +31,7 @@
     <span class="text-gray-500">-</span>
     <input type="date" id="dateTo" class="border rounded px-2 py-1 text-sm">
     <button id="clearDate" class="px-3 py-2 bg-gray-200 rounded text-sm">Без даты</button>
+    <a href="<?= $base ?>/orders/create" class="ml-4 px-3 py-2 bg-[#C86052] text-white rounded text-sm">Создать заказ</a>
   </div>
 </div>
 

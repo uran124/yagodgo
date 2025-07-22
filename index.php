@@ -461,6 +461,14 @@ switch ("$method $uri") {
         requireAdmin();
         (new App\Controllers\OrdersController($pdo))->index();
         break;
+    case 'GET /admin/orders/create':
+        requireAdmin();
+        (new App\Controllers\OrdersController($pdo))->create();
+        break;
+    case 'POST /admin/orders/create':
+        requireAdmin();
+        (new App\Controllers\OrdersController($pdo))->storeManual();
+        break;
     case (bool)preg_match('#^GET /admin/orders/(\d+)$#', "$method $uri", $m):
         requireAdmin();
         (new App\Controllers\OrdersController($pdo))->show((int)$m[1]);
@@ -544,6 +552,10 @@ switch ("$method $uri") {
     case 'GET /admin/users':
         requireAdmin();
         (new App\Controllers\UsersController($pdo))->index();
+        break;
+    case 'GET /admin/users/search':
+        requireAdmin();
+        (new App\Controllers\UsersController($pdo))->searchPhone();
         break;
     case (bool)preg_match('#^GET /admin/users/(\d+)$#', "$method $uri", $m):
         requireAdmin();
