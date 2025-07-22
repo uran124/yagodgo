@@ -530,6 +530,12 @@ public function cart(): void
         $addrStmt->execute([$userId]);
         $addresses = $addrStmt->fetchAll(PDO::FETCH_ASSOC);
         $address = $addresses[0]['street'] ?? '';
+
+        // 8.1) Время слотов доставки
+        $slotsStmt = $this->pdo->query(
+            "SELECT time_from, time_to FROM delivery_slots ORDER BY time_from"
+        );
+        $slots = $slotsStmt->fetchAll(PDO::FETCH_ASSOC);
     
         // 9) Собираем debug-данные
         $debugData = [
@@ -561,6 +567,7 @@ public function cart(): void
             'addresses'        => $addresses,
             'userName'         => $_SESSION['name'] ?? null,
             'today'            => date('Y-m-d'),
+            'slots'            => $slots,
             'debugData'        => $debugData,
         ]);
     }
