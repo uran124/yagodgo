@@ -448,4 +448,22 @@ class UsersController
         header('Location: /admin/users/edit?id=' . $id);
         exit;
     }
+
+    // Поиск пользователей по телефону (JSON)
+    public function searchPhone(): void
+    {
+        $term = preg_replace('/\D+/', '', $_GET['term'] ?? '');
+        if ($term === '') {
+            echo json_encode([]);
+            return;
+        }
+
+        $stmt = $this->pdo->prepare(
+            "SELECT id, name, phone FROM users WHERE phone LIKE ? ORDER BY phone LIMIT 5"
+        );
+        $stmt->execute([ $term . '%' ]);
+        $res = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        header('Content-Type: application/json');
+        echo json_encode($res);
+    }
 }
