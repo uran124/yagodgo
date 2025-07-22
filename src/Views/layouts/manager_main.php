@@ -242,6 +242,7 @@
         <a href="/manager/orders" class="hover:underline">Заказы</a>
         <a href="/manager/products" class="hover:underline">Товары</a>
         <a href="/manager/users" class="hover:underline">Пользователи</a>
+        <a href="/manager/profile" class="hover:underline">Профиль</a>
       </nav>
       <button id="burgerBtn" class="md:hidden p-2 text-gray-600">
         <span class="material-icons-round">menu</span>
@@ -268,6 +269,10 @@
       <a href="/manager/users" class="flex items-center p-2 rounded hover:bg-gray-200">
         <span class="material-icons-round mr-2">people</span>
         <span class="menu-text">Пользователи</span>
+      </a>
+      <a href="/manager/profile" class="flex items-center p-2 mt-2 rounded hover:bg-gray-200">
+        <span class="material-icons-round mr-2">account_circle</span>
+        <span class="menu-text">Профиль</span>
       </a>
     </nav>
   </aside>

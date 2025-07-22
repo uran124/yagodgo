@@ -133,6 +133,108 @@ class UsersController
     }
 
     /**
+     * Профиль менеджера со статистикой
+     */
+    public function managerProfile(): void
+    {
+        $authUser = Auth::user();
+        if (!$authUser || ($authUser['role'] ?? '') !== 'manager') {
+            header('Location: /login');
+            exit;
+        }
+
+        $managerId = (int)$authUser['id'];
+
+        // 1) Прямые рефералы менеджера
+        $stmt = $this->pdo->prepare(
+            "SELECT id, role, name, phone FROM users WHERE referred_by = ?"
+        );
+        $stmt->execute([$managerId]);
+        $directUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $directClientIds  = [];
+        $partnerIds       = [];
+        foreach ($directUsers as $du) {
+            if ($du['role'] === 'partner') {
+                $partnerIds[] = (int)$du['id'];
+            } else {
+                $directClientIds[] = (int)$du['id'];
+            }
+        }
+
+        // 2) Второй уровень
+        $secondUsers = [];
+        if ($directUsers) {
+            $placeholders = implode(',', array_fill(0, count($directUsers), '?'));
+            $stmt = $this->pdo->prepare(
+                "SELECT id, role, referred_by FROM users WHERE referred_by IN ($placeholders)"
+            );
+            $stmt->execute(array_column($directUsers, 'id'));
+            $secondUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        $secondClientIds = [];
+        foreach ($secondUsers as $su) {
+            if ($su['role'] === 'client') {
+                $secondClientIds[] = (int)$su['id'];
+            }
+        }
+
+        $allClientIds = array_merge($directClientIds, $secondClientIds);
+
+        $orderCount = 0;
+        if ($allClientIds) {
+            $placeholders = implode(',', array_fill(0, count($allClientIds), '?'));
+            $stmt = $this->pdo->prepare(
+                "SELECT COUNT(*) FROM orders WHERE user_id IN ($placeholders) AND status = 'delivered'"
+            );
+            $stmt->execute($allClientIds);
+            $orderCount = (int)$stmt->fetchColumn();
+        }
+
+        // Статистика по каждому партнёру
+        $partnerStats = [];
+        foreach ($partnerIds as $pid) {
+            $pStmt = $this->pdo->prepare("SELECT name, phone FROM users WHERE id = ?");
+            $pStmt->execute([$pid]);
+            $info = $pStmt->fetch(PDO::FETCH_ASSOC) ?: ['name' => '', 'phone' => ''];
+
+            $cStmt = $this->pdo->prepare("SELECT id FROM users WHERE referred_by = ? AND role = 'client'");
+            $cStmt->execute([$pid]);
+            $clientIds = array_column($cStmt->fetchAll(PDO::FETCH_ASSOC), 'id');
+            $clientCount = count($clientIds);
+
+            $orders = 0;
+            $revenue = 0;
+            if ($clientIds) {
+                $ph = implode(',', array_fill(0, count($clientIds), '?'));
+                $oStmt = $this->pdo->prepare("SELECT COUNT(*) AS cnt, SUM(total_amount) AS sum FROM orders WHERE user_id IN ($ph) AND status='delivered'");
+                $oStmt->execute($clientIds);
+                $row = $oStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+                $orders = (int)($row['cnt'] ?? 0);
+                $revenue = (int)($row['sum'] ?? 0);
+            }
+
+            $partnerStats[] = [
+                'id'      => $pid,
+                'name'    => $info['name'],
+                'phone'   => $info['phone'],
+                'clients' => $clientCount,
+                'orders'  => $orders,
+                'revenue' => $revenue,
+            ];
+        }
+
+        viewAdmin('manager_profile', [
+            'pageTitle'        => 'Профиль менеджера',
+            'directClients'    => count($directUsers),
+            'secondClients'    => count($secondUsers),
+            'ordersCount'      => $orderCount,
+            'partnerStats'     => $partnerStats,
+        ]);
+    }
+
+    /**
      * Сохранение нового адреса (POST /profile)
      */
     public function saveAddress(): void
