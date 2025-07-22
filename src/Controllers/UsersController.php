@@ -461,7 +461,7 @@ class UsersController
         $stmt = $this->pdo->prepare(
             "SELECT id, name, phone, points_balance FROM users WHERE phone LIKE ? ORDER BY phone LIMIT 5"
         );
-        $stmt->execute([ $term . '%' ]);
+        $stmt->execute([ '%' . $term . '%' ]);
         $res = $stmt->fetchAll(PDO::FETCH_ASSOC);
         header('Content-Type: application/json');
         echo json_encode($res);
