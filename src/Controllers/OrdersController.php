@@ -14,6 +14,23 @@ class OrdersController
         $this->pdo = $pdo;
     }
 
+    /**
+     * Normalize phone number to 7XXXXXXXXXX format
+     */
+    private function normalizePhone(string $raw): string
+    {
+        $digits = preg_replace('/\D+/', '', $raw);
+        if (strlen($digits) === 10) {
+            return '7' . $digits;
+        }
+        if (strlen($digits) === 11) {
+            $first = $digits[0];
+            $rest  = substr($digits, 1);
+            return ($first === '8' ? '7' : $first) . $rest;
+        }
+        return $digits;
+    }
+
     // Список заказов (админ/менеджер)
     public function index(): void
     {
@@ -153,7 +170,7 @@ class OrdersController
 
         if ($isNew) {
             $name  = trim($_POST['new_name'] ?? '');
-            $phone = preg_replace('/\D+/', '', $_POST['new_phone'] ?? '');
+            $phone = $this->normalizePhone($_POST['new_phone'] ?? '');
             $address = trim($_POST['new_address'] ?? '');
             $pin   = trim($_POST['new_pin'] ?? '');
             if ($name === '' || !preg_match('/^7\d{10}$/', $phone) || !preg_match('/^\d{4}$/', $pin)) {
