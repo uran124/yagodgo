@@ -141,7 +141,7 @@
   const itemsList = document.getElementById('itemsList');
   search.addEventListener('input', ()=>{
     const term = search.value.replace(/\D/g,'');
-    if (term.length < 3) { sugg.classList.add('hidden'); return; }
+    if (term.length < 2) { sugg.classList.add('hidden'); return; }
     fetch('<?= $base ?>/users/search?term='+term)
       .then(r=>r.json()).then(data=>{
         sugg.innerHTML='';
