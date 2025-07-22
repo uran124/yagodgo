@@ -266,3 +266,65 @@
     });
   }
 </script>
+
+<?php if (!empty($debugData)): ?>
+  <div id="debugOverlay" style="
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      width: 320px;
+      max-height: 50vh;
+      overflow-y: auto;
+      background: rgba(0,0,0,0.8);
+      color: #fff;
+      font-family: monospace;
+      font-size: 12px;
+      line-height: 1.2;
+      padding: 8px;
+      border-radius: 6px;
+      z-index: 9999;
+      display: none;
+  ">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+      <strong>DEBUG INFO</strong>
+      <button id="debugToggle" style="
+          background: transparent;
+          border: none;
+          color: #fff;
+          font-weight: bold;
+          cursor: pointer;
+          font-size: 14px;
+      ">×</button>
+    </div>
+    <pre id="debugContent" style="white-space: pre-wrap;">
+<?= htmlspecialchars(json_encode($debugData, JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT)) ?>
+    </pre>
+  </div>
+  <button id="debugOpenBtn" style="
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      background: #e53e3e;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      padding: 6px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      z-index: 9999;
+  ">Открыть DEBUG</button>
+  <script>
+    const overlay = document.getElementById('debugOverlay');
+    const content = document.getElementById('debugContent');
+    const btnOpen = document.getElementById('debugOpenBtn');
+    const btnClose = document.getElementById('debugToggle');
+    btnOpen.addEventListener('click', () => {
+      overlay.style.display = 'block';
+      btnOpen.style.display = 'none';
+    });
+    btnClose.addEventListener('click', () => {
+      overlay.style.display = 'none';
+      btnOpen.style.display = 'block';
+    });
+  </script>
+<?php endif; ?>
