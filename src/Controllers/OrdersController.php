@@ -131,7 +131,7 @@ class OrdersController
         );
         $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $slotsStmt = $this->pdo->query("SELECT id, date, time_from, time_to FROM delivery_slots ORDER BY date, time_from");
+        $slotsStmt = $this->pdo->query("SELECT id, time_from, time_to FROM delivery_slots ORDER BY time_from");
         $slots = $slotsStmt->fetchAll(PDO::FETCH_ASSOC);
 
         $debugData = $_SESSION['debug_order_data'] ?? [];

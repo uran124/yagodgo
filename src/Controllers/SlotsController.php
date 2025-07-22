@@ -12,7 +12,7 @@ class SlotsController
     public function index(): void
     {
         $stmt = $this->pdo->query(
-          "SELECT id, date, time_from, time_to FROM delivery_slots ORDER BY date, time_from"
+          "SELECT id, time_from, time_to FROM delivery_slots ORDER BY time_from"
         );
         $slots = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -41,21 +41,20 @@ class SlotsController
     // Сохранение
     public function save(): void
     {
-        $id        = $_POST['id'] ?? null;
-        $date      = $_POST['date'] ?? '';
-        $timeFrom  = $_POST['time_from'] ?? '';
-        $timeTo    = $_POST['time_to'] ?? '';
+        $id       = $_POST['id'] ?? null;
+        $timeFrom = $_POST['time_from'] ?? '';
+        $timeTo   = $_POST['time_to'] ?? '';
 
         if ($id) {
             $stmt = $this->pdo->prepare(
-              "UPDATE delivery_slots SET date = ?, time_from = ?, time_to = ? WHERE id = ?"
+              "UPDATE delivery_slots SET time_from = ?, time_to = ? WHERE id = ?"
             );
-            $stmt->execute([$date, $timeFrom, $timeTo, (int)$id]);
+            $stmt->execute([$timeFrom, $timeTo, (int)$id]);
         } else {
             $stmt = $this->pdo->prepare(
-              "INSERT INTO delivery_slots (date, time_from, time_to) VALUES (?, ?, ?)"
+              "INSERT INTO delivery_slots (time_from, time_to) VALUES (?, ?)"
             );
-            $stmt->execute([$date, $timeFrom, $timeTo]);
+            $stmt->execute([$timeFrom, $timeTo]);
         }
         header('Location: /admin/slots');
         exit;

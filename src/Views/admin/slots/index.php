@@ -5,7 +5,6 @@
 <table class="min-w-full bg-white rounded shadow overflow-hidden">
   <thead class="bg-gray-200 text-gray-700">
     <tr>
-      <th class="p-3 text-left font-semibold">Дата</th>
       <th class="p-3 text-left font-semibold">Время с</th>
       <th class="p-3 text-left font-semibold">Время до</th>
       <th class="p-3 text-center font-semibold">Действия</th>
@@ -14,7 +13,6 @@
   <tbody>
     <?php foreach ($slots as $s): ?>
     <tr class="border-b hover:bg-gray-50 transition-all duration-200">
-      <td class="p-3 font-medium text-gray-600"><?= htmlspecialchars($s['date']) ?></td>
       <td class="p-3 text-gray-600"><?= htmlspecialchars($s['time_from']) ?></td>
       <td class="p-3 text-gray-600"><?= htmlspecialchars($s['time_to']) ?></td>
       <td class="p-3 flex space-x-2 justify-center">
