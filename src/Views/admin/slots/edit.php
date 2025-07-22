@@ -3,10 +3,6 @@
   <?php if ($slot): ?>
     <input type="hidden" name="id" value="<?= $slot['id'] ?>">
   <?php endif; ?>
-  <div>
-    <label class="block mb-1">Дата</label>
-    <input type="date" name="date" value="<?= htmlspecialchars($slot['date'] ?? '') ?>" class="w-full border px-2 py-1 rounded" required>
-  </div>
   <div class="flex space-x-2">
     <div class="flex-1">
       <label class="block mb-1">Время с</label>

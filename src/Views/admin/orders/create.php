@@ -47,7 +47,7 @@
         <option value="">-- слот --</option>
         <?php foreach ($slots as $s): ?>
           <option value="<?= $s['id'] ?>">
-            <?= htmlspecialchars($s['date']) ?> <?= htmlspecialchars($s['time_from']) ?>-<?= htmlspecialchars($s['time_to']) ?>
+            <?= htmlspecialchars($s['time_from']) ?>-<?= htmlspecialchars($s['time_to']) ?>
           </option>
         <?php endforeach; ?>
       </select>
