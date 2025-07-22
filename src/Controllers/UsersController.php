@@ -466,4 +466,21 @@ class UsersController
         header('Content-Type: application/json');
         echo json_encode($res);
     }
+
+    // Список адресов пользователя (JSON)
+    public function addresses(): void
+    {
+        $uid = (int)($_GET['user_id'] ?? 0);
+        if ($uid <= 0) {
+            echo json_encode([]);
+            return;
+        }
+        $stmt = $this->pdo->prepare(
+            "SELECT id, street FROM addresses WHERE user_id = ? ORDER BY is_primary DESC, created_at ASC"
+        );
+        $stmt->execute([$uid]);
+        $res = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        header('Content-Type: application/json');
+        echo json_encode($res);
+    }
 }

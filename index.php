@@ -557,6 +557,10 @@ switch ("$method $uri") {
         requireAdmin();
         (new App\Controllers\UsersController($pdo))->searchPhone();
         break;
+    case 'GET /admin/users/addresses':
+        requireAdmin();
+        (new App\Controllers\UsersController($pdo))->addresses();
+        break;
     case (bool)preg_match('#^GET /admin/users/(\d+)$#', "$method $uri", $m):
         requireAdmin();
         (new App\Controllers\UsersController($pdo))->show((int)$m[1]);
