@@ -198,6 +198,7 @@ class OrdersController
 
         $slotId = $_POST['slot_id'] ?? null;
         $deliveryDate = $_POST['delivery_date'] ?? null;
+        $couponCode = trim($_POST['coupon_code'] ?? '');
 
         $items = $_POST['items'] ?? [];
         if (!$items) {
@@ -208,7 +209,7 @@ class OrdersController
         $total = 0;
         $stmtPrice = $this->pdo->prepare("SELECT price FROM products WHERE id = ?");
         foreach ($items as $pid => $qty) {
-            $qty = (float)$qty;
+            $qty = (int)$qty;
             if ($qty <= 0) continue;
             $stmtPrice->execute([$pid]);
             $price = (float)$stmtPrice->fetchColumn();
@@ -224,21 +225,38 @@ class OrdersController
             $this->pdo->prepare("UPDATE users SET has_used_referral_coupon = 1 WHERE id = ?")->execute([$userId]);
         }
 
+        $pointsUsed = 0;
+        if (!$isNew) {
+            $stmtPoints = $this->pdo->prepare("SELECT points_balance FROM users WHERE id = ?");
+            $stmtPoints->execute([$userId]);
+            $balance = (int)$stmtPoints->fetchColumn();
+            $pointsUsed = min($balance, (int)($_POST['points'] ?? 0), (int)$total);
+            $total -= $pointsUsed;
+        }
+
         $stmt = $this->pdo->prepare(
-            "INSERT INTO orders (user_id, address_id, slot_id, status, total_amount, discount_applied, points_used, points_accrued, delivery_date, delivery_slot, created_at) VALUES (?, ?, ?, 'new', ?, 0, 0, 0, ?, '', NOW())"
+            "INSERT INTO orders (user_id, address_id, slot_id, status, total_amount, discount_applied, points_used, points_accrued, coupon_code, delivery_date, delivery_slot, created_at) VALUES (?, ?, ?, 'new', ?, 0, ?, 0, ?, ?, '', NOW())"
         );
-        $stmt->execute([$userId, $addressId, $slotId, $total, $deliveryDate]);
+        $stmt->execute([$userId, $addressId, $slotId, $total, $pointsUsed, $couponCode, $deliveryDate]);
         $orderId = (int)$this->pdo->lastInsertId();
 
         $stmtItem = $this->pdo->prepare(
             "INSERT INTO order_items (order_id, product_id, quantity, boxes, unit_price) VALUES (?, ?, ?, ?, ?)"
         );
         foreach ($items as $pid => $qty) {
-            $qty = (float)$qty;
+            $qty = (int)$qty;
             if ($qty <= 0) continue;
             $stmtPrice->execute([$pid]);
             $price = (float)$stmtPrice->fetchColumn();
             $stmtItem->execute([$orderId, $pid, $qty, $qty, $price]);
+        }
+
+        if ($pointsUsed > 0) {
+            $this->pdo->prepare("UPDATE users SET points_balance = points_balance - ? WHERE id = ?")->execute([$pointsUsed, $userId]);
+            $desc = "Списание {$pointsUsed} клубничек за заказ #{$orderId}";
+            $this->pdo->prepare(
+                "INSERT INTO points_transactions (user_id, order_id, amount, transaction_type, description, created_at) VALUES (?, ?, ?, 'usage', ?, NOW())"
+            )->execute([$userId, $orderId, -$pointsUsed, $desc]);
         }
 
         header('Location: /admin/orders/' . $orderId);

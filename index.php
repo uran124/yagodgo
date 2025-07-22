@@ -692,6 +692,14 @@ switch ("$method $uri") {
         requireManager();
         (new App\Controllers\UsersController($pdo))->index();
         break;
+    case 'GET /manager/users/search':
+        requireManager();
+        (new App\Controllers\UsersController($pdo))->searchPhone();
+        break;
+    case 'GET /manager/users/addresses':
+        requireManager();
+        (new App\Controllers\UsersController($pdo))->addresses();
+        break;
     case (bool)preg_match('#^GET /manager/users/(\d+)$#', "$method $uri", $m):
         requireManager();
         (new App\Controllers\UsersController($pdo))->show((int)$m[1]);
