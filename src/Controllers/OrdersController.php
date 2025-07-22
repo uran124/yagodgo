@@ -199,6 +199,11 @@ class OrdersController
         } else {
             $userId = (int)($_POST['user_id'] ?? 0);
             $addressId = $_POST['address_id'] ?? null;
+            if ($addressId === 'pickup') {
+                $addressId = null;
+            } elseif ($addressId !== null) {
+                $addressId = is_numeric($addressId) ? (int)$addressId : null;
+            }
             $referralDiscount = false;
         }
 
