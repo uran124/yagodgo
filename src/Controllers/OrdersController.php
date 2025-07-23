@@ -317,7 +317,7 @@ class OrdersController
             )->execute([$userId, $orderId, -$pointsUsed, $desc]);
         }
 
-        header('Location: ' . $this->basePath() . '/' . $orderId);
+        header('Location: ' . $this->basePath());
         exit;
     }
 
