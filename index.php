@@ -141,7 +141,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 function requireClient(): void
 {
     $role = $_SESSION['role'] ?? '';
-    if (!in_array($role, ['client','partner','admin'], true)) {
+    if (!in_array($role, ['client','partner','admin','manager'], true)) {
         header('Location: /login');
         exit;
     }
