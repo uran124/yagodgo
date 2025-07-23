@@ -12,6 +12,16 @@ class ProductsController
         $this->pdo = $pdo;
     }
 
+    /**
+     * Get base path for redirects depending on role
+     */
+    private function basePath(): string
+    {
+        return ($_SESSION['role'] ?? '') === 'manager'
+            ? '/manager/products'
+            : '/admin/products';
+    }
+
 
 
     // Возвращает массив всех активных товаров
@@ -245,7 +255,7 @@ class ProductsController
             $stmt->execute($params);
         }
 
-        header('Location: /admin/products');
+        header('Location: ' . $this->basePath());
         exit;
     }
 
@@ -258,7 +268,7 @@ class ProductsController
                 "UPDATE products SET is_active = CASE WHEN is_active=1 THEN 0 ELSE 1 END WHERE id = ?"
             )->execute([$id]);
         }
-        header('Location: /admin/products');
+        header('Location: ' . $this->basePath());
         exit;
     }
 
@@ -269,7 +279,7 @@ class ProductsController
         if ($id) {
             $this->pdo->prepare("DELETE FROM products WHERE id = ?")->execute([$id]);
         }
-        header('Location: /admin/products');
+        header('Location: ' . $this->basePath());
         exit;
     }
 

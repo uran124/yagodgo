@@ -16,6 +16,16 @@ class UsersController
     }
 
     /**
+     * Get base path for redirects depending on role
+     */
+    private function basePath(): string
+    {
+        return ($_SESSION['role'] ?? '') === 'manager'
+            ? '/manager/users'
+            : '/admin/users';
+    }
+
+    /**
      * Нормализует телефон к формату 7XXXXXXXXXX
      */
     private function normalizePhone(string $raw): string
@@ -339,7 +349,7 @@ class UsersController
         $stmt->execute([$id]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$user) {
-            header('Location: /admin/users');
+            header('Location: ' . $this->basePath());
             exit;
         }
 
@@ -435,7 +445,7 @@ class UsersController
                 !preg_match('/^\d{4}$/', $pin) ||
                 $address === ''
             ) {
-                header('Location: /admin/users/edit?error=Неверные+данные');
+                header('Location: ' . $this->basePath() . '/edit?error=Неверные+данные');
                 exit;
             }
 
@@ -478,12 +488,12 @@ class UsersController
                 $this->pdo->commit();
             } catch (\Exception $e) {
                 $this->pdo->rollBack();
-                header('Location: /admin/users/edit?error=Ошибка+создания');
+                header('Location: ' . $this->basePath() . '/edit?error=Ошибка+создания');
                 exit;
             }
         }
 
-        header('Location: /admin/users');
+        header('Location: ' . $this->basePath());
         exit;
     }
 
@@ -535,7 +545,7 @@ class UsersController
                 // Если поле отсутствует, просто игнорируем переключение
             }
         }
-        header('Location: /admin/users');
+        header('Location: ' . $this->basePath());
         exit;
     }
 
@@ -547,7 +557,7 @@ class UsersController
             $this->pdo->prepare("UPDATE users SET rub_balance = 0 WHERE id = ?")
                  ->execute([$id]);
         }
-        header('Location: /admin/users/edit?id=' . $id);
+        header('Location: ' . $this->basePath() . '/edit?id=' . $id);
         exit;
     }
 

@@ -15,6 +15,16 @@ class OrdersController
     }
 
     /**
+     * Returns base path depending on user role
+     */
+    private function basePath(): string
+    {
+        return ($_SESSION['role'] ?? '') === 'manager'
+            ? '/manager/orders'
+            : '/admin/orders';
+    }
+
+    /**
      * Normalize phone number to 7XXXXXXXXXX format
      */
     private function normalizePhone(string $raw): string
@@ -79,7 +89,7 @@ class OrdersController
 
         if (!$order) {
             $msg = urlencode("Заказ {$id} удалён");
-            header("Location: /admin/orders?msg={$msg}");
+            header('Location: ' . $this->basePath() . "?msg={$msg}");
             exit;
         }
 
@@ -181,7 +191,7 @@ class OrdersController
                     'pin'     => $pin,
                     'raw'     => $_POST,
                 ];
-                header('Location: /admin/orders/create?error=invalid+user');
+                header('Location: ' . $this->basePath() . '/create?error=invalid+user');
                 exit;
             }
 
@@ -225,7 +235,7 @@ class OrdersController
         }
 
         if ($userId <= 0) {
-            header('Location: /admin/orders/create?error=user');
+            header('Location: ' . $this->basePath() . '/create?error=user');
             exit;
         }
 
@@ -235,7 +245,7 @@ class OrdersController
 
         $items = $_POST['items'] ?? [];
         if (!$items) {
-            header('Location: /admin/orders/create?error=empty');
+            header('Location: ' . $this->basePath() . '/create?error=empty');
             exit;
         }
 
@@ -292,7 +302,7 @@ class OrdersController
             )->execute([$userId, $orderId, -$pointsUsed, $desc]);
         }
 
-        header('Location: /admin/orders/' . $orderId);
+        header('Location: ' . $this->basePath() . '/' . $orderId);
         exit;
     }
 
@@ -307,7 +317,7 @@ class OrdersController
             );
             $stmt->execute([$courierId, $orderId]);
         }
-        header("Location: /admin/orders/{$orderId}");
+        header('Location: ' . $this->basePath() . '/' . $orderId);
         exit;
     }
 
@@ -418,7 +428,7 @@ class OrdersController
                 }
             }
         }
-        header("Location: /admin/orders/{$orderId}");
+        header('Location: ' . $this->basePath() . '/' . $orderId);
         exit;
     }
 
@@ -703,7 +713,7 @@ class OrdersController
                 }
             }
         }
-        header('Location: /admin/orders');
+        header('Location: ' . $this->basePath());
         exit;
     }
 
@@ -756,7 +766,7 @@ class OrdersController
                 "UPDATE orders SET total_amount = ?, discount_applied = ? WHERE id = ?"
             )->execute([$finalTotal, $discountApplied, $orderId]);
         }
-        header('Location: /admin/orders/' . $orderId);
+        header('Location: ' . $this->basePath() . '/' . $orderId);
         exit;
     }
 }
