@@ -195,6 +195,21 @@ class OrdersController
                 exit;
             }
 
+            // Check for duplicate phone number to avoid unique constraint errors
+            $stmt = $this->pdo->prepare('SELECT id FROM users WHERE phone = ?');
+            $stmt->execute([$phone]);
+            if ($stmt->fetchColumn()) {
+                $_SESSION['debug_order_data'] = [
+                    'name'    => $name,
+                    'phone'   => $phone,
+                    'address' => $address,
+                    'pin'     => $pin,
+                    'raw'     => $_POST,
+                ];
+                header('Location: ' . $this->basePath() . '/create?error=phone_exists');
+                exit;
+            }
+
             $refCode = ReferralHelper::generateUniqueCode($this->pdo, 8);
             $managerId = $_SESSION['user_id'] ?? null;
             $pinHash = password_hash($pin, PASSWORD_DEFAULT);
