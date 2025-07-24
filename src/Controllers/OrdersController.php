@@ -270,13 +270,23 @@ class OrdersController
         }
 
         $total = 0;
-        $stmtPrice = $this->pdo->prepare("SELECT price FROM products WHERE id = ?");
-        foreach ($items as $pid => $qty) {
-            $qty = (int)$qty;
-            if ($qty <= 0) continue;
-            $stmtPrice->execute([$pid]);
-            $price = (float)$stmtPrice->fetchColumn();
-            $total += $price * $qty;
+        $stmtProd = $this->pdo->prepare("SELECT price, box_size FROM products WHERE id = ?");
+        $itemsPrepared = [];
+        foreach ($items as $pid => $boxes) {
+            $boxes = (float)$boxes;
+            if ($boxes <= 0) continue;
+            $stmtProd->execute([$pid]);
+            $row = $stmtProd->fetch(PDO::FETCH_ASSOC);
+            if (!$row) continue;
+            $pricePerKg = (float)$row['price'];
+            $boxSize = (float)($row['box_size'] ?: 1);
+            $qtyKg = $boxes * $boxSize;
+            $total += $qtyKg * $pricePerKg;
+            $itemsPrepared[$pid] = [
+                'qtyKg'  => $qtyKg,
+                'boxes'  => $boxes,
+                'price'  => $pricePerKg,
+            ];
         }
 
         if (isset($_POST['pickup'])) {
@@ -306,12 +316,14 @@ class OrdersController
         $stmtItem = $this->pdo->prepare(
             "INSERT INTO order_items (order_id, product_id, quantity, boxes, unit_price) VALUES (?, ?, ?, ?, ?)"
         );
-        foreach ($items as $pid => $qty) {
-            $qty = (int)$qty;
-            if ($qty <= 0) continue;
-            $stmtPrice->execute([$pid]);
-            $price = (float)$stmtPrice->fetchColumn();
-            $stmtItem->execute([$orderId, $pid, $qty, $qty, $price]);
+        foreach ($itemsPrepared as $pid => $data) {
+            $stmtItem->execute([
+                $orderId,
+                $pid,
+                $data['qtyKg'],
+                $data['boxes'],
+                $data['price'],
+            ]);
         }
 
         if ($pointsUsed > 0) {
@@ -744,9 +756,13 @@ class OrdersController
         $productId = (int)($_POST['product_id'] ?? 0);
         $qty       = (float)($_POST['quantity'] ?? 0);
         if ($orderId && $productId && $qty > 0) {
+            $stmtBox = $this->pdo->prepare("SELECT box_size FROM products WHERE id = ?");
+            $stmtBox->execute([$productId]);
+            $boxSize = (float)($stmtBox->fetchColumn() ?: 1);
+            $boxes = $boxSize > 0 ? $qty / $boxSize : $qty;
             $this->pdo->prepare(
-                "UPDATE order_items SET quantity = ? WHERE order_id = ? AND product_id = ?"
-            )->execute([$qty, $orderId, $productId]);
+                "UPDATE order_items SET quantity = ?, boxes = ? WHERE order_id = ? AND product_id = ?"
+            )->execute([$qty, $boxes, $orderId, $productId]);
 
             $stmt = $this->pdo->prepare(
                 "SELECT SUM(quantity * unit_price) FROM order_items WHERE order_id = ?"

@@ -63,8 +63,12 @@
           </div>
           <div class="flex items-center space-x-1">
             <button type="button" class="dec px-2 bg-gray-200 rounded" data-target="item<?= $p['id'] ?>">-</button>
-            <?php $n = $p['product'] . ($p['variety'] ? ' '.$p['variety'] : '') . (!empty($p['box_size']) && !empty($p['box_unit']) ? ' '.$p['box_size'].' '.$p['box_unit'] : ''); ?>
-            <input id="item<?= $p['id'] ?>" data-price="<?= $p['price'] ?>" data-name="<?= htmlspecialchars($n) ?>" type="number" step="1" min="0" name="items[<?= $p['id'] ?>]" value="0" class="qty border px-1 py-0.5 rounded w-16 text-center">
+            <?php
+              $n = $p['product'] . ($p['variety'] ? ' '.$p['variety'] : '') .
+                   (!empty($p['box_size']) && !empty($p['box_unit']) ? ' '.$p['box_size'].' '.$p['box_unit'] : '');
+              $priceBox = $p['price'] * ($p['box_size'] > 0 ? $p['box_size'] : 1);
+            ?>
+            <input id="item<?= $p['id'] ?>" data-price="<?= $priceBox ?>" data-name="<?= htmlspecialchars($n) ?>" type="number" step="1" min="0" name="items[<?= $p['id'] ?>]" value="0" class="qty border px-1 py-0.5 rounded w-16 text-center">
             <button type="button" class="inc px-2 bg-gray-200 rounded" data-target="item<?= $p['id'] ?>">+</button>
           </div>
         </div>
