@@ -21,14 +21,7 @@
     </div>
     <div id="newBlock" class="space-y-2 hidden">
       <input type="text" name="new_name" placeholder="Имя" class="border px-2 py-1 rounded w-56">
-      <input
-        type="tel"
-        name="new_phone"
-        placeholder="Телефон XXXXXXXXXX"
-        maxlength="10"
-        inputmode="numeric"
-        pattern="\d{10}"
-        class="border px-2 py-1 rounded w-56">
+      <input type="hidden" name="new_phone" id="newPhoneHidden">
       <input type="password" name="new_pin" placeholder="PIN" maxlength="4" class="border px-2 py-1 rounded w-32">
       <input type="text" name="new_address" placeholder="Адрес" class="border px-2 py-1 rounded w-full">
     </div>
@@ -135,12 +128,6 @@
   const pointsAmount = document.getElementById('pointsAmount');
   const itemsList = document.getElementById('itemsList');
   const newPhoneInput = document.querySelector('input[name="new_phone"]');
-
-  if (newPhoneInput) {
-    newPhoneInput.addEventListener('input', () => {
-      newPhoneInput.value = cleanPhone(newPhoneInput.value);
-    });
-  }
   function cleanPhone(val) {
     let digits = val.replace(/\D/g,'');
     if (digits.startsWith('7') || digits.startsWith('8')) digits = digits.slice(1);
