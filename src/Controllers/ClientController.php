@@ -709,16 +709,27 @@ public function cart(): void
     $recipientName   = trim($_POST['recipient_name'] ?? ($_SESSION['name'] ?? ''));
     $recipientPhone  = $this->normalizePhone($_POST['recipient_phone'] ?? '');
 
-    $addressIds = [];
+    $addressIds   = [];
+    $pickupByDate = [];
     foreach ($itemsByDate as $dateKey => $_) {
         $addrInput = $postedAddresses[$dateKey] ?? $defaultAddress;
-        if ($addrInput === 'new' && $newStreet !== '') {
+        $streetVal = '';
+        if ($addrInput === 'pickup') {
+            $addressIds[$dateKey] = null;
+            $streetVal = 'pickup';
+        } elseif ($addrInput === 'new' && $newStreet !== '') {
             $addressIds[$dateKey] = $this->ensureAddress($userId, $newStreet, $recipientName, $recipientPhone);
+            $streetVal = $newStreet;
         } elseif (is_numeric($addrInput)) {
             $addressIds[$dateKey] = (int)$addrInput;
+            $stmtAddr = $this->pdo->prepare("SELECT street FROM addresses WHERE id = ?");
+            $stmtAddr->execute([(int)$addrInput]);
+            $streetVal = (string)$stmtAddr->fetchColumn();
         } else {
             $addressIds[$dateKey] = $this->ensureAddress($userId, $addrInput, $recipientName, $recipientPhone);
+            $streetVal = $addrInput;
         }
+        $pickupByDate[$dateKey] = ($addrInput === 'pickup') || stripos($streetVal, 'самовывоз') !== false;
     }
 
     // 9) СОЗДАЁМ ЗАКАЗЫ ПО КАЖДОЙ ДАТЕ, учитываем дату и слот
@@ -729,12 +740,17 @@ public function cart(): void
         foreach ($block as $data) {
             $blockSum += $data['quantity'] * $data['unit_price'];
         }
+        $pickupDiscount = 0;
+        if (!empty($pickupByDate[$dateKey])) {
+            $pickupDiscount = (int) floor($blockSum * 0.20);
+        }
+        $subAfterPickup = $blockSum - $pickupDiscount;
         $pointsDiscount = $discountsByDate[$dateKey] ?? 0;
         $couponDiscount = 0;
         if ($discountPercent > 0) {
-            $couponDiscount = (int) floor(($blockSum - $pointsDiscount) * ($discountPercent / 100));
+            $couponDiscount = (int) floor(($subAfterPickup - $pointsDiscount) * ($discountPercent / 100));
         }
-        $finalSum = $blockSum - $pointsDiscount - $couponDiscount;
+        $finalSum = $subAfterPickup - $pointsDiscount - $couponDiscount;
 
         $deliverySlot = $_POST['slot_id'][$dateKey] ?? ''; // из формы
 
@@ -751,7 +767,7 @@ public function cart(): void
             $userId,
             $addressIds[$dateKey],
             $finalSum,
-            $couponDiscount,  // discount_applied = скидка по купону %
+            $couponDiscount + $pickupDiscount, // discount_applied = скидка по купону и самовывозу
             $pointsDiscount,  // points_used = списанные баллы
             $pointsAccrued,   // points_accrued = пока 0
             $couponCode,
