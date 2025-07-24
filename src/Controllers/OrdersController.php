@@ -164,24 +164,30 @@ class OrdersController
         $debugData = $_SESSION['debug_order_data'] ?? [];
         unset($_SESSION['debug_order_data']);
 
+        $today = date('Y-m-d');
+
         viewAdmin('orders/create', [
             'pageTitle' => 'Создать заказ',
             'products'  => $products,
             'slots'     => $slots,
             'debugData' => $debugData,
+            'today'     => $today,
         ]);
     }
 
     // Сохранить заказ (POST, админ)
     public function storeManual(): void
     {
-        $userId = 0;
-        $isNew  = ($_POST['user_mode'] ?? '') === 'new';
+        $userId = (int)($_POST['user_id'] ?? 0);
+        $isNew  = $userId === 0;
 
         if ($isNew) {
             $name  = trim($_POST['new_name'] ?? '');
             $phone = $this->normalizePhone($_POST['new_phone'] ?? '');
             $address = trim($_POST['new_address'] ?? '');
+            if ($address === '') {
+                $address = 'Самовывоз: 9 мая, 73';
+            }
             $pin   = trim($_POST['new_pin'] ?? '');
             if ($name === '' || !preg_match('/^7\d{10}$/', $phone) || !preg_match('/^\d{4}$/', $pin)) {
                 $_SESSION['debug_order_data'] = [
@@ -239,7 +245,6 @@ class OrdersController
             $this->pdo->commit();
             $referralDiscount = true;
         } else {
-            $userId = (int)($_POST['user_id'] ?? 0);
             $addressId = $_POST['address_id'] ?? null;
             if ($addressId === 'pickup') {
                 $addressId = null;

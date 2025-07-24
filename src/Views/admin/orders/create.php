@@ -9,12 +9,6 @@
   <!-- Шаг 1 -->
   <div id="step1" class="bg-white p-4 rounded shadow space-y-2">
     <h2 class="font-semibold mb-2">Шаг 1. Клиент</h2>
-    <div>
-      <input type="radio" name="user_mode" value="existing" id="modeExist" checked>
-      <label for="modeExist">Существующий</label>
-      <input type="radio" name="user_mode" value="new" id="modeNew" class="ml-4">
-      <label for="modeNew">Новый пользователь</label>
-    </div>
     <div id="existBlock" class="space-y-2">
       <input type="text" id="searchPhone" placeholder="Телефон" class="border px-2 py-1 rounded w-56">
       <input type="hidden" name="user_id" id="userId">
@@ -23,6 +17,7 @@
         <select name="address_id" id="addressSelect" class="border px-2 py-1 rounded w-full"></select>
         <input type="text" name="address_new" id="addressNew" placeholder="Новый адрес" class="border px-2 py-1 rounded w-full hidden">
       </div>
+      <div id="userInfo" class="text-sm text-gray-600 hidden"></div>
     </div>
     <div id="newBlock" class="space-y-2 hidden">
       <input type="text" name="new_name" placeholder="Имя" class="border px-2 py-1 rounded w-56">
@@ -42,11 +37,10 @@
     </div>
     <div>
       <label>Дата доставки:</label>
-      <input type="date" name="delivery_date" class="border px-2 py-1 rounded">
+      <input type="date" name="delivery_date" value="<?= $today ?>" class="border px-2 py-1 rounded">
       <select name="slot_id" class="border px-2 py-1 rounded">
-        <option value="">-- слот --</option>
-        <?php foreach ($slots as $s): ?>
-          <option value="<?= $s['id'] ?>">
+        <?php foreach ($slots as $i => $s): ?>
+          <option value="<?= $s['id'] ?>" <?= $i === 0 ? 'selected' : '' ?>>
             <?= htmlspecialchars($s['time_from']) ?>-<?= htmlspecialchars($s['time_to']) ?>
           </option>
         <?php endforeach; ?>
@@ -104,22 +98,12 @@
 <script>
   const existBlock = document.getElementById('existBlock');
   const newBlock = document.getElementById('newBlock');
-  document.getElementById('modeExist').addEventListener('change', ()=>{
-    existBlock.classList.remove('hidden');
-    newBlock.classList.add('hidden');
-    pointsRow.classList.add('hidden');
-    pointsInput.value = 0;
-    pointsAmount.textContent = '0';
-  });
-  document.getElementById('modeNew').addEventListener('change', ()=>{
-    existBlock.classList.add('hidden');
-    newBlock.classList.remove('hidden');
-    pointsRow.classList.add('hidden');
-    pointsInput.value = 0;
-    pointsAmount.textContent = '0';
-  });
+  const userInfo = document.getElementById('userInfo');
 
   document.getElementById('toStep2').addEventListener('click', ()=>{
+    if (document.getElementById('userId').value === '') {
+      if (newPhoneInput) newPhoneInput.value = search.value;
+    }
     document.getElementById('step1').classList.add('hidden');
     document.getElementById('step2').classList.remove('hidden');
   });
@@ -146,9 +130,23 @@
   const pointsRow = document.getElementById('pointsRow');
   const pointsAmount = document.getElementById('pointsAmount');
   const itemsList = document.getElementById('itemsList');
+  const newPhoneInput = document.querySelector('input[name="new_phone"]');
+
+  if (newPhoneInput) {
+    newPhoneInput.addEventListener('input', () => {
+      newPhoneInput.value = cleanPhone(newPhoneInput.value);
+    });
+  }
+  function cleanPhone(val) {
+    let digits = val.replace(/\D/g,'');
+    if (digits.startsWith('7') || digits.startsWith('8')) digits = digits.slice(1);
+    return digits.slice(0,10);
+  }
+
   search.addEventListener('input', ()=>{
-    const term = search.value.replace(/\D/g,'');
-    if (term.length < 2) { sugg.classList.add('hidden'); return; }
+    search.value = cleanPhone(search.value);
+    const term = search.value;
+    if (term.length < 2) { sugg.classList.add('hidden'); newBlock.classList.add('hidden'); userInfo.classList.add('hidden'); pointsRow.classList.add('hidden'); return; }
     fetch('<?= $base ?>/users/search?term='+term)
       .then(r=>r.json()).then(data=>{
         sugg.innerHTML='';
@@ -164,11 +162,21 @@
             pointsInput.value = u.points_balance || 0;
             pointsAmount.textContent = u.points_balance || 0;
             pointsRow.classList.remove('hidden');
+            newBlock.classList.add('hidden');
+            userInfo.textContent = u.referrer_name ? 'Пригласил: '+u.referrer_name : 'Без пригласившего';
+            userInfo.classList.remove('hidden');
             updateSummary();
           });
           sugg.appendChild(li);
         });
-      sugg.classList.remove('hidden');
+      if (data.length === 0) {
+        newBlock.classList.remove('hidden');
+        document.getElementById('userId').value='';
+        pointsRow.classList.add('hidden');
+        userInfo.classList.add('hidden');
+      } else {
+        sugg.classList.remove('hidden');
+      }
       });
   });
 
@@ -190,8 +198,6 @@
   });
   qtyInputs.forEach(i=>i.addEventListener('input', updateSummary));
   pickupChk.addEventListener('change', updateSummary);
-  document.getElementById('modeNew').addEventListener('change', updateSummary);
-  document.getElementById('modeExist').addEventListener('change', updateSummary);
   if (pointsInput) pointsInput.addEventListener('input', updateSummary);
 
   function updateSummary() {
@@ -219,7 +225,7 @@
     } else {
       pickupRow.classList.add('hidden');
     }
-    const referral = document.getElementById('modeNew').checked;
+    const referral = document.getElementById('userId').value === '';
     if (referral) {
       const d = subtotal * 0.1;
       refEl.textContent = '-' + d.toFixed(2);
