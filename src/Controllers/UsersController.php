@@ -571,9 +571,14 @@ class UsersController
         }
 
         $stmt = $this->pdo->prepare(
-            "SELECT id, name, phone, points_balance FROM users WHERE phone LIKE ? ORDER BY phone LIMIT 5"
+            "SELECT u.id, u.name, u.phone, u.points_balance, u.referred_by, ref.name AS referrer_name
+             FROM users u
+             LEFT JOIN users ref ON ref.id = u.referred_by
+             WHERE u.phone LIKE ?
+             ORDER BY u.phone
+             LIMIT 5"
         );
-        $stmt->execute([ '%' . $term . '%' ]);
+        $stmt->execute(['%' . $term . '%']);
         $res = $stmt->fetchAll(PDO::FETCH_ASSOC);
         header('Content-Type: application/json');
         echo json_encode($res);
