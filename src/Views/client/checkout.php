@@ -241,8 +241,16 @@ $slots           = $slots           ?? [];
             <div class="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl p-4">
               <div class="flex justify-between items-center">
                 <div>
+                  <div id="pickupRow" class="flex justify-between text-sm text-gray-600 mb-1 hidden">
+                    <span>Самовывоз -20%</span>
+                    <span id="pickupAmount">-0 ₽</span>
+                  </div>
                   <div class="text-sm text-gray-600 mb-1">К оплате</div>
-                  <div class="text-2xl font-bold text-gray-800">
+                  <div id="finalTotal" class="text-2xl font-bold text-gray-800"
+                       data-subtotal="<?= (int)$subtotal ?>"
+                       data-pointstouse="<?= (int)$pointsToUse ?>"
+                       data-couponpoints="<?= (int)$couponPoints ?>"
+                       data-discountpercent="<?= (float)$discountPercent ?>">
                     <?= number_format($finalTotal, 0, '.', ' ') ?> ₽
                   </div>
                 </div>
@@ -296,9 +304,53 @@ $slots           = $slots           ?? [];
       block.classList.add('hidden');
     }
   }
-  if (select) {
-    select.addEventListener('change', toggleBlock);
+
+  function format(num) {
+    return num.toLocaleString('ru-RU');
+  }
+
+  function updateTotal() {
     applyPickup();
     toggleBlock();
+    const finalEl = document.getElementById('finalTotal');
+    if (!finalEl) return;
+    const subtotal = parseFloat(finalEl.dataset.subtotal);
+    const points = parseFloat(finalEl.dataset.pointstouse);
+    const couponPts = parseFloat(finalEl.dataset.couponpoints);
+    const discountPercent = parseFloat(finalEl.dataset.discountpercent);
+
+    const pickup = select && select.value === 'pickup';
+    let pickupDiscount = 0;
+    let subAfterPickup = subtotal;
+    if (pickup) {
+      pickupDiscount = Math.floor(subtotal * 0.20);
+      subAfterPickup -= pickupDiscount;
+    }
+
+    const pointsDiscount = Math.min(points + couponPts, subAfterPickup);
+    const afterPoints = subAfterPickup - pointsDiscount;
+    let couponDiscount = 0;
+    if (discountPercent > 0) {
+      couponDiscount = Math.floor(afterPoints * (discountPercent / 100));
+    }
+
+    const final = afterPoints - couponDiscount;
+    finalEl.textContent = format(final) + ' ₽';
+
+    const row = document.getElementById('pickupRow');
+    const amtEl = document.getElementById('pickupAmount');
+    if (pickup && row && amtEl) {
+      amtEl.textContent = '-' + format(pickupDiscount) + ' ₽';
+      row.classList.remove('hidden');
+    } else if (row) {
+      row.classList.add('hidden');
+    }
+  }
+
+  if (select) {
+    select.addEventListener('change', () => {
+      updateTotal();
+    });
+    updateTotal();
   }
 </script>
