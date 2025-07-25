@@ -60,7 +60,7 @@ class OrdersController
             $sql .= " WHERE u.referred_by = ?";
             $params[] = $managerId;
         }
-        $sql .= " ORDER BY FIELD(o.status,'new','processing','assigned','delivered','cancelled'), o.created_at DESC";
+        $sql .= " ORDER BY o.delivery_date DESC, d.time_from DESC";
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
