@@ -48,7 +48,7 @@ class OrdersController
 
         $sql = "SELECT o.id, o.status, o.total_amount, o.delivery_date,\n" .
                "       o.points_used, o.coupon_code, o.discount_applied,\n" .
-               "       d.time_from AS slot_from, d.time_to AS slot_to,\n" .
+               "       o.slot_id, d.time_from AS slot_from, d.time_to AS slot_to,\n" .
                "       u.name AS client_name, u.phone, a.street AS address,\n" .
                "       o.created_at\n" .
                "FROM orders o\n" .
@@ -151,11 +151,15 @@ class OrdersController
         $managersStmt = $this->pdo->query("SELECT id, name FROM users WHERE role = 'manager' ORDER BY name");
         $managers = $managersStmt->fetchAll(PDO::FETCH_ASSOC);
 
+        $slotsStmt = $this->pdo->query("SELECT id, time_from, time_to FROM delivery_slots ORDER BY time_from");
+        $slots = $slotsStmt->fetchAll(PDO::FETCH_ASSOC);
+
         viewAdmin('orders/index', [
             'pageTitle'       => 'Заказы',
             'orders'          => $orders,
             'managers'       => $managers,
             'selectedManager' => $managerId,
+            'slots'           => $slots,
         ]);
     }
 
