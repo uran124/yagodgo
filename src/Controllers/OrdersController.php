@@ -65,6 +65,9 @@ class OrdersController
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
         $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        if (!$orders) {
+            $orders = [];
+        }
 
         // Load items for all orders (for manager view)
         $orderIds = array_column($orders, 'id');
