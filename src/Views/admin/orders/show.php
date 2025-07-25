@@ -1,4 +1,4 @@
-<?php /** @var array $order @var array $items */ ?>
+<?php /** @var array $order @var array $items @var array $addresses @var array $slots */ ?>
 <?php $isManager = ($_SESSION['role'] ?? '') === 'manager'; $base = $isManager ? '/manager' : '/admin'; ?>
 <style>
   @media (max-width: 640px) {
@@ -67,6 +67,34 @@
       <span><?= $order['total_amount'] ?> ₽</span>
     </div>
   </div>
+
+  <form action="<?= $base ?>/orders/update-delivery" method="post" class="bg-white p-4 rounded shadow space-y-2">
+    <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
+    <div class="space-x-2 flex flex-wrap items-center">
+      <label>
+        <span class="mr-1">Адрес:</span>
+        <select name="address_id" class="border px-2 py-1 rounded">
+          <?php foreach ($addresses as $a): ?>
+            <option value="<?= $a['id'] ?>" <?= $a['id'] == $order['address_id'] ? 'selected' : '' ?>><?= htmlspecialchars($a['street']) ?></option>
+          <?php endforeach; ?>
+          <option value="pickup" <?= $order['address_id'] === null ? 'selected' : '' ?>>Самовывоз 9 мая 73</option>
+        </select>
+      </label>
+      <label>
+        <span class="mr-1">Дата:</span>
+        <input type="date" name="delivery_date" value="<?= htmlspecialchars($order['delivery_date']) ?>" class="border px-2 py-1 rounded">
+      </label>
+      <label>
+        <span class="mr-1">Слот:</span>
+        <select name="slot_id" class="border px-2 py-1 rounded">
+          <?php foreach ($slots as $s): ?>
+            <option value="<?= $s['id'] ?>" <?= $s['id'] == $order['slot_id'] ? 'selected' : '' ?>><?= htmlspecialchars($s['time_from']) ?>-<?= htmlspecialchars($s['time_to']) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </label>
+      <button type="submit" class="bg-blue-700 text-white px-3 py-1 rounded">Сохранить</button>
+    </div>
+  </form>
 
   <div class="flex flex-wrap gap-2 items-center">
     <?php $btnClasses = [

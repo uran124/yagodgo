@@ -203,6 +203,15 @@ class OrdersController
         $stmt->execute([$id]);
         $transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        $addrStmt = $this->pdo->prepare(
+            "SELECT id, street FROM addresses WHERE user_id = ? ORDER BY is_primary DESC, created_at ASC"
+        );
+        $addrStmt->execute([$order['user_id']]);
+        $addresses = $addrStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $slotsStmt = $this->pdo->query("SELECT id, time_from, time_to FROM delivery_slots ORDER BY time_from");
+        $slots = $slotsStmt->fetchAll(PDO::FETCH_ASSOC);
+
         $couponInfo = null;
         $pointsFromBalance = (int)($order['points_used'] ?? 0);
         if (!empty($order['coupon_code'])) {
@@ -234,6 +243,8 @@ class OrdersController
             'transactions' => $transactions,
             'coupon'       => $couponInfo,
             'pointsFromBalance' => $pointsFromBalance,
+            'addresses'    => $addresses,
+            'slots'        => $slots,
         ]);
     }
 
@@ -439,6 +450,35 @@ class OrdersController
                 "UPDATE orders SET assigned_to = ?, status = 'assigned' WHERE id = ?"
             );
             $stmt->execute([$courierId, $orderId]);
+        }
+        header('Location: ' . $this->basePath() . '/' . $orderId);
+        exit;
+    }
+
+    // Обновление адреса и времени доставки
+    public function updateDelivery(): void
+    {
+        $orderId = (int)($_POST['order_id'] ?? 0);
+        if ($orderId) {
+            $addressRaw = $_POST['address_id'] ?? null;
+            if ($addressRaw === 'pickup') {
+                $addressId = null;
+            } elseif ($addressRaw !== null && $addressRaw !== '') {
+                $addressId = is_numeric($addressRaw) ? (int)$addressRaw : null;
+            } else {
+                $addressId = null;
+            }
+
+            $deliveryDate = $_POST['delivery_date'] ?? null;
+            $slotId = $_POST['slot_id'] ?? null;
+            if ($slotId === '') {
+                $slotId = null;
+            }
+
+            $stmt = $this->pdo->prepare(
+                "UPDATE orders SET address_id = ?, delivery_date = ?, slot_id = ? WHERE id = ?"
+            );
+            $stmt->execute([$addressId, $deliveryDate, $slotId, $orderId]);
         }
         header('Location: ' . $this->basePath() . '/' . $orderId);
         exit;
