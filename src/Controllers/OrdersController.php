@@ -47,6 +47,7 @@ class OrdersController
         $managerId = isset($_GET['manager']) ? (int)$_GET['manager'] : 0;
 
         $sql = "SELECT o.id, o.status, o.total_amount, o.delivery_date,\n" .
+               "       o.points_used, o.coupon_code, o.discount_applied,\n" .
                "       d.time_from AS slot_from, d.time_to AS slot_to,\n" .
                "       u.name AS client_name, u.phone, a.street AS address,\n" .
                "       o.created_at\n" .
@@ -64,6 +65,82 @@ class OrdersController
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
         $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Load items for all orders (for manager view)
+        $orderIds = array_column($orders, 'id');
+        $itemsByOrder = [];
+        if ($orderIds) {
+            $placeholders = implode(',', array_fill(0, count($orderIds), '?'));
+            $iStmt = $this->pdo->prepare(
+                "SELECT oi.order_id, oi.quantity, oi.boxes, oi.unit_price,\n" .
+                "       t.name AS product_name, p.variety, p.box_size, p.box_unit\n" .
+                "FROM order_items oi\n" .
+                "JOIN products p ON p.id = oi.product_id\n" .
+                "JOIN product_types t ON t.id = p.product_type_id\n" .
+                "WHERE oi.order_id IN ($placeholders)\n" .
+                "ORDER BY oi.order_id"
+            );
+            $iStmt->execute($orderIds);
+            while ($row = $iStmt->fetch(PDO::FETCH_ASSOC)) {
+                $itemsByOrder[$row['order_id']][] = $row;
+            }
+        }
+
+        // Prefetch coupon info
+        $codes = array_filter(array_column($orders, 'coupon_code'), fn($c) => $c !== null && $c !== '');
+        $couponInfo = [];
+        if ($codes) {
+            $placeholders = implode(',', array_fill(0, count($codes), '?'));
+            $cStmt = $this->pdo->prepare(
+                "SELECT code, type, discount, points FROM coupons WHERE code IN ($placeholders)"
+            );
+            $cStmt->execute($codes);
+            foreach ($cStmt->fetchAll(PDO::FETCH_ASSOC) as $c) {
+                $couponInfo[$c['code']] = $c;
+            }
+        }
+
+        $refStmt = $this->pdo->prepare("SELECT id FROM users WHERE referral_code = ?");
+
+        foreach ($orders as &$o) {
+            $o['items'] = $itemsByOrder[$o['id']] ?? [];
+
+            $rawTotal = 0;
+            foreach ($o['items'] as $it) {
+                $rawTotal += $it['quantity'] * $it['unit_price'];
+            }
+
+            $pickupDiscount = 0;
+            if (!empty($o['address']) && stripos($o['address'], 'самовывоз') !== false) {
+                $pickupDiscount = (int) floor($rawTotal * 0.20);
+            }
+            $o['pickup_discount'] = $pickupDiscount;
+
+            $coupon = null;
+            if (!empty($o['coupon_code'])) {
+                $coupon = $couponInfo[$o['coupon_code']] ?? null;
+                if (!$coupon) {
+                    $refStmt->execute([$o['coupon_code']]);
+                    if ($refStmt->fetch()) {
+                        $coupon = [
+                            'code' => $o['coupon_code'],
+                            'type' => 'discount',
+                            'discount' => 10,
+                        ];
+                    }
+                }
+            }
+            $o['coupon'] = $coupon;
+
+            $pointsFromBalance = (int)($o['points_used'] ?? 0);
+            if ($coupon && $coupon['type'] === 'points') {
+                $pointsFromBalance = max(0, $pointsFromBalance - (int)$coupon['points']);
+            }
+            $o['points_from_balance'] = $pointsFromBalance;
+
+            $o['coupon_discount'] = max(0, (int)$o['discount_applied'] - $pickupDiscount);
+        }
+        unset($o);
 
         $managersStmt = $this->pdo->query("SELECT id, name FROM users WHERE role = 'manager' ORDER BY name");
         $managers = $managersStmt->fetchAll(PDO::FETCH_ASSOC);
