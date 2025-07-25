@@ -765,17 +765,17 @@ public function cart(): void
                (user_id, address_id, slot_id, status, total_amount,
                 discount_applied, points_used, points_accrued, coupon_code,
                 delivery_date, created_at)
-             VALUES (?, ?, ?, 'new', ?, ?, ?, ?, ?, NOW())"
+             VALUES (?, ?, ?, 'new', ?, ?, ?, ?, ?, ?, NOW())"
         );
         $pointsAccrued = 0; // пока 0, начислим ниже, если надо
         $stmtOrder->execute([
             $userId,
             $addressIds[$dateKey],
+            $slotId,
             $finalSum,
             $couponDiscount + $pickupDiscount, // discount_applied = скидка по купону и самовывозу
             $pointsDiscount,  // points_used = списанные баллы
             $pointsAccrued,   // points_accrued = пока 0
-            $slotId,
             $couponCode,
             $dateKey
         ]);
