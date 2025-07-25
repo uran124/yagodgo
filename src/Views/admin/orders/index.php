@@ -52,6 +52,62 @@
   </div>
 </div>
 
+<?php if ($isManager): ?>
+  <div id="ordersCards" class="space-y-3">
+    <?php foreach ($orders as $o): ?>
+      <?php
+        $bg = in_array($o['status'], ['new','processing'], true) ? 'bg-gray-200' : '';
+        $dateAttr = $o['delivery_date'] ? date('Y-m-d', strtotime($o['delivery_date'])) : '';
+        $createdAttr = date('Y-m-d H:i', strtotime($o['created_at']));
+        $deliveryAttr = $o['delivery_date'] ? date('Y-m-d', strtotime($o['delivery_date'])) : '';
+      ?>
+      <div class="order-card bg-white p-4 rounded shadow <?= $bg ?>" data-status="<?= $o['status'] ?>" data-date="<?= $dateAttr ?>" data-created="<?= $createdAttr ?>" data-id="<?= $o['id'] ?>" data-delivery="<?= $deliveryAttr ?>">
+        <div class="flex justify-between items-center">
+          <div class="flex flex-col">
+            <span class="font-semibold">#<?= $o['id'] ?><?php if ($o['delivery_date']): ?>, <?= date('d.m', strtotime($o['delivery_date'])) ?> <?= htmlspecialchars(format_time_range($o['slot_from'], $o['slot_to'])) ?><?php endif; ?></span>
+          </div>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-medium <?= status_classes($o['status']) ?>">
+            <?= order_status_info($o['status'])['label'] ?>
+          </span>
+        </div>
+        <div class="text-sm text-gray-600 mt-1">
+          <?= htmlspecialchars($o['client_name']) ?>, <?= htmlspecialchars($o['phone']) ?>, <?= htmlspecialchars($o['address']) ?>
+        </div>
+        <div class="font-semibold mt-2">Состав:</div>
+        <?php foreach ($o['items'] as $it): ?>
+          <?php $lineCost = $it['quantity'] * $it['unit_price']; ?>
+          <?php $boxes = isset($it['boxes']) ? $it['boxes'] : ($it['box_size']>0 ? round($it['quantity']/$it['box_size'],1) : $it['quantity']); ?>
+          <div class="flex justify-between text-sm">
+            <span><?= htmlspecialchars($it['product_name']) ?><?php if(!empty($it['variety'])): ?> «<?= htmlspecialchars($it['variety']) ?>»<?php endif; ?>, <?= $boxes ?> ящ. (<?= htmlspecialchars($it['quantity']) ?> кг)</span>
+            <span><?= number_format($lineCost, 0, '.', ' ') ?> ₽</span>
+          </div>
+        <?php endforeach; ?>
+        <?php if (($o['points_from_balance'] ?? 0) > 0): ?>
+          <div class="flex justify-between text-sm text-pink-600 border-t mt-1 pt-1">
+            <span>Списано баллов:</span>
+            <span>-<?= $o['points_from_balance'] ?></span>
+          </div>
+        <?php endif; ?>
+        <?php if (!empty($o['coupon']) && $o['coupon']['type'] === 'discount' && $o['coupon_discount'] > 0): ?>
+          <div class="flex justify-between text-sm">
+            <span>Скидка КУПОН:</span>
+            <span>-<?= number_format($o['coupon_discount'], 0, '.', ' ') ?> ₽</span>
+          </div>
+        <?php endif; ?>
+        <?php if (($o['pickup_discount'] ?? 0) > 0): ?>
+          <div class="flex justify-between text-sm">
+            <span>Скидка за самовывоз:</span>
+            <span>-<?= number_format($o['pickup_discount'], 0, '.', ' ') ?> ₽</span>
+          </div>
+        <?php endif; ?>
+        <div class="flex justify-between font-semibold border-t pt-1 mt-1">
+          <span>Стоимость заказа:</span>
+          <span><?= number_format($o['total_amount'], 0, '.', ' ') ?> ₽</span>
+        </div>
+      </div>
+    <?php endforeach; ?>
+  </div>
+<?php else: ?>
 <div class="overflow-x-auto">
 <table class="orders-table min-w-full bg-white rounded shadow overflow-hidden">
   <thead class="bg-gray-200 text-gray-700">
@@ -100,6 +156,7 @@
   </tbody>
 </table>
 </div>
+<?php endif; ?>
 
 <script>
   document.addEventListener('DOMContentLoaded', function () {
@@ -110,7 +167,8 @@
     const tomorrowBtn = document.getElementById('tomorrowBtn');
     const clearDate = document.getElementById('clearDate');
     const managerFilter = document.getElementById('managerFilter');
-    let rows = document.querySelectorAll('#ordersTable tr');
+    const isManager = <?= $isManager ? 'true' : 'false' ?>;
+    let rows = document.querySelectorAll(isManager ? '#ordersCards .order-card' : '#ordersTable tr');
 
     function applyFilters() {
       const s = statusFilter.value;
@@ -183,7 +241,7 @@
         return dir === 'asc' ? av - bv : bv - av;
       });
       arr.forEach(r => tbody.appendChild(r));
-      rows = document.querySelectorAll('#ordersTable tr');
+      rows = document.querySelectorAll(isManager ? '#ordersCards .order-card' : '#ordersTable tr');
     }
   });
 </script>
