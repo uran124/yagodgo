@@ -1,6 +1,12 @@
 <?php /** @var array $order @var array $items */ ?>
 <?php $isManager = ($_SESSION['role'] ?? '') === 'manager'; $base = $isManager ? '/manager' : '/admin'; ?>
-<div class="space-y-4">
+<style>
+  @media (max-width: 640px) {
+    .order-details button { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
+    .order-details span { font-size: 0.75rem; }
+  }
+</style>
+<div class="order-details space-y-4">
   <div class="flex justify-between items-center bg-white p-4 rounded shadow">
     <div class="flex flex-wrap items-center gap-2">
       <span class="font-semibold">Заказ #<?= $order['id'] ?></span>

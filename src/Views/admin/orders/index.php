@@ -2,15 +2,30 @@
 <?php $isManager = ($_SESSION['role'] ?? '') === 'manager'; ?>
 <?php $base = $isManager ? '/manager' : '/admin'; ?>
 <?php $managers = $managers ?? []; $selectedManager = $selectedManager ?? 0; ?>
+<style>
+  @media (max-width: 640px) {
+    .orders-filter select,
+    .orders-filter button,
+    .orders-filter input {
+      padding: 0.25rem 0.5rem;
+      font-size: 0.75rem;
+    }
+    .orders-table th,
+    .orders-table td {
+      padding: 0.25rem;
+      font-size: 0.75rem;
+    }
+  }
+</style>
 <?php if (!empty($_GET['msg'])): ?>
   <div class="mb-4 p-3 rounded bg-green-50 text-green-800 border border-green-200">
     <?= htmlspecialchars($_GET['msg']) ?>
   </div>
 <?php endif; ?>
 <div class="mb-2">
-  <a href="<?= $base ?>/orders/create" class="px-3 py-2 bg-[#C86052] text-white rounded text-sm">Создать заказ</a>
+  <a href="<?= $base ?>/orders/create" class="px-2 py-1 md:px-3 md:py-2 bg-[#C86052] text-white rounded text-xs md:text-sm">Создать заказ</a>
 </div>
-<div class="mb-4 flex flex-col md:flex-row md:items-end md:justify-between gap-2">
+<div class="orders-filter mb-4 flex flex-col md:flex-row md:items-end md:justify-between gap-2">
   <select id="statusFilter" class="border rounded px-3 py-2 text-sm">
     <option value="">Все статусы</option>
     <option value="new">Новые</option>
@@ -37,7 +52,8 @@
   </div>
 </div>
 
-<table class="min-w-full bg-white rounded shadow overflow-hidden">
+<div class="overflow-x-auto">
+<table class="orders-table min-w-full bg-white rounded shadow overflow-hidden">
   <thead class="bg-gray-200 text-gray-700">
     <tr>
       <th class="p-3 text-left font-semibold cursor-pointer sortable" data-sort="id">№</th>
@@ -83,6 +99,7 @@
     <?php endforeach; ?>
   </tbody>
 </table>
+</div>
 
 <script>
   document.addEventListener('DOMContentLoaded', function () {
