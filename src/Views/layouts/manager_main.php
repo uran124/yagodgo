@@ -285,7 +285,7 @@
   <div class="flex-1 flex flex-col">
     <h1 class="text-xl md:text-2xl font-semibold text-gray-700 p-2 md:p-4"><?= htmlspecialchars($pageTitle) ?></h1>
     <!-- Main -->
-    <main class="p-3 md:p-6 overflow-auto bg-gray-50 flex-1">
+    <main class="p-0 sm:p-3 md:p-6 overflow-auto bg-gray-50 flex-1">
       <?= $content ?>
     </main>
   </div>
