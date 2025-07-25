@@ -781,11 +781,25 @@ class OrdersController
             $rawTotal = (float)$stmt->fetchColumn();
 
             $oStmt = $this->pdo->prepare(
-                "SELECT points_used, coupon_code FROM orders WHERE id = ?"
+                "SELECT points_used, coupon_code, address_id FROM orders WHERE id = ?"
             );
             $oStmt->execute([$orderId]);
             $oRow = $oStmt->fetch(PDO::FETCH_ASSOC);
             $pointsUsed = (int)($oRow['points_used'] ?? 0);
+            $addressId  = (int)($oRow['address_id'] ?? 0);
+
+            // Проверяем, является ли заказ самовывозом
+            $pickupDiscount = 0;
+            if ($addressId) {
+                $aStmt = $this->pdo->prepare("SELECT street FROM addresses WHERE id = ?");
+                $aStmt->execute([$addressId]);
+                $street = (string)$aStmt->fetchColumn();
+                if ($street && stripos($street, 'самовывоз') !== false) {
+                    $pickupDiscount = (int) floor($rawTotal * 0.20);
+                }
+            }
+
+            $subAfterPickup = $rawTotal - $pickupDiscount;
 
             $discountApplied = 0;
             $couponCode = $oRow['coupon_code'] ?? '';
@@ -798,15 +812,17 @@ class OrdersController
                 if ($coupon) {
                     if ($coupon['type'] === 'discount') {
                         $percent = (float)$coupon['discount'];
-                        $discountApplied = (int) floor(($rawTotal - $pointsUsed) * ($percent / 100));
+                        $discountApplied = (int) floor(($subAfterPickup - $pointsUsed) * ($percent / 100));
                     }
                 } else {
                     // реферальный код даёт скидку 10%
-                    $discountApplied = (int) floor(($rawTotal - $pointsUsed) * 0.10);
+                    $discountApplied = (int) floor(($subAfterPickup - $pointsUsed) * 0.10);
                 }
             }
 
-            $finalTotal = $rawTotal - $pointsUsed - $discountApplied;
+            $discountApplied += $pickupDiscount;
+
+            $finalTotal = $subAfterPickup - $pointsUsed - ($discountApplied - $pickupDiscount);
 
             $this->pdo->prepare(
                 "UPDATE orders SET total_amount = ?, discount_applied = ? WHERE id = ?"
