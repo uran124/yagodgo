@@ -66,7 +66,7 @@
           <div class="flex flex-col">
             <span class="font-semibold">#<?= $o['id'] ?><?php if ($o['delivery_date']): ?>, <?= date('d.m', strtotime($o['delivery_date'])) ?> <?= htmlspecialchars(format_time_range($o['slot_from'], $o['slot_to'])) ?><?php endif; ?></span>
           </div>
-          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-medium <?= status_classes($o['status']) ?>">
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-medium <?= order_status_info($o['status'])['badge'] ?>">
             <?= order_status_info($o['status'])['label'] ?>
           </span>
         </div>
