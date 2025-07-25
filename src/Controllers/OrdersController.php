@@ -506,7 +506,12 @@ class OrdersController
             exit;
         }
 
-        $stmt = $this->pdo->prepare("SELECT ci.product_id, ci.quantity, ci.unit_price FROM cart_items ci WHERE ci.user_id = ?");
+        $stmt = $this->pdo->prepare(
+            "SELECT ci.product_id, ci.quantity, ci.unit_price, p.box_size\n" .
+            "FROM cart_items ci\n" .
+            "JOIN products p ON p.id = ci.product_id\n" .
+            "WHERE ci.user_id = ?"
+        );
         $stmt->execute([$user['id']]);
         $cartItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
         if (empty($cartItems)) {
@@ -515,9 +520,14 @@ class OrdersController
         }
 
         $totalAmount = 0;
-        foreach ($cartItems as $ci) {
-            $totalAmount += $ci['quantity'] * $ci['unit_price'];
+        foreach ($cartItems as &$ci) {
+            $ci['kg_qty'] = $ci['quantity'] * (float)$ci['box_size'];
+            $ci['kg_price'] = ((float)$ci['box_size'] > 0)
+                ? $ci['unit_price'] / (float)$ci['box_size']
+                : $ci['unit_price'];
+            $totalAmount += $ci['kg_qty'] * $ci['kg_price'];
         }
+        unset($ci);
 
         try {
             $this->pdo->beginTransaction();
@@ -567,9 +577,9 @@ class OrdersController
                 $stmtItem->execute([
                     $orderId,
                     $ci['product_id'],
+                    $ci['kg_qty'],
                     $ci['quantity'],
-                    $ci['quantity'],
-                    $ci['unit_price']
+                    $ci['kg_price']
                 ]);
             }
 
