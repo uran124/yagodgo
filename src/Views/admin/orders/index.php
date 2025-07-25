@@ -6,7 +6,8 @@
   @media (max-width: 640px) {
     .orders-filter select,
     .orders-filter button,
-    .orders-filter input {
+    .orders-filter input,
+    .date-filter button {
       padding: 0.25rem 0.5rem;
       font-size: 0.75rem;
     }
@@ -22,10 +23,8 @@
     <?= htmlspecialchars($_GET['msg']) ?>
   </div>
 <?php endif; ?>
-<div class="mb-2">
-  <a href="<?= $base ?>/orders/create" class="px-2 py-1 md:px-3 md:py-2 bg-[#C86052] text-white rounded text-xs md:text-sm">Создать заказ</a>
-</div>
-<div class="orders-filter mb-4 flex flex-col md:flex-row md:items-end md:justify-between gap-2">
+<div class="orders-filter mb-4 flex flex-row flex-wrap items-end gap-2">
+  <a href="<?= $base ?>/orders/create" class="px-2 py-1 md:px-3 md:py-2 bg-[#C86052] text-white rounded text-xs md:text-sm whitespace-nowrap">Создать новый</a>
   <select id="statusFilter" class="border rounded px-3 py-2 text-sm">
     <option value="">Все статусы</option>
     <option value="new">Новые</option>
@@ -42,14 +41,12 @@
       <?php endforeach; ?>
     </select>
   <?php endif; ?>
-  <div class="flex items-center gap-2">
-    <button id="todayBtn" class="px-3 py-2 bg-gray-200 rounded text-sm">Сегодня</button>
-    <button id="tomorrowBtn" class="px-3 py-2 bg-gray-200 rounded text-sm">Завтра</button>
-    <input type="date" id="dateFrom" class="border rounded px-2 py-1 text-sm">
-    <span class="text-gray-500">-</span>
-    <input type="date" id="dateTo" class="border rounded px-2 py-1 text-sm">
-    <button id="clearDate" class="px-3 py-2 bg-gray-200 rounded text-sm">Без даты</button>
-  </div>
+</div>
+<div class="date-filter mb-4 flex flex-row flex-wrap gap-2">
+  <button data-filter="today" class="date-btn px-3 py-2 bg-gray-200 rounded text-sm">Сегодня</button>
+  <button data-filter="tomorrow" class="date-btn px-3 py-2 bg-gray-200 rounded text-sm">Завтра</button>
+  <button data-filter="upcoming" class="date-btn px-3 py-2 bg-gray-200 rounded text-sm">Ближайшие</button>
+  <button data-filter="completed" class="date-btn px-3 py-2 bg-gray-200 rounded text-sm">Завершенные</button>
 </div>
 
 <?php if ($isManager): ?>
@@ -161,52 +158,51 @@
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     const statusFilter = document.getElementById('statusFilter');
-    const dateFrom = document.getElementById('dateFrom');
-    const dateTo = document.getElementById('dateTo');
-    const todayBtn = document.getElementById('todayBtn');
-    const tomorrowBtn = document.getElementById('tomorrowBtn');
-    const clearDate = document.getElementById('clearDate');
+    const dateButtons = document.querySelectorAll('.date-btn');
+    let dateFilter = '';
     const managerFilter = document.getElementById('managerFilter');
     const isManager = <?= $isManager ? 'true' : 'false' ?>;
     let rows = document.querySelectorAll(isManager ? '#ordersCards .order-card' : '#ordersTable tr');
 
     function applyFilters() {
       const s = statusFilter.value;
-      const from = dateFrom.value;
-      const to = dateTo.value;
       rows.forEach(row => {
         const st = row.dataset.status;
-        const d = row.dataset.date;
+        const d = row.dataset.delivery;
         let visible = true;
         if (s && st !== s) visible = false;
-        if (from && (!d || d < from)) visible = false;
-        if (to && (!d || d > to)) visible = false;
+        if (dateFilter === 'today') {
+          const today = new Date().toISOString().slice(0,10);
+          if (!d || d !== today) visible = false;
+        } else if (dateFilter === 'tomorrow') {
+          const t = new Date();
+          t.setDate(t.getDate() + 1);
+          const tomorrow = t.toISOString().slice(0,10);
+          if (!d || d !== tomorrow) visible = false;
+        } else if (dateFilter === 'upcoming') {
+          if (!['new','processing','assigned'].includes(st)) visible = false;
+        } else if (dateFilter === 'completed') {
+          if (st !== 'delivered') {
+            visible = false;
+          } else {
+            const end = new Date();
+            const start = new Date();
+            start.setDate(end.getDate() - 6);
+            const dt = d ? new Date(d) : null;
+            if (!dt || dt < start || dt > end) visible = false;
+          }
+        }
         row.style.display = visible ? '' : 'none';
       });
     }
 
     statusFilter.addEventListener('change', applyFilters);
-    dateFrom.addEventListener('change', applyFilters);
-    dateTo.addEventListener('change', applyFilters);
-
-    todayBtn.addEventListener('click', () => {
-      const d = new Date().toISOString().slice(0,10);
-      dateFrom.value = d; dateTo.value = d;
-      applyFilters();
-    });
-
-    tomorrowBtn.addEventListener('click', () => {
-      const t = new Date();
-      t.setDate(t.getDate()+1);
-      const d = t.toISOString().slice(0,10);
-      dateFrom.value = d; dateTo.value = d;
-      applyFilters();
-    });
-
-    clearDate.addEventListener('click', () => {
-      dateFrom.value = '';
-      dateTo.value = '';
-      applyFilters();
+    dateButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        dateFilter = btn.dataset.filter;
+        dateButtons.forEach(b => b.classList.toggle('bg-[#C86052]', b === btn));
+        applyFilters();
+      });
     });
 
     managerFilter?.addEventListener('change', () => {
