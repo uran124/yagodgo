@@ -5,29 +5,29 @@
 /** @var array $partnerStats */
 ?>
 <div class="space-y-6">
-  <div class="bg-white rounded shadow p-4">
-    <h2 class="text-lg font-semibold mb-2">Общая статистика</h2>
-    <div class="grid grid-cols-3 gap-4 text-center">
+  <div class="bg-white rounded shadow p-2 md:p-4">
+    <h2 class="text-base md:text-lg font-semibold mb-2">Общая статистика</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-4 text-center">
       <div>
-        <div class="text-2xl font-bold text-[#C86052]"><?= $ordersCount ?></div>
+        <div class="text-xl md:text-2xl font-bold text-[#C86052]"><?= $ordersCount ?></div>
         <div class="text-sm text-gray-600">продаж</div>
       </div>
       <div>
-        <div class="text-2xl font-bold text-[#C86052]"><?= $directClients ?></div>
+        <div class="text-xl md:text-2xl font-bold text-[#C86052]"><?= $directClients ?></div>
         <div class="text-sm text-gray-600">прямых клиентов</div>
       </div>
       <div>
-        <div class="text-2xl font-bold text-[#C86052]"><?= $secondClients ?></div>
+        <div class="text-xl md:text-2xl font-bold text-[#C86052]"><?= $secondClients ?></div>
         <div class="text-sm text-gray-600">клиентов второго уровня</div>
       </div>
     </div>
   </div>
-  <div class="bg-white rounded shadow p-4">
-    <h2 class="text-lg font-semibold mb-4">Партнёры</h2>
+  <div class="bg-white rounded shadow p-2 md:p-4">
+    <h2 class="text-base md:text-lg font-semibold mb-4">Партнёры</h2>
     <?php if (empty($partnerStats)): ?>
       <p class="text-gray-600">Партнёров нет</p>
     <?php else: ?>
-    <table class="min-w-full text-left">
+    <table class="min-w-full text-left text-sm">
       <thead class="bg-gray-100">
         <tr>
           <th class="p-2">Имя</th>

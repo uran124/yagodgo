@@ -230,15 +230,19 @@
     [data-theme='dark'] .status-btn:hover {
       background: #475569;
     }
+
+    @media (max-width: 768px) {
+      body { font-size: 14px; }
+    }
   </style>
 </head>
 <body class="flex flex-col min-h-screen bg-gray-100 font-sans">
 
   <!-- Header -->
-  <header class="flex items-center justify-between bg-white p-4 shadow">
-    <div class="flex items-center space-x-4">
-      <div class="font-bold text-xl text-[#C86052]">BerryGo Manager</div>
-      <nav class="hidden md:flex space-x-4">
+  <header class="flex items-center justify-between bg-white p-2 md:p-4 shadow">
+    <div class="flex items-center space-x-2 md:space-x-4">
+      <div class="font-bold text-lg md:text-xl text-[#C86052]">BerryGo Manager</div>
+      <nav class="hidden md:flex space-x-2 md:space-x-4">
         <a href="/manager/orders" class="hover:underline">Заказы</a>
         <a href="/manager/products" class="hover:underline">Товары</a>
         <a href="/manager/users" class="hover:underline">Пользователи</a>
@@ -256,32 +260,32 @@
   </header>
 
   <!-- Sidebar for small screens -->
-  <aside id="sidebar" class="md:hidden fixed top-16 left-0 w-64 bg-white shadow-md transform -translate-x-full transition-transform duration-300 z-40">
-    <nav class="p-4">
+  <aside id="sidebar" class="md:hidden fixed top-16 left-0 w-52 md:w-64 bg-white shadow-md transform -translate-x-full transition-transform duration-300 z-40">
+    <nav class="p-2 md:p-4">
       <a href="/manager/orders" class="flex items-center p-2 mb-2 rounded hover:bg-gray-200">
-        <span class="material-icons-round mr-2">receipt_long</span>
-        <span class="menu-text">Заказы</span>
+        <span class="material-icons-round mr-2 text-base md:text-lg">receipt_long</span>
+        <span class="menu-text text-sm md:text-base">Заказы</span>
       </a>
       <a href="/manager/products" class="flex items-center p-2 mb-2 rounded hover:bg-gray-200">
-        <span class="material-icons-round mr-2">inventory_2</span>
-        <span class="menu-text">Товары</span>
+        <span class="material-icons-round mr-2 text-base md:text-lg">inventory_2</span>
+        <span class="menu-text text-sm md:text-base">Товары</span>
       </a>
       <a href="/manager/users" class="flex items-center p-2 rounded hover:bg-gray-200">
-        <span class="material-icons-round mr-2">people</span>
-        <span class="menu-text">Пользователи</span>
+        <span class="material-icons-round mr-2 text-base md:text-lg">people</span>
+        <span class="menu-text text-sm md:text-base">Пользователи</span>
       </a>
       <a href="/manager/profile" class="flex items-center p-2 mt-2 rounded hover:bg-gray-200">
-        <span class="material-icons-round mr-2">account_circle</span>
-        <span class="menu-text">Профиль</span>
+        <span class="material-icons-round mr-2 text-base md:text-lg">account_circle</span>
+        <span class="menu-text text-sm md:text-base">Профиль</span>
       </a>
     </nav>
   </aside>
 
   <!-- Контент -->
   <div class="flex-1 flex flex-col">
-    <h1 class="text-2xl font-semibold text-gray-700 p-4"><?= htmlspecialchars($pageTitle) ?></h1>
+    <h1 class="text-xl md:text-2xl font-semibold text-gray-700 p-2 md:p-4"><?= htmlspecialchars($pageTitle) ?></h1>
     <!-- Main -->
-    <main class="p-6 overflow-auto bg-gray-50 flex-1">
+    <main class="p-3 md:p-6 overflow-auto bg-gray-50 flex-1">
       <?= $content ?>
     </main>
   </div>
