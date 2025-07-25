@@ -90,7 +90,10 @@ class OrdersController
         }
 
         // Prefetch coupon info
-        $codes = array_filter(array_column($orders, 'coupon_code'), fn($c) => $c !== null && $c !== '');
+        $codes = array_values(array_filter(
+            array_column($orders, 'coupon_code'),
+            fn($c) => $c !== null && $c !== ''
+        ));
         $couponInfo = [];
         if ($codes) {
             $placeholders = implode(',', array_fill(0, count($codes), '?'));
