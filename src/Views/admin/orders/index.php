@@ -61,7 +61,7 @@
         $createdAttr = date('Y-m-d H:i', strtotime($o['created_at']));
         $deliveryAttr = $o['delivery_date'] ? date('Y-m-d', strtotime($o['delivery_date'])) : '';
       ?>
-      <div class="order-card bg-white p-4 rounded shadow <?= $bg ?>" data-status="<?= $o['status'] ?>" data-date="<?= $dateAttr ?>" data-created="<?= $createdAttr ?>" data-id="<?= $o['id'] ?>" data-delivery="<?= $deliveryAttr ?>">
+      <a href="<?= $base ?>/orders/<?= $o['id'] ?>" class="order-card block bg-white p-2 sm:p-4 rounded shadow hover:bg-gray-50 <?= $bg ?>" data-status="<?= $o['status'] ?>" data-date="<?= $dateAttr ?>" data-created="<?= $createdAttr ?>" data-id="<?= $o['id'] ?>" data-delivery="<?= $deliveryAttr ?>">
         <div class="flex justify-between items-center">
           <div class="flex flex-col">
             <span class="font-semibold">#<?= $o['id'] ?><?php if ($o['delivery_date']): ?>, <?= date('d.m', strtotime($o['delivery_date'])) ?> <?= htmlspecialchars(format_time_range($o['slot_from'], $o['slot_to'])) ?><?php endif; ?></span>
@@ -104,7 +104,7 @@
           <span>Стоимость заказа:</span>
           <span><?= number_format($o['total_amount'], 0, '.', ' ') ?> ₽</span>
         </div>
-      </div>
+      </a>
     <?php endforeach; ?>
   </div>
 <?php else: ?>
