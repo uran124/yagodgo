@@ -55,7 +55,6 @@
   <button data-filter="tomorrow" class="date-btn px-3 py-2 bg-gray-200 rounded text-sm">Завтра</button>
   <button data-filter="upcoming" class="date-btn px-3 py-2 bg-gray-200 rounded text-sm">Ближайшие</button>
   <button data-filter="completed" class="date-btn px-3 py-2 bg-gray-200 rounded text-sm">Завершенные</button>
-  <input type="date" id="deliveryDate" class="border rounded px-3 py-2 text-sm" />
 </div>
 
 <?php if ($isManager): ?>
@@ -181,14 +180,12 @@
     let dateFilter = '';
     const managerFilter = document.getElementById('managerFilter');
     const slotFilter = document.getElementById('slotFilter');
-    const dateInput = document.getElementById('deliveryDate');
     const isManager = <?= $isManager ? 'true' : 'false' ?>;
     let rows = document.querySelectorAll(isManager ? '#ordersCards .order-card' : '#ordersTable tr');
 
     function applyFilters() {
       const s = statusFilter.value;
       const sl = slotFilter ? slotFilter.value : '';
-      const exact = dateInput ? dateInput.value : '';
       rows.forEach(row => {
         const st = row.dataset.status;
         const d = row.dataset.delivery;
@@ -196,9 +193,7 @@
         let visible = true;
         if (s && st !== s) visible = false;
         if (sl && ds !== sl) visible = false;
-        if (exact) {
-          if (!d || d !== exact) visible = false;
-        } else if (dateFilter === 'today') {
+        if (dateFilter === 'today') {
           const today = new Date().toISOString().slice(0,10);
           if (!d || d !== today) visible = false;
         } else if (dateFilter === 'tomorrow') {
@@ -227,7 +222,6 @@
     dateButtons.forEach(btn => {
       btn.addEventListener('click', () => {
         dateFilter = btn.dataset.filter;
-        if (dateInput) dateInput.value = '';
         dateButtons.forEach(b => b.classList.toggle('bg-[#C86052]', b === btn));
         applyFilters();
       });
@@ -241,11 +235,6 @@
     });
 
     slotFilter?.addEventListener('change', applyFilters);
-    dateInput?.addEventListener('change', () => {
-      dateFilter = '';
-      dateButtons.forEach(b => b.classList.remove('bg-[#C86052]'));
-      applyFilters();
-    });
 
     document.querySelectorAll('th.sortable').forEach(th => {
       th.addEventListener('click', function () {
