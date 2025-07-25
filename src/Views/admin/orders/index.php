@@ -1,7 +1,7 @@
 <?php /** @var array $orders */ ?>
 <?php $isManager = ($_SESSION['role'] ?? '') === 'manager'; ?>
 <?php $base = $isManager ? '/manager' : '/admin'; ?>
-<?php $managers = $managers ?? []; $selectedManager = $selectedManager ?? 0; ?>
+<?php $managers = $managers ?? []; $selectedManager = $selectedManager ?? 0; $slots = $slots ?? []; ?>
 <style>
   @media (max-width: 640px) {
     .orders-filter select,
@@ -41,12 +41,21 @@
       <?php endforeach; ?>
     </select>
   <?php endif; ?>
+  <?php if (!empty($slots)): ?>
+    <select id="slotFilter" class="border rounded px-3 py-2 text-sm">
+      <option value="">Все слоты</option>
+      <?php foreach ($slots as $s): ?>
+        <option value="<?= $s['id'] ?>"><?= htmlspecialchars(format_time_range($s['time_from'], $s['time_to'])) ?></option>
+      <?php endforeach; ?>
+    </select>
+  <?php endif; ?>
 </div>
 <div class="date-filter mb-4 flex flex-row flex-wrap gap-2">
   <button data-filter="today" class="date-btn px-3 py-2 bg-gray-200 rounded text-sm">Сегодня</button>
   <button data-filter="tomorrow" class="date-btn px-3 py-2 bg-gray-200 rounded text-sm">Завтра</button>
   <button data-filter="upcoming" class="date-btn px-3 py-2 bg-gray-200 rounded text-sm">Ближайшие</button>
   <button data-filter="completed" class="date-btn px-3 py-2 bg-gray-200 rounded text-sm">Завершенные</button>
+  <input type="date" id="deliveryDate" class="border rounded px-3 py-2 text-sm" />
 </div>
 
 <?php if ($isManager): ?>
@@ -57,6 +66,7 @@
         $dateAttr = $o['delivery_date'] ? date('Y-m-d', strtotime($o['delivery_date'])) : '';
         $createdAttr = date('Y-m-d H:i', strtotime($o['created_at']));
         $deliveryAttr = $o['delivery_date'] ? date('Y-m-d', strtotime($o['delivery_date'])) : '';
+        $slotAttr = $o['slot_id'] ?? '';
       ?>
       <?php
         $wa = preg_replace('/\D+/', '', $o['phone']);
@@ -66,7 +76,7 @@
             $wa = '7' . substr($wa, 1);
         }
       ?>
-      <div class="order-card block bg-white p-2 sm:p-4 rounded shadow hover:bg-gray-50 <?= $bg ?>" data-status="<?= $o['status'] ?>" data-date="<?= $dateAttr ?>" data-created="<?= $createdAttr ?>" data-id="<?= $o['id'] ?>" data-delivery="<?= $deliveryAttr ?>">
+      <div class="order-card block bg-white p-2 sm:p-4 rounded shadow hover:bg-gray-50 <?= $bg ?>" data-status="<?= $o['status'] ?>" data-date="<?= $dateAttr ?>" data-created="<?= $createdAttr ?>" data-id="<?= $o['id'] ?>" data-delivery="<?= $deliveryAttr ?>" data-slot="<?= $slotAttr ?>">
         <div class="flex justify-between items-center">
           <a href="<?= $base ?>/orders/<?= $o['id'] ?>" class="flex flex-col hover:underline">
             <span class="font-semibold">#<?= $o['id'] ?><?php if ($o['delivery_date']): ?>, <?= date('d.m', strtotime($o['delivery_date'])) ?> <?= htmlspecialchars(format_time_range($o['slot_from'], $o['slot_to'])) ?><?php endif; ?></span>
@@ -120,7 +130,7 @@
       <th class="p-3 text-left font-semibold cursor-pointer sortable" data-sort="id">№</th>
       <th class="p-3 text-left font-semibold cursor-pointer sortable" data-sort="created">Дата оформления</th>
       <th class="p-3 text-left font-semibold cursor-pointer sortable" data-sort="delivery">Дата доставки</th>
-      <th class="p-3 text-left font-semibold">Слот</th>
+      <th class="p-3 text-left font-semibold cursor-pointer sortable" data-sort="slot">Слот</th>
       <th class="p-3 text-left font-semibold">Клиент</th>
       <th class="p-3 text-left font-semibold">Телефон</th>
       <th class="p-3 text-left font-semibold">Адрес</th>
@@ -134,8 +144,9 @@
         $dateAttr = $o['delivery_date'] ? date('Y-m-d', strtotime($o['delivery_date'])) : '';
         $createdAttr = date('Y-m-d H:i', strtotime($o['created_at']));
         $deliveryAttr = $o['delivery_date'] ? date('Y-m-d', strtotime($o['delivery_date'])) : '';
+        $slotAttr = $o['slot_id'] ?? '';
       ?>
-      <tr data-status="<?= $o['status'] ?>" data-date="<?= $dateAttr ?>" data-created="<?= $createdAttr ?>" data-id="<?= $o['id'] ?>" data-delivery="<?= $deliveryAttr ?>" class="border-b hover:bg-gray-50 cursor-pointer <?= $bg ?>" onclick="location.href='<?= $base ?>/orders/<?= $o['id'] ?>'">
+      <tr data-status="<?= $o['status'] ?>" data-date="<?= $dateAttr ?>" data-created="<?= $createdAttr ?>" data-id="<?= $o['id'] ?>" data-delivery="<?= $deliveryAttr ?>" data-slot="<?= $slotAttr ?>" class="border-b hover:bg-gray-50 cursor-pointer <?= $bg ?>" onclick="location.href='<?= $base ?>/orders/<?= $o['id'] ?>'">
         <?php
           $numCls = match($o['status']) {
             'new' => 'text-red-500',
@@ -169,17 +180,25 @@
     const dateButtons = document.querySelectorAll('.date-btn');
     let dateFilter = '';
     const managerFilter = document.getElementById('managerFilter');
+    const slotFilter = document.getElementById('slotFilter');
+    const dateInput = document.getElementById('deliveryDate');
     const isManager = <?= $isManager ? 'true' : 'false' ?>;
     let rows = document.querySelectorAll(isManager ? '#ordersCards .order-card' : '#ordersTable tr');
 
     function applyFilters() {
       const s = statusFilter.value;
+      const sl = slotFilter ? slotFilter.value : '';
+      const exact = dateInput ? dateInput.value : '';
       rows.forEach(row => {
         const st = row.dataset.status;
         const d = row.dataset.delivery;
+        const ds = row.dataset.slot;
         let visible = true;
         if (s && st !== s) visible = false;
-        if (dateFilter === 'today') {
+        if (sl && ds !== sl) visible = false;
+        if (exact) {
+          if (!d || d !== exact) visible = false;
+        } else if (dateFilter === 'today') {
           const today = new Date().toISOString().slice(0,10);
           if (!d || d !== today) visible = false;
         } else if (dateFilter === 'tomorrow') {
@@ -208,6 +227,7 @@
     dateButtons.forEach(btn => {
       btn.addEventListener('click', () => {
         dateFilter = btn.dataset.filter;
+        if (dateInput) dateInput.value = '';
         dateButtons.forEach(b => b.classList.toggle('bg-[#C86052]', b === btn));
         applyFilters();
       });
@@ -218,6 +238,13 @@
       const params = new URLSearchParams(window.location.search);
       if (val) { params.set('manager', val); } else { params.delete('manager'); }
       window.location.search = params.toString();
+    });
+
+    slotFilter?.addEventListener('change', applyFilters);
+    dateInput?.addEventListener('change', () => {
+      dateFilter = '';
+      dateButtons.forEach(b => b.classList.remove('bg-[#C86052]'));
+      applyFilters();
     });
 
     document.querySelectorAll('th.sortable').forEach(th => {
@@ -238,6 +265,9 @@
         if (field === 'id') {
           av = parseInt(av, 10);
           bv = parseInt(bv, 10);
+        } else if (field === 'slot') {
+          av = parseInt(av || 0, 10);
+          bv = parseInt(bv || 0, 10);
         } else {
           av = new Date(av || 0);
           bv = new Date(bv || 0);
