@@ -60,7 +60,7 @@ $discount = max(0, $rawSum - $order['total_amount']);
         <?php if ($order['delivery_date'] === $placeholder): ?>
           Ближайшая возможная дата
         <?php else: ?>
-          <?= date('d.m.Y', strtotime($order['delivery_date'])) ?> <?= htmlspecialchars(format_slot($order['delivery_slot'])) ?>
+          <?= date('d.m.Y', strtotime($order['delivery_date'])) ?> <?= htmlspecialchars(format_time_range($order['slot_from'], $order['slot_to'])) ?>
         <?php endif; ?>
       </p>
       <p class="text-gray-700 mb-2 flex items-center">

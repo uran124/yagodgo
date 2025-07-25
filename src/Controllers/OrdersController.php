@@ -46,12 +46,14 @@ class OrdersController
     {
         $managerId = isset($_GET['manager']) ? (int)$_GET['manager'] : 0;
 
-        $sql = "SELECT o.id, o.status, o.total_amount, o.delivery_date, o.delivery_slot,\n" .
+        $sql = "SELECT o.id, o.status, o.total_amount, o.delivery_date,\n" .
+               "       d.time_from AS slot_from, d.time_to AS slot_to,\n" .
                "       u.name AS client_name, u.phone, a.street AS address,\n" .
                "       o.created_at\n" .
                "FROM orders o\n" .
                "JOIN users u ON u.id = o.user_id\n" .
-               "LEFT JOIN addresses a ON a.id = o.address_id";
+               "LEFT JOIN addresses a ON a.id = o.address_id\n" .
+               "LEFT JOIN delivery_slots d ON d.id = o.slot_id";
         $params = [];
         if ($managerId > 0) {
             $sql .= " WHERE u.referred_by = ?";
@@ -78,10 +80,12 @@ class OrdersController
     public function show(int $id): void
     {
         $stmt = $this->pdo->prepare(
-            "SELECT o.*, u.name AS client_name, u.phone, a.street AS address\n" .
+            "SELECT o.*, d.time_from AS slot_from, d.time_to AS slot_to,\n" .
+            "       u.name AS client_name, u.phone, a.street AS address\n" .
             "FROM orders o\n" .
             "JOIN users u ON u.id = o.user_id\n" .
             "JOIN addresses a ON a.id = o.address_id\n" .
+            "LEFT JOIN delivery_slots d ON d.id = o.slot_id\n" .
             "WHERE o.id = ?"
         );
         $stmt->execute([$id]);
@@ -308,7 +312,7 @@ class OrdersController
         }
 
         $stmt = $this->pdo->prepare(
-            "INSERT INTO orders (user_id, address_id, slot_id, status, total_amount, discount_applied, points_used, points_accrued, coupon_code, delivery_date, delivery_slot, created_at) VALUES (?, ?, ?, 'new', ?, 0, ?, 0, ?, ?, '', NOW())"
+            "INSERT INTO orders (user_id, address_id, slot_id, status, total_amount, discount_applied, points_used, points_accrued, coupon_code, delivery_date, created_at) VALUES (?, ?, ?, 'new', ?, 0, ?, 0, ?, ?, NOW())"
         );
         $stmt->execute([$userId, $addressId, $slotId, $total, $pointsUsed, $couponCode, $deliveryDate]);
         $orderId = (int)$this->pdo->lastInsertId();
@@ -556,8 +560,8 @@ class OrdersController
             // Сохраняем заказ
             $stmtOrder = $this->pdo->prepare(
                 "INSERT INTO orders
-                (user_id, address_id, slot_id, status, total_amount, discount_applied, points_used, points_accrued, delivery_date, delivery_slot, created_at)
-                 VALUES (?, ?, ?, 'new', ?, ?, ?, 0, ?, '', NOW())"
+                (user_id, address_id, slot_id, status, total_amount, discount_applied, points_used, points_accrued, delivery_date, created_at)
+                 VALUES (?, ?, ?, 'new', ?, ?, ?, 0, ?, NOW())"
             );
             $stmtOrder->execute([
                 $user['id'],
@@ -619,10 +623,17 @@ class OrdersController
 
         // Получаем основные данные заказа и пользователя
         $stmt = $this->pdo->prepare(
-            "SELECT o.created_at, o.total_amount, o.delivery_date, o.delivery_slot, u.name, u.phone
-             FROM orders o
-             JOIN users u ON u.id = o.user_id
-             WHERE o.id = ?"
+            "SELECT o.created_at, o.total_amount, o.delivery_date,
+" .
+            "       d.time_from AS slot_from, d.time_to AS slot_to, u.name, u.phone
+" .
+            "FROM orders o
+" .
+            "JOIN users u ON u.id = o.user_id
+" .
+            "LEFT JOIN delivery_slots d ON d.id = o.slot_id
+" .
+            "WHERE o.id = ?"
         );
         $stmt->execute([$orderId]);
         $order = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -643,7 +654,7 @@ class OrdersController
         $item = $stmtItems->fetch(\PDO::FETCH_ASSOC);
 
         $deliveryDate = $order['delivery_date'] ?? null;
-        $deliverySlot = $order['delivery_slot'] ?? '';
+        $deliverySlot = format_time_range($order['slot_from'] ?? null, $order['slot_to'] ?? null);
         $placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
         if ($deliveryDate && $deliveryDate !== $placeholder) {
             $deliveryText = date('d.m.Y', strtotime($deliveryDate));
@@ -651,7 +662,7 @@ class OrdersController
             $deliveryText = 'Ближайшая возможная дата';
         }
         if ($deliverySlot !== '') {
-            $deliveryText .= ' ' . format_slot($deliverySlot);
+            $deliveryText .= ' ' . $deliverySlot;
         }
 
         $line1 = $order['phone'] . ', ' . $order['name'];
