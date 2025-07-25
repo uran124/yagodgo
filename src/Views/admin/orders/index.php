@@ -58,17 +58,25 @@
         $createdAttr = date('Y-m-d H:i', strtotime($o['created_at']));
         $deliveryAttr = $o['delivery_date'] ? date('Y-m-d', strtotime($o['delivery_date'])) : '';
       ?>
-      <a href="<?= $base ?>/orders/<?= $o['id'] ?>" class="order-card block bg-white p-2 sm:p-4 rounded shadow hover:bg-gray-50 <?= $bg ?>" data-status="<?= $o['status'] ?>" data-date="<?= $dateAttr ?>" data-created="<?= $createdAttr ?>" data-id="<?= $o['id'] ?>" data-delivery="<?= $deliveryAttr ?>">
+      <?php
+        $wa = preg_replace('/\D+/', '', $o['phone']);
+        if (strlen($wa) === 10) {
+            $wa = '7' . $wa;
+        } elseif (strlen($wa) === 11 && $wa[0] === '8') {
+            $wa = '7' . substr($wa, 1);
+        }
+      ?>
+      <div class="order-card block bg-white p-2 sm:p-4 rounded shadow hover:bg-gray-50 <?= $bg ?>" data-status="<?= $o['status'] ?>" data-date="<?= $dateAttr ?>" data-created="<?= $createdAttr ?>" data-id="<?= $o['id'] ?>" data-delivery="<?= $deliveryAttr ?>">
         <div class="flex justify-between items-center">
-          <div class="flex flex-col">
+          <a href="<?= $base ?>/orders/<?= $o['id'] ?>" class="flex flex-col hover:underline">
             <span class="font-semibold">#<?= $o['id'] ?><?php if ($o['delivery_date']): ?>, <?= date('d.m', strtotime($o['delivery_date'])) ?> <?= htmlspecialchars(format_time_range($o['slot_from'], $o['slot_to'])) ?><?php endif; ?></span>
-          </div>
+          </a>
           <span class="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-medium <?= order_status_info($o['status'])['badge'] ?>">
             <?= order_status_info($o['status'])['label'] ?>
           </span>
         </div>
         <div class="text-sm text-gray-600 mt-1">
-          <?= htmlspecialchars($o['client_name']) ?>, <?= htmlspecialchars($o['phone']) ?>, <?= htmlspecialchars($o['address']) ?>
+          <?= htmlspecialchars($o['client_name']) ?>, <a href="https://wa.me/<?= $wa ?>" class="hover:underline" target="_blank"><?= htmlspecialchars($o['phone']) ?></a>, <?= htmlspecialchars($o['address']) ?>
         </div>
         <div class="font-semibold mt-2">Состав:</div>
         <?php foreach ($o['items'] as $it): ?>
@@ -101,7 +109,7 @@
           <span>Стоимость заказа:</span>
           <span><?= number_format($o['total_amount'], 0, '.', ' ') ?> ₽</span>
         </div>
-      </a>
+      </div>
     <?php endforeach; ?>
   </div>
 <?php else: ?>
