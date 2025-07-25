@@ -78,8 +78,8 @@
       ?>
       <div class="order-card block bg-white p-2 sm:p-4 rounded shadow hover:bg-gray-50 <?= $bg ?>" data-status="<?= $o['status'] ?>" data-date="<?= $dateAttr ?>" data-created="<?= $createdAttr ?>" data-id="<?= $o['id'] ?>" data-delivery="<?= $deliveryAttr ?>" data-slot="<?= $slotAttr ?>">
         <div class="flex justify-between items-center">
-          <a href="<?= $base ?>/orders/<?= $o['id'] ?>" class="flex flex-col hover:underline">
-            <span class="font-semibold">#<?= $o['id'] ?><?php if ($o['delivery_date']): ?>, <?= date('d.m', strtotime($o['delivery_date'])) ?> <?= htmlspecialchars(format_time_range($o['slot_from'], $o['slot_to'])) ?><?php endif; ?></span>
+          <a href="<?= $base ?>/orders/<?= $o['id'] ?>" class="flex flex-col font-bold underline">
+            <span class="text-green-600">#<?= $o['id'] ?></span><?php if ($o['delivery_date']): ?>, <?= date('d.m', strtotime($o['delivery_date'])) ?> <?= htmlspecialchars(format_time_range($o['slot_from'], $o['slot_to'])) ?><?php endif; ?>
           </a>
           <span class="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-medium <?= order_status_info($o['status'])['badge'] ?>">
             <?= order_status_info($o['status'])['label'] ?>
