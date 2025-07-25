@@ -76,3 +76,11 @@ INSERT INTO delivery_slots (time_from, time_to) VALUES
   ('18:00', '22:00');
 ```
 
+
+### Orders table update
+
+Remove the obsolete `delivery_slot` column from the `orders` table. Slots are now referenced via `slot_id`.
+
+```sql
+ALTER TABLE orders DROP COLUMN delivery_slot;
+```

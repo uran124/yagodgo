@@ -217,6 +217,15 @@ function format_slot(?string $slot): string
     return $slot;
 }
 
+// Formats delivery slot from time range
+function format_time_range(?string $from, ?string $to): string
+{
+    if (!$from || !$to) {
+        return '';
+    }
+    return substr($from, 0, 5) . ' - ' . substr($to, 0, 5);
+}
+
 switch ("$method $uri") {
 
 

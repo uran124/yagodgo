@@ -100,8 +100,7 @@ $slots           = $slots           ?? [];
                           required
                           class="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 pr-10 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all bg-white">
                     <?php foreach ($slots as $slot): ?>
-                      <?php $value = sprintf('%02d-%02d', (int)substr($slot['time_from'], 0, 2), (int)substr($slot['time_to'], 0, 2)); ?>
-                      <option value="<?= $value ?>">
+                      <option value="<?= $slot['id'] ?>">
                         <?= htmlspecialchars($slot['time_from'] . ' - ' . $slot['time_to']) ?>
                       </option>
                     <?php endforeach; ?>

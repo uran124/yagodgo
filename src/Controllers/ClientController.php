@@ -533,7 +533,7 @@ public function cart(): void
 
         // 8.1) Время слотов доставки
         $slotsStmt = $this->pdo->query(
-            "SELECT time_from, time_to FROM delivery_slots ORDER BY time_from"
+            "SELECT id, time_from, time_to FROM delivery_slots ORDER BY time_from"
         );
         $slots = $slotsStmt->fetchAll(PDO::FETCH_ASSOC);
     
@@ -757,15 +757,15 @@ public function cart(): void
         }
         $finalSum = $subAfterPickup - $pointsDiscount - $couponDiscount;
 
-        $deliverySlot = $_POST['slot_id'][$dateKey] ?? ''; // из формы
+        $slotId = $_POST['slot_id'][$dateKey] ?? null; // из формы
 
         // (7.2) Вставляем заказ. Поскольку у таблицы orders есть колонки discount_applied, points_used, points_accrued, нужно задать их:
         $stmtOrder = $this->pdo->prepare(
             "INSERT INTO orders
-               (user_id, address_id, status, total_amount,
+               (user_id, address_id, slot_id, status, total_amount,
                 discount_applied, points_used, points_accrued, coupon_code,
-                delivery_date, delivery_slot, created_at)
-             VALUES (?, ?, 'new', ?, ?, ?, ?, ?, ?, ?, NOW())"
+                delivery_date, created_at)
+             VALUES (?, ?, ?, 'new', ?, ?, ?, ?, ?, NOW())"
         );
         $pointsAccrued = 0; // пока 0, начислим ниже, если надо
         $stmtOrder->execute([
@@ -775,9 +775,9 @@ public function cart(): void
             $couponDiscount + $pickupDiscount, // discount_applied = скидка по купону и самовывозу
             $pointsDiscount,  // points_used = списанные баллы
             $pointsAccrued,   // points_accrued = пока 0
+            $slotId,
             $couponCode,
-            $dateKey,
-            $deliverySlot
+            $dateKey
         ]);
         $orderId = (int)$this->pdo->lastInsertId();
         $createdOrderIds[] = $orderId;
@@ -846,7 +846,7 @@ public function showOrder(int $orderId): void
     // 1) Получаем данные о заказе
     $stmt = $this->pdo->prepare(
       "SELECT
-         o.*,
+         o.*, d.time_from AS slot_from, d.time_to AS slot_to,
          u.name AS client_name,
          a.street AS address,
          a.recipient_name,
@@ -854,6 +854,7 @@ public function showOrder(int $orderId): void
        FROM orders o
        JOIN users u ON u.id = o.user_id
        LEFT JOIN addresses a ON a.id = o.address_id
+       LEFT JOIN delivery_slots d ON d.id = o.slot_id
        WHERE o.id = ?"
     );
     $stmt->execute([$orderId]);
@@ -956,11 +957,7 @@ public function showOrder(int $orderId): void
         requireClient();
         $userId = $_SESSION['user_id'];
         $stmt = $this->pdo->prepare(
-            "SELECT o.id, o.status, o.total_amount, o.created_at, o.delivery_date, o.delivery_slot, a.street AS address
-             FROM orders o
-             LEFT JOIN addresses a ON a.id = o.address_id
-             WHERE o.user_id = ?
-             ORDER BY o.id DESC"
+            "SELECT o.id, o.status, o.total_amount, o.created_at, o.delivery_date,\n       d.time_from AS slot_from, d.time_to AS slot_to, a.street AS address\nFROM orders o\nLEFT JOIN addresses a ON a.id = o.address_id\nLEFT JOIN delivery_slots d ON d.id = o.slot_id\nWHERE o.user_id = ?\nORDER BY o.id DESC"
         );
         $stmt->execute([$userId]);
         $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);

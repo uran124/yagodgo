@@ -44,7 +44,7 @@ function status_classes(string $status): string {
                 <span class="font-semibold">#<?= $order['id'] ?>:</span>
                 <span>
                   <?php if (!empty($order['delivery_date'])): ?>
-                    <?= date('d.m', strtotime($order['delivery_date'])) ?><?php if(!empty($order['delivery_slot'])): ?> <?= htmlspecialchars(format_slot($order['delivery_slot'])) ?><?php endif; ?>
+                    <?= date('d.m', strtotime($order['delivery_date'])) ?><?php if(!empty($order['slot_from'])): ?> <?= htmlspecialchars(format_time_range($order['slot_from'], $order['slot_to'])) ?><?php endif; ?>
                   <?php endif; ?>
                 </span>
                 <span class="order-date hidden"><?= date('d.m.Y H:i', strtotime($order['created_at'])) ?></span>
@@ -92,7 +92,7 @@ function status_classes(string $status): string {
                 <span class="font-semibold">#<?= $order['id'] ?>:</span>
                 <span>
                   <?php if (!empty($order['delivery_date'])): ?>
-                    <?= date('d.m', strtotime($order['delivery_date'])) ?><?php if(!empty($order['delivery_slot'])): ?> <?= htmlspecialchars(format_slot($order['delivery_slot'])) ?><?php endif; ?>
+                    <?= date('d.m', strtotime($order['delivery_date'])) ?><?php if(!empty($order['slot_from'])): ?> <?= htmlspecialchars(format_time_range($order['slot_from'], $order['slot_to'])) ?><?php endif; ?>
                   <?php endif; ?>
                 </span>
                 <span class="order-date hidden"><?= date('d.m.Y H:i', strtotime($order['created_at'])) ?></span>
