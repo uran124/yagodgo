@@ -151,15 +151,11 @@ class OrdersController
         $managersStmt = $this->pdo->query("SELECT id, name FROM users WHERE role = 'manager' ORDER BY name");
         $managers = $managersStmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $slotsStmt = $this->pdo->query("SELECT id, time_from, time_to FROM delivery_slots ORDER BY time_from");
-        $slots = $slotsStmt->fetchAll(PDO::FETCH_ASSOC);
-
         viewAdmin('orders/index', [
             'pageTitle'       => 'Заказы',
             'orders'          => $orders,
             'managers'       => $managers,
             'selectedManager' => $managerId,
-            'slots'           => $slots,
         ]);
     }
 

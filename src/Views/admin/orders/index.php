@@ -41,14 +41,6 @@
       <?php endforeach; ?>
     </select>
   <?php endif; ?>
-  <?php if (!empty($slots)): ?>
-    <select id="slotFilter" class="border rounded px-3 py-2 text-sm">
-      <option value="">Все слоты</option>
-      <?php foreach ($slots as $s): ?>
-        <option value="<?= $s['id'] ?>"><?= htmlspecialchars(format_time_range($s['time_from'], $s['time_to'])) ?></option>
-      <?php endforeach; ?>
-    </select>
-  <?php endif; ?>
 </div>
 <div class="date-filter mb-4 flex flex-row flex-wrap gap-2">
   <button data-filter="today" class="date-btn px-3 py-2 bg-gray-200 rounded text-sm">Сегодня</button>
@@ -179,20 +171,17 @@
     const dateButtons = document.querySelectorAll('.date-btn');
     let dateFilter = '';
     const managerFilter = document.getElementById('managerFilter');
-    const slotFilter = document.getElementById('slotFilter');
     const isManager = <?= $isManager ? 'true' : 'false' ?>;
     let rows = document.querySelectorAll(isManager ? '#ordersCards .order-card' : '#ordersTable tr');
 
     function applyFilters() {
       const s = statusFilter.value;
-      const sl = slotFilter ? slotFilter.value : '';
       rows.forEach(row => {
         const st = row.dataset.status;
         const d = row.dataset.delivery;
-        const ds = row.dataset.slot;
+        
         let visible = true;
         if (s && st !== s) visible = false;
-        if (sl && ds !== sl) visible = false;
         if (dateFilter === 'today') {
           const today = new Date().toISOString().slice(0,10);
           if (!d || d !== today) visible = false;
@@ -234,7 +223,6 @@
       window.location.search = params.toString();
     });
 
-    slotFilter?.addEventListener('change', applyFilters);
 
     document.querySelectorAll('th.sortable').forEach(th => {
       th.addEventListener('click', function () {
