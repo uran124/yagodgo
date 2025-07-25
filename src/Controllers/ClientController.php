@@ -715,8 +715,13 @@ public function cart(): void
         $addrInput = $postedAddresses[$dateKey] ?? $defaultAddress;
         $streetVal = '';
         if ($addrInput === 'pickup') {
-            $addressIds[$dateKey] = null;
-            $streetVal = 'pickup';
+            $streetVal = 'Самовывоз: 9 мая, 73';
+            $addressIds[$dateKey] = $this->ensureAddress(
+                $userId,
+                $streetVal,
+                $recipientName,
+                $recipientPhone
+            );
         } elseif ($addrInput === 'new' && $newStreet !== '') {
             $addressIds[$dateKey] = $this->ensureAddress($userId, $newStreet, $recipientName, $recipientPhone);
             $streetVal = $newStreet;
