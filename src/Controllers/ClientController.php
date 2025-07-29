@@ -521,7 +521,8 @@ public function cart(): void
         if ($discountPercent > 0) {
             $couponPercentAmount = (int)floor(($subtotal - $pointsDiscountTotal) * ($discountPercent / 100));
         }
-        $finalTotal = $subtotal - $pointsDiscountTotal - $couponPercentAmount;
+        $shippingTotal = 300 * count($groups);
+        $finalTotal = $subtotal - $pointsDiscountTotal - $couponPercentAmount + $shippingTotal;
     
         // 8) Берём текущий адрес пользователя
         $addrStmt = $this->pdo->prepare(
@@ -750,7 +751,9 @@ public function cart(): void
         if ($discountPercent > 0) {
             $couponDiscount = (int) floor(($subAfterPickup - $pointsDiscount) * ($discountPercent / 100));
         }
-        $finalSum = $subAfterPickup - $pointsDiscount - $couponDiscount;
+        $addrInput = $postedAddresses[$dateKey] ?? $defaultAddress;
+        $shippingFee = ($addrInput === 'pickup') ? 0 : 300;
+        $finalSum = $subAfterPickup - $pointsDiscount - $couponDiscount + $shippingFee;
 
         $slotId = $_POST['slot_id'][$dateKey] ?? null; // из формы
 

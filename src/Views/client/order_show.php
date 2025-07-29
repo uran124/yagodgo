@@ -19,7 +19,8 @@ foreach ($items as $it) {
     $rawSum += ($it['quantity'] * $it['unit_price']);
 }
 // Сумма скидки в рублях
-$discount = max(0, $rawSum - $order['total_amount']);
+$shippingCost = (stripos($order['address'] ?? '', 'Самовывоз') === false) ? 300 : 0;
+$discount = max(0, $rawSum - $order['total_amount'] + $shippingCost);
 ?>
 
 <main class="bg-gradient-to-br from-orange-50 via-white to-pink-50 min-h-screen pb-24">
@@ -134,8 +135,12 @@ $discount = max(0, $rawSum - $order['total_amount']);
         <?php endif; ?>
       </div>
 
-      <!-- Окончательная сумма -->
       <div class="flex justify-between items-center pt-4 border-t border-gray-200 mt-4">
+        <span class="font-semibold text-gray-800">Доставка:</span>
+        <span class="font-semibold text-gray-800"><?= $shippingCost > 0 ? '300 ₽' : '0 ₽' ?></span>
+      </div>
+      <!-- Окончательная сумма -->
+      <div class="flex justify-between items-center pt-2">
         <span class="font-semibold text-gray-800 text-lg">Стоимость заказа:</span>
         <span class="font-bold text-2xl text-gray-800">
           <?= number_format($order['total_amount'], 0, '.', ' ') ?> ₽
