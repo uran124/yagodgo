@@ -154,23 +154,28 @@ $slots           = $slots           ?? [];
                     <?= number_format($orderSum, 0, '.', ' ') ?> ₽
                   </span>
                 </div>
+                <div class="flex justify-between items-center pt-2" data-shipping-row>
+                  <span class="font-semibold text-gray-800">Доставка:</span>
+                  <span class="font-bold text-gray-800">300 ₽</span>
+                </div>
               </div>
             </div>
           </div>
         <?php endforeach; ?>
 
-        <!-- Адрес доставки -->
+        <!-- Способ получения -->
         <div class="bg-white rounded-3xl shadow-lg p-6">
           <h3 class="text-lg font-semibold text-gray-800 mb-4">
             <span class="material-icons-round text-lg mr-2 align-middle">location_on</span>
-            Адрес доставки
+            Способ получения
           </h3>
           <div class="space-y-2">
             <select name="address_id[default]" id="addressSelect" class="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none">
               <?php foreach ($addresses as $a): ?>
-                <option value="<?= $a['id'] ?>" <?= $a['is_primary'] ? 'selected' : '' ?>><?= htmlspecialchars($a['street']) ?> (<?= htmlspecialchars($a['recipient_name']) ?>)</option>
+                <option value="<?= $a['id'] ?>" <?= $a['is_primary'] ? 'selected' : '' ?>>Доставка: <?= htmlspecialchars($a['street']) ?> (<?= htmlspecialchars($a['recipient_name']) ?>)</option>
               <?php endforeach; ?>
-              <option value="new">Другой адрес</option>
+              <option value="new">Доставка: другой адрес</option>
+              <option value="pickup">Самовывоз: 9 мая 73</option>
             </select>
             <div id="newAddressBlock" class="space-y-2 hidden">
               <input type="text" name="new_address" placeholder="Адрес" class="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none">
@@ -247,7 +252,9 @@ $slots           = $slots           ?? [];
                        data-subtotal="<?= (int)$subtotal ?>"
                        data-pointstouse="<?= (int)$pointsToUse ?>"
                        data-couponpoints="<?= (int)$couponPoints ?>"
-                       data-discountpercent="<?= (float)$discountPercent ?>">
+                       data-discountpercent="<?= (float)$discountPercent ?>"
+                       data-groups="<?= count($groups) ?>"
+                       data-shipping="300">
                     <?= number_format($finalTotal, 0, '.', ' ') ?> ₽
                   </div>
                 </div>
@@ -296,20 +303,28 @@ $slots           = $slots           ?? [];
     const points = parseFloat(finalEl.dataset.pointstouse);
     const couponPts = parseFloat(finalEl.dataset.couponpoints);
     const discountPercent = parseFloat(finalEl.dataset.discountpercent);
+    const groups = parseInt(finalEl.dataset.groups);
+    const shipPer = parseFloat(finalEl.dataset.shipping);
 
-    const subAfterPickup = subtotal;
+    const shipping = select.value === 'pickup' ? 0 : shipPer * groups;
 
-    const pointsDiscount = Math.min(points + couponPts, subAfterPickup);
-    const afterPoints = subAfterPickup - pointsDiscount;
+    const pointsDiscount = Math.min(points + couponPts, subtotal);
+    const afterPoints = subtotal - pointsDiscount;
     let couponDiscount = 0;
     if (discountPercent > 0) {
       couponDiscount = Math.floor(afterPoints * (discountPercent / 100));
     }
 
-    const final = afterPoints - couponDiscount;
+    const final = afterPoints - couponDiscount + shipping;
     finalEl.textContent = format(final) + ' ₽';
 
-
+    document.querySelectorAll('[data-shipping-row]').forEach(row => {
+      if (select.value === 'pickup') {
+        row.classList.add('hidden');
+      } else {
+        row.classList.remove('hidden');
+      }
+    });
   }
 
   if (select) {
