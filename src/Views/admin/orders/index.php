@@ -100,12 +100,6 @@
             <span>-<?= number_format($o['coupon_discount'], 0, '.', ' ') ?> ₽</span>
           </div>
         <?php endif; ?>
-        <?php if (($o['pickup_discount'] ?? 0) > 0): ?>
-          <div class="flex justify-between text-sm">
-            <span>Скидка за самовывоз:</span>
-            <span>-<?= number_format($o['pickup_discount'], 0, '.', ' ') ?> ₽</span>
-          </div>
-        <?php endif; ?>
         <div class="flex justify-between font-semibold border-t pt-1 mt-1">
           <span>Стоимость заказа:</span>
           <span><?= number_format($o['total_amount'], 0, '.', ' ') ?> ₽</span>

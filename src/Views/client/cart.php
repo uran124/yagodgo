@@ -150,7 +150,6 @@
             </button>
           </form>
         </div>
-        <p class="text-xs text-gray-500 mt-3 text-center">Скидка за самовывоз будет рассчитана при подтверждении заказа.</p>
       </div>
     </div>
 

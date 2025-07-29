@@ -710,7 +710,6 @@ public function cart(): void
     $recipientPhone  = $this->normalizePhone($_POST['recipient_phone'] ?? '');
 
     $addressIds   = [];
-    $pickupByDate = [];
     foreach ($itemsByDate as $dateKey => $_) {
         $addrInput = $postedAddresses[$dateKey] ?? $defaultAddress;
         $streetVal = '';
@@ -734,7 +733,7 @@ public function cart(): void
             $addressIds[$dateKey] = $this->ensureAddress($userId, $addrInput, $recipientName, $recipientPhone);
             $streetVal = $addrInput;
         }
-        $pickupByDate[$dateKey] = ($addrInput === 'pickup') || stripos($streetVal, 'самовывоз') !== false;
+        // сохраняем адрес как обычный, скидка за самовывоз не применяется
     }
 
     // 9) СОЗДАЁМ ЗАКАЗЫ ПО КАЖДОЙ ДАТЕ, учитываем дату и слот
@@ -745,11 +744,7 @@ public function cart(): void
         foreach ($block as $data) {
             $blockSum += $data['quantity'] * $data['unit_price'];
         }
-        $pickupDiscount = 0;
-        if (!empty($pickupByDate[$dateKey])) {
-            $pickupDiscount = (int) floor($blockSum * 0.20);
-        }
-        $subAfterPickup = $blockSum - $pickupDiscount;
+        $subAfterPickup = $blockSum;
         $pointsDiscount = $discountsByDate[$dateKey] ?? 0;
         $couponDiscount = 0;
         if ($discountPercent > 0) {
@@ -773,7 +768,7 @@ public function cart(): void
             $addressIds[$dateKey],
             $slotId,
             $finalSum,
-            $couponDiscount + $pickupDiscount, // discount_applied = скидка по купону и самовывозу
+            $couponDiscount, // discount_applied = скидка по купону
             $pointsDiscount,  // points_used = списанные баллы
             $pointsAccrued,   // points_accrued = пока 0
             $couponCode,
