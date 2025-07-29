@@ -397,6 +397,10 @@ class OrdersController
             $total -= $pointsUsed;
         }
 
+        $isPickup = $isNew ? trim($_POST['new_address'] ?? '') === '' : $addressId === null;
+        $shippingFee = $isPickup ? 0 : 300;
+        $total += $shippingFee;
+
         $stmt = $this->pdo->prepare(
             "INSERT INTO orders (user_id, address_id, slot_id, status, total_amount, discount_applied, points_used, points_accrued, coupon_code, delivery_date, created_at) VALUES (?, ?, ?, 'new', ?, 0, ?, 0, ?, ?, NOW())"
         );
