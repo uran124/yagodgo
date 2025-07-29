@@ -242,10 +242,6 @@ $slots           = $slots           ?? [];
             <div class="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl p-4">
               <div class="flex justify-between items-center">
                 <div>
-                  <div id="pickupRow" class="flex justify-between text-sm text-gray-600 mb-1 hidden">
-                    <span>Самовывоз -20%</span>
-                    <span id="pickupAmount">-0 ₽</span>
-                  </div>
                   <div class="text-sm text-gray-600 mb-1">К оплате</div>
                   <div id="finalTotal" class="text-2xl font-bold text-gray-800"
                        data-subtotal="<?= (int)$subtotal ?>"
@@ -280,24 +276,6 @@ $slots           = $slots           ?? [];
 <script>
   const select = document.getElementById('addressSelect');
   const block = document.getElementById('newAddressBlock');
-  function applyPickup() {
-    if (!select) return;
-    const enabled = localStorage.getItem('pickupEnabled') === '1';
-    let opt = select.querySelector('option[value="pickup"]');
-    if (enabled) {
-      if (!opt) {
-        opt = document.createElement('option');
-        opt.value = 'pickup';
-        opt.textContent = 'Самовывоз 9 мая 73';
-        select.prepend(opt);
-      }
-      select.value = 'pickup';
-      block.classList.add('hidden');
-    } else if (opt) {
-      if (opt.selected) select.selectedIndex = 0;
-      opt.remove();
-    }
-  }
   function toggleBlock() {
     if (select.value === 'new') {
       block.classList.remove('hidden');
@@ -311,7 +289,6 @@ $slots           = $slots           ?? [];
   }
 
   function updateTotal() {
-    applyPickup();
     toggleBlock();
     const finalEl = document.getElementById('finalTotal');
     if (!finalEl) return;
@@ -320,13 +297,7 @@ $slots           = $slots           ?? [];
     const couponPts = parseFloat(finalEl.dataset.couponpoints);
     const discountPercent = parseFloat(finalEl.dataset.discountpercent);
 
-    const pickup = select && select.value === 'pickup';
-    let pickupDiscount = 0;
-    let subAfterPickup = subtotal;
-    if (pickup) {
-      pickupDiscount = Math.floor(subtotal * 0.20);
-      subAfterPickup -= pickupDiscount;
-    }
+    const subAfterPickup = subtotal;
 
     const pointsDiscount = Math.min(points + couponPts, subAfterPickup);
     const afterPoints = subAfterPickup - pointsDiscount;
@@ -338,14 +309,7 @@ $slots           = $slots           ?? [];
     const final = afterPoints - couponDiscount;
     finalEl.textContent = format(final) + ' ₽';
 
-    const row = document.getElementById('pickupRow');
-    const amtEl = document.getElementById('pickupAmount');
-    if (pickup && row && amtEl) {
-      amtEl.textContent = '-' + format(pickupDiscount) + ' ₽';
-      row.classList.remove('hidden');
-    } else if (row) {
-      row.classList.add('hidden');
-    }
+
   }
 
   if (select) {

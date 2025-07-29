@@ -126,14 +126,7 @@ $regularKg  = round($price, 2);
   <div class="flex-1"></div>
 <?php endif; ?>
 
-    <!-- Самовывоз toggle -->
-    <div class="flex items-center justify-between mb-3 bg-gray-50 rounded px-2 py-1">
-      <span class="text-sm text-gray-600 font-semibold">Самовывоз -20%</span>
-      <label class="inline-flex relative items-center cursor-pointer">
-        <input type="checkbox" class="sr-only peer pickup-toggle">
-        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-pink-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-500"></div>
-      </label>
-    </div>
+
 
     <!-- Блок цены -->
     <div class="mt-auto">

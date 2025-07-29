@@ -26,9 +26,6 @@
       <input type="text" name="new_address" placeholder="Адрес" class="border px-2 py-1 rounded w-full">
     </div>
     <div>
-      <label><input type="checkbox" name="pickup" id="pickupChk"> Самовывоз</label>
-    </div>
-    <div>
       <label>Дата доставки:</label>
       <input type="date" name="delivery_date" value="<?= $today ?>" class="border px-2 py-1 rounded">
       <select name="slot_id" class="border px-2 py-1 rounded">
@@ -76,7 +73,6 @@
     <div id="itemsList" class="space-y-1 text-sm"></div>
     <div id="summary" class="space-y-1 text-sm">
       <div class="flex justify-between"><span>Стоимость товаров:</span> <span id="sumSubtotal">0</span></div>
-      <div id="rowPickup" class="flex justify-between hidden"><span>Самовывоз -20%</span> <span id="sumPickup">0</span></div>
       <div id="rowReferral" class="flex justify-between hidden"><span>Скидка -10%</span> <span id="sumReferral">0</span></div>
       <div class="flex justify-between font-semibold border-t pt-1"><span>Итого:</span> <span id="sumTotal">0</span></div>
     </div>
@@ -115,11 +111,8 @@
   const addressWrapper = document.getElementById('addressWrapper');
   const addressSelect = document.getElementById('addressSelect');
   const addressNew = document.getElementById('addressNew');
-  const pickupChk = document.getElementById('pickupChk');
   const qtyInputs = document.querySelectorAll('.qty');
   const subtotalEl = document.getElementById('sumSubtotal');
-  const pickupRow = document.getElementById('rowPickup');
-  const pickupEl = document.getElementById('sumPickup');
   const refRow = document.getElementById('rowReferral');
   const refEl = document.getElementById('sumReferral');
   const totalEl = document.getElementById('sumTotal');
@@ -188,7 +181,6 @@
     });
   });
   qtyInputs.forEach(i=>i.addEventListener('input', updateSummary));
-  pickupChk.addEventListener('change', updateSummary);
   if (pointsInput) pointsInput.addEventListener('input', updateSummary);
 
   function updateSummary() {
@@ -207,15 +199,6 @@
     });
     subtotalEl.textContent = subtotal.toFixed(2) + ' ₽';
     let total = subtotal;
-    const pickup = pickupChk.checked;
-    if (pickup) {
-      const d = subtotal * 0.2;
-      pickupEl.textContent = '-' + d.toFixed(2);
-      pickupRow.classList.remove('hidden');
-      total -= d;
-    } else {
-      pickupRow.classList.add('hidden');
-    }
     const referral = document.getElementById('userId').value === '';
     if (referral) {
       const d = subtotal * 0.1;
@@ -262,7 +245,6 @@
       } else {
         addressNew.classList.add('hidden');
       }
-      pickupChk.checked = addressSelect.value === 'pickup';
     });
   }
 </script>
