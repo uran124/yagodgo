@@ -74,6 +74,7 @@
     <div id="summary" class="space-y-1 text-sm">
       <div class="flex justify-between"><span>Стоимость товаров:</span> <span id="sumSubtotal">0</span></div>
       <div id="rowReferral" class="flex justify-between hidden"><span>Скидка -10%</span> <span id="sumReferral">0</span></div>
+      <div id="rowShipping" class="flex justify-between hidden"><span>Доставка:</span> <span id="sumShipping">0</span></div>
       <div class="flex justify-between font-semibold border-t pt-1"><span>Итого:</span> <span id="sumTotal">0</span></div>
     </div>
     <div>
@@ -115,12 +116,15 @@
   const subtotalEl = document.getElementById('sumSubtotal');
   const refRow = document.getElementById('rowReferral');
   const refEl = document.getElementById('sumReferral');
+  const shipRow = document.getElementById('rowShipping');
+  const shipEl = document.getElementById('sumShipping');
   const totalEl = document.getElementById('sumTotal');
   const pointsInput = document.getElementById('pointsInput');
   const pointsRow = document.getElementById('pointsRow');
   const pointsAmount = document.getElementById('pointsAmount');
   const itemsList = document.getElementById('itemsList');
   const newPhoneInput = document.querySelector('input[name="new_phone"]');
+  const newAddressInput = document.querySelector('input[name="new_address"]');
   function cleanPhone(val) {
     let digits = val.replace(/\D/g,'');
     if (digits.startsWith('7') || digits.startsWith('8')) digits = digits.slice(1);
@@ -130,7 +134,7 @@
   search.addEventListener('input', ()=>{
     search.value = cleanPhone(search.value);
     const term = search.value;
-    if (term.length < 2) { sugg.classList.add('hidden'); newBlock.classList.add('hidden'); userInfo.classList.add('hidden'); pointsRow.classList.add('hidden'); return; }
+    if (term.length < 2) { sugg.classList.add('hidden'); newBlock.classList.add('hidden'); userInfo.classList.add('hidden'); pointsRow.classList.add('hidden'); updateSummary(); return; }
     fetch('<?= $base ?>/users/search?term='+term)
       .then(r=>r.json()).then(data=>{
         sugg.innerHTML='';
@@ -158,6 +162,7 @@
         document.getElementById('userId').value='';
         pointsRow.classList.add('hidden');
         userInfo.classList.add('hidden');
+        updateSummary();
       } else {
         sugg.classList.remove('hidden');
       }
@@ -213,6 +218,23 @@
     if (pointsInput) pointsInput.value = maxUse;
     pointsAmount.textContent = maxUse;
     total -= maxUse;
+
+    let shipping = 300;
+    if (addressSelect) {
+      shipping = addressSelect.value === 'pickup' ? 0 : 300;
+    } else {
+      const newAddr = document.querySelector('input[name="new_address"]');
+      if (newAddr && newAddr.value.trim() === '') shipping = 0;
+    }
+
+    shipEl.textContent = shipping.toFixed(2) + ' ₽';
+    if (shipping === 0) {
+      shipRow.classList.add('hidden');
+    } else {
+      shipRow.classList.remove('hidden');
+    }
+
+    total += shipping;
     totalEl.textContent = total.toFixed(2) + ' ₽';
   }
 
@@ -235,6 +257,7 @@
         optPickup.textContent='Самовывоз 9 мая 73';
         addressSelect.appendChild(optPickup);
         addressWrapper.classList.remove('hidden');
+        updateSummary();
       });
   }
 
@@ -245,7 +268,16 @@
       } else {
         addressNew.classList.add('hidden');
       }
+      updateSummary();
     });
+  }
+
+  if (addressNew) {
+    addressNew.addEventListener('input', updateSummary);
+  }
+
+  if (newAddressInput) {
+    newAddressInput.addEventListener('input', updateSummary);
   }
 </script>
 
