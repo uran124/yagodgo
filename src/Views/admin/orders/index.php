@@ -49,8 +49,7 @@
   <button data-filter="completed" class="date-btn px-3 py-2 bg-gray-200 rounded text-sm">Завершенные</button>
 </div>
 
-<?php if ($isManager): ?>
-  <div id="ordersCards" class="space-y-3">
+<div id="ordersCards" class="space-y-3">
     <?php foreach ($orders as $o): ?>
       <?php
         $bg = in_array($o['status'], ['new','processing'], true) ? 'bg-gray-200' : '';
@@ -77,7 +76,9 @@
           </span>
         </div>
         <div class="text-sm text-gray-600 mt-1">
-          <?= htmlspecialchars($o['client_name']) ?>, <a href="https://wa.me/<?= $wa ?>" class="<?php if($isManager): ?>text-green-600 underline hover:text-green-700<?php else: ?>hover:underline<?php endif; ?>" target="_blank"><?= htmlspecialchars($o['phone']) ?></a>, <?= htmlspecialchars($o['address']) ?>
+          <?= htmlspecialchars($o['client_name']) ?>,
+          <a href="https://wa.me/<?= $wa ?>" class="<?php if($isManager): ?>text-green-600 underline hover:text-green-700<?php else: ?>hover:underline<?php endif; ?>" target="_blank"><?= htmlspecialchars($o['phone']) ?></a>,
+          <a href="#" class="copy-address hover:underline" data-address="<?= htmlspecialchars($o['address'], ENT_QUOTES) ?>"><?= htmlspecialchars($o['address']) ?></a>
         </div>
         <div class="font-semibold mt-2">Состав:</div>
         <?php foreach ($o['items'] as $it): ?>
@@ -106,58 +107,7 @@
         </div>
       </div>
     <?php endforeach; ?>
-  </div>
-<?php else: ?>
-<div class="overflow-x-auto">
-<table class="orders-table min-w-full bg-white rounded shadow overflow-hidden">
-  <thead class="bg-gray-200 text-gray-700">
-    <tr>
-      <th class="p-3 text-left font-semibold cursor-pointer sortable" data-sort="id">№</th>
-      <th class="p-3 text-left font-semibold cursor-pointer sortable" data-sort="created">Дата оформления</th>
-      <th class="p-3 text-left font-semibold cursor-pointer sortable" data-sort="delivery">Дата доставки</th>
-      <th class="p-3 text-left font-semibold cursor-pointer sortable" data-sort="slot">Слот</th>
-      <th class="p-3 text-left font-semibold">Клиент</th>
-      <th class="p-3 text-left font-semibold">Телефон</th>
-      <th class="p-3 text-left font-semibold">Адрес</th>
-      <th class="p-3 text-left font-semibold">Сумма</th>
-    </tr>
-  </thead>
-  <tbody id="ordersTable">
-    <?php foreach ($orders as $o): ?>
-      <?php
-        $bg = in_array($o['status'], ['new','processing'], true) ? 'bg-gray-200' : '';
-        $dateAttr = $o['delivery_date'] ? date('Y-m-d', strtotime($o['delivery_date'])) : '';
-        $createdAttr = date('Y-m-d H:i', strtotime($o['created_at']));
-        $deliveryAttr = $o['delivery_date'] ? date('Y-m-d', strtotime($o['delivery_date'])) : '';
-        $slotAttr = $o['slot_id'] ?? '';
-      ?>
-      <tr data-status="<?= $o['status'] ?>" data-date="<?= $dateAttr ?>" data-created="<?= $createdAttr ?>" data-id="<?= $o['id'] ?>" data-delivery="<?= $deliveryAttr ?>" data-slot="<?= $slotAttr ?>" class="border-b hover:bg-gray-50 cursor-pointer <?= $bg ?>" onclick="location.href='<?= $base ?>/orders/<?= $o['id'] ?>'">
-        <?php
-          $numCls = match($o['status']) {
-            'new' => 'text-red-500',
-            'processing' => 'text-yellow-400',
-            'assigned' => 'text-green-500',
-            default => ''
-          };
-        ?>
-        <td class="p-3 font-semibold <?= $numCls ?>">#<?= $o['id'] ?></td>
-        <td class="p-3 text-gray-600"><?= date('d.m H:i', strtotime($o['created_at'])) ?></td>
-        <td class="p-3 text-gray-600">
-          <?php if ($o['delivery_date']): ?>
-            <?= date('d.m', strtotime($o['delivery_date'])) ?> <?= htmlspecialchars(format_time_range($o['slot_from'], $o['slot_to'])) ?>
-          <?php endif; ?>
-        </td>
-        <td class="p-3 text-gray-600"><?= htmlspecialchars(format_time_range($o['slot_from'], $o['slot_to'])) ?></td>
-        <td class="p-3 text-gray-600"><?= htmlspecialchars($o['client_name']) ?></td>
-        <td class="p-3 text-gray-600"><?= htmlspecialchars($o['phone']) ?></td>
-        <td class="p-3 text-gray-600"><?= htmlspecialchars($o['address']) ?></td>
-        <td class="p-3 text-gray-600"><?= $o['total_amount'] ?> ₽</td>
-      </tr>
-    <?php endforeach; ?>
-  </tbody>
-</table>
 </div>
-<?php endif; ?>
 
 <script>
   document.addEventListener('DOMContentLoaded', function () {
@@ -166,7 +116,7 @@
     let dateFilter = '';
     const managerFilter = document.getElementById('managerFilter');
     const isManager = <?= $isManager ? 'true' : 'false' ?>;
-    let rows = document.querySelectorAll(isManager ? '#ordersCards .order-card' : '#ordersTable tr');
+    let rows = document.querySelectorAll('#ordersCards .order-card');
 
     function applyFilters() {
       const s = statusFilter.value;
@@ -217,6 +167,14 @@
       window.location.search = params.toString();
     });
 
+    document.querySelectorAll('.copy-address').forEach(el => {
+      el.addEventListener('click', e => {
+        e.preventDefault();
+        const addr = el.dataset.address;
+        navigator.clipboard.writeText(addr);
+      });
+    });
+
 
     document.querySelectorAll('th.sortable').forEach(th => {
       th.addEventListener('click', function () {
@@ -229,6 +187,7 @@
 
     function sortRows(field, dir) {
       const tbody = document.getElementById('ordersTable');
+      if (!tbody) return;
       const arr = Array.from(tbody.querySelectorAll('tr'));
       arr.sort((a, b) => {
         let av = a.dataset[field];
@@ -246,7 +205,7 @@
         return dir === 'asc' ? av - bv : bv - av;
       });
       arr.forEach(r => tbody.appendChild(r));
-      rows = document.querySelectorAll(isManager ? '#ordersCards .order-card' : '#ordersTable tr');
+      rows = document.querySelectorAll('#ordersCards .order-card');
     }
   });
 </script>
