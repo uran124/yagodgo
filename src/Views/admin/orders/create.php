@@ -74,6 +74,7 @@
     <div id="summary" class="space-y-1 text-sm">
       <div class="flex justify-between"><span>Стоимость товаров:</span> <span id="sumSubtotal">0</span></div>
       <div id="rowReferral" class="flex justify-between hidden"><span>Скидка -10%</span> <span id="sumReferral">0</span></div>
+      <div id="rowShipping" class="flex justify-between hidden"><span>Доставка:</span> <span id="sumShipping">0</span></div>
       <div class="flex justify-between font-semibold border-t pt-1"><span>Итого:</span> <span id="sumTotal">0</span></div>
     </div>
     <div>
@@ -115,6 +116,8 @@
   const subtotalEl = document.getElementById('sumSubtotal');
   const refRow = document.getElementById('rowReferral');
   const refEl = document.getElementById('sumReferral');
+  const shippingRow = document.getElementById('rowShipping');
+  const shippingEl = document.getElementById('sumShipping');
   const totalEl = document.getElementById('sumTotal');
   const pointsInput = document.getElementById('pointsInput');
   const pointsRow = document.getElementById('pointsRow');
@@ -213,6 +216,22 @@
     if (pointsInput) pointsInput.value = maxUse;
     pointsAmount.textContent = maxUse;
     total -= maxUse;
+
+    let isPickup = false;
+    if (!newBlock.classList.contains('hidden')) {
+      const addr = document.querySelector('input[name="new_address"]').value.trim();
+      isPickup = addr === '';
+    } else if (addressSelect) {
+      isPickup = addressSelect.value === 'pickup';
+    }
+    const shipping = isPickup ? 0 : 300;
+    shippingEl.textContent = shipping.toFixed(2) + ' ₽';
+    if (shipping > 0) {
+      shippingRow.classList.remove('hidden');
+    } else {
+      shippingRow.classList.add('hidden');
+    }
+    total += shipping;
     totalEl.textContent = total.toFixed(2) + ' ₽';
   }
 
