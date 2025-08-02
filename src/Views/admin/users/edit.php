@@ -15,7 +15,7 @@
       <input name="name" type="text" class="w-full border px-2 py-1 rounded" required>
     </div>
     <div>
-      <label class="block mb-1">Телефон (7XXXXXXXXXX)</label>
+      <label class="block mb-1">Телефон (9XXXXXXXXX)</label>
       <input name="phone" type="tel" class="w-full border px-2 py-1 rounded" required>
     </div>
     <div>
@@ -32,6 +32,19 @@
     </div>
     <button type="submit" class="bg-[#C86052] text-white px-4 py-2 rounded">Создать</button>
   </form>
+  <script>
+    const phoneInput = document.querySelector('input[name="phone"]');
+    function cleanPhone(val) {
+      let digits = val.replace(/\D/g, '');
+      if (digits.startsWith('7') || digits.startsWith('8')) digits = digits.slice(1);
+      return digits.slice(0, 10);
+    }
+    if (phoneInput) {
+      phoneInput.addEventListener('input', () => {
+        phoneInput.value = cleanPhone(phoneInput.value);
+      });
+    }
+  </script>
 <?php else: ?>
   <form action="<?= $base ?>/users/save" method="post" class="bg-white p-6 rounded shadow max-w-md space-y-4">
     <input type="hidden" name="id" value="<?= $user['id'] ?>">
