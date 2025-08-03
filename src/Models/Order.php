@@ -40,9 +40,10 @@ class Order extends Model
         return (int) floor($sumAfterPoints * 0.05);
     }
 
-    // Метод для подсчёта реферального бонуса (3% от суммы до скидки)
-    public static function calculateReferralBonus(int $sumBeforeDiscount): int
+    // Метод для подсчёта реферального бонуса (3% или 10% для партнёра)
+    public static function calculateReferralBonus(int $sumBeforeDiscount, bool $isPartner = false): int
     {
-        return (int) floor($sumBeforeDiscount * 0.03);
+        $rate = $isPartner ? 0.10 : 0.03;
+        return (int) floor($sumBeforeDiscount * $rate);
     }
 }
