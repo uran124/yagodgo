@@ -33,8 +33,8 @@ $priceBox   = $effectiveKg * $boxSize;
 $pricePerKg = round($effectiveKg, 2);
 $regularBox = $price * $boxSize;
 $role     = $_SESSION['role'] ?? '';
-$isStaff  = in_array($role, ['admin','manager'], true);
-$basePath = $role === 'manager' ? '/manager' : '/admin';
+$isStaff  = in_array($role, ['admin','manager','partner'], true);
+$basePath = $role === 'manager' ? '/manager' : ($role === 'partner' ? '/partner' : '/admin');
 $regularKg  = round($price, 2);
 ?>
 <div class="product-card bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col hover:shadow-2xl transition-shadow duration-200 h-full max-w-[350px]"

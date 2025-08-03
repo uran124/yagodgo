@@ -1,5 +1,5 @@
 <?php /** @var array $products @var array $slots */ ?>
-<?php $isManager = ($_SESSION['role'] ?? '') === 'manager'; $base = $isManager ? '/manager' : '/admin'; ?>
+<?php $role = $_SESSION['role'] ?? ''; $isManager = in_array($role, ['manager','partner'], true); $base = $role === 'manager' ? '/manager' : ($role === 'partner' ? '/partner' : '/admin'); ?>
 
 <?php if (!empty($_GET['error'])): ?>
   <div class="mb-4 p-3 bg-red-50 text-red-700 rounded"><?= htmlspecialchars($_GET['error']) ?></div>

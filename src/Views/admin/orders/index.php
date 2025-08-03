@@ -1,6 +1,5 @@
 <?php /** @var array $orders */ ?>
-<?php $isManager = ($_SESSION['role'] ?? '') === 'manager'; ?>
-<?php $base = $isManager ? '/manager' : '/admin'; ?>
+<?php $role = $_SESSION['role'] ?? ''; $isManager = ($role === 'manager'); $isStaff = in_array($role, ['manager','partner'], true); $base = $role === 'manager' ? '/manager' : ($role === 'partner' ? '/partner' : '/admin'); ?>
 <?php $managers = $managers ?? []; $selectedManager = $selectedManager ?? 0; $slots = $slots ?? []; ?>
 <style>
   @media (max-width: 640px) {
@@ -33,7 +32,7 @@
     <option value="delivered">Выполненные</option>
     <option value="cancelled">Отмененные</option>
   </select>
-  <?php if ($isManager || !empty($managers)): ?>
+  <?php if ($role === 'manager' || !empty($managers)): ?>
     <select id="managerFilter" class="border rounded px-3 py-2 text-sm">
       <option value="">Все менеджеры</option>
       <?php foreach ($managers as $m): ?>
@@ -68,7 +67,7 @@
       ?>
       <div class="order-card block bg-white p-2 sm:p-4 rounded shadow hover:bg-gray-50 <?= $bg ?>" data-status="<?= $o['status'] ?>" data-date="<?= $dateAttr ?>" data-created="<?= $createdAttr ?>" data-id="<?= $o['id'] ?>" data-delivery="<?= $deliveryAttr ?>" data-slot="<?= $slotAttr ?>">
         <div class="flex justify-between items-center">
-          <a href="<?= $base ?>/orders/<?= $o['id'] ?>" class="flex flex-col font-bold<?php if($isManager): ?> text-white decoration-white<?php endif; ?>">
+          <a href="<?= $base ?>/orders/<?= $o['id'] ?>" class="flex flex-col font-bold<?php if($isStaff): ?> text-white decoration-white<?php endif; ?>">
             #<?= $o['id'] ?> <?php if ($o['delivery_date']): ?> | <?= date('d.m', strtotime($o['delivery_date'])) ?> <?= htmlspecialchars(format_time_range($o['slot_from'], $o['slot_to'])) ?><?php endif; ?>
           </a>
           <span class="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-medium <?= order_status_info($o['status'])['badge'] ?>">
@@ -77,7 +76,7 @@
         </div>
         <div class="text-sm text-gray-600 mt-1">
           <?= htmlspecialchars($o['client_name']) ?>,
-          <a href="https://wa.me/<?= $wa ?>" class="<?php if($isManager): ?>text-green-600 underline hover:text-green-700<?php else: ?>hover:underline<?php endif; ?>" target="_blank"><?= htmlspecialchars($o['phone']) ?></a>,
+          <a href="https://wa.me/<?= $wa ?>" class="<?php if($isStaff): ?>text-green-600 underline hover:text-green-700<?php else: ?>hover:underline<?php endif; ?>" target="_blank"><?= htmlspecialchars($o['phone']) ?></a>,
           <a href="#" class="copy-address hover:underline" data-address="<?= htmlspecialchars($o['address'], ENT_QUOTES) ?>"><?= htmlspecialchars($o['address']) ?></a>
         </div>
         <div class="font-semibold mt-2">Состав:</div>
@@ -115,7 +114,7 @@
     const dateButtons = document.querySelectorAll('.date-btn');
     let dateFilter = '';
     const managerFilter = document.getElementById('managerFilter');
-    const isManager = <?= $isManager ? 'true' : 'false' ?>;
+    const isManager = <?= $isStaff ? 'true' : 'false' ?>;
     let rows = document.querySelectorAll('#ordersCards .order-card');
 
     function applyFilters() {

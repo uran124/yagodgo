@@ -1,5 +1,5 @@
 <?php /** @var array $order @var array $items @var array $addresses @var array $slots */ ?>
-<?php $isManager = ($_SESSION['role'] ?? '') === 'manager'; $base = $isManager ? '/manager' : '/admin'; ?>
+<?php $role = $_SESSION['role'] ?? ''; $isManager = in_array($role, ['manager','partner'], true); $base = $role === 'manager' ? '/manager' : ($role === 'partner' ? '/partner' : '/admin'); ?>
 <style>
   @media (max-width: 640px) {
     .order-details button { padding: 0.25rem 0.5rem; font-size: 0.75rem; }

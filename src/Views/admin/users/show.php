@@ -1,5 +1,5 @@
 <?php /** @var array $user @var array $transactions */ ?>
-<?php $isManager = ($_SESSION['role'] ?? '') === 'manager'; $base = $isManager ? '/manager' : '/admin'; ?>
+<?php $role = $_SESSION['role'] ?? ''; $isManager = in_array($role, ['manager','partner'], true); $base = $role === 'manager' ? '/manager' : ($role === 'partner' ? '/partner' : '/admin'); ?>
 <h1 class="text-xl font-semibold mb-4">Пользователь #<?= $user['id'] ?></h1>
 <div class="bg-white p-4 rounded shadow mb-4">
   <div class="font-semibold text-lg mb-1"><?= htmlspecialchars($user['name']) ?></div>

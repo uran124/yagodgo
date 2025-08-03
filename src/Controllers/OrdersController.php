@@ -19,9 +19,12 @@ class OrdersController
      */
     private function basePath(): string
     {
-        return ($_SESSION['role'] ?? '') === 'manager'
-            ? '/manager/orders'
-            : '/admin/orders';
+        $role = $_SESSION['role'] ?? '';
+        return match ($role) {
+            'manager' => '/manager/orders',
+            'partner' => '/partner/orders',
+            default   => '/admin/orders',
+        };
     }
 
     /**

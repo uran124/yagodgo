@@ -1,6 +1,5 @@
 <?php /** @var array $users */ ?>
-<?php $isManager = ($_SESSION['role'] ?? '') === 'manager'; ?>
-<?php $base = $isManager ? '/manager' : '/admin'; ?>
+<?php $role = $_SESSION['role'] ?? ''; $isManager = in_array($role, ['manager','partner'], true); $base = $role === 'manager' ? '/manager' : ($role === 'partner' ? '/partner' : '/admin'); ?>
 <form method="get" class="mb-4 flex">
   <input type="text" name="q" value="<?= htmlspecialchars($search ?? '') ?>" placeholder="Телефон или адрес" class="border rounded px-3 py-2 mr-2 flex-grow">
   <button type="submit" class="bg-[#C86052] text-white px-4 py-2 rounded">Поиск</button>

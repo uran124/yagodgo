@@ -254,6 +254,17 @@
         <span class="material-icons-round">dashboard</span>
       </a>
       <button id="managerToggle" class="material-icons-round text-2xl text-gray-600 hover:text-emerald-500 transition-colors p-2 hover:bg-emerald-50 rounded-xl">manage_accounts</button>
+    <?php elseif (($_SESSION['role'] ?? '') === 'partner'): ?>
+      <a href="/partner/users/edit" class="p-2 text-gray-600 hover:text-[#C86052]" title="Добавить пользователя">
+        <span class="material-icons-round">person_add</span>
+      </a>
+      <a href="/partner/orders/create" class="p-2 text-gray-600 hover:text-[#C86052]" title="Создать заказ">
+        <span class="material-icons-round">add_shopping_cart</span>
+      </a>
+      <a href="/partner/profile" class="p-2 text-gray-600 hover:text-[#C86052]" title="Дашборд">
+        <span class="material-icons-round">dashboard</span>
+      </a>
+      <button id="partnerToggle" class="material-icons-round text-2xl text-gray-600 hover:text-emerald-500 transition-colors p-2 hover:bg-emerald-50 rounded-xl">manage_accounts</button>
     <?php endif; ?>
 
     <?php if (!empty($_SESSION['user_id'])): ?>
@@ -352,6 +363,37 @@
         <span class="font-medium">Пользователи</span>
       </a>
       <a href="/manager/profile" class="flex items-center p-4 hover:bg-gradient-to-r hover:from-red-50 hover:to-orange-50 rounded-2xl transition-all group">
+        <span class="material-icons-round mr-3 text-red-500 group-hover:scale-110 transition-transform">account_circle</span>
+        <span class="font-medium">Профиль</span>
+      </a>
+    </nav>
+  </aside>
+  <?php endif; ?>
+
+  <!-- Partner sidebar (off-canvas) -->
+  <?php if (($_SESSION['role'] ?? '') === 'partner'): ?>
+  <aside
+    id="partnerSidebar"
+    class="fixed top-0 right-0 h-full w-80 glass-effect shadow-2xl transform translate-x-full transition-transform duration-300 z-30 border-l border-white/20"
+  >
+    <div class="p-6 font-bold text-xl border-b border-gray-100 fresh-gradient text-white rounded-tr-xl">
+      <span class="material-icons-round mr-2">manage_accounts</span>
+      Партнёр
+    </div>
+    <nav class="p-4 space-y-1">
+      <a href="/partner/orders" class="flex items-center p-4 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 rounded-2xl transition-all group">
+        <span class="material-icons-round mr-3 text-blue-500 group-hover:scale-110 transition-transform">receipt_long</span>
+        <span class="font-medium">Заказы</span>
+      </a>
+      <a href="/partner/products" class="flex items-center p-4 hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 rounded-2xl transition-all group">
+        <span class="material-icons-round mr-3 text-purple-500 group-hover:scale-110 transition-transform">inventory_2</span>
+        <span class="font-medium">Товары</span>
+      </a>
+      <a href="/partner/users" class="flex items-center p-4 hover:bg-gradient-to-r hover:from-teal-50 hover:to-cyan-50 rounded-2xl transition-all group">
+        <span class="material-icons-round mr-3 text-teal-500 group-hover:scale-110 transition-transform">people</span>
+        <span class="font-medium">Пользователи</span>
+      </a>
+      <a href="/partner/profile" class="flex items-center p-4 hover:bg-gradient-to-r hover:from-red-50 hover:to-orange-50 rounded-2xl transition-all group">
         <span class="material-icons-round mr-3 text-red-500 group-hover:scale-110 transition-transform">account_circle</span>
         <span class="font-medium">Профиль</span>
       </a>
@@ -572,6 +614,20 @@
       document.addEventListener('click', (e) => {
         if (!managerSidebar.contains(e.target) && !managerToggle.contains(e.target)) {
           managerSidebar.classList.add('translate-x-full');
+        }
+      });
+    }
+
+    // Partner sidebar
+    const partnerToggle = document.getElementById('partnerToggle');
+    const partnerSidebar = document.getElementById('partnerSidebar');
+    if (partnerToggle && partnerSidebar) {
+      partnerToggle.addEventListener('click', () => {
+        partnerSidebar.classList.toggle('translate-x-full');
+      });
+      document.addEventListener('click', (e) => {
+        if (!partnerSidebar.contains(e.target) && !partnerToggle.contains(e.target)) {
+          partnerSidebar.classList.add('translate-x-full');
         }
       });
     }

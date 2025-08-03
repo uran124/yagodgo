@@ -17,9 +17,12 @@ class ProductsController
      */
     private function basePath(): string
     {
-        return ($_SESSION['role'] ?? '') === 'manager'
-            ? '/manager/products'
-            : '/admin/products';
+        $role = $_SESSION['role'] ?? '';
+        return match ($role) {
+            'manager' => '/manager/products',
+            'partner' => '/partner/products',
+            default   => '/admin/products',
+        };
     }
 
 
@@ -295,10 +298,13 @@ class ProductsController
         }
         // Determine where to redirect after updating
         $refererPath = parse_url($_SERVER['HTTP_REFERER'] ?? '', PHP_URL_PATH) ?? '';
-        if (preg_match('#^/(admin|manager)/#', $refererPath)) {
-            $base = ($_SESSION['role'] ?? '') === 'manager'
-                ? '/manager/products'
-                : '/admin/products';
+        if (preg_match('#^/(admin|manager|partner)/#', $refererPath)) {
+            $role = $_SESSION['role'] ?? '';
+            $base = match ($role) {
+                'manager' => '/manager/products',
+                'partner' => '/partner/products',
+                default   => '/admin/products',
+            };
         } else {
             $base = '/';
         }
