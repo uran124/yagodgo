@@ -1,4 +1,7 @@
 <?php
+mb_internal_encoding('UTF-8');
+header('Content-Type: text/html; charset=UTF-8');
+
 // testbot.php - тестовая страница для отправки сообщений и просмотра отладочной информации
 // Подключаем конфиг Telegram
 $telegramConfig = require __DIR__ . '/config/telegram.php';
@@ -24,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['message'])) {
     }
     $options = [
         'http' => [
-            'header'  => "Content-Type: application/json\r\n",
+            'header'  => "Content-Type: application/json; charset=UTF-8\r\n",
             'method'  => 'POST',
             'content' => json_encode($data),
             'timeout' => 5,

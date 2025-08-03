@@ -210,7 +210,7 @@ public function register(): void
         $phone = $this->normalizePhone($_POST['phone'] ?? '');
         $method = $_POST['method'] ?? 'sms';
         $email  = trim($_POST['email'] ?? '');
-        header('Content-Type: application/json');
+        header('Content-Type: application/json; charset=UTF-8');
 
         if (!preg_match('/^7\d{10}$/', $phone)) {
             echo json_encode(['error' => 'Неверный номер']);
@@ -279,7 +279,7 @@ public function register(): void
         if ($valid) {
             $_SESSION['reg_verified'] = true;
         }
-        header('Content-Type: application/json');
+        header('Content-Type: application/json; charset=UTF-8');
         echo json_encode(['success' => $valid]);
     }
 
@@ -296,7 +296,7 @@ public function register(): void
     {
         $phone = $this->normalizePhone($_POST['phone'] ?? '');
         if (!preg_match('/^7\d{10}$/', $phone)) {
-            header('Content-Type: application/json');
+            header('Content-Type: application/json; charset=UTF-8');
             echo json_encode(['error' => 'Неверный номер']);
             return;
         }
@@ -305,7 +305,7 @@ public function register(): void
         $_SESSION['reset_code'] = $code;
         $sms = new SmsRu($this->smsConfig['api_id'] ?? '');
         $ok = $sms->send($phone, "Код сброса PIN: {$code}");
-        header('Content-Type: application/json');
+        header('Content-Type: application/json; charset=UTF-8');
         echo json_encode(['success' => $ok]);
     }
 
@@ -316,7 +316,7 @@ public function register(): void
         $code  = trim($_POST['code'] ?? '');
         $valid = isset($_SESSION['reset_phone'], $_SESSION['reset_code']) &&
             $_SESSION['reset_phone'] === $phone && $_SESSION['reset_code'] == $code;
-        header('Content-Type: application/json');
+        header('Content-Type: application/json; charset=UTF-8');
         echo json_encode(['success' => $valid]);
     }
 

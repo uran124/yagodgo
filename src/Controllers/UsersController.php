@@ -620,7 +620,7 @@ class UsersController
         );
         $stmt->execute(['%' . $term . '%']);
         $res = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        header('Content-Type: application/json');
+        header('Content-Type: application/json; charset=UTF-8');
         echo json_encode($res);
     }
 
@@ -637,7 +637,7 @@ class UsersController
         );
         $stmt->execute([$uid]);
         $res = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        header('Content-Type: application/json');
+        header('Content-Type: application/json; charset=UTF-8');
         echo json_encode($res);
     }
 }
