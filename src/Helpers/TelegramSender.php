@@ -22,7 +22,7 @@ class TelegramSender
         }
         $options = [
             'http' => [
-                'header'  => "Content-Type: application/json\r\n",
+                'header'  => "Content-Type: application/json; charset=UTF-8\r\n",
                 'method'  => 'POST',
                 'content' => json_encode($payload),
                 'timeout' => 5,

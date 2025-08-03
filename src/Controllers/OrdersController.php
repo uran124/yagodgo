@@ -834,7 +834,7 @@ class OrdersController
         curl_setopt($ch, CURLOPT_TIMEOUT, 5);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Content-Type: application/json'
+            'Content-Type: application/json; charset=UTF-8'
         ]);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
 

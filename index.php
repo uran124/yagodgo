@@ -3,8 +3,11 @@ declare(strict_types=1);
 ini_set('display_errors', '1');
 error_reporting(E_ALL);
 
+mb_internal_encoding('UTF-8');
+
 // Запуск сессии
 session_start();
+header('Content-Type: text/html; charset=UTF-8');
 
 // Сохраняем пригласительный код из URL в сессию (если передан)
 if (isset($_GET['invite'])) {
