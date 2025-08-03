@@ -508,14 +508,24 @@ class OrdersController
                         )->execute([$userId, $orderId, $personal, $desc]);
                     }
 
-                    // 3% пригласившему (если есть и ещё не начислено)
+                    // Бонусы пригласившему и менеджеру (если есть и ещё не начислено)
                     if ((int)$order['points_accrued'] === 0) {
                         $refStmt = $this->pdo->prepare("SELECT referred_by FROM users WHERE id = ?");
                         $refStmt->execute([$userId]);
                         $refId = (int)($refStmt->fetchColumn() ?: 0);
                         if ($refId) {
-                            $refBonus = (int) floor($sum * 0.03);
+                            // Получаем роль пригласившего и его пригласившего (менеджера)
+                            $infoStmt = $this->pdo->prepare("SELECT role, referred_by FROM users WHERE id = ?");
+                            $infoStmt->execute([$refId]);
+                            $refInfo = $infoStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+
+                            $refRole = $refInfo['role'] ?? '';
+                            $mgrId   = (int)($refInfo['referred_by'] ?? 0);
+
+                            $refPercent   = ($refRole === 'partner') ? 0.10 : 0.03;
+                            $refBonus     = (int) floor($sum * $refPercent);
                             $managerBonus = 0;
+
                             if ($refBonus > 0) {
                                 $this->pdo->prepare(
                                     "UPDATE users SET points_balance = points_balance + ? WHERE id = ?"
@@ -526,10 +536,7 @@ class OrdersController
                                     "INSERT INTO points_transactions (user_id, order_id, amount, transaction_type, description, created_at) VALUES (?, ?, ?, 'accrual', ?, NOW())"
                                 )->execute([$refId, $orderId, $refBonus, $refDesc]);
 
-                                // Проверяем, есть ли у пригласившего свой пригласивший (менеджер)
-                                $mgrStmt = $this->pdo->prepare("SELECT referred_by FROM users WHERE id = ?");
-                                $mgrStmt->execute([$refId]);
-                                $mgrId = (int)($mgrStmt->fetchColumn() ?: 0);
+                                // Менеджеру второго уровня (если есть)
                                 if ($mgrId) {
                                     $managerBonus = (int) floor($sum * 0.03);
                                     if ($managerBonus > 0) {
