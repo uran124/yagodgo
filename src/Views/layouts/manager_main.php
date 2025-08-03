@@ -248,6 +248,17 @@
         <a href="/manager/users" class="hover:underline">Пользователи</a>
         <a href="/manager/profile" class="hover:underline">Профиль</a>
       </nav>
+      <div class="flex space-x-1 md:space-x-2">
+        <a href="/manager/users/edit" class="p-2 text-gray-600 hover:text-[#C86052]" title="Добавить пользователя">
+          <span class="material-icons-round">person_add</span>
+        </a>
+        <a href="/manager/orders/create" class="p-2 text-gray-600 hover:text-[#C86052]" title="Создать заказ">
+          <span class="material-icons-round">add_shopping_cart</span>
+        </a>
+        <a href="/manager/profile" class="p-2 text-gray-600 hover:text-[#C86052]" title="Дашборд">
+          <span class="material-icons-round">dashboard</span>
+        </a>
+      </div>
       <button id="burgerBtn" class="md:hidden p-2 text-gray-600">
         <span class="material-icons-round">menu</span>
       </button>
