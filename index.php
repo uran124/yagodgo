@@ -97,7 +97,7 @@ function viewAdmin(string $template, array $data = []): void
     require __DIR__ . "/src/Views/admin/{$template}.php";
     $content = ob_get_clean();
     $role = $_SESSION['role'] ?? '';
-    if ($role === 'manager') {
+    if (in_array($role, ['manager','partner'], true)) {
         require __DIR__ . '/src/Views/layouts/manager_main.php';
     } else {
         require __DIR__ . '/src/Views/layouts/admin_main.php';
@@ -163,6 +163,16 @@ function requireManager(): void
 {
     $role = $_SESSION['role'] ?? '';
     if (!in_array($role, ['manager', 'admin'], true)) {
+        header('Location: /login');
+        exit;
+    }
+}
+
+// Partner access (partner, manager or admin)
+function requirePartner(): void
+{
+    $role = $_SESSION['role'] ?? '';
+    if (!in_array($role, ['partner', 'manager', 'admin'], true)) {
         header('Location: /login');
         exit;
     }
@@ -714,6 +724,106 @@ switch ("$method $uri") {
         break;
     case 'POST /manager/users/toggle-block':
         requireManager();
+        (new App\Controllers\UsersController($pdo))->toggleBlock();
+        break;
+
+    // === ROUTES FOR PARTNERS ===
+    case 'GET /partner/dashboard':
+        requirePartner();
+        (new App\Controllers\AdminController($pdo))->dashboard();
+        break;
+    case 'GET /partner/profile':
+        requirePartner();
+        (new App\Controllers\UsersController($pdo))->partnerProfile();
+        break;
+    case 'GET /partner/orders':
+        requirePartner();
+        (new App\Controllers\OrdersController($pdo))->index();
+        break;
+    case 'GET /partner/orders/create':
+        requirePartner();
+        (new App\Controllers\OrdersController($pdo))->create();
+        break;
+    case 'POST /partner/orders/create':
+        requirePartner();
+        (new App\Controllers\OrdersController($pdo))->storeManual();
+        break;
+    case (bool)preg_match('#^GET /partner/orders/(\d+)$#', "$method $uri", $m):
+        requirePartner();
+        (new App\Controllers\OrdersController($pdo))->show((int)$m[1]);
+        break;
+    case 'POST /partner/orders/assign':
+        requirePartner();
+        (new App\Controllers\OrdersController($pdo))->assign();
+        break;
+    case 'POST /partner/orders/status':
+        requirePartner();
+        (new App\Controllers\OrdersController($pdo))->updateStatus();
+        break;
+    case 'POST /partner/orders/update-item':
+        requirePartner();
+        (new App\Controllers\OrdersController($pdo))->updateItemQuantity();
+        break;
+    case 'POST /partner/orders/update-delivery':
+        requirePartner();
+        (new App\Controllers\OrdersController($pdo))->updateDelivery();
+        break;
+    case 'POST /partner/orders/delete':
+        requirePartner();
+        (new App\Controllers\OrdersController($pdo))->delete();
+        break;
+
+    case 'GET /partner/products':
+        requirePartner();
+        (new App\Controllers\ProductsController($pdo))->index();
+        break;
+    case 'GET /partner/products/edit':
+        requirePartner();
+        (new App\Controllers\ProductsController($pdo))->edit();
+        break;
+    case 'POST /partner/products/save':
+        requirePartner();
+        (new App\Controllers\ProductsController($pdo))->save();
+        break;
+    case 'POST /partner/products/toggle':
+        requirePartner();
+        (new App\Controllers\ProductsController($pdo))->toggle();
+        break;
+    case 'POST /partner/products/update-date':
+        requirePartner();
+        (new App\Controllers\ProductsController($pdo))->updateDeliveryDate();
+        break;
+    case 'POST /partner/products/delete':
+        requirePartner();
+        (new App\Controllers\ProductsController($pdo))->delete();
+        break;
+
+    case 'GET /partner/users':
+        requirePartner();
+        (new App\Controllers\UsersController($pdo))->index();
+        break;
+    case 'GET /partner/users/search':
+        requirePartner();
+        (new App\Controllers\UsersController($pdo))->searchPhone();
+        break;
+    case 'GET /partner/users/addresses':
+        requirePartner();
+        (new App\Controllers\UsersController($pdo))->addresses();
+        break;
+    case (bool)preg_match('#^GET /partner/users/(\d+)$#', "$method $uri", $m):
+        requirePartner();
+        (new App\Controllers\UsersController($pdo))->show((int)$m[1]);
+        break;
+    case 'GET /partner/users/edit':
+        requirePartner();
+        (new App\Controllers\UsersController($pdo))->edit();
+        break;
+    case 'POST /partner/users/save':
+        requirePartner();
+        (new App\Controllers\UsersController($pdo))->save();
+        break;
+    case 'POST /partner/users/toggle-block':
+        requirePartner();
         (new App\Controllers\UsersController($pdo))->toggleBlock();
         break;
 

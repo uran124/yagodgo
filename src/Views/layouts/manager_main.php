@@ -1,3 +1,9 @@
+<?php
+$role = $_SESSION['role'] ?? '';
+$base = $role === 'partner' ? '/partner' : '/manager';
+$titleRole = $role === 'partner' ? 'Partner' : 'Manager';
+$labelRole = $role === 'partner' ? 'Партнёр' : 'Менеджер';
+?>
 <!DOCTYPE html>
 <html lang="ru" data-theme="dark">
 <head>
@@ -241,12 +247,12 @@
   <!-- Header -->
   <header class="flex items-center justify-between bg-white p-2 md:p-4 shadow">
     <div class="flex items-center space-x-2 md:space-x-4">
-      <div class="font-bold text-lg md:text-xl text-[#C86052]">BerryGo Manager</div>
+      <div class="font-bold text-lg md:text-xl text-[#C86052]">BerryGo <?= htmlspecialchars($titleRole) ?></div>
       <nav class="hidden md:flex space-x-2 md:space-x-4">
-        <a href="/manager/orders" class="hover:underline">Заказы</a>
-        <a href="/manager/products" class="hover:underline">Товары</a>
-        <a href="/manager/users" class="hover:underline">Пользователи</a>
-        <a href="/manager/profile" class="hover:underline">Профиль</a>
+        <a href="<?= $base ?>/orders" class="hover:underline">Заказы</a>
+        <a href="<?= $base ?>/products" class="hover:underline">Товары</a>
+        <a href="<?= $base ?>/users" class="hover:underline">Пользователи</a>
+        <a href="<?= $base ?>/profile" class="hover:underline">Профиль</a>
       </nav>
       <button id="burgerBtn" class="md:hidden p-2 text-gray-600">
         <span class="material-icons-round">menu</span>
@@ -262,21 +268,21 @@
   <!-- Sidebar for small screens -->
   <aside id="sidebar" class="md:hidden fixed top-16 left-0 w-52 md:w-64 bg-white shadow-md transform -translate-x-full transition-transform duration-300 z-40">
     <nav class="p-2 md:p-4">
-      <a href="/manager/orders" class="flex items-center p-2 mb-2 rounded hover:bg-gray-200">
+      <a href="<?= $base ?>/orders" class="flex items-center p-2 mb-2 rounded hover:bg-gray-200">
         <span class="material-icons-round mr-2 text-base md:text-lg">receipt_long</span>
         <span class="menu-text text-sm md:text-base">Заказы</span>
       </a>
-      <a href="/manager/products" class="flex items-center p-2 mb-2 rounded hover:bg-gray-200">
+      <a href="<?= $base ?>/products" class="flex items-center p-2 mb-2 rounded hover:bg-gray-200">
         <span class="material-icons-round mr-2 text-base md:text-lg">inventory_2</span>
         <span class="menu-text text-sm md:text-base">Товары</span>
       </a>
-      <a href="/manager/users" class="flex items-center p-2 rounded hover:bg-gray-200">
+      <a href="<?= $base ?>/users" class="flex items-center p-2 rounded hover:bg-gray-200">
         <span class="material-icons-round mr-2 text-base md:text-lg">people</span>
         <span class="menu-text text-sm md:text-base">Пользователи</span>
       </a>
-      <a href="/manager/profile" class="flex items-center p-2 mt-2 rounded hover:bg-gray-200">
-        <span class="material-icons-round mr-2 text-base md:text-lg">account_circle</span>
-        <span class="menu-text text-sm md:text-base">Профиль</span>
+      <a href="<?= $base ?>/profile" class="flex items-center p-2 mt-2 rounded hover:bg-gray-200">
+      <span class="material-icons-round mr-2 text-base md:text-lg">account_circle</span>
+      <span class="menu-text text-sm md:text-base">Профиль</span>
       </a>
     </nav>
   </aside>

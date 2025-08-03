@@ -20,9 +20,12 @@ class UsersController
      */
     private function basePath(): string
     {
-        return ($_SESSION['role'] ?? '') === 'manager'
-            ? '/manager/users'
-            : '/admin/users';
+        $role = $_SESSION['role'] ?? '';
+        return match ($role) {
+            'manager' => '/manager/users',
+            'partner' => '/partner/users',
+            default   => '/admin/users',
+        };
     }
 
     /**
@@ -241,6 +244,43 @@ class UsersController
             'secondClients'    => count($secondUsers),
             'ordersCount'      => $orderCount,
             'partnerStats'     => $partnerStats,
+        ]);
+    }
+
+    /**
+     * Профиль партнёра со статистикой
+     */
+    public function partnerProfile(): void
+    {
+        $authUser = Auth::user();
+        if (!$authUser || ($authUser['role'] ?? '') !== 'partner') {
+            header('Location: /login');
+            exit;
+        }
+
+        $partnerId = (int)$authUser['id'];
+
+        $stmt = $this->pdo->prepare("SELECT id FROM users WHERE referred_by = ? AND role = 'client'");
+        $stmt->execute([$partnerId]);
+        $clientIds = array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'id');
+        $clientCount = count($clientIds);
+
+        $ordersCount = 0;
+        $revenue = 0;
+        if ($clientIds) {
+            $placeholders = implode(',', array_fill(0, count($clientIds), '?'));
+            $oStmt = $this->pdo->prepare("SELECT COUNT(*) AS cnt, SUM(total_amount) AS sum FROM orders WHERE user_id IN ($placeholders) AND status='delivered'");
+            $oStmt->execute($clientIds);
+            $row = $oStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+            $ordersCount = (int)($row['cnt'] ?? 0);
+            $revenue = (int)($row['sum'] ?? 0);
+        }
+
+        viewAdmin('partner_profile', [
+            'pageTitle'   => 'Профиль партнёра',
+            'clientCount' => $clientCount,
+            'ordersCount' => $ordersCount,
+            'revenue'     => $revenue,
         ]);
     }
 

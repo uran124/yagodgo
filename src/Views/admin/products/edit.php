@@ -6,7 +6,7 @@
  * @var string     $box_unit
  */
 ?>
-<?php $isManager = ($_SESSION['role'] ?? '') === 'manager'; $base = $isManager ? '/manager' : '/admin'; ?>
+<?php $role = $_SESSION['role'] ?? ''; $isManager = in_array($role, ['manager','partner'], true); $base = $role === 'manager' ? '/manager' : ($role === 'partner' ? '/partner' : '/admin'); ?>
 <form action="<?= $base ?>/products/save" method="post" enctype="multipart/form-data"
       class="bg-white p-6 rounded shadow max-w-lg mx-auto">
 

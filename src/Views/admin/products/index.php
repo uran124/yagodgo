@@ -1,6 +1,5 @@
 <?php /** @var array $products */ ?>
-<?php $isManager = ($_SESSION['role'] ?? '') === 'manager'; ?>
-<?php $base = $isManager ? '/manager' : '/admin'; ?>
+<?php $role = $_SESSION['role'] ?? ''; $isManager = in_array($role, ['manager','partner'], true); $base = $role === 'manager' ? '/manager' : ($role === 'partner' ? '/partner' : '/admin'); ?>
 
 <a href="<?= $base ?>/products/edit" class="bg-[#C86052] text-white px-4 py-2 rounded mb-4 inline-flex items-center">
   <span class="material-icons-round text-base mr-1">add</span> Добавить товар</a>
