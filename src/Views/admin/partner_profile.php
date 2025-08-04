@@ -15,31 +15,6 @@
 ?>
 <div class="space-y-6">
   <div class="bg-white rounded shadow p-2 md:p-4">
-    <h2 class="text-base md:text-lg font-semibold mb-2">Общая статистика</h2>
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-4 text-center">
-      <div>
-        <div class="text-xl md:text-2xl font-bold text-[#C86052]"><?= $ordersCount ?></div>
-        <div class="text-sm text-gray-600">продаж</div>
-      </div>
-      <div>
-        <div class="text-xl md:text-2xl font-bold text-[#C86052]"><?= $clientCount ?></div>
-        <div class="text-sm text-gray-600">клиентов</div>
-      </div>
-      <div>
-        <div class="text-xl md:text-2xl font-bold text-[#C86052]"><?= $revenue ?></div>
-        <div class="text-sm text-gray-600">оборот, ₽</div>
-      </div>
-    </div>
-  </div>
-  <div class="bg-white rounded shadow p-2 md:p-4">
-    <h2 class="text-base md:text-lg font-semibold mb-2">Статистика по месяцам</h2>
-    <div class="space-y-4">
-      <div><canvas id="clientsChart" class="w-full h-48 md:h-64"></canvas></div>
-      <div><canvas id="ordersChart" class="w-full h-48 md:h-64"></canvas></div>
-      <div><canvas id="revenueChart" class="w-full h-48 md:h-64"></canvas></div>
-    </div>
-  </div>
-  <div class="bg-white rounded shadow p-2 md:p-4">
     <h2 class="text-base md:text-lg font-semibold mb-2">Баланс</h2>
     <div class="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-4 text-center">
       <div>
@@ -82,6 +57,31 @@
       </table>
     </div>
     <?php endif; ?>
+  </div>
+  <div class="bg-white rounded shadow p-2 md:p-4">
+    <h2 class="text-base md:text-lg font-semibold mb-2">Общая статистика</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-4 text-center">
+      <div>
+        <div class="text-xl md:text-2xl font-bold text-[#C86052]"><?= $ordersCount ?></div>
+        <div class="text-sm text-gray-600">продаж</div>
+      </div>
+      <div>
+        <div class="text-xl md:text-2xl font-bold text-[#C86052]"><?= $clientCount ?></div>
+        <div class="text-sm text-gray-600">клиентов</div>
+      </div>
+      <div>
+        <div class="text-xl md:text-2xl font-bold text-[#C86052]"><?= $revenue ?></div>
+        <div class="text-sm text-gray-600">оборот, ₽</div>
+      </div>
+    </div>
+  </div>
+  <div class="bg-white rounded shadow p-2 md:p-4">
+    <h2 class="text-base md:text-lg font-semibold mb-2">Статистика по месяцам</h2>
+    <div class="space-y-4">
+      <div><canvas id="clientsChart" class="w-full h-48 md:h-64"></canvas></div>
+      <div><canvas id="ordersChart" class="w-full h-48 md:h-64"></canvas></div>
+      <div><canvas id="revenueChart" class="w-full h-48 md:h-64"></canvas></div>
+    </div>
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
