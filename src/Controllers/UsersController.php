@@ -347,11 +347,30 @@ class UsersController
             $revenue = (int)($row['sum'] ?? 0);
         }
 
+        $tenPercent = (int)round($revenue * 0.10);
+
+        $balStmt = $this->pdo->prepare("SELECT points_balance, rub_balance FROM users WHERE id = ?");
+        $balStmt->execute([$partnerId]);
+        $balances = $balStmt->fetch(PDO::FETCH_ASSOC) ?: ['points_balance' => 0, 'rub_balance' => 0];
+        $pointsBalance = (int)$balances['points_balance'];
+        $rubBalance = (int)$balances['rub_balance'];
+
+        $payoutStmt = $this->pdo->prepare(
+            "SELECT id, amount, description, created_at FROM points_transactions \n" .
+            "WHERE user_id = ? AND transaction_type = 'payout' ORDER BY created_at DESC"
+        );
+        $payoutStmt->execute([$partnerId]);
+        $payoutTransactions = $payoutStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
         viewAdmin('partner_profile', [
             'pageTitle'   => 'Профиль партнёра',
             'clientCount' => $clientCount,
             'ordersCount' => $ordersCount,
             'revenue'     => $revenue,
+            'tenPercent'  => $tenPercent,
+            'pointsBalance' => $pointsBalance,
+            'rubBalance'    => $rubBalance,
+            'payoutTransactions' => $payoutTransactions,
         ]);
     }
 

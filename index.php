@@ -743,6 +743,10 @@ switch ("$method $uri") {
         requirePartner();
         (new App\Controllers\UsersController($pdo))->partnerProfile();
         break;
+    case 'POST /partner/payout':
+        requirePartner();
+        (new App\Controllers\UsersController($pdo))->requestPayout();
+        break;
     case 'GET /partner/orders':
         requirePartner();
         (new App\Controllers\OrdersController($pdo))->index();
