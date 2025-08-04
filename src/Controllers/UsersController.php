@@ -362,6 +362,56 @@ class UsersController
         $payoutStmt->execute([$partnerId]);
         $payoutTransactions = $payoutStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
+        // Monthly statistics for charts (last 12 months including current)
+        $startDate = date('Y-m-01', strtotime('-11 months'));
+
+        // Clients per month
+        $cStmt = $this->pdo->prepare(
+            "SELECT DATE_FORMAT(created_at, '%Y-%m') AS ym, COUNT(*) AS cnt
+             FROM users
+             WHERE referred_by = ? AND role = 'client' AND created_at >= ?
+             GROUP BY ym"
+        );
+        $cStmt->execute([$partnerId, $startDate]);
+        $clientRows = $cStmt->fetchAll(PDO::FETCH_ASSOC);
+        $clientsByMonth = [];
+        foreach ($clientRows as $row) {
+            $clientsByMonth[$row['ym']] = (int)$row['cnt'];
+        }
+
+        // Orders and revenue per month
+        $ordersByMonth = [];
+        $revenueByMonth = [];
+        if ($clientIds) {
+            $placeholders = implode(',', array_fill(0, count($clientIds), '?'));
+            $oStmt = $this->pdo->prepare(
+                "SELECT DATE_FORMAT(created_at, '%Y-%m') AS ym, COUNT(*) AS cnt, SUM(total_amount) AS sum
+                 FROM orders
+                 WHERE user_id IN ($placeholders) AND status='delivered' AND created_at >= ?
+                 GROUP BY ym"
+            );
+            $params = $clientIds;
+            $params[] = $startDate;
+            $oStmt->execute($params);
+            $orderRows = $oStmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($orderRows as $row) {
+                $ordersByMonth[$row['ym']] = (int)$row['cnt'];
+                $revenueByMonth[$row['ym']] = (int)$row['sum'];
+            }
+        }
+
+        $labels = [];
+        $monthlyClients = [];
+        $monthlyOrders = [];
+        $monthlyRevenue = [];
+        for ($i = 0; $i < 12; $i++) {
+            $monthKey = date('Y-m', strtotime("$startDate +$i months"));
+            $labels[] = $monthKey;
+            $monthlyClients[] = $clientsByMonth[$monthKey] ?? 0;
+            $monthlyOrders[] = $ordersByMonth[$monthKey] ?? 0;
+            $monthlyRevenue[] = $revenueByMonth[$monthKey] ?? 0;
+        }
+
         viewAdmin('partner_profile', [
             'pageTitle'   => 'Профиль партнёра',
             'clientCount' => $clientCount,
@@ -371,6 +421,10 @@ class UsersController
             'pointsBalance' => $pointsBalance,
             'rubBalance'    => $rubBalance,
             'payoutTransactions' => $payoutTransactions,
+            'chartLabels' => $labels,
+            'chartClients' => $monthlyClients,
+            'chartOrders' => $monthlyOrders,
+            'chartRevenue' => $monthlyRevenue,
         ]);
     }
 
