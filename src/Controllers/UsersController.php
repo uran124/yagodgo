@@ -205,6 +205,42 @@ class UsersController
             $orderCount = (int)$stmt->fetchColumn();
         }
 
+        // Начисления менеджера: 3% от прямых и 3% от второго уровня
+        $directBonus = 0;
+        if ($directClientIds) {
+            $ph = implode(',', array_fill(0, count($directClientIds), '?'));
+            $stmt = $this->pdo->prepare(
+                "SELECT SUM(points_accrued) FROM orders WHERE user_id IN ($ph) AND status='delivered'"
+            );
+            $stmt->execute($directClientIds);
+            $directBonus = (int)($stmt->fetchColumn() ?: 0);
+        }
+
+        $secondBonus = 0;
+        if ($secondClientIds) {
+            $ph = implode(',', array_fill(0, count($secondClientIds), '?'));
+            $stmt = $this->pdo->prepare(
+                "SELECT SUM(manager_points_accrued) FROM orders WHERE user_id IN ($ph) AND status='delivered'"
+            );
+            $stmt->execute($secondClientIds);
+            $secondBonus = (int)($stmt->fetchColumn() ?: 0);
+        }
+
+        // Балансы
+        $balStmt = $this->pdo->prepare("SELECT points_balance, rub_balance FROM users WHERE id = ?");
+        $balStmt->execute([$managerId]);
+        $balances = $balStmt->fetch(PDO::FETCH_ASSOC) ?: ['points_balance' => 0, 'rub_balance' => 0];
+        $pointsBalance = (int)$balances['points_balance'];
+        $rubBalance = (int)$balances['rub_balance'];
+
+        // Транзакции по выплатам
+        $payoutStmt = $this->pdo->prepare(
+            "SELECT id, amount, description, created_at FROM points_transactions \n" .
+            "WHERE user_id = ? AND transaction_type = 'payout' ORDER BY created_at DESC"
+        );
+        $payoutStmt->execute([$managerId]);
+        $payoutTransactions = $payoutStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
         // Статистика по каждому партнёру
         $partnerStats = [];
         foreach ($partnerIds as $pid) {
@@ -244,7 +280,42 @@ class UsersController
             'secondClients'    => count($secondUsers),
             'ordersCount'      => $orderCount,
             'partnerStats'     => $partnerStats,
+            'directBonus'      => $directBonus,
+            'secondBonus'      => $secondBonus,
+            'pointsBalance'    => $pointsBalance,
+            'rubBalance'       => $rubBalance,
+            'payoutTransactions' => $payoutTransactions,
         ]);
+    }
+
+    // Запрос выплаты: конвертация баллов в рубли
+    public function requestPayout(): void
+    {
+        $authUser = Auth::user();
+        if (!$authUser || !in_array($authUser['role'] ?? '', ['manager','partner'], true)) {
+            header('Location: /login');
+            exit;
+        }
+
+        $userId = (int)$authUser['id'];
+        $stmt = $this->pdo->prepare("SELECT points_balance FROM users WHERE id = ?");
+        $stmt->execute([$userId]);
+        $points = (int)($stmt->fetchColumn() ?: 0);
+
+        if ($points > 0) {
+            $this->pdo->prepare(
+                "UPDATE users SET points_balance = 0, rub_balance = rub_balance + ? WHERE id = ?"
+            )->execute([$points, $userId]);
+
+            $desc = 'Запрос выплаты на ' . $points . ' ₽';
+            $this->pdo->prepare(
+                "INSERT INTO points_transactions (user_id, amount, transaction_type, description, created_at) VALUES (?, ?, 'payout', ?, NOW())"
+            )->execute([$userId, -$points, $desc]);
+        }
+
+        $redirect = ($authUser['role'] === 'partner') ? '/partner/profile' : '/manager/profile';
+        header('Location: ' . $redirect);
+        exit;
     }
 
     /**
