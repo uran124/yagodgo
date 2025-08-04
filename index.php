@@ -639,6 +639,10 @@ switch ("$method $uri") {
         requireManager();
         (new App\Controllers\UsersController($pdo))->managerProfile();
         break;
+    case 'POST /manager/payout':
+        requireManager();
+        (new App\Controllers\UsersController($pdo))->requestPayout();
+        break;
     case 'GET /manager/orders':
         requireManager();
         (new App\Controllers\OrdersController($pdo))->index();
