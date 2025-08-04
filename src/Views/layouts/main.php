@@ -253,7 +253,6 @@
       <a href="/manager/profile" class="p-2 text-gray-600 hover:text-[#C86052]" title="Дашборд">
         <span class="material-icons-round">dashboard</span>
       </a>
-      <button id="managerToggle" class="material-icons-round text-2xl text-gray-600 hover:text-emerald-500 transition-colors p-2 hover:bg-emerald-50 rounded-xl">manage_accounts</button>
     <?php elseif (($_SESSION['role'] ?? '') === 'partner'): ?>
       <a href="/partner/users/edit" class="p-2 text-gray-600 hover:text-[#C86052]" title="Добавить пользователя">
         <span class="material-icons-round">person_add</span>
@@ -264,7 +263,6 @@
       <a href="/partner/profile" class="p-2 text-gray-600 hover:text-[#C86052]" title="Дашборд">
         <span class="material-icons-round">dashboard</span>
       </a>
-      <button id="partnerToggle" class="material-icons-round text-2xl text-gray-600 hover:text-emerald-500 transition-colors p-2 hover:bg-emerald-50 rounded-xl">manage_accounts</button>
     <?php endif; ?>
 
     <?php if (!empty($_SESSION['user_id'])): ?>
