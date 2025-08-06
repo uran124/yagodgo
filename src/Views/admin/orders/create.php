@@ -85,9 +85,7 @@
       <label class="inline-flex items-center cursor-pointer">
         <input type="hidden" name="has_used_referral_coupon" value="0">
         <input type="checkbox" id="referralToggle" name="has_used_referral_coupon" value="1" class="sr-only peer">
-        <div class="w-10 h-5 bg-gray-200 rounded-full peer-checked:bg-[#C86052] relative transition-colors">
-          <div class="absolute left-1 top-0.5 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
-        </div>
+        <div class="w-10 h-5 bg-gray-200 rounded-full peer-checked:bg-[#C86052] relative transition-colors after:content-[''] after:absolute after:left-1 after:top-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-transform peer-checked:after:translate-x-5"></div>
         <span class="ml-2 text-sm">Скидка 10% на первый заказ</span>
       </label>
     </div>
@@ -136,6 +134,8 @@
   const newPhoneInput = document.querySelector('input[name="new_phone"]');
   const referralToggleWrap = document.getElementById('referralToggleWrap');
   const referralToggle = document.getElementById('referralToggle');
+  const couponInput = document.querySelector('input[name="coupon_code"]');
+  const myReferralCode = "<?= htmlspecialchars($_SESSION['referral_code'] ?? '') ?>";
   function cleanPhone(val) {
     let digits = val.replace(/\D/g,'');
     if (digits.startsWith('7') || digits.startsWith('8')) digits = digits.slice(1);
@@ -145,7 +145,7 @@
   search.addEventListener('input', ()=>{
     search.value = cleanPhone(search.value);
     const term = search.value;
-    if (term.length < 2) { sugg.classList.add('hidden'); newBlock.classList.add('hidden'); userInfo.classList.add('hidden'); pointsRow.classList.add('hidden'); referralToggleWrap.classList.add('hidden'); referralToggle.checked=false; return; }
+    if (term.length < 2) { sugg.classList.add('hidden'); newBlock.classList.add('hidden'); userInfo.classList.add('hidden'); pointsRow.classList.add('hidden'); referralToggleWrap.classList.add('hidden'); referralToggle.checked=false; if(couponInput) couponInput.value=''; return; }
     fetch('<?= $base ?>/users/search?term='+term)
       .then(r=>r.json()).then(data=>{
         sugg.innerHTML='';
@@ -156,33 +156,36 @@
           li.addEventListener('click', ()=>{
             search.value=u.phone;
             document.getElementById('userId').value=u.id;
-            sugg.classList.add('hidden');
-            loadAddresses(u.id);
-            pointsInput.value = u.points_balance || 0;
-            pointsAmount.textContent = u.points_balance || 0;
-            pointsRow.classList.remove('hidden');
-            newBlock.classList.add('hidden');
-            userInfo.textContent = u.referrer_name ? 'Пригласил: '+u.referrer_name : 'Без пригласившего';
-            userInfo.classList.remove('hidden');
-            referralToggleWrap.classList.add('hidden');
-            referralToggle.checked = false;
-            updateSummary();
+              sugg.classList.add('hidden');
+              loadAddresses(u.id);
+              pointsInput.value = u.points_balance || 0;
+              pointsAmount.textContent = u.points_balance || 0;
+              pointsRow.classList.remove('hidden');
+              newBlock.classList.add('hidden');
+              userInfo.textContent = u.referrer_name ? 'Пригласил: '+u.referrer_name : 'Без пригласившего';
+              userInfo.classList.remove('hidden');
+              referralToggleWrap.classList.add('hidden');
+              referralToggle.checked = false;
+              if(couponInput) couponInput.value='';
+              updateSummary();
+            });
+            sugg.appendChild(li);
           });
-          sugg.appendChild(li);
+        if (data.length === 0) {
+          newBlock.classList.remove('hidden');
+          document.getElementById('userId').value='';
+          pointsRow.classList.add('hidden');
+          userInfo.classList.add('hidden');
+          referralToggleWrap.classList.remove('hidden');
+          referralToggle.checked = false;
+          if(couponInput) couponInput.value = myReferralCode;
+        } else {
+          sugg.classList.remove('hidden');
+          referralToggleWrap.classList.add('hidden');
+          referralToggle.checked = false;
+          if(couponInput) couponInput.value='';
+        }
         });
-      if (data.length === 0) {
-        newBlock.classList.remove('hidden');
-        document.getElementById('userId').value='';
-        pointsRow.classList.add('hidden');
-        userInfo.classList.add('hidden');
-        referralToggleWrap.classList.remove('hidden');
-        referralToggle.checked = false;
-      } else {
-        sugg.classList.remove('hidden');
-        referralToggleWrap.classList.add('hidden');
-        referralToggle.checked = false;
-      }
-      });
   });
 
   document.querySelectorAll('.dec').forEach(btn => {
