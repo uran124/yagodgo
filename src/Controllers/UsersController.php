@@ -566,7 +566,9 @@ class UsersController
         }
 
         $stmt = $this->pdo->prepare(
-            "SELECT id, name, phone, points_balance, rub_balance FROM users WHERE id = ?"
+            "SELECT id, name, phone, role, is_blocked, telegram_id, referral_code, referred_by,
+                    points_balance, rub_balance, created_at
+             FROM users WHERE id = ?"
         );
         $stmt->execute([$id]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -574,6 +576,15 @@ class UsersController
             header('Location: ' . $this->basePath());
             exit;
         }
+
+        $addrStmt = $this->pdo->prepare(
+            "SELECT id, street, recipient_name, recipient_phone
+             FROM addresses
+             WHERE user_id = ?
+             ORDER BY created_at ASC"
+        );
+        $addrStmt->execute([$id]);
+        $addresses = $addrStmt->fetchAll(PDO::FETCH_ASSOC);
 
         $tStmt = $this->pdo->prepare(
             "SELECT id, amount, transaction_type, description, order_id, created_at
@@ -584,10 +595,15 @@ class UsersController
         $tStmt->execute([$id]);
         $transactions = $tStmt->fetchAll(PDO::FETCH_ASSOC);
 
+        $refStmt = $this->pdo->query("SELECT id, name, phone FROM users ORDER BY name");
+        $referrers = $refStmt->fetchAll(PDO::FETCH_ASSOC);
+
         viewAdmin('users/show', [
             'pageTitle'    => 'Пользователь #' . $id,
             'user'         => $user,
             'transactions' => $transactions,
+            'addresses'    => $addresses,
+            'referrers'    => $referrers,
         ]);
     }
 
@@ -646,21 +662,31 @@ class UsersController
         if ($id) {
             $role      = $_POST['role'] ?? 'client';
             $isBlocked = isset($_POST['is_blocked']) ? 1 : 0;
+            $refBy     = (int)($_POST['referred_by'] ?? 0) ?: null;
 
             try {
                 $stmt = $this->pdo->prepare(
                     "UPDATE users
-                     SET role = ?, is_blocked = ?
+                     SET role = ?, is_blocked = ?, referred_by = ?
                      WHERE id = ?"
                 );
-                $stmt->execute([$role, $isBlocked, $id]);
+                $stmt->execute([$role, $isBlocked, $refBy, $id]);
             } catch (\PDOException $e) {
-                $stmt = $this->pdo->prepare(
-                    "UPDATE users
-                     SET role = ?
-                     WHERE id = ?"
-                );
-                $stmt->execute([$role, $id]);
+                try {
+                    $stmt = $this->pdo->prepare(
+                        "UPDATE users
+                         SET role = ?, referred_by = ?
+                         WHERE id = ?"
+                    );
+                    $stmt->execute([$role, $refBy, $id]);
+                } catch (\PDOException $e2) {
+                    $stmt = $this->pdo->prepare(
+                        "UPDATE users
+                         SET role = ?
+                         WHERE id = ?"
+                    );
+                    $stmt->execute([$role, $id]);
+                }
             }
         } else {
             $nameRaw  = $_POST['name'] ?? '';
@@ -799,6 +825,48 @@ class UsersController
         }
         $redirect = $_POST['redirect'] ?? ($this->basePath() . '/edit?id=' . $id);
         header('Location: ' . $redirect);
+        exit;
+    }
+
+    // Добавление адреса (админ/менеджер/партнёр)
+    public function addAddressAdmin(): void
+    {
+        $auth    = Auth::user();
+        $userId  = (int)($_POST['user_id'] ?? 0);
+        $address = trim($_POST['address'] ?? '');
+        $name    = trim($_POST['recipient_name'] ?? '');
+        $phone   = trim($_POST['recipient_phone'] ?? '');
+
+        if ($userId && $address !== '') {
+            if ($auth && in_array($auth['role'], ['manager', 'partner'], true) && $auth['id'] !== $userId) {
+                header('Location: ' . $this->basePath());
+                exit;
+            }
+            $stmt = $this->pdo->prepare(
+                "INSERT INTO addresses (user_id, street, recipient_name, recipient_phone, is_primary, created_at)
+                 VALUES (?, ?, ?, ?, 0, NOW())"
+            );
+            $stmt->execute([$userId, $address, $name, $phone]);
+        }
+        header('Location: ' . $this->basePath() . '/' . $userId);
+        exit;
+    }
+
+    // Удаление адреса (админ/менеджер/партнёр)
+    public function deleteAddressAdmin(): void
+    {
+        $auth   = Auth::user();
+        $id     = (int)($_POST['id'] ?? 0);
+        $userId = (int)($_POST['user_id'] ?? 0);
+        if ($id && $userId) {
+            if ($auth && in_array($auth['role'], ['manager', 'partner'], true) && $auth['id'] !== $userId) {
+                header('Location: ' . $this->basePath());
+                exit;
+            }
+            $this->pdo->prepare("DELETE FROM addresses WHERE id = ? AND user_id = ?")
+                 ->execute([$id, $userId]);
+        }
+        header('Location: ' . $this->basePath() . '/' . $userId);
         exit;
     }
 

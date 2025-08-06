@@ -586,6 +586,14 @@ switch ("$method $uri") {
         requireAdmin();
         (new App\Controllers\UsersController($pdo))->resetRubBalance();
         break;
+    case 'POST /admin/users/add-address':
+        requireAdmin();
+        (new App\Controllers\UsersController($pdo))->addAddressAdmin();
+        break;
+    case 'POST /admin/users/delete-address':
+        requireAdmin();
+        (new App\Controllers\UsersController($pdo))->deleteAddressAdmin();
+        break;
 
     case 'GET /admin/apps':
         requireAdmin();
@@ -733,6 +741,14 @@ switch ("$method $uri") {
         requireManager();
         (new App\Controllers\UsersController($pdo))->toggleBlock();
         break;
+    case 'POST /manager/users/add-address':
+        requireManager();
+        (new App\Controllers\UsersController($pdo))->addAddressAdmin();
+        break;
+    case 'POST /manager/users/delete-address':
+        requireManager();
+        (new App\Controllers\UsersController($pdo))->deleteAddressAdmin();
+        break;
 
     // === ROUTES FOR PARTNERS ===
     case 'GET /partner/dashboard':
@@ -836,6 +852,14 @@ switch ("$method $uri") {
     case 'POST /partner/users/toggle-block':
         requirePartner();
         (new App\Controllers\UsersController($pdo))->toggleBlock();
+        break;
+    case 'POST /partner/users/add-address':
+        requirePartner();
+        (new App\Controllers\UsersController($pdo))->addAddressAdmin();
+        break;
+    case 'POST /partner/users/delete-address':
+        requirePartner();
+        (new App\Controllers\UsersController($pdo))->deleteAddressAdmin();
         break;
 
     // Любые другие запросы — 404
