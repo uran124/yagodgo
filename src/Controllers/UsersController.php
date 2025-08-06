@@ -494,6 +494,7 @@ class UsersController
                 'pageTitle' => 'Пользователи',
                 'users'     => $users,
                 'search'    => '',
+                'payouts'   => [],
             ]);
             return;
         }
@@ -537,10 +538,19 @@ class UsersController
 
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        $payoutStmt = $this->pdo->query(
+            "SELECT id, name, phone, role, rub_balance
+             FROM users
+             WHERE rub_balance <> 0 AND role IN ('partner','manager')
+             ORDER BY rub_balance DESC"
+        );
+        $payouts = $payoutStmt->fetchAll(PDO::FETCH_ASSOC);
+
         viewAdmin('users/index', [
             'pageTitle' => 'Пользователи',
             'users'     => $users,
             'search'    => $search,
+            'payouts'   => $payouts,
         ]);
     }
 
@@ -787,7 +797,8 @@ class UsersController
             $this->pdo->prepare("UPDATE users SET rub_balance = 0 WHERE id = ?")
                  ->execute([$id]);
         }
-        header('Location: ' . $this->basePath() . '/edit?id=' . $id);
+        $redirect = $_POST['redirect'] ?? ($this->basePath() . '/edit?id=' . $id);
+        header('Location: ' . $redirect);
         exit;
     }
 
