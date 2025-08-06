@@ -81,6 +81,16 @@
       <label>Купон:</label>
       <input type="text" name="coupon_code" class="border px-2 py-1 rounded">
     </div>
+    <div id="referralToggleWrap" class="hidden">
+      <label class="inline-flex items-center cursor-pointer">
+        <input type="hidden" name="has_used_referral_coupon" value="0">
+        <input type="checkbox" id="referralToggle" name="has_used_referral_coupon" value="1" class="sr-only peer">
+        <div class="w-10 h-5 bg-gray-200 rounded-full peer-checked:bg-[#C86052] relative transition-colors">
+          <div class="absolute left-1 top-0.5 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
+        </div>
+        <span class="ml-2 text-sm">Скидка 10% на первый заказ</span>
+      </label>
+    </div>
     <div id="pointsRow" class="hidden">
       <label>Списано баллов: <span id="pointsAmount">0</span></label>
       <input type="hidden" name="points" id="pointsInput" value="0">
@@ -124,6 +134,8 @@
   const pointsAmount = document.getElementById('pointsAmount');
   const itemsList = document.getElementById('itemsList');
   const newPhoneInput = document.querySelector('input[name="new_phone"]');
+  const referralToggleWrap = document.getElementById('referralToggleWrap');
+  const referralToggle = document.getElementById('referralToggle');
   function cleanPhone(val) {
     let digits = val.replace(/\D/g,'');
     if (digits.startsWith('7') || digits.startsWith('8')) digits = digits.slice(1);
@@ -133,7 +145,7 @@
   search.addEventListener('input', ()=>{
     search.value = cleanPhone(search.value);
     const term = search.value;
-    if (term.length < 2) { sugg.classList.add('hidden'); newBlock.classList.add('hidden'); userInfo.classList.add('hidden'); pointsRow.classList.add('hidden'); return; }
+    if (term.length < 2) { sugg.classList.add('hidden'); newBlock.classList.add('hidden'); userInfo.classList.add('hidden'); pointsRow.classList.add('hidden'); referralToggleWrap.classList.add('hidden'); referralToggle.checked=false; return; }
     fetch('<?= $base ?>/users/search?term='+term)
       .then(r=>r.json()).then(data=>{
         sugg.innerHTML='';
@@ -152,6 +164,8 @@
             newBlock.classList.add('hidden');
             userInfo.textContent = u.referrer_name ? 'Пригласил: '+u.referrer_name : 'Без пригласившего';
             userInfo.classList.remove('hidden');
+            referralToggleWrap.classList.add('hidden');
+            referralToggle.checked = false;
             updateSummary();
           });
           sugg.appendChild(li);
@@ -161,8 +175,12 @@
         document.getElementById('userId').value='';
         pointsRow.classList.add('hidden');
         userInfo.classList.add('hidden');
+        referralToggleWrap.classList.remove('hidden');
+        referralToggle.checked = false;
       } else {
         sugg.classList.remove('hidden');
+        referralToggleWrap.classList.add('hidden');
+        referralToggle.checked = false;
       }
       });
   });
@@ -185,6 +203,7 @@
   });
   qtyInputs.forEach(i=>i.addEventListener('input', updateSummary));
   if (pointsInput) pointsInput.addEventListener('input', updateSummary);
+  if (referralToggle) referralToggle.addEventListener('change', updateSummary);
 
   function updateSummary() {
     let subtotal = 0;
@@ -202,7 +221,7 @@
     });
     subtotalEl.textContent = subtotal.toFixed(2) + ' ₽';
     let total = subtotal;
-    const referral = document.getElementById('userId').value === '';
+    const referral = referralToggle && !referralToggleWrap.classList.contains('hidden') && referralToggle.checked;
     if (referral) {
       const d = subtotal * 0.1;
       refEl.textContent = '-' + d.toFixed(2);
