@@ -30,6 +30,17 @@
         <div class="text-sm text-gray-600">баланс рублей</div>
       </div>
     </div>
+    <?php $inviteLink = "https://berrygo.ru/?invite=" . urlencode($_SESSION['referral_code'] ?? ''); ?>
+    <div class="mt-4 text-center space-y-2">
+      <div class="text-sm text-gray-600">Пригласительная ссылка</div>
+      <button onclick="copyInviteLink()" class="underline break-all">
+        <?= htmlspecialchars($inviteLink) ?>
+      </button>
+      <div class="text-sm text-gray-600">Пригласительный код</div>
+      <button onclick="copyInviteCode()" class="underline">
+        <?= htmlspecialchars($_SESSION['referral_code'] ?? '') ?>
+      </button>
+    </div>
     <div class="text-center mt-4">
       <form method="POST" action="/partner/payout">
         <button class="bg-[#C86052] text-white px-4 py-2 rounded">Запросить выплату</button>
@@ -110,4 +121,14 @@
     data: { labels, datasets: [{ label: 'Выручка', data: revenueData, backgroundColor: '#4CAF50' }] },
     options: baseOptions
   });
+</script>
+<script>
+function copyInviteLink() {
+  const link = "<?= addslashes($inviteLink) ?>";
+  navigator.clipboard.writeText(link).then(() => alert('Ссылка скопирована в буфер обмена!'));
+}
+function copyInviteCode() {
+  const code = "<?= addslashes($_SESSION['referral_code'] ?? '') ?>";
+  navigator.clipboard.writeText(code).then(() => alert('Код скопирован в буфер обмена!'));
+}
 </script>
