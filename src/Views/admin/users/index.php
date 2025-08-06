@@ -1,5 +1,6 @@
 <?php /** @var array $users */ ?>
 <?php $role = $_SESSION['role'] ?? ''; $isManager = in_array($role, ['manager','partner'], true); $base = $role === 'manager' ? '/manager' : ($role === 'partner' ? '/partner' : '/admin'); ?>
+<?php if (!$isManager): ?>
 <form method="get" class="mb-4 flex">
   <input type="text" name="q" value="<?= htmlspecialchars($search ?? '') ?>" placeholder="Телефон или адрес" class="border rounded px-3 py-2 mr-2 flex-grow">
   <button type="submit" class="bg-[#C86052] text-white px-4 py-2 rounded">Поиск</button>
@@ -7,6 +8,7 @@
 <a href="<?= $base ?>/users/edit" class="bg-[#C86052] text-white px-4 py-2 rounded mb-4 inline-flex items-center">
   <span class="material-icons-round text-base mr-1">add</span> Добавить пользователя
 </a>
+<?php endif; ?>
 <table class="min-w-full bg-white rounded shadow overflow-hidden">
   <thead class="bg-gray-200 text-gray-700">
     <tr>
@@ -17,7 +19,9 @@
       <th class="p-3 text-left font-semibold">Телефон</th>
       <th class="p-3 text-left font-semibold">Адрес</th>
       <th class="p-3 text-left font-semibold">Баланс</th>
+      <?php if (!$isManager): ?>
       <th class="p-3 text-center font-semibold">Заблокирован</th>
+      <?php endif; ?>
     </tr>
   </thead>
   <tbody>
@@ -41,6 +45,7 @@
           <br><span><?= (int)$u['rub_balance'] ?> ₽</span>
         <?php endif; ?>
       </td>
+      <?php if (!$isManager): ?>
       <td class="p-3 text-center">
         <form action="<?= $base ?>/users/toggle-block" method="post" class="inline-block">
           <input type="hidden" name="id" value="<?= $u['id'] ?>">
@@ -50,6 +55,7 @@
           </label>
         </form>
       </td>
+      <?php endif; ?>
     </tr>
     <?php endforeach; ?>
   </tbody>

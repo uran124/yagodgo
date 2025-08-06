@@ -476,6 +476,28 @@ class UsersController
      */
     public function index(): void
     {
+        $auth = Auth::user();
+        if ($auth && in_array($auth['role'], ['manager', 'partner'], true)) {
+            $stmt = $this->pdo->prepare(
+                "SELECT u.id, u.name, u.phone, u.role, u.created_at,
+                        u.referral_code, u.points_balance, u.rub_balance, u.is_blocked,
+                        (SELECT street FROM addresses WHERE user_id = u.id ORDER BY created_at DESC LIMIT 1) AS address,
+                        ref.name AS referrer_name
+                 FROM users u
+                 LEFT JOIN users ref ON ref.id = u.referred_by
+                 WHERE u.id = ?"
+            );
+            $stmt->execute([$auth['id']]);
+            $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            viewAdmin('users/index', [
+                'pageTitle' => 'Пользователи',
+                'users'     => $users,
+                'search'    => '',
+            ]);
+            return;
+        }
+
         $search = trim($_GET['q'] ?? '');
 
         $baseSql = "SELECT u.id, u.name, u.phone, u.role, u.created_at,
@@ -527,6 +549,12 @@ class UsersController
      */
     public function show(int $id): void
     {
+        $auth = Auth::user();
+        if ($auth && in_array($auth['role'], ['manager', 'partner'], true) && $auth['id'] !== $id) {
+            header('Location: ' . $this->basePath());
+            exit;
+        }
+
         $stmt = $this->pdo->prepare(
             "SELECT id, name, phone, points_balance, rub_balance FROM users WHERE id = ?"
         );
@@ -558,7 +586,14 @@ class UsersController
      */
     public function edit(): void
     {
+        $auth = Auth::user();
         $id   = (int)($_GET['id'] ?? 0);
+        if ($auth && in_array($auth['role'], ['manager', 'partner'], true)) {
+            if ($id === 0 || $auth['id'] !== $id) {
+                header('Location: ' . $this->basePath());
+                exit;
+            }
+        }
         $user = null;
 
         if ($id) {
@@ -591,6 +626,11 @@ class UsersController
      */
     public function save(): void
     {
+        $auth = Auth::user();
+        if ($auth && in_array($auth['role'], ['manager', 'partner'], true)) {
+            header('Location: ' . $this->basePath());
+            exit;
+        }
         $id = (int)($_POST['id'] ?? 0);
 
         if ($id) {
@@ -719,6 +759,12 @@ class UsersController
     // Блокировка/разблокировка
     public function toggleBlock(): void
     {
+        $auth = Auth::user();
+        if ($auth && in_array($auth['role'], ['manager', 'partner'], true)) {
+            header('Location: ' . $this->basePath());
+            exit;
+        }
+
         $id = (int)($_POST['id'] ?? 0);
         if ($id) {
             try {
@@ -748,6 +794,12 @@ class UsersController
     // Поиск пользователей по телефону (JSON)
     public function searchPhone(): void
     {
+        $auth = Auth::user();
+        if ($auth && in_array($auth['role'], ['manager', 'partner'], true)) {
+            echo json_encode([]);
+            return;
+        }
+
         $term = preg_replace('/\D+/', '', $_GET['term'] ?? '');
         if ($term === '') {
             echo json_encode([]);
@@ -771,8 +823,13 @@ class UsersController
     // Список адресов пользователя (JSON)
     public function addresses(): void
     {
+        $auth = Auth::user();
         $uid = (int)($_GET['user_id'] ?? 0);
         if ($uid <= 0) {
+            echo json_encode([]);
+            return;
+        }
+        if ($auth && in_array($auth['role'], ['manager', 'partner'], true) && $auth['id'] !== $uid) {
             echo json_encode([]);
             return;
         }
