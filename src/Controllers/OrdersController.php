@@ -277,6 +277,7 @@ class OrdersController
     {
         $userId = (int)($_POST['user_id'] ?? 0);
         $isNew  = $userId === 0;
+        $hasUsedReferral = 0;
 
         if ($isNew) {
             $name  = trim($_POST['new_name'] ?? '');
@@ -316,12 +317,13 @@ class OrdersController
             $refCode = ReferralHelper::generateUniqueCode($this->pdo, 8);
             $managerId = $_SESSION['user_id'] ?? null;
             $pinHash = password_hash($pin, PASSWORD_DEFAULT);
+            $hasUsedReferral = isset($_POST['has_used_referral_coupon']) && $_POST['has_used_referral_coupon'] === '1' ? 1 : 0;
 
             $this->pdo->beginTransaction();
             $stmt = $this->pdo->prepare(
-                "INSERT INTO users (role, name, phone, password_hash, referral_code, referred_by, has_used_referral_coupon, points_balance, created_at) VALUES ('client', ?, ?, ?, ?, ?, 0, 0, NOW())"
+                "INSERT INTO users (role, name, phone, password_hash, referral_code, referred_by, has_used_referral_coupon, points_balance, created_at) VALUES ('client', ?, ?, ?, ?, ?, ?, 0, NOW())"
             );
-            $stmt->execute([$name, $phone, $pinHash, $refCode, $managerId]);
+            $stmt->execute([$name, $phone, $pinHash, $refCode, $managerId, $hasUsedReferral]);
             $userId = (int)$this->pdo->lastInsertId();
 
             if ($address !== '') {
@@ -340,7 +342,7 @@ class OrdersController
                 )->execute([$managerId, $userId]);
             }
             $this->pdo->commit();
-            $referralDiscount = true;
+            $referralDiscount = $hasUsedReferral === 1;
         } else {
             $addressId = $_POST['address_id'] ?? null;
             if ($addressId === 'pickup') {
@@ -388,7 +390,9 @@ class OrdersController
 
         if ($referralDiscount) {
             $total = (int)floor($total * 0.9);
-            $this->pdo->prepare("UPDATE users SET has_used_referral_coupon = 1 WHERE id = ?")->execute([$userId]);
+            if ($hasUsedReferral === 0) {
+                $this->pdo->prepare("UPDATE users SET has_used_referral_coupon = 1 WHERE id = ?")->execute([$userId]);
+            }
         }
 
         $pointsUsed = 0;
