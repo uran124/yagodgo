@@ -476,30 +476,9 @@ class UsersController
      */
     public function index(): void
     {
-        $auth = Auth::user();
-        if ($auth && in_array($auth['role'], ['manager', 'partner'], true)) {
-            $stmt = $this->pdo->prepare(
-                "SELECT u.id, u.name, u.phone, u.role, u.created_at,
-                        u.referral_code, u.points_balance, u.rub_balance, u.is_blocked,
-                        (SELECT street FROM addresses WHERE user_id = u.id ORDER BY created_at DESC LIMIT 1) AS address,
-                        ref.name AS referrer_name
-                 FROM users u
-                 LEFT JOIN users ref ON ref.id = u.referred_by
-                 WHERE u.id = ?"
-            );
-            $stmt->execute([$auth['id']]);
-            $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            viewAdmin('users/index', [
-                'pageTitle' => 'Пользователи',
-                'users'     => $users,
-                'search'    => '',
-                'payouts'   => [],
-            ]);
-            return;
-        }
-
-        $search = trim($_GET['q'] ?? '');
+        $auth    = Auth::user();
+        $isStaff = $auth && in_array($auth['role'], ['manager', 'partner'], true);
+        $search  = trim($_GET['q'] ?? '');
 
         $baseSql = "SELECT u.id, u.name, u.phone, u.role, u.created_at,
                             u.referral_code, u.points_balance, u.rub_balance, u.is_blocked,
@@ -508,11 +487,19 @@ class UsersController
                      FROM users u
                      LEFT JOIN users ref ON ref.id = u.referred_by";
 
-        $params = [];
+        $params     = [];
+        $conditions = [];
         if ($search !== '') {
-            $baseSql .= " WHERE u.phone LIKE ? OR EXISTS(SELECT 1 FROM addresses a WHERE a.user_id = u.id AND a.street LIKE ?)";
-            $params[] = "%$search%";
-            $params[] = "%$search%";
+            $conditions[] = "(u.phone LIKE ? OR EXISTS(SELECT 1 FROM addresses a WHERE a.user_id = u.id AND a.street LIKE ?))";
+            $params[]     = "%$search%";
+            $params[]     = "%$search%";
+        }
+        if ($isStaff) {
+            $conditions[] = "(u.role NOT IN ('partner','manager') OR u.id = ?)";
+            $params[]     = $auth['id'];
+        }
+        if ($conditions) {
+            $baseSql .= ' WHERE ' . implode(' AND ', $conditions);
         }
         $baseSql .= " ORDER BY u.created_at DESC";
 
@@ -527,8 +514,19 @@ class UsersController
                                 ref.name AS referrer_name
                          FROM users u
                          LEFT JOIN users ref ON ref.id = u.referred_by";
+            $conditions = [];
+            $params     = [];
             if ($search !== '') {
-                $baseSql .= " WHERE u.phone LIKE ? OR EXISTS(SELECT 1 FROM addresses a WHERE a.user_id = u.id AND a.street LIKE ?)";
+                $conditions[] = "(u.phone LIKE ? OR EXISTS(SELECT 1 FROM addresses a WHERE a.user_id = u.id AND a.street LIKE ?))";
+                $params[]     = "%$search%";
+                $params[]     = "%$search%";
+            }
+            if ($isStaff) {
+                $conditions[] = "(u.role NOT IN ('partner','manager') OR u.id = ?)";
+                $params[]     = $auth['id'];
+            }
+            if ($conditions) {
+                $baseSql .= ' WHERE ' . implode(' AND ', $conditions);
             }
             $baseSql .= " ORDER BY u.created_at DESC";
 
@@ -538,13 +536,17 @@ class UsersController
 
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $payoutStmt = $this->pdo->query(
-            "SELECT id, name, phone, role, rub_balance
-             FROM users
-             WHERE rub_balance <> 0 AND role IN ('partner','manager')
-             ORDER BY rub_balance DESC"
-        );
-        $payouts = $payoutStmt->fetchAll(PDO::FETCH_ASSOC);
+        if (!$isStaff) {
+            $payoutStmt = $this->pdo->query(
+                "SELECT id, name, phone, role, rub_balance
+                 FROM users
+                 WHERE rub_balance <> 0 AND role IN ('partner','manager')
+                 ORDER BY rub_balance DESC"
+            );
+            $payouts = $payoutStmt->fetchAll(PDO::FETCH_ASSOC);
+        } else {
+            $payouts = [];
+        }
 
         viewAdmin('users/index', [
             'pageTitle' => 'Пользователи',
@@ -560,10 +562,6 @@ class UsersController
     public function show(int $id): void
     {
         $auth = Auth::user();
-        if ($auth && in_array($auth['role'], ['manager', 'partner'], true) && $auth['id'] !== $id) {
-            header('Location: ' . $this->basePath());
-            exit;
-        }
 
         $stmt = $this->pdo->prepare(
             "SELECT id, name, phone, role, is_blocked, telegram_id, referral_code, referred_by,
@@ -573,6 +571,15 @@ class UsersController
         $stmt->execute([$id]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$user) {
+            header('Location: ' . $this->basePath());
+            exit;
+        }
+        if (
+            $auth &&
+            in_array($auth['role'], ['manager', 'partner'], true) &&
+            $auth['id'] !== $id &&
+            in_array($user['role'], ['manager', 'partner'], true)
+        ) {
             header('Location: ' . $this->basePath());
             exit;
         }
@@ -614,12 +621,6 @@ class UsersController
     {
         $auth = Auth::user();
         $id   = (int)($_GET['id'] ?? 0);
-        if ($auth && in_array($auth['role'], ['manager', 'partner'], true)) {
-            if ($id === 0 || $auth['id'] !== $id) {
-                header('Location: ' . $this->basePath());
-                exit;
-            }
-        }
         $user = null;
 
         if ($id) {
@@ -641,6 +642,13 @@ class UsersController
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
         }
 
+        if ($auth && in_array($auth['role'], ['manager', 'partner'], true)) {
+            if ($id && $auth['id'] !== $id && in_array($user['role'] ?? '', ['manager', 'partner'], true)) {
+                header('Location: ' . $this->basePath());
+                exit;
+            }
+        }
+
         viewAdmin('users/edit', [
             'pageTitle' => $id ? 'Редактировать пользователя' : 'Добавить пользователя',
             'user'      => $user,
@@ -652,12 +660,27 @@ class UsersController
      */
     public function save(): void
     {
-        $auth = Auth::user();
-        if ($auth && in_array($auth['role'], ['manager', 'partner'], true)) {
-            header('Location: ' . $this->basePath());
-            exit;
+        $auth       = Auth::user();
+        $authStaff  = $auth && in_array($auth['role'], ['manager', 'partner'], true);
+        $id         = (int)($_POST['id'] ?? 0);
+
+        if ($authStaff) {
+            $targetRole = 'client';
+            if ($id) {
+                $stmt = $this->pdo->prepare("SELECT role FROM users WHERE id = ?");
+                $stmt->execute([$id]);
+                $targetRole = $stmt->fetchColumn() ?: 'client';
+                if ($auth['id'] !== $id && in_array($targetRole, ['manager', 'partner'], true)) {
+                    header('Location: ' . $this->basePath());
+                    exit;
+                }
+            }
+            $newRole = $_POST['role'] ?? 'client';
+            if (in_array($newRole, ['partner', 'manager', 'admin'], true)) {
+                header('Location: ' . $this->basePath());
+                exit;
+            }
         }
-        $id = (int)($_POST['id'] ?? 0);
 
         if ($id) {
             $role      = $_POST['role'] ?? 'client';
@@ -796,12 +819,17 @@ class UsersController
     public function toggleBlock(): void
     {
         $auth = Auth::user();
+        $id   = (int)($_POST['id'] ?? 0);
         if ($auth && in_array($auth['role'], ['manager', 'partner'], true)) {
-            header('Location: ' . $this->basePath());
-            exit;
+            $stmt = $this->pdo->prepare("SELECT role FROM users WHERE id = ?");
+            $stmt->execute([$id]);
+            $targetRole = $stmt->fetchColumn();
+            if ($auth['id'] !== $id && in_array($targetRole, ['manager', 'partner'], true)) {
+                header('Location: ' . $this->basePath());
+                exit;
+            }
         }
 
-        $id = (int)($_POST['id'] ?? 0);
         if ($id) {
             try {
                 $this->pdo->prepare(
@@ -839,8 +867,13 @@ class UsersController
 
         if ($userId && $address !== '') {
             if ($auth && in_array($auth['role'], ['manager', 'partner'], true) && $auth['id'] !== $userId) {
-                header('Location: ' . $this->basePath());
-                exit;
+                $stmt = $this->pdo->prepare("SELECT role FROM users WHERE id = ?");
+                $stmt->execute([$userId]);
+                $targetRole = $stmt->fetchColumn();
+                if (in_array($targetRole, ['manager', 'partner'], true)) {
+                    header('Location: ' . $this->basePath());
+                    exit;
+                }
             }
             $stmt = $this->pdo->prepare(
                 "INSERT INTO addresses (user_id, street, recipient_name, recipient_phone, is_primary, created_at)
@@ -860,8 +893,13 @@ class UsersController
         $userId = (int)($_POST['user_id'] ?? 0);
         if ($id && $userId) {
             if ($auth && in_array($auth['role'], ['manager', 'partner'], true) && $auth['id'] !== $userId) {
-                header('Location: ' . $this->basePath());
-                exit;
+                $stmt = $this->pdo->prepare("SELECT role FROM users WHERE id = ?");
+                $stmt->execute([$userId]);
+                $targetRole = $stmt->fetchColumn();
+                if (in_array($targetRole, ['manager', 'partner'], true)) {
+                    header('Location: ' . $this->basePath());
+                    exit;
+                }
             }
             $this->pdo->prepare("DELETE FROM addresses WHERE id = ? AND user_id = ?")
                  ->execute([$id, $userId]);
@@ -874,10 +912,6 @@ class UsersController
     public function searchPhone(): void
     {
         $auth = Auth::user();
-        if ($auth && in_array($auth['role'], ['manager', 'partner'], true)) {
-            echo json_encode([]);
-            return;
-        }
 
         $term = preg_replace('/\D+/', '', $_GET['term'] ?? '');
         if ($term === '') {
@@ -885,15 +919,19 @@ class UsersController
             return;
         }
 
-        $stmt = $this->pdo->prepare(
-            "SELECT u.id, u.name, u.phone, u.points_balance, u.referred_by, ref.name AS referrer_name
-             FROM users u
-             LEFT JOIN users ref ON ref.id = u.referred_by
-             WHERE u.phone LIKE ?
-             ORDER BY u.phone
-             LIMIT 5"
-        );
-        $stmt->execute(['%' . $term . '%']);
+        $sql = "SELECT u.id, u.name, u.phone, u.points_balance, u.referred_by, ref.name AS referrer_name
+                FROM users u
+                LEFT JOIN users ref ON ref.id = u.referred_by
+                WHERE u.phone LIKE ?";
+        $params = ['%' . $term . '%'];
+        if ($auth && in_array($auth['role'], ['manager', 'partner'], true)) {
+            $sql    .= " AND (u.role NOT IN ('partner','manager') OR u.id = ?)";
+            $params[] = $auth['id'];
+        }
+        $sql .= " ORDER BY u.phone LIMIT 5";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
         $res = $stmt->fetchAll(PDO::FETCH_ASSOC);
         header('Content-Type: application/json; charset=UTF-8');
         echo json_encode($res);
@@ -903,14 +941,19 @@ class UsersController
     public function addresses(): void
     {
         $auth = Auth::user();
-        $uid = (int)($_GET['user_id'] ?? 0);
+        $uid  = (int)($_GET['user_id'] ?? 0);
         if ($uid <= 0) {
             echo json_encode([]);
             return;
         }
         if ($auth && in_array($auth['role'], ['manager', 'partner'], true) && $auth['id'] !== $uid) {
-            echo json_encode([]);
-            return;
+            $stmt = $this->pdo->prepare("SELECT role FROM users WHERE id = ?");
+            $stmt->execute([$uid]);
+            $targetRole = $stmt->fetchColumn();
+            if (in_array($targetRole, ['manager', 'partner'], true)) {
+                echo json_encode([]);
+                return;
+            }
         }
         $stmt = $this->pdo->prepare(
             "SELECT id, street FROM addresses WHERE user_id = ? ORDER BY is_primary DESC, created_at ASC"
