@@ -91,6 +91,18 @@
     <button type="submit" class="bg-blue-700 text-white px-3 py-1 rounded">Сохранить</button>
   </form>
 
+  <form action="<?= $base ?>/orders/referral" method="post" class="bg-white p-4 rounded shadow space-y-2">
+    <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
+    <input type="hidden" name="user_id" value="<?= $order['user_id'] ?>">
+    <label class="inline-flex items-center cursor-pointer">
+      <input type="hidden" name="has_used_referral_coupon" value="0">
+      <input type="checkbox" name="has_used_referral_coupon" value="1" class="sr-only peer" <?= ($order['has_used_referral_coupon'] ?? 0) ? 'checked' : '' ?>>
+      <div class="w-10 h-5 bg-gray-200 rounded-full peer-checked:bg-[#C86052] relative transition-colors after:content-[''] after:absolute after:left-1 after:top-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-transform peer-checked:after:translate-x-5"></div>
+      <span class="ml-2 text-sm">Скидка 10% на первый заказ</span>
+    </label>
+    <button type="submit" class="bg-blue-700 text-white px-3 py-1 rounded">Сохранить</button>
+  </form>
+
   <form action="<?= $base ?>/orders/update-delivery" method="post" class="bg-white p-4 rounded shadow space-y-2">
     <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
     <div class="space-x-2 flex flex-wrap items-center">
