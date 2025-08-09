@@ -1,5 +1,16 @@
 <?php /** @var array $user @var array $transactions @var array $addresses @var array $referrers */ ?>
-<?php $role = $_SESSION['role'] ?? ''; $isManager = in_array($role, ['manager','partner'], true); $base = $role === 'manager' ? '/manager' : ($role === 'partner' ? '/partner' : '/admin'); ?>
+<?php
+$role = $_SESSION['role'] ?? '';
+$isManager = in_array($role, ['manager','partner'], true);
+$base = $role === 'manager' ? '/manager' : ($role === 'partner' ? '/partner' : '/admin');
+$roleNames = [
+  'client'  => 'Клиент',
+  'courier' => 'Курьер',
+  'admin'   => 'Админ',
+  'manager' => 'Менеджер',
+  'partner' => 'Партнёр',
+];
+?>
 <form action="<?= $base ?>/users/save" method="post" class="bg-white p-4 rounded shadow mb-4 space-y-4">
   <input type="hidden" name="id" value="<?= $user['id'] ?>">
   <div class="flex justify-between">
@@ -10,13 +21,17 @@
     </div>
     <div>
       <label class="block text-sm mb-1">Роль</label>
-      <select name="role" class="border rounded px-2 py-1">
-        <option value="client" <?= $user['role']==='client'?'selected':'' ?>>Клиент</option>
-        <option value="courier" <?= $user['role']==='courier'?'selected':'' ?>>Курьер</option>
-        <option value="admin" <?= $user['role']==='admin'?'selected':'' ?>>Админ</option>
-        <option value="manager" <?= $user['role']==='manager'?'selected':'' ?>>Менеджер</option>
-        <option value="partner" <?= $user['role']==='partner'?'selected':'' ?>>Партнёр</option>
-      </select>
+      <?php if ($isManager): ?>
+        <div><?= $roleNames[$user['role']] ?? htmlspecialchars($user['role']) ?></div>
+      <?php else: ?>
+        <select name="role" class="border rounded px-2 py-1">
+          <option value="client" <?= $user['role']==='client'?'selected':'' ?>>Клиент</option>
+          <option value="courier" <?= $user['role']==='courier'?'selected':'' ?>>Курьер</option>
+          <option value="admin" <?= $user['role']==='admin'?'selected':'' ?>>Админ</option>
+          <option value="manager" <?= $user['role']==='manager'?'selected':'' ?>>Менеджер</option>
+          <option value="partner" <?= $user['role']==='partner'?'selected':'' ?>>Партнёр</option>
+        </select>
+      <?php endif; ?>
     </div>
   </div>
   <div class="flex justify-between items-center">
@@ -28,17 +43,19 @@
   </div>
   <div>Telegram: <?= htmlspecialchars($user['telegram_id'] ?? '') ?></div>
   <div>Пригласительный код: <?= htmlspecialchars($user['referral_code']) ?></div>
-  <div>
-    <label class="block text-sm mb-1">Реферансье</label>
-    <select name="referred_by" class="border rounded px-2 py-1">
-      <option value="">—</option>
-      <?php foreach ($referrers as $ref): ?>
-        <option value="<?= $ref['id'] ?>" <?= $user['referred_by'] == $ref['id'] ? 'selected' : '' ?>>
-          <?= htmlspecialchars($ref['name']) ?> (<?= htmlspecialchars($ref['phone']) ?>)
-        </option>
-      <?php endforeach; ?>
-    </select>
-  </div>
+  <?php if (!$isManager): ?>
+    <div>
+      <label class="block text-sm mb-1">Реферансье</label>
+      <select name="referred_by" class="border rounded px-2 py-1">
+        <option value="">—</option>
+        <?php foreach ($referrers as $ref): ?>
+          <option value="<?= $ref['id'] ?>" <?= $user['referred_by'] == $ref['id'] ? 'selected' : '' ?>>
+            <?= htmlspecialchars($ref['name']) ?> (<?= htmlspecialchars($ref['phone']) ?>)
+          </option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+  <?php endif; ?>
   <div class="flex justify-between">
     <div>Баланс: <?= (int)$user['points_balance'] ?> 🍓</div>
     <?php if ($isManager): ?>
