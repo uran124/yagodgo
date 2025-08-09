@@ -498,6 +498,10 @@ switch ("$method $uri") {
         requireAdmin();
         (new App\Controllers\OrdersController($pdo))->updateComment();
         break;
+    case 'POST /admin/orders/referral':
+        requireAdmin();
+        (new App\Controllers\OrdersController($pdo))->updateReferral();
+        break;
     case 'POST /admin/orders/update-delivery':
         requireAdmin();
         (new App\Controllers\OrdersController($pdo))->updateDelivery();
@@ -703,6 +707,10 @@ switch ("$method $uri") {
         requireManager();
         (new App\Controllers\OrdersController($pdo))->updateComment();
         break;
+    case 'POST /manager/orders/referral':
+        requireManager();
+        (new App\Controllers\OrdersController($pdo))->updateReferral();
+        break;
     case 'POST /manager/orders/update-delivery':
         requireManager();
         (new App\Controllers\OrdersController($pdo))->updateDelivery();
@@ -826,6 +834,10 @@ switch ("$method $uri") {
     case 'POST /partner/orders/comment':
         requirePartner();
         (new App\Controllers\OrdersController($pdo))->updateComment();
+        break;
+    case 'POST /partner/orders/referral':
+        requirePartner();
+        (new App\Controllers\OrdersController($pdo))->updateReferral();
         break;
     case 'POST /partner/orders/update-delivery':
         requirePartner();

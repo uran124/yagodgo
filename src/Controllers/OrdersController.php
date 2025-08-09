@@ -163,7 +163,7 @@ class OrdersController
     {
         $stmt = $this->pdo->prepare(
             "SELECT o.*, d.time_from AS slot_from, d.time_to AS slot_to,\n" .
-            "       u.name AS client_name, u.phone, a.street AS address\n" .
+            "       u.name AS client_name, u.phone, u.has_used_referral_coupon, a.street AS address\n" .
             "FROM orders o\n" .
             "JOIN users u ON u.id = o.user_id\n" .
             "JOIN addresses a ON a.id = o.address_id\n" .
@@ -987,6 +987,22 @@ class OrdersController
         exit;
     }
 
+    // Обновление скидки первого заказа
+    public function updateReferral(): void
+    {
+        $orderId = (int)($_POST['order_id'] ?? 0);
+        $userId  = (int)($_POST['user_id'] ?? 0);
+        $value   = isset($_POST['has_used_referral_coupon']) && $_POST['has_used_referral_coupon'] === '1' ? 1 : 0;
+        if ($orderId && $userId) {
+            $this->pdo->prepare(
+                "UPDATE users SET has_used_referral_coupon = ? WHERE id = ?"
+            )->execute([$value, $userId]);
+            $this->recalculateTotals($orderId);
+        }
+        header('Location: ' . $this->basePath() . '/' . $orderId);
+        exit;
+    }
+
     public function updateComment(): void
     {
         $orderId = (int)($_POST['order_id'] ?? 0);
@@ -1008,11 +1024,18 @@ class OrdersController
         $rawTotal = (float)$stmt->fetchColumn();
 
         $oStmt = $this->pdo->prepare(
-            "SELECT points_used, coupon_code, address_id FROM orders WHERE id = ?"
+            "SELECT user_id, points_used, coupon_code, address_id FROM orders WHERE id = ?"
         );
         $oStmt->execute([$orderId]);
         $oRow = $oStmt->fetch(PDO::FETCH_ASSOC);
         $pointsUsed = (int)($oRow['points_used'] ?? 0);
+        $userId    = (int)($oRow['user_id'] ?? 0);
+        $hasUsedReferral = 0;
+        if ($userId) {
+            $uStmt = $this->pdo->prepare("SELECT has_used_referral_coupon FROM users WHERE id = ?");
+            $uStmt->execute([$userId]);
+            $hasUsedReferral = (int)$uStmt->fetchColumn();
+        }
 
         $subAfterPickup = $rawTotal;
 
@@ -1030,8 +1053,10 @@ class OrdersController
                     $discountApplied = (int) floor(($subAfterPickup - $pointsUsed) * ($percent / 100));
                 }
             } else {
-                // реферальный код даёт скидку 10%
-                $discountApplied = (int) floor(($subAfterPickup - $pointsUsed) * 0.10);
+                // реферальный код даёт скидку 10% только если отметка использована
+                if ($hasUsedReferral === 1) {
+                    $discountApplied = (int) floor(($subAfterPickup - $pointsUsed) * 0.10);
+                }
             }
         }
 
