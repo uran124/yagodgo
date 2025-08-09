@@ -53,7 +53,7 @@ class OrdersController
                "       o.points_used, o.coupon_code, o.discount_applied,\n" .
                "       o.slot_id, d.time_from AS slot_from, d.time_to AS slot_to,\n" .
                "       u.name AS client_name, u.phone, a.street AS address,\n" .
-               "       o.created_at\n" .
+               "       o.created_at, o.comment\n" .
                "FROM orders o\n" .
                "JOIN users u ON u.id = o.user_id\n" .
                "LEFT JOIN addresses a ON a.id = o.address_id\n" .
@@ -230,6 +230,14 @@ class OrdersController
                 $pointsFromBalance = max(0, $pointsFromBalance - (int)$couponInfo['points']);
             }
         }
+        $prodStmt = $this->pdo->query(
+            "SELECT p.id, t.name AS product, p.variety\n" .
+            "FROM products p\n" .
+            "JOIN product_types t ON t.id = p.product_type_id\n" .
+            "WHERE p.is_active = 1\n" .
+            "ORDER BY t.name"
+        );
+        $products = $prodStmt->fetchAll(PDO::FETCH_ASSOC);
 
         viewAdmin('orders/show', [
             'pageTitle'    => "Заказ #{$id}",
@@ -240,6 +248,7 @@ class OrdersController
             'pointsFromBalance' => $pointsFromBalance,
             'addresses'    => $addresses,
             'slots'        => $slots,
+            'products'     => $products,
         ]);
     }
 
@@ -904,62 +913,132 @@ class OrdersController
     }
 
     // Обновление количества товара в заказе (POST, админ)
-    public function updateItemQuantity(): void
+    public function updateItem(): void
     {
         $orderId   = (int)($_POST['order_id'] ?? 0);
         $productId = (int)($_POST['product_id'] ?? 0);
         $qty       = (float)($_POST['quantity'] ?? 0);
+        $price     = (float)($_POST['unit_price'] ?? 0);
         if ($orderId && $productId && $qty > 0) {
-            $stmtBox = $this->pdo->prepare("SELECT box_size FROM products WHERE id = ?");
+            $stmtBox = $this->pdo->prepare("SELECT box_size, price FROM products WHERE id = ?");
             $stmtBox->execute([$productId]);
-            $boxSize = (float)($stmtBox->fetchColumn() ?: 1);
+            $prod = $stmtBox->fetch(PDO::FETCH_ASSOC) ?: [];
+            $boxSize = (float)($prod['box_size'] ?? 1);
+            if ($price <= 0) {
+                $price = (float)($prod['price'] ?? 0);
+            }
             $boxes = $boxSize > 0 ? $qty / $boxSize : $qty;
             $this->pdo->prepare(
-                "UPDATE order_items SET quantity = ?, boxes = ? WHERE order_id = ? AND product_id = ?"
-            )->execute([$qty, $boxes, $orderId, $productId]);
+                "UPDATE order_items SET quantity = ?, boxes = ?, unit_price = ? WHERE order_id = ? AND product_id = ?"
+            )->execute([$qty, $boxes, $price, $orderId, $productId]);
 
-            $stmt = $this->pdo->prepare(
-                "SELECT SUM(quantity * unit_price) FROM order_items WHERE order_id = ?"
-            );
-            $stmt->execute([$orderId]);
-            $rawTotal = (float)$stmt->fetchColumn();
-
-            $oStmt = $this->pdo->prepare(
-                "SELECT points_used, coupon_code, address_id FROM orders WHERE id = ?"
-            );
-            $oStmt->execute([$orderId]);
-            $oRow = $oStmt->fetch(PDO::FETCH_ASSOC);
-            $pointsUsed = (int)($oRow['points_used'] ?? 0);
-            $addressId  = (int)($oRow['address_id'] ?? 0);
-
-            $subAfterPickup = $rawTotal;
-
-            $discountApplied = 0;
-            $couponCode = $oRow['coupon_code'] ?? '';
-            if ($couponCode !== '') {
-                $cStmt = $this->pdo->prepare(
-                    "SELECT type, discount, points FROM coupons WHERE code = ?"
-                );
-                $cStmt->execute([$couponCode]);
-                $coupon = $cStmt->fetch(PDO::FETCH_ASSOC) ?: null;
-                if ($coupon) {
-                    if ($coupon['type'] === 'discount') {
-                        $percent = (float)$coupon['discount'];
-                        $discountApplied = (int) floor(($subAfterPickup - $pointsUsed) * ($percent / 100));
-                    }
-                } else {
-                    // реферальный код даёт скидку 10%
-                    $discountApplied = (int) floor(($subAfterPickup - $pointsUsed) * 0.10);
-                }
-            }
-
-            $finalTotal = $subAfterPickup - $pointsUsed - $discountApplied;
-
-            $this->pdo->prepare(
-                "UPDATE orders SET total_amount = ?, discount_applied = ? WHERE id = ?"
-            )->execute([$finalTotal, $discountApplied, $orderId]);
+            $this->recalculateTotals($orderId);
         }
         header('Location: ' . $this->basePath() . '/' . $orderId);
         exit;
+    }
+
+    public function addItem(): void
+    {
+        $orderId   = (int)($_POST['order_id'] ?? 0);
+        $productId = (int)($_POST['product_id'] ?? 0);
+        $qty       = (float)($_POST['quantity'] ?? 0);
+        $price     = (float)($_POST['unit_price'] ?? 0);
+        if ($orderId && $productId && $qty > 0) {
+            $stmt = $this->pdo->prepare("SELECT price, box_size FROM products WHERE id = ?");
+            $stmt->execute([$productId]);
+            $prod = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+            $boxSize = (float)($prod['box_size'] ?? 1);
+            if ($price <= 0) {
+                $price = (float)($prod['price'] ?? 0);
+            }
+            $boxes = $boxSize > 0 ? $qty / $boxSize : $qty;
+
+            $check = $this->pdo->prepare("SELECT 1 FROM order_items WHERE order_id = ? AND product_id = ?");
+            $check->execute([$orderId, $productId]);
+            if ($check->fetch()) {
+                $this->pdo->prepare(
+                    "UPDATE order_items SET quantity = ?, boxes = ?, unit_price = ? WHERE order_id = ? AND product_id = ?"
+                )->execute([$qty, $boxes, $price, $orderId, $productId]);
+            } else {
+                $this->pdo->prepare(
+                    "INSERT INTO order_items (order_id, product_id, quantity, boxes, unit_price) VALUES (?, ?, ?, ?, ?)"
+                )->execute([$orderId, $productId, $qty, $boxes, $price]);
+            }
+
+            $this->recalculateTotals($orderId);
+        }
+        header('Location: ' . $this->basePath() . '/' . $orderId);
+        exit;
+    }
+
+    public function deleteItem(): void
+    {
+        $orderId   = (int)($_POST['order_id'] ?? 0);
+        $productId = (int)($_POST['product_id'] ?? 0);
+        if ($orderId && $productId) {
+            $this->pdo->prepare(
+                "DELETE FROM order_items WHERE order_id = ? AND product_id = ?"
+            )->execute([$orderId, $productId]);
+
+            $this->recalculateTotals($orderId);
+        }
+        header('Location: ' . $this->basePath() . '/' . $orderId);
+        exit;
+    }
+
+    public function updateComment(): void
+    {
+        $orderId = (int)($_POST['order_id'] ?? 0);
+        $comment = trim($_POST['comment'] ?? '');
+        if ($orderId) {
+            $this->pdo->prepare("UPDATE orders SET comment = ? WHERE id = ?")
+                      ->execute([$comment, $orderId]);
+        }
+        header('Location: ' . $this->basePath() . '/' . $orderId);
+        exit;
+    }
+
+    private function recalculateTotals(int $orderId): void
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT SUM(quantity * unit_price) FROM order_items WHERE order_id = ?"
+        );
+        $stmt->execute([$orderId]);
+        $rawTotal = (float)$stmt->fetchColumn();
+
+        $oStmt = $this->pdo->prepare(
+            "SELECT points_used, coupon_code, address_id FROM orders WHERE id = ?"
+        );
+        $oStmt->execute([$orderId]);
+        $oRow = $oStmt->fetch(PDO::FETCH_ASSOC);
+        $pointsUsed = (int)($oRow['points_used'] ?? 0);
+
+        $subAfterPickup = $rawTotal;
+
+        $discountApplied = 0;
+        $couponCode = $oRow['coupon_code'] ?? '';
+        if ($couponCode !== '') {
+            $cStmt = $this->pdo->prepare(
+                "SELECT type, discount, points FROM coupons WHERE code = ?"
+            );
+            $cStmt->execute([$couponCode]);
+            $coupon = $cStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+            if ($coupon) {
+                if ($coupon['type'] === 'discount') {
+                    $percent = (float)$coupon['discount'];
+                    $discountApplied = (int) floor(($subAfterPickup - $pointsUsed) * ($percent / 100));
+                }
+            } else {
+                // реферальный код даёт скидку 10%
+                $discountApplied = (int) floor(($subAfterPickup - $pointsUsed) * 0.10);
+            }
+        }
+
+        $finalTotal = $subAfterPickup - $pointsUsed - $discountApplied;
+
+        $this->pdo->prepare(
+            "UPDATE orders SET total_amount = ?, discount_applied = ? WHERE id = ?"
+        )->execute([$finalTotal, $discountApplied, $orderId]);
     }
 }

@@ -484,7 +484,19 @@ switch ("$method $uri") {
         break;
     case 'POST /admin/orders/update-item':
         requireAdmin();
-        (new App\Controllers\OrdersController($pdo))->updateItemQuantity();
+        (new App\Controllers\OrdersController($pdo))->updateItem();
+        break;
+    case 'POST /admin/orders/add-item':
+        requireAdmin();
+        (new App\Controllers\OrdersController($pdo))->addItem();
+        break;
+    case 'POST /admin/orders/delete-item':
+        requireAdmin();
+        (new App\Controllers\OrdersController($pdo))->deleteItem();
+        break;
+    case 'POST /admin/orders/comment':
+        requireAdmin();
+        (new App\Controllers\OrdersController($pdo))->updateComment();
         break;
     case 'POST /admin/orders/update-delivery':
         requireAdmin();
@@ -677,7 +689,19 @@ switch ("$method $uri") {
         break;
     case 'POST /manager/orders/update-item':
         requireManager();
-        (new App\Controllers\OrdersController($pdo))->updateItemQuantity();
+        (new App\Controllers\OrdersController($pdo))->updateItem();
+        break;
+    case 'POST /manager/orders/add-item':
+        requireManager();
+        (new App\Controllers\OrdersController($pdo))->addItem();
+        break;
+    case 'POST /manager/orders/delete-item':
+        requireManager();
+        (new App\Controllers\OrdersController($pdo))->deleteItem();
+        break;
+    case 'POST /manager/orders/comment':
+        requireManager();
+        (new App\Controllers\OrdersController($pdo))->updateComment();
         break;
     case 'POST /manager/orders/update-delivery':
         requireManager();
@@ -789,7 +813,19 @@ switch ("$method $uri") {
         break;
     case 'POST /partner/orders/update-item':
         requirePartner();
-        (new App\Controllers\OrdersController($pdo))->updateItemQuantity();
+        (new App\Controllers\OrdersController($pdo))->updateItem();
+        break;
+    case 'POST /partner/orders/add-item':
+        requirePartner();
+        (new App\Controllers\OrdersController($pdo))->addItem();
+        break;
+    case 'POST /partner/orders/delete-item':
+        requirePartner();
+        (new App\Controllers\OrdersController($pdo))->deleteItem();
+        break;
+    case 'POST /partner/orders/comment':
+        requirePartner();
+        (new App\Controllers\OrdersController($pdo))->updateComment();
         break;
     case 'POST /partner/orders/update-delivery':
         requirePartner();
