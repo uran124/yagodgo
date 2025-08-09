@@ -31,22 +31,28 @@ class BotController
      */
     public function webhook(): void
     {
-        // Получаем всё обновление (Update) из Telegram
-        $update = $this->telegram->getWebhookUpdate();
+        try {
+            // Получаем всё обновление (Update) из Telegram
+            $update = $this->telegram->getWebhookUpdate();
 
-        // Если это обычное текстовое сообщение
-        if ($message = $update->getMessage()) {
-            $this->handleMessage($message);
-            return;
+            // Если это обычное текстовое сообщение
+            if ($message = $update->getMessage()) {
+                $this->handleMessage($message);
+                return;
+            }
+
+            // Если это callback_query (нажатие на inline-кнопку)
+            if ($callbackQuery = $update->getCallbackQuery()) {
+                $this->handleCallbackData($callbackQuery);
+                return;
+            }
+
+            // Другие типы (например, edited_message и др.) пока не обрабатываем
+        } catch (\Throwable $e) {
+            $logMessage = sprintf("[%s] %s\n%s\n", date('Y-m-d H:i:s'), $e->getMessage(), $e->getTraceAsString());
+            error_log($logMessage, 3, __DIR__ . '/../../log/webhook.log');
+            http_response_code(200);
         }
-
-        // Если это callback_query (нажатие на inline-кнопку)
-        if ($callbackQuery = $update->getCallbackQuery()) {
-            $this->handleCallbackData($callbackQuery);
-            return;
-        }
-
-        // Другие типы (например, edited_message и др.) пока не обрабатываем
     }
 
     /**
