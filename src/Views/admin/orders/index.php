@@ -88,6 +88,9 @@
             <span><?= number_format($lineCost, 0, '.', ' ') ?> ₽</span>
           </div>
         <?php endforeach; ?>
+        <?php if (!empty($o['comment'])): ?>
+          <div class="text-sm text-gray-700 mt-1"><?= nl2br(htmlspecialchars($o['comment'])) ?></div>
+        <?php endif; ?>
         <?php if (($o['points_from_balance'] ?? 0) > 0): ?>
           <div class="flex justify-between text-sm text-pink-600 border-t mt-1 pt-1">
             <span>Списано баллов:</span>

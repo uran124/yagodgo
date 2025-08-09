@@ -1,4 +1,4 @@
-<?php /** @var array $order @var array $items @var array $addresses @var array $slots */ ?>
+<?php /** @var array $order @var array $items @var array $addresses @var array $slots @var array $products */ ?>
 <?php $role = $_SESSION['role'] ?? ''; $isManager = in_array($role, ['manager','partner'], true); $base = $role === 'manager' ? '/manager' : ($role === 'partner' ? '/partner' : '/admin'); ?>
 <style>
   @media (max-width: 640px) {
@@ -36,11 +36,25 @@
           <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
           <input type="hidden" name="product_id" value="<?= $it['product_id'] ?>">
           <input type="number" name="quantity" value="<?= $it['quantity'] ?>" step="0.01" class="w-20 border px-1 py-0.5 rounded"> кг
+          <input type="number" name="unit_price" value="<?= $it['unit_price'] ?>" step="1" class="w-20 border px-1 py-0.5 rounded"> ₽
           <button type="submit" class="bg-[#C86052] text-white px-2 py-1 rounded">OK</button>
+          <button type="submit" formaction="<?= $base ?>/orders/delete-item" class="text-red-600" onclick="return confirm('Удалить позицию?');">✕</button>
           <span class="ml-2"><?= number_format($lineCost, 0, '.', ' ') ?> ₽</span>
         </form>
       </div>
     <?php endforeach; ?>
+
+    <form action="<?= $base ?>/orders/add-item" method="post" class="flex items-center space-x-2 pt-2 border-t">
+      <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
+      <select name="product_id" class="border px-1 py-0.5 rounded">
+        <?php foreach ($products as $p): ?>
+          <option value="<?= $p['id'] ?>"><?= htmlspecialchars($p['product']) ?><?php if(!empty($p['variety'])): ?> <?= htmlspecialchars($p['variety']) ?><?php endif; ?></option>
+        <?php endforeach; ?>
+      </select>
+      <input type="number" name="quantity" step="0.01" placeholder="Кг" class="w-20 border px-1 py-0.5 rounded">
+      <input type="number" name="unit_price" step="1" placeholder="₽" class="w-20 border px-1 py-0.5 rounded">
+      <button type="submit" class="bg-green-700 text-white px-2 py-1 rounded">Добавить</button>
+    </form>
 
     <?php if (($pointsFromBalance ?? 0) > 0): ?>
       <div class="flex justify-between text-pink-600 py-1 border-t">
@@ -67,6 +81,15 @@
       <span><?= $order['total_amount'] ?> ₽</span>
     </div>
   </div>
+
+  <form action="<?= $base ?>/orders/comment" method="post" class="bg-white p-4 rounded shadow space-y-2">
+    <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
+    <label class="block">
+      <span class="block mb-1">Комментарий:</span>
+      <textarea name="comment" rows="3" class="w-full border px-2 py-1 rounded"><?= htmlspecialchars($order['comment'] ?? '') ?></textarea>
+    </label>
+    <button type="submit" class="bg-blue-700 text-white px-3 py-1 rounded">Сохранить</button>
+  </form>
 
   <form action="<?= $base ?>/orders/update-delivery" method="post" class="bg-white p-4 rounded shadow space-y-2">
     <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
