@@ -663,29 +663,30 @@ class UsersController
         $auth       = Auth::user();
         $authStaff  = $auth && in_array($auth['role'], ['manager', 'partner'], true);
         $id         = (int)($_POST['id'] ?? 0);
+        $targetRole = 'client';
+        $currentRef = null;
 
-        if ($authStaff) {
-            $targetRole = 'client';
-            if ($id) {
-                $stmt = $this->pdo->prepare("SELECT role FROM users WHERE id = ?");
-                $stmt->execute([$id]);
-                $targetRole = $stmt->fetchColumn() ?: 'client';
-                if ($auth['id'] !== $id && in_array($targetRole, ['manager', 'partner'], true)) {
-                    header('Location: ' . $this->basePath());
-                    exit;
-                }
-            }
-            $newRole = $_POST['role'] ?? 'client';
-            if (in_array($newRole, ['partner', 'manager', 'admin'], true)) {
+        if ($authStaff && $id) {
+            $stmt = $this->pdo->prepare("SELECT role, referred_by FROM users WHERE id = ?");
+            $stmt->execute([$id]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+            $targetRole = $row['role'] ?? 'client';
+            $currentRef = $row['referred_by'] ?? null;
+            if ($auth['id'] !== $id && in_array($targetRole, ['manager', 'partner'], true)) {
                 header('Location: ' . $this->basePath());
                 exit;
             }
         }
 
         if ($id) {
-            $role      = $_POST['role'] ?? 'client';
+            if ($authStaff) {
+                $role  = $targetRole;
+                $refBy = $currentRef;
+            } else {
+                $role  = $_POST['role'] ?? 'client';
+                $refBy = (int)($_POST['referred_by'] ?? 0) ?: null;
+            }
             $isBlocked = isset($_POST['is_blocked']) ? 1 : 0;
-            $refBy     = (int)($_POST['referred_by'] ?? 0) ?: null;
 
             try {
                 $stmt = $this->pdo->prepare(
