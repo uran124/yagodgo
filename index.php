@@ -927,6 +927,10 @@ switch ("$method $uri") {
         requireSeller();
         (new App\Controllers\SellerController($pdo))->dashboard();
         break;
+    case 'GET /seller/profile':
+        requireSeller();
+        (new App\Controllers\UsersController($pdo))->sellerProfile();
+        break;
     case 'GET /seller/products':
         requireSeller();
         (new App\Controllers\ProductsController($pdo))->index();

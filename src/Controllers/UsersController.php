@@ -429,6 +429,40 @@ class UsersController
     }
 
     /**
+     * Профиль продавца с основной статистикой
+     */
+    public function sellerProfile(): void
+    {
+        $authUser = Auth::user();
+        if (!$authUser || ($authUser['role'] ?? '') !== 'seller') {
+            header('Location: /login');
+            exit;
+        }
+
+        $sellerId = (int)$authUser['id'];
+
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) AS cnt, SUM(gross_amount) AS sum FROM seller_payouts WHERE seller_id = ?");
+        $stmt->execute([$sellerId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        $ordersCount = (int)($row['cnt'] ?? 0);
+        $revenue = (int)($row['sum'] ?? 0);
+
+        $payoutStmt = $this->pdo->prepare(
+            "SELECT created_at, gross_amount, payout_amount, status FROM seller_payouts \n" .
+            "WHERE seller_id = ? ORDER BY created_at DESC LIMIT 20"
+        );
+        $payoutStmt->execute([$sellerId]);
+        $payouts = $payoutStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        viewAdmin('seller_profile', [
+            'pageTitle'   => 'Профиль продавца',
+            'ordersCount' => $ordersCount,
+            'revenue'     => $revenue,
+            'payouts'     => $payouts,
+        ]);
+    }
+
+    /**
      * Сохранение нового адреса (POST /profile)
      */
     public function saveAddress(): void
