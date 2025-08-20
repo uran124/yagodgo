@@ -664,11 +664,11 @@ public function cart(): void
                     $referrerId = (int)$ref['id'];
                     $referralUsed = true;
                 } else {
-                    header('Location: /checkout?coupon_error=Промокод+действует+на+первый+заказ');
+                    header('Location: /checkout?coupon_error=' . urlencode('Промокод действует на первый заказ'));
                     exit;
                 }
             } else {
-                header('Location: /checkout?coupon_error=Неверный+купон');
+                header('Location: /checkout?coupon_error=' . urlencode('Неверный купон'));
                 exit;
             }
         } else {
