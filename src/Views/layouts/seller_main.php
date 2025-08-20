@@ -250,6 +250,7 @@ $labelRole = 'Селлер';
       <div class="font-bold text-lg md:text-xl text-[#C86052]">BerryGo <?= htmlspecialchars($titleRole) ?></div>
       <nav class="hidden md:flex space-x-2 md:space-x-4">
         <a href="<?= $base ?>/dashboard" class="hover:underline">Статистика</a>
+        <a href="<?= $base ?>/orders" class="hover:underline">Заказы</a>
         <a href="<?= $base ?>/products" class="hover:underline">Товары</a>
         <a href="<?= $base ?>/product-types" class="hover:underline">Категории</a>
         <a href="<?= $base ?>/profile" class="hover:underline">Профиль</a>
@@ -272,6 +273,10 @@ $labelRole = 'Селлер';
         <span class="material-icons-round mr-2 text-base md:text-lg">bar_chart</span>
         <span class="menu-text text-sm md:text-base">Статистика</span>
       </a>
+      <a href="<?= $base ?>/orders" class="flex items-center p-2 mb-2 rounded hover:bg-gray-200">
+        <span class="material-icons-round mr-2 text-base md:text-lg">shopping_bag</span>
+        <span class="menu-text text-sm md:text-base">Заказы</span>
+      </a>
       <a href="<?= $base ?>/products" class="flex items-center p-2 mb-2 rounded hover:bg-gray-200">
         <span class="material-icons-round mr-2 text-base md:text-lg">inventory_2</span>
         <span class="menu-text text-sm md:text-base">Товары</span>
@@ -281,8 +286,8 @@ $labelRole = 'Селлер';
         <span class="menu-text text-sm md:text-base">Категории</span>
       </a>
       <a href="<?= $base ?>/profile" class="flex items-center p-2 mt-2 rounded hover:bg-gray-200">
-      <span class="material-icons-round mr-2 text-base md:text-lg">account_circle</span>
-      <span class="menu-text text-sm md:text-base">Профиль</span>
+        <span class="material-icons-round mr-2 text-base md:text-lg">account_circle</span>
+        <span class="menu-text text-sm md:text-base">Профиль</span>
       </a>
     </nav>
   </aside>
