@@ -668,14 +668,14 @@ class UsersController
         if ($id) {
             try {
                 $stmt = $this->pdo->prepare(
-                    "SELECT id, name, phone, role, is_blocked, rub_balance, company_name, pickup_address, delivery_cost, work_mode
+                    "SELECT id, name, phone, role, is_blocked, rub_balance
                      FROM users
                      WHERE id = ?"
                 );
                 $stmt->execute([$id]);
             } catch (\PDOException $e) {
                 $stmt = $this->pdo->prepare(
-                    "SELECT id, name, phone, role, rub_balance, company_name, pickup_address, delivery_cost, work_mode
+                    "SELECT id, name, phone, role, rub_balance
                      FROM users
                      WHERE id = ?"
                 );
@@ -754,16 +754,6 @@ class UsersController
                     $stmt->execute([$role, $id]);
                 }
             }
-            $cStmt = $this->pdo->prepare(
-                "UPDATE users SET company_name = ?, pickup_address = ?, delivery_cost = ?, work_mode = ? WHERE id = ?"
-            );
-            $cStmt->execute([
-                trim($_POST['company_name'] ?? ''),
-                trim($_POST['pickup_address'] ?? ''),
-                (float)($_POST['delivery_cost'] ?? 0),
-                $_POST['work_mode'] ?? 'berrygo_store',
-                $id
-            ]);
         } else {
             $nameRaw  = $_POST['name'] ?? '';
             $phoneRaw = $_POST['phone'] ?? '';

@@ -12,6 +12,11 @@ class SellersController
         $this->pdo = $pdo;
     }
 
+    private function basePath(): string
+    {
+        return '/admin/sellers';
+    }
+
     /**
      * List all sellers
      */
@@ -99,5 +104,42 @@ class SellersController
             'seller'    => $seller,
             'orders'    => $orders,
         ]);
+    }
+
+    public function edit(): void
+    {
+        $id = (int)($_GET['id'] ?? 0);
+        $seller = null;
+        if ($id) {
+            $stmt = $this->pdo->prepare("SELECT id, company_name, pickup_address, delivery_cost, work_mode FROM users WHERE id = ? AND role = 'seller'");
+            $stmt->execute([$id]);
+            $seller = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$seller) {
+                header('Location: ' . $this->basePath());
+                exit;
+            }
+        }
+
+        viewAdmin('sellers/edit', [
+            'pageTitle' => 'Редактировать селлера',
+            'seller'    => $seller,
+        ]);
+    }
+
+    public function save(): void
+    {
+        $id = (int)($_POST['id'] ?? 0);
+        $company = trim($_POST['company_name'] ?? '');
+        $pickup  = trim($_POST['pickup_address'] ?? '');
+        $cost    = (float)($_POST['delivery_cost'] ?? 0);
+        $mode    = $_POST['work_mode'] ?? 'berrygo_store';
+
+        if ($id) {
+            $stmt = $this->pdo->prepare("UPDATE users SET company_name = ?, pickup_address = ?, delivery_cost = ?, work_mode = ? WHERE id = ? AND role = 'seller'");
+            $stmt->execute([$company, $pickup, $cost, $mode, $id]);
+        }
+
+        header('Location: ' . $this->basePath());
+        exit;
     }
 }

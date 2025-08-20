@@ -58,32 +58,12 @@ $roleNames = [
       </select>
     </div>
   <?php endif; ?>
-  <div>
-    <label class="block text-sm mb-1">Название компании</label>
-    <input name="company_name" class="border rounded px-2 py-1" value="<?= htmlspecialchars($user['company_name'] ?? '') ?>">
-  </div>
-    <div>
-      <label class="block text-sm mb-1">Адрес самовывоза</label>
-      <input name="pickup_address" class="border rounded px-2 py-1" value="<?= htmlspecialchars($user['pickup_address'] ?? '') ?>">
-    </div>
-    <div>
-      <label class="block text-sm mb-1">Стоимость доставки</label>
-      <input name="delivery_cost" type="number" step="0.01" class="border rounded px-2 py-1" value="<?= htmlspecialchars($user['delivery_cost'] ?? '') ?>">
-    </div>
-    <div>
-      <label class="block text-sm mb-1">Режим работы</label>
-      <select name="work_mode" class="border rounded px-2 py-1">
-        <option value="berrygo_store" <?= ($user['work_mode'] ?? '')==='berrygo_store' ? 'selected' : '' ?>>Товар в BerryGo</option>
-        <option value="own_store" <?= ($user['work_mode'] ?? '')==='own_store' ? 'selected' : '' ?>>Со своего магазина</option>
-        <option value="warehouse_delivery" <?= ($user['work_mode'] ?? '')==='warehouse_delivery' ? 'selected' : '' ?>>Со своего склада</option>
-      </select>
-    </div>
     <div class="flex justify-between">
       <div>Баланс: <?= (int)$user['points_balance'] ?> 🍓</div>
       <?php if ($isManager): ?>
         <div><?= (int)$user['rub_balance'] ?> ₽</div>
       <?php endif; ?>
-  </div>
+    </div>
   <button type="submit" class="bg-[#C86052] text-white px-4 py-2 rounded">Сохранить</button>
 </form>
 
