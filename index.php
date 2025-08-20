@@ -627,6 +627,14 @@ switch ("$method $uri") {
         requireAdmin();
         (new App\Controllers\SellersController($pdo))->index();
         break;
+    case 'GET /admin/sellers/edit':
+        requireAdmin();
+        (new App\Controllers\SellersController($pdo))->edit();
+        break;
+    case 'POST /admin/sellers/save':
+        requireAdmin();
+        (new App\Controllers\SellersController($pdo))->save();
+        break;
     case (bool)preg_match('#^GET /admin/sellers/(\\d+)$#', "$method $uri", $m):
         requireAdmin();
         (new App\Controllers\SellersController($pdo))->show((int)$m[1]);

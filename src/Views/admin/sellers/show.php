@@ -5,6 +5,9 @@
   <div class="mb-2"><span class="font-semibold">Имя:</span> <?= htmlspecialchars($seller['name']) ?></div>
   <div class="mb-2"><span class="font-semibold">Телефон:</span> <?= htmlspecialchars($seller['phone']) ?></div>
   <div><span class="font-semibold">Баланс:</span> <?= (int)$seller['rub_balance'] ?> ₽</div>
+  <div class="mt-4">
+    <a href="/admin/sellers/edit?id=<?= $seller['id'] ?>" class="text-[#C86052] hover:underline">Редактировать</a>
+  </div>
 </div>
 <h2 class="text-lg font-semibold mb-4">Заказы</h2>
 <?php if ($orders): ?>
