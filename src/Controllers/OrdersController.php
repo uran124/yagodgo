@@ -44,6 +44,30 @@ class OrdersController
         return $digits;
     }
 
+    /**
+     * Ensure pickup address exists for the user and return its ID.
+     */
+    private function ensurePickupAddress(int $userId): int
+    {
+        $stmt = $this->pdo->prepare("SELECT name, phone FROM users WHERE id = ?");
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        $name = $user['name'] ?? '';
+        $phone = $user['phone'] ?? '';
+
+        $street = 'Самовывоз: 9 мая, 73';
+        $stmt = $this->pdo->prepare("SELECT id FROM addresses WHERE user_id = ? AND street = ? AND recipient_name = ? AND recipient_phone = ?");
+        $stmt->execute([$userId, $street, $name, $phone]);
+        if ($id = $stmt->fetchColumn()) {
+            return (int)$id;
+        }
+
+        $this->pdo->prepare("INSERT INTO addresses (user_id, street, recipient_name, recipient_phone, is_primary, created_at) VALUES (?, ?, ?, ?, 0, NOW())")
+            ->execute([$userId, $street, $name, $phone]);
+
+        return (int)$this->pdo->lastInsertId();
+    }
+
     // Список заказов (админ/менеджер)
     public function index(): void
     {
@@ -287,12 +311,14 @@ class OrdersController
         $userId = (int)($_POST['user_id'] ?? 0);
         $isNew  = $userId === 0;
         $hasUsedReferral = 0;
+        $isPickup = false;
 
         if ($isNew) {
             $name  = trim($_POST['new_name'] ?? '');
             $phone = $this->normalizePhone($_POST['new_phone'] ?? '');
             $address = trim($_POST['new_address'] ?? '');
-            if ($address === '') {
+            $isPickup = $address === '';
+            if ($isPickup) {
                 $address = 'Самовывоз: 9 мая, 73';
             }
             $pin   = trim($_POST['new_pin'] ?? '');
@@ -353,14 +379,17 @@ class OrdersController
             $this->pdo->commit();
             $referralDiscount = $hasUsedReferral === 1;
         } else {
-            $addressId = $_POST['address_id'] ?? null;
-            if ($addressId === 'pickup') {
-                $addressId = null;
-            } elseif ($addressId !== null) {
-                $addressId = is_numeric($addressId) ? (int)$addressId : null;
-            }
-            $referralDiscount = false;
-        }
+              $addrInput = $_POST['address_id'] ?? null;
+              $isPickup = ($addrInput === 'pickup');
+              if ($isPickup) {
+                  $addressId = $this->ensurePickupAddress($userId);
+              } elseif ($addrInput !== null) {
+                  $addressId = is_numeric($addrInput) ? (int)$addrInput : null;
+              } else {
+                  $addressId = null;
+              }
+              $referralDiscount = false;
+          }
 
         if ($userId <= 0) {
             header('Location: ' . $this->basePath() . '/create?error=user');
@@ -413,9 +442,8 @@ class OrdersController
             $total -= $pointsUsed;
         }
 
-        $isPickup = $isNew ? trim($_POST['new_address'] ?? '') === '' : $addressId === null;
-        $shippingFee = $isPickup ? 0 : 300;
-        $total += $shippingFee;
+          $shippingFee = $isPickup ? 0 : 300;
+          $total += $shippingFee;
 
         $stmt = $this->pdo->prepare(
             "INSERT INTO orders (user_id, address_id, slot_id, status, total_amount, discount_applied, points_used, points_accrued, coupon_code, delivery_date, created_at) VALUES (?, ?, ?, 'new', ?, 0, ?, 0, ?, ?, NOW())"
