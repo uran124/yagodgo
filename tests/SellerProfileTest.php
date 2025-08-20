@@ -1,9 +1,11 @@
 <?php
 namespace {
-    function viewAdmin(string $template, array $data = []): void
-    {
-        echo $template . PHP_EOL;
-        echo json_encode($data);
+    if (!function_exists('viewAdmin')) {
+        function viewAdmin(string $template, array $data = []): void
+        {
+            echo $template . PHP_EOL;
+            echo json_encode($data);
+        }
     }
 }
 
