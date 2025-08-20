@@ -777,7 +777,9 @@ class UsersController
             }
 
             $referredBy = null;
-            if ($invite !== '') {
+            if ($authStaff) {
+                $referredBy = (int)$auth['id'];
+            } elseif ($invite !== '') {
                 $stmt = $this->pdo->prepare("SELECT id FROM users WHERE referral_code = ?");
                 $stmt->execute([$invite]);
                 $found = $stmt->fetch(PDO::FETCH_ASSOC);
