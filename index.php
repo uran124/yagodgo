@@ -623,6 +623,15 @@ switch ("$method $uri") {
         (new App\Controllers\UsersController($pdo))->deleteAddressAdmin();
         break;
 
+    case 'GET /admin/sellers':
+        requireAdmin();
+        (new App\Controllers\SellersController($pdo))->index();
+        break;
+    case (bool)preg_match('#^GET /admin/sellers/(\\d+)$#', "$method $uri", $m):
+        requireAdmin();
+        (new App\Controllers\SellersController($pdo))->show((int)$m[1]);
+        break;
+
     case 'GET /admin/apps':
         requireAdmin();
         (new App\Controllers\AppsController($pdo))->index();
