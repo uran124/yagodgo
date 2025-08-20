@@ -16,7 +16,7 @@ CREATE TABLE seller_payouts (
   commission_rate DECIMAL(5,2) NOT NULL DEFAULT 30.00,
   commission_amount DECIMAL(10,2) NOT NULL,
   payout_amount DECIMAL(10,2) NOT NULL,
-  status ENUM('pending','scheduled','paid','cancelled') NOT NULL DEFAULT 'pending',
+  status ENUM('pending','scheduled','accrued','paid','cancelled') NOT NULL DEFAULT 'pending',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   paid_at DATETIME NULL,
   CONSTRAINT fk_sp_seller FOREIGN KEY (seller_id) REFERENCES users(id) ON DELETE CASCADE,
