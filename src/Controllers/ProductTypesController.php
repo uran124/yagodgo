@@ -12,6 +12,12 @@ class ProductTypesController
         $this->pdo = $pdo;
     }
 
+    private function basePath(): string
+    {
+        $role = $_SESSION['role'] ?? '';
+        return $role === 'seller' ? '/seller/product-types' : '/admin/product-types';
+    }
+
     public function index(): void
     {
         $types = $this->pdo->query("SELECT * FROM product_types ORDER BY id DESC")
@@ -62,7 +68,7 @@ class ProductTypesController
             );
             $stmt->execute([$name, $alias, $metaT, $metaD, $metaK, $h1, $short, $text]);
         }
-        header('Location: /admin/product-types');
+        header('Location: ' . $this->basePath());
         exit;
     }
 }

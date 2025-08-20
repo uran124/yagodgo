@@ -85,7 +85,7 @@
             <link itemprop="availability" href="<?= $active ? 'http://schema.org/InStock' : 'http://schema.org/OutOfStock' ?>">
           </div>
 
-          <?php if (in_array((string)($_SESSION['role'] ?? ''), ['client','partner']) && $active): ?>
+          <?php if (in_array((string)($_SESSION['role'] ?? ''), ['client','partner','seller']) && $active): ?>
             <form action="/cart/add" method="post" class="flex items-center space-x-2 add-to-cart-form" data-id="<?= $product['id'] ?>" data-name="<?= htmlspecialchars($product['product'] . ($product['variety'] ? ' ' . $product['variety'] : '')) ?>" data-price="<?= $priceBox ?>">
               <input type="hidden" name="product_id" value="<?= $product['id'] ?>">
               <div class="flex items-center space-x-2">

@@ -9,6 +9,7 @@ $roleNames = [
   'admin'   => 'Админ',
   'manager' => 'Менеджер',
   'partner' => 'Партнёр',
+  'seller'  => 'Селлер',
 ];
 ?>
 <form action="<?= $base ?>/users/save" method="post" class="bg-white p-4 rounded shadow mb-4 space-y-4">
@@ -30,6 +31,7 @@ $roleNames = [
           <option value="admin" <?= $user['role']==='admin'?'selected':'' ?>>Админ</option>
           <option value="manager" <?= $user['role']==='manager'?'selected':'' ?>>Менеджер</option>
           <option value="partner" <?= $user['role']==='partner'?'selected':'' ?>>Партнёр</option>
+          <option value="seller" <?= $user['role']==='seller'?'selected':'' ?>>Селлер</option>
         </select>
       <?php endif; ?>
     </div>
@@ -56,6 +58,18 @@ $roleNames = [
       </select>
     </div>
   <?php endif; ?>
+  <div>
+    <label class="block text-sm mb-1">Название компании</label>
+    <input name="company_name" class="border rounded px-2 py-1" value="<?= htmlspecialchars($user['company_name'] ?? '') ?>">
+  </div>
+  <div>
+    <label class="block text-sm mb-1">Адрес самовывоза</label>
+    <input name="pickup_address" class="border rounded px-2 py-1" value="<?= htmlspecialchars($user['pickup_address'] ?? '') ?>">
+  </div>
+  <div>
+    <label class="block text-sm mb-1">Стоимость доставки</label>
+    <input name="delivery_cost" type="number" step="0.01" class="border rounded px-2 py-1" value="<?= htmlspecialchars($user['delivery_cost'] ?? '') ?>">
+  </div>
   <div class="flex justify-between">
     <div>Баланс: <?= (int)$user['points_balance'] ?> 🍓</div>
     <?php if ($isManager): ?>

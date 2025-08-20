@@ -263,6 +263,13 @@
       <a href="/partner/profile" class="p-2 text-gray-600 hover:text-[#C86052]" title="Дашборд">
         <span class="material-icons-round">dashboard</span>
       </a>
+    <?php elseif (($_SESSION['role'] ?? '') === 'seller'): ?>
+      <a href="/seller/products" class="p-2 text-gray-600 hover:text-[#C86052]" title="Товары">
+        <span class="material-icons-round">inventory_2</span>
+      </a>
+      <a href="/seller/dashboard" class="p-2 text-gray-600 hover:text-[#C86052]" title="Дашборд">
+        <span class="material-icons-round">dashboard</span>
+      </a>
     <?php endif; ?>
 
     <?php if (!empty($_SESSION['user_id'])): ?>
@@ -482,7 +489,7 @@
       </li>
       
       <!-- Мои заказы -->
-      <?php if (in_array($role, ['client','partner','manager','admin'])): ?>
+      <?php if (in_array($role, ['client','partner','manager','admin','seller'])): ?>
         <li class="flex-1 mx-1">
           <a href="/orders" class="nav-item flex flex-col items-center py-3 px-2 rounded-2xl transition-all <?= isActive('/orders') ?>">
             <span class="material-icons-round text-xl mb-1">receipt_long</span>
@@ -516,7 +523,7 @@
       <?php endif; ?>
 
       <!-- Профиль -->
-      <?php if (in_array($role, ['client','partner','manager','admin'])): ?>
+      <?php if (in_array($role, ['client','partner','manager','admin','seller'])): ?>
         <li class="flex-1">
           <a href="/profile" class="nav-item flex flex-col items-center py-3 px-2 rounded-2xl transition-all <?= isActive('/profile') ?>">
             <span class="material-icons-round text-xl mb-1">person</span>

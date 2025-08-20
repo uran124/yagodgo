@@ -21,6 +21,7 @@ class ProductsController
         return match ($role) {
             'manager' => '/manager/products',
             'partner' => '/partner/products',
+            'seller'  => '/seller/products',
             default   => '/admin/products',
         };
     }
@@ -51,8 +52,9 @@ class ProductsController
      */
     public function index(): void
     {
-        $stmt = $this->pdo->query(
-            "SELECT
+        $role = $_SESSION['role'] ?? '';
+        $params = [];
+        $sql = "SELECT
                 p.id,
                 p.alias,
                 t.name            AS product,
@@ -70,9 +72,14 @@ class ProductsController
                 p.image_path,
                 p.delivery_date
              FROM products p
-             JOIN product_types t ON t.id = p.product_type_id
-             ORDER BY t.name, p.variety"
-        );
+             JOIN product_types t ON t.id = p.product_type_id";
+        if ($role === 'seller') {
+            $sql .= " WHERE p.seller_id = ?";
+            $params[] = $_SESSION['user_id'] ?? 0;
+        }
+        $sql .= " ORDER BY t.name, p.variety";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
         $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         viewAdmin('products/index', [
@@ -90,8 +97,14 @@ class ProductsController
         $product = null;
 
         if ($id) {
-            $stmt = $this->pdo->prepare("SELECT * FROM products WHERE id = ?");
-            $stmt->execute([(int)$id]);
+            $role = $_SESSION['role'] ?? '';
+            if ($role === 'seller') {
+                $stmt = $this->pdo->prepare("SELECT * FROM products WHERE id = ? AND seller_id = ?");
+                $stmt->execute([(int)$id, $_SESSION['user_id'] ?? 0]);
+            } else {
+                $stmt = $this->pdo->prepare("SELECT * FROM products WHERE id = ?");
+                $stmt->execute([(int)$id]);
+            }
             $product = $stmt->fetch(PDO::FETCH_ASSOC);
         }
 
@@ -120,6 +133,8 @@ class ProductsController
     {
         $id            = $_POST['id'] ?? null;
         $typeId        = (int)($_POST['product_type_id'] ?? 0);
+        $role          = $_SESSION['role'] ?? '';
+        $sellerId      = $role === 'seller' ? (int)($_SESSION['user_id'] ?? 0) : null;
         $variety       = trim($_POST['variety'] ?? '');
         $alias         = trim($_POST['alias'] ?? '');
         $description   = trim($_POST['description'] ?? '');
@@ -230,6 +245,10 @@ class ProductsController
 
             $sql      .= " WHERE id = ?";
             $params[]  = (int)$id;
+            if ($sellerId) {
+                $sql    .= " AND seller_id = ?";
+                $params[] = $sellerId;
+            }
 
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute($params);
@@ -246,6 +265,11 @@ class ProductsController
                 $unit, $price, $salePrice, $stockBoxes,
                 $deliveryDate, $isActive
             ];
+            if ($sellerId) {
+                $columns      .= ",seller_id";
+                $placeholders .= ",?";
+                $params[] = $sellerId;
+            }
 
             if ($imagePath) {
                 $columns      .= ",image_path";
@@ -267,9 +291,14 @@ class ProductsController
     {
         $id = (int)($_POST['id'] ?? 0);
         if ($id) {
-            $this->pdo->prepare(
-                "UPDATE products SET is_active = CASE WHEN is_active=1 THEN 0 ELSE 1 END WHERE id = ?"
-            )->execute([$id]);
+            $role = $_SESSION['role'] ?? '';
+            $params = [$id];
+            $sql = "UPDATE products SET is_active = CASE WHEN is_active=1 THEN 0 ELSE 1 END WHERE id = ?";
+            if ($role === 'seller') {
+                $sql .= " AND seller_id = ?";
+                $params[] = $_SESSION['user_id'] ?? 0;
+            }
+            $this->pdo->prepare($sql)->execute($params);
         }
         header('Location: ' . $this->basePath());
         exit;
@@ -280,7 +309,14 @@ class ProductsController
     {
         $id = (int)($_POST['id'] ?? 0);
         if ($id) {
-            $this->pdo->prepare("DELETE FROM products WHERE id = ?")->execute([$id]);
+            $role = $_SESSION['role'] ?? '';
+            $params = [$id];
+            $sql = "DELETE FROM products WHERE id = ?";
+            if ($role === 'seller') {
+                $sql .= " AND seller_id = ?";
+                $params[] = $_SESSION['user_id'] ?? 0;
+            }
+            $this->pdo->prepare($sql)->execute($params);
         }
         header('Location: ' . $this->basePath());
         exit;
@@ -293,16 +329,24 @@ class ProductsController
         $raw = trim($_POST['delivery_date'] ?? '');
         $date = $raw !== '' ? $raw : null;
         if ($id) {
-            $stmt = $this->pdo->prepare("UPDATE products SET delivery_date = ? WHERE id = ?");
-            $stmt->execute([$date, $id]);
+            $role = $_SESSION['role'] ?? '';
+            $params = [$date, $id];
+            $sql = "UPDATE products SET delivery_date = ? WHERE id = ?";
+            if ($role === 'seller') {
+                $sql .= " AND seller_id = ?";
+                $params[] = $_SESSION['user_id'] ?? 0;
+            }
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($params);
         }
         // Determine where to redirect after updating
         $refererPath = parse_url($_SERVER['HTTP_REFERER'] ?? '', PHP_URL_PATH) ?? '';
-        if (preg_match('#^/(admin|manager|partner)/#', $refererPath)) {
+        if (preg_match('#^/(admin|manager|partner|seller)/#', $refererPath)) {
             $role = $_SESSION['role'] ?? '';
             $base = match ($role) {
                 'manager' => '/manager/products',
                 'partner' => '/partner/products',
+                'seller'  => '/seller/products',
                 default   => '/admin/products',
             };
         } else {

@@ -100,7 +100,9 @@ function viewAdmin(string $template, array $data = []): void
     require __DIR__ . "/src/Views/admin/{$template}.php";
     $content = ob_get_clean();
     $role = $_SESSION['role'] ?? '';
-    if (in_array($role, ['manager','partner'], true)) {
+    if ($role === 'seller') {
+        require __DIR__ . '/src/Views/layouts/seller_main.php';
+    } elseif (in_array($role, ['manager','partner'], true)) {
         require __DIR__ . '/src/Views/layouts/manager_main.php';
     } else {
         require __DIR__ . '/src/Views/layouts/admin_main.php';
@@ -146,7 +148,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 function requireClient(): void
 {
     $role = $_SESSION['role'] ?? '';
-    if (!in_array($role, ['client','partner','admin','manager'], true)) {
+    if (!in_array($role, ['client','partner','admin','manager','seller'], true)) {
         header('Location: /login');
         exit;
     }
@@ -166,6 +168,16 @@ function requireManager(): void
 {
     $role = $_SESSION['role'] ?? '';
     if (!in_array($role, ['manager', 'admin'], true)) {
+        header('Location: /login');
+        exit;
+    }
+}
+
+// Seller access (seller or admin)
+function requireSeller(): void
+{
+    $role = $_SESSION['role'] ?? '';
+    if (!in_array($role, ['seller', 'admin'], true)) {
         header('Location: /login');
         exit;
     }
@@ -908,6 +920,48 @@ switch ("$method $uri") {
     case 'POST /partner/users/delete-address':
         requirePartner();
         (new App\Controllers\UsersController($pdo))->deleteAddressAdmin();
+        break;
+
+    // === ROUTES FOR SELLERS ===
+    case 'GET /seller/dashboard':
+        requireSeller();
+        (new App\Controllers\SellerController($pdo))->dashboard();
+        break;
+    case 'GET /seller/products':
+        requireSeller();
+        (new App\Controllers\ProductsController($pdo))->index();
+        break;
+    case 'GET /seller/products/edit':
+        requireSeller();
+        (new App\Controllers\ProductsController($pdo))->edit();
+        break;
+    case 'POST /seller/products/save':
+        requireSeller();
+        (new App\Controllers\ProductsController($pdo))->save();
+        break;
+    case 'POST /seller/products/toggle':
+        requireSeller();
+        (new App\Controllers\ProductsController($pdo))->toggle();
+        break;
+    case 'POST /seller/products/update-date':
+        requireSeller();
+        (new App\Controllers\ProductsController($pdo))->updateDeliveryDate();
+        break;
+    case 'POST /seller/products/delete':
+        requireSeller();
+        (new App\Controllers\ProductsController($pdo))->delete();
+        break;
+    case 'GET /seller/product-types':
+        requireSeller();
+        (new App\Controllers\ProductTypesController($pdo))->index();
+        break;
+    case 'GET /seller/product-types/edit':
+        requireSeller();
+        (new App\Controllers\ProductTypesController($pdo))->edit();
+        break;
+    case 'POST /seller/product-types/save':
+        requireSeller();
+        (new App\Controllers\ProductTypesController($pdo))->save();
         break;
 
     // Любые другие запросы — 404
