@@ -64,7 +64,20 @@
         <option value="admin" <?= $user['role']==='admin'?'selected':'' ?>>Админ</option>
         <option value="manager" <?= $user['role']==='manager'?'selected':'' ?>>Менеджер</option>
         <option value="partner" <?= $user['role']==='partner'?'selected':'' ?>>Партнёр</option>
+        <option value="seller" <?= $user['role']==='seller'?'selected':'' ?>>Селлер</option>
       </select>
+    </div>
+    <div>
+      <label class="block mb-1">Название компании</label>
+      <input type="text" name="company_name" value="<?= htmlspecialchars($user['company_name'] ?? '') ?>" class="w-full border px-2 py-1 rounded">
+    </div>
+    <div>
+      <label class="block mb-1">Адрес самовывоза</label>
+      <input type="text" name="pickup_address" value="<?= htmlspecialchars($user['pickup_address'] ?? '') ?>" class="w-full border px-2 py-1 rounded">
+    </div>
+    <div>
+      <label class="block mb-1">Стоимость доставки</label>
+      <input type="number" step="0.01" name="delivery_cost" value="<?= htmlspecialchars($user['delivery_cost'] ?? '') ?>" class="w-full border px-2 py-1 rounded">
     </div>
     <div class="flex items-center space-x-2">
       <input type="checkbox" name="is_blocked" value="1" <?= !empty($user['is_blocked']) ? 'checked' : '' ?>>

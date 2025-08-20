@@ -11,7 +11,8 @@
  *   - is_active        (0 или 1)
  *   - image_path
  *   - box_size, box_unit
- *   - delivery_date    (строка 'Y-m-d' или null)
+  *   - delivery_date    (строка 'Y-m-d' или null)
+ *   - seller_name
  */
 ?>
 <?php
@@ -33,7 +34,7 @@ $priceBox   = $effectiveKg * $boxSize;
 $pricePerKg = round($effectiveKg, 2);
 $regularBox = $price * $boxSize;
 $role     = $_SESSION['role'] ?? '';
-$isStaff  = in_array($role, ['admin','manager','partner'], true);
+$isStaff  = in_array($role, ['admin','manager','partner','seller'], true);
 $basePath = $role === 'manager' ? '/manager' : ($role === 'partner' ? '/partner' : '/admin');
 $regularKg  = round($price, 2);
 ?>
@@ -119,12 +120,14 @@ $regularKg  = round($price, 2);
     <!-- Описание (если есть) -->
 
 <?php if (!empty($p['description'])): ?>
-  <p class="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 flex-1">
+  <p class="text-xs sm:text-sm text-gray-600 mb-1 flex-1">
     <?= htmlspecialchars($p['description']) ?>
   </p>
 <?php else: ?>
   <div class="flex-1"></div>
 <?php endif; ?>
+
+    <div class="text-[10px] sm:text-xs text-gray-500 mb-2">Продавец: <?= htmlspecialchars($p['seller_name'] ?? 'berryGo') ?></div>
 
 
 
@@ -156,7 +159,7 @@ $regularKg  = round($price, 2);
       <?php endif; ?>
 
       <!-- Кнопка «В корзину» или «Войдите» -->
-      <?php if (in_array((string)($_SESSION['role'] ?? ''), ['client','partner']) && $active): ?>
+      <?php if (in_array((string)($_SESSION['role'] ?? ''), ['client','partner','seller']) && $active): ?>
         <form action="/cart/add" method="post" class="flex items-center space-x-2 add-to-cart-form" data-id="<?= $p['id'] ?>" data-name="<?= htmlspecialchars($p['product'] . ($p['variety'] ? ' ' . $p['variety'] : '')) ?>" data-price="<?= $priceBox ?>">
           <input type="hidden" name="product_id" value="<?= $p['id'] ?>">
           <div class="flex items-center space-x-2">

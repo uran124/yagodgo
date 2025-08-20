@@ -57,9 +57,11 @@ class ClientController
                     p.sale_price,
                     p.is_active,
                     p.image_path,
-                    p.delivery_date
+                    p.delivery_date,
+                    COALESCE(u.company_name,u.name,'berryGo') AS seller_name
              FROM products p
              JOIN product_types t ON t.id = p.product_type_id
+             LEFT JOIN users u ON u.id = p.seller_id
              WHERE p.is_active = 1 AND p.sale_price > 0
              ORDER BY p.id DESC
              LIMIT 10"
@@ -79,9 +81,11 @@ class ClientController
                     p.sale_price,
                     p.is_active,
                     p.image_path,
-                    p.delivery_date
+                    p.delivery_date,
+                    COALESCE(u.company_name,u.name,'berryGo') AS seller_name
              FROM products p
              JOIN product_types t ON t.id = p.product_type_id
+             LEFT JOIN users u ON u.id = p.seller_id
              WHERE p.is_active = 1
                AND p.delivery_date IS NOT NULL
              ORDER BY p.id DESC
@@ -102,9 +106,11 @@ class ClientController
                     p.sale_price,
                     p.is_active,
                     p.image_path,
-                    p.delivery_date
+                    p.delivery_date,
+                    COALESCE(u.company_name,u.name,'berryGo') AS seller_name
              FROM products p
              JOIN product_types t ON t.id = p.product_type_id
+             LEFT JOIN users u ON u.id = p.seller_id
              WHERE p.is_active = 1
                AND p.delivery_date IS NULL
              ORDER BY p.id DESC
@@ -148,9 +154,11 @@ class ClientController
                  p.sale_price,
                  p.is_active,
                  p.image_path,
-                 p.delivery_date
+                 p.delivery_date,
+                 COALESCE(u.company_name,u.name,'berryGo') AS seller_name
              FROM products p
              JOIN product_types t ON t.id = p.product_type_id
+             LEFT JOIN users u ON u.id = p.seller_id
              WHERE p.is_active = 1
              ORDER BY
                CASE WHEN p.sale_price > 0 THEN 0 ELSE 1 END,
@@ -588,7 +596,7 @@ public function cart(): void
     // 1) Получаем товары из корзины
     $stmt = $this->pdo->prepare(
       "SELECT ci.product_id, ci.quantity, ci.unit_price,
-              p.box_size, p.box_unit, t.name AS product, t.alias AS type_alias, p.alias, p.variety
+              p.box_size, p.box_unit, t.name AS product, t.alias AS type_alias, p.alias, p.variety, p.seller_id
        FROM cart_items ci
        JOIN products p ON p.id = ci.product_id
        JOIN product_types t ON t.id = p.product_type_id
@@ -609,6 +617,7 @@ public function cart(): void
             'quantity'   => $it['quantity'],     // boxes
             'unit_price' => $it['unit_price'],   // price per box
             'box_size'   => $it['box_size'],
+            'seller_id'  => $it['seller_id'],
         ];
     }
 
@@ -797,6 +806,26 @@ public function cart(): void
                 $data['quantity'],
                 $kgPrice,
             ]);
+        }
+
+        // (7.4) Создаём записи выплат для селлеров
+        $sellerTotals = [];
+        foreach ($block as $prodId => $data) {
+            $sid = $data['seller_id'] ?? null;
+            if ($sid) {
+                $sellerTotals[$sid] = ($sellerTotals[$sid] ?? 0) + $data['quantity'] * $data['unit_price'];
+            }
+        }
+        if ($sellerTotals) {
+            $pStmt = $this->pdo->prepare(
+                "INSERT INTO seller_payouts (seller_id, order_id, gross_amount, commission_rate, commission_amount, payout_amount) VALUES (?, ?, ?, ?, ?, ?)"
+            );
+            foreach ($sellerTotals as $sid => $gross) {
+                $rate = 30.00;
+                $commission = round($gross * $rate / 100, 2);
+                $payout = $gross - $commission;
+                $pStmt->execute([$sid, $orderId, $gross, $rate, $commission, $payout]);
+            }
         }
 
     }
@@ -1104,9 +1133,11 @@ public function showOrder(int $orderId): void
                 $pStmt = $this->pdo->prepare(
                     "SELECT p.id, p.alias, t.name AS product, t.alias AS type_alias, p.variety, p.description, p.origin_country,
                             p.box_size, p.box_unit, p.price, p.sale_price, p.is_active,
-                            p.image_path, p.delivery_date
+                            p.image_path, p.delivery_date,
+                            COALESCE(u.company_name,u.name,'berryGo') AS seller_name
                        FROM products p
                        JOIN product_types t ON t.id = p.product_type_id
+                       LEFT JOIN users u ON u.id = p.seller_id
                        WHERE p.id = ?"
                 );
                 $pStmt->execute([$pid]);
@@ -1183,7 +1214,12 @@ public function showOrder(int $orderId): void
         }
 
         $pStmt = $this->pdo->prepare(
-            "SELECT p.id, p.alias, t.name AS product, t.alias AS type_alias, p.variety, p.description, p.origin_country, p.box_size, p.box_unit, p.price, p.sale_price, p.is_active, p.image_path, p.delivery_date FROM products p JOIN product_types t ON t.id = p.product_type_id WHERE p.product_type_id = ? AND p.is_active = 1"
+            "SELECT p.id, p.alias, t.name AS product, t.alias AS type_alias, p.variety, p.description, p.origin_country, p.box_size, p.box_unit, p.price, p.sale_price, p.is_active, p.image_path, p.delivery_date,
+                    COALESCE(u.company_name,u.name,'berryGo') AS seller_name
+             FROM products p
+             JOIN product_types t ON t.id = p.product_type_id
+             LEFT JOIN users u ON u.id = p.seller_id
+             WHERE p.product_type_id = ? AND p.is_active = 1"
         );
         $pStmt->execute([$type['id']]);
         $products = $pStmt->fetchAll(PDO::FETCH_ASSOC);

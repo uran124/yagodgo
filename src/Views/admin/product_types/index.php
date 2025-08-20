@@ -1,5 +1,6 @@
 <?php /** @var array $types */ ?>
-<a href="/admin/product-types/edit" class="bg-[#C86052] text-white px-4 py-2 rounded mb-4 inline-flex items-center">
+<?php $role = $_SESSION['role'] ?? ''; $base = $role === 'seller' ? '/seller' : '/admin'; ?>
+<a href="<?= $base ?>/product-types/edit" class="bg-[#C86052] text-white px-4 py-2 rounded mb-4 inline-flex items-center">
   <span class="material-icons-round text-base mr-1">add</span> Добавить категорию
 </a>
 <table class="min-w-full bg-white rounded shadow overflow-hidden">
@@ -16,7 +17,7 @@
       <td class="p-3 text-gray-600"><?= htmlspecialchars($t['name']) ?></td>
       <td class="p-3 text-gray-600"><?= htmlspecialchars($t['alias']) ?></td>
       <td class="p-3 text-center">
-        <a href="/admin/product-types/edit?id=<?= $t['id'] ?>" class="text-[#C86052] hover:underline">Редактировать</a>
+        <a href="<?= $base ?>/product-types/edit?id=<?= $t['id'] ?>" class="text-[#C86052] hover:underline">Редактировать</a>
       </td>
     </tr>
     <?php endforeach; ?>

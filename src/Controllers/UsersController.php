@@ -712,6 +712,15 @@ class UsersController
                     $stmt->execute([$role, $id]);
                 }
             }
+            $cStmt = $this->pdo->prepare(
+                "UPDATE users SET company_name = ?, pickup_address = ?, delivery_cost = ? WHERE id = ?"
+            );
+            $cStmt->execute([
+                trim($_POST['company_name'] ?? ''),
+                trim($_POST['pickup_address'] ?? ''),
+                (float)($_POST['delivery_cost'] ?? 0),
+                $id
+            ]);
         } else {
             $nameRaw  = $_POST['name'] ?? '';
             $phoneRaw = $_POST['phone'] ?? '';
