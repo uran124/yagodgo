@@ -86,24 +86,27 @@ class SellerController
     {
         $sellerId = (int)($_SESSION['user_id'] ?? 0);
 
+        // Получаем список заказов, в которых присутствуют товары текущего селлера
         $stmt = $this->pdo->prepare(
             "SELECT o.id, o.status, o.points_used, o.delivery_date,\n"
             . "       d.time_from AS slot_from, d.time_to AS slot_to,\n"
             . "       u.name AS client_name, u.phone, a.street AS address,\n"
-            . "       sp.gross_amount AS seller_subtotal,\n"
-            . "       sp.commission_rate, sp.commission_amount, sp.payout_amount,\n"
+            . "       SUM(oi.quantity * oi.unit_price) AS seller_subtotal,\n"
             . "       (SELECT SUM(quantity * unit_price) FROM order_items WHERE order_id = o.id) AS order_total\n"
-            . "FROM seller_payouts sp\n"
-            . "JOIN orders o ON o.id = sp.order_id\n"
+            . "FROM orders o\n"
+            . "JOIN order_items oi ON oi.order_id = o.id\n"
+            . "JOIN products p ON p.id = oi.product_id\n"
             . "JOIN users u ON u.id = o.user_id\n"
             . "LEFT JOIN addresses a ON a.id = o.address_id\n"
             . "LEFT JOIN delivery_slots d ON d.id = o.slot_id\n"
-            . "WHERE sp.seller_id = ?\n"
+            . "WHERE p.seller_id = ?\n"
+            . "GROUP BY o.id, o.status, o.points_used, o.delivery_date, d.time_from, d.time_to, u.name, u.phone, a.street\n"
             . "ORDER BY o.delivery_date DESC, d.time_from DESC"
         );
         $stmt->execute([$sellerId]);
         $orders = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
+        // Получаем позиции заказа только для текущего селлера
         $orderIds = array_column($orders, 'id');
         $itemsByOrder = [];
         if ($orderIds) {
@@ -128,12 +131,19 @@ class SellerController
             $orderTotal = (float)($o['order_total'] ?? 0);
             $sellerSubtotal = (float)($o['seller_subtotal'] ?? 0);
             $pointsUsed = (float)($o['points_used'] ?? 0);
+
+            $o['commission_rate'] = 30.0;
+            $o['commission'] = round($sellerSubtotal * $o['commission_rate'] / 100, 2);
+            $o['payout'] = $sellerSubtotal - $o['commission'];
             $o['points_applied'] = $orderTotal > 0
                 ? round($pointsUsed * $sellerSubtotal / $orderTotal, 2)
                 : 0.0;
-            $o['commission'] = (float)($o['commission_amount'] ?? 0);
-            $o['payout'] = (float)($o['payout_amount'] ?? 0);
-            unset($o['order_total'], $o['commission_amount'], $o['payout_amount']);
+
+            // Маскируем телефон, если заказ ещё не подтверждён
+            if ($o['status'] === 'new') {
+                $o['phone'] = preg_replace('/^(\d{2})(\d+)(\d{3})$/', '$1******$3', $o['phone']);
+            }
+            unset($o['order_total']);
         }
         unset($o);
 

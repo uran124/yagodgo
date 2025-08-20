@@ -39,7 +39,6 @@ class SellerOrdersTest extends TestCase
         $pdo->exec('CREATE TABLE users (id INT, name TEXT, phone TEXT)');
         $pdo->exec('CREATE TABLE addresses (id INT, street TEXT)');
         $pdo->exec('CREATE TABLE delivery_slots (id INT, time_from TEXT, time_to TEXT)');
-        $pdo->exec('CREATE TABLE seller_payouts (id INTEGER PRIMARY KEY AUTOINCREMENT, seller_id INT, order_id INT, gross_amount REAL, commission_rate REAL, commission_amount REAL, payout_amount REAL, created_at TEXT)');
         $pdo->exec('CREATE TABLE order_items (id INTEGER PRIMARY KEY AUTOINCREMENT, order_id INT, product_id INT, quantity REAL, boxes REAL, unit_price REAL)');
         $pdo->exec('CREATE TABLE products (id INT, product_type_id INT, seller_id INT, box_size REAL, box_unit TEXT, variety TEXT)');
         $pdo->exec('CREATE TABLE product_types (id INT, name TEXT)');
@@ -53,7 +52,6 @@ class SellerOrdersTest extends TestCase
         $pdo->exec("INSERT INTO products (id,product_type_id,seller_id,box_size,box_unit,variety) VALUES (2,1,2,2.0,'кг','')");
         $pdo->exec("INSERT INTO order_items (order_id,product_id,quantity,boxes,unit_price) VALUES (1,1,2.0,1,600)");
         $pdo->exec("INSERT INTO order_items (order_id,product_id,quantity,boxes,unit_price) VALUES (1,2,3.0,1.5,800)");
-        $pdo->exec("INSERT INTO seller_payouts (seller_id,order_id,gross_amount,commission_rate,commission_amount,payout_amount,created_at) VALUES (1,1,1200,30,360,840,'2024-08-10')");
 
         $controller = new SellerController($pdo);
         ob_start();
@@ -69,6 +67,7 @@ class SellerOrdersTest extends TestCase
         $this->assertEquals(360, $order['commission']);
         $this->assertEquals(840, $order['payout']);
         $this->assertEquals(33.33, $order['points_applied']);
+        $this->assertEquals('79******385', $order['phone']);
     }
 }
 
