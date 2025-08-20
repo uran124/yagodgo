@@ -24,7 +24,11 @@
     </div>
     <div>
       <label class="block mb-1">Invite-код (необязательно)</label>
-      <input name="invite" type="text" value="<?= htmlspecialchars($_SESSION['referral_code'] ?? '') ?>" class="w-full border px-2 py-1 rounded">
+      <input name="invite" type="text" value="<?= htmlspecialchars($_SESSION['referral_code'] ?? '') ?>"
+             class="w-full border px-2 py-1 rounded" <?= $isManager ? 'disabled' : '' ?>>
+      <?php if ($isManager): ?>
+        <input type="hidden" name="invite" value="<?= htmlspecialchars($_SESSION['referral_code'] ?? '') ?>">
+      <?php endif; ?>
     </div>
     <div>
       <label class="block mb-1">PIN (4 цифры)</label>
