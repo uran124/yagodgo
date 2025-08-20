@@ -817,13 +817,29 @@ public function cart(): void
             }
         }
         if ($sellerTotals) {
+            // Получаем режим работы селлеров одним запросом
+            $sellerIds = array_keys($sellerTotals);
+            $placeholders = implode(',', array_fill(0, count($sellerIds), '?'));
+            $mStmt = $this->pdo->prepare("SELECT id, work_mode FROM users WHERE id IN ($placeholders)");
+            $mStmt->execute($sellerIds);
+            $modes = [];
+            foreach ($mStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $modes[(int)$row['id']] = $row['work_mode'];
+            }
+
             $pStmt = $this->pdo->prepare(
                 "INSERT INTO seller_payouts (seller_id, order_id, gross_amount, commission_rate, commission_amount, payout_amount) VALUES (?, ?, ?, ?, ?, ?)"
             );
             foreach ($sellerTotals as $sid => $gross) {
                 $rate = 30.00;
                 $commission = round($gross * $rate / 100, 2);
-                $payout = $gross - $commission;
+                $mode = $modes[$sid] ?? 'berrygo_store';
+                // Для собственных магазинов и доставки удерживаем комиссию, иначе выплачиваем 70%
+                if (in_array($mode, ['own_store', 'warehouse_delivery'], true)) {
+                    $payout = -$commission;
+                } else {
+                    $payout = $gross - $commission;
+                }
                 $pStmt->execute([$sid, $orderId, $gross, $rate, $commission, $payout]);
             }
         }
