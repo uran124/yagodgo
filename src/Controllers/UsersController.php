@@ -447,6 +447,12 @@ class UsersController
         $ordersCount = (int)($row['cnt'] ?? 0);
         $revenue = (int)($row['sum'] ?? 0);
 
+        $uStmt = $this->pdo->prepare("SELECT rub_balance, work_mode FROM users WHERE id = ?");
+        $uStmt->execute([$sellerId]);
+        $uRow = $uStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        $balance  = (int)($uRow['rub_balance'] ?? 0);
+        $workMode = $uRow['work_mode'] ?? 'berrygo_store';
+
         $payoutStmt = $this->pdo->prepare(
             "SELECT created_at, gross_amount, payout_amount, status FROM seller_payouts \n" .
             "WHERE seller_id = ? ORDER BY created_at DESC LIMIT 20"
@@ -459,6 +465,8 @@ class UsersController
             'ordersCount' => $ordersCount,
             'revenue'     => $revenue,
             'payouts'     => $payouts,
+            'balance'     => $balance,
+            'workMode'    => $workMode,
         ]);
     }
 
@@ -660,14 +668,14 @@ class UsersController
         if ($id) {
             try {
                 $stmt = $this->pdo->prepare(
-                    "SELECT id, name, phone, role, is_blocked, rub_balance
+                    "SELECT id, name, phone, role, is_blocked, rub_balance, company_name, pickup_address, delivery_cost, work_mode
                      FROM users
                      WHERE id = ?"
                 );
                 $stmt->execute([$id]);
             } catch (\PDOException $e) {
                 $stmt = $this->pdo->prepare(
-                    "SELECT id, name, phone, role, rub_balance
+                    "SELECT id, name, phone, role, rub_balance, company_name, pickup_address, delivery_cost, work_mode
                      FROM users
                      WHERE id = ?"
                 );
@@ -747,12 +755,13 @@ class UsersController
                 }
             }
             $cStmt = $this->pdo->prepare(
-                "UPDATE users SET company_name = ?, pickup_address = ?, delivery_cost = ? WHERE id = ?"
+                "UPDATE users SET company_name = ?, pickup_address = ?, delivery_cost = ?, work_mode = ? WHERE id = ?"
             );
             $cStmt->execute([
                 trim($_POST['company_name'] ?? ''),
                 trim($_POST['pickup_address'] ?? ''),
                 (float)($_POST['delivery_cost'] ?? 0),
+                $_POST['work_mode'] ?? 'berrygo_store',
                 $id
             ]);
         } else {

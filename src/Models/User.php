@@ -9,7 +9,8 @@ class User extends Model
 
     protected $fillable = [
         'name', 'phone', 'password_hash',
-        'referral_code', 'referred_by', 'points_balance', 'rub_balance'
+        'referral_code', 'referred_by', 'points_balance', 'rub_balance',
+        'work_mode'
     ];
 
     protected $hidden = [

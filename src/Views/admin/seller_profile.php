@@ -3,12 +3,14 @@
  * @var int   $ordersCount
  * @var int   $revenue
  * @var array $payouts
+ * @var int   $balance
+ * @var string $workMode
  */
 ?>
 <div class="space-y-6">
   <div class="bg-white rounded shadow p-2 md:p-4">
     <h2 class="text-base md:text-lg font-semibold mb-2">Общая статистика</h2>
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-4 text-center">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-4 text-center">
       <div>
         <div class="text-xl md:text-2xl font-bold text-[#C86052]"><?= $ordersCount ?></div>
         <div class="text-sm text-gray-600">продаж</div>
@@ -17,7 +19,19 @@
         <div class="text-xl md:text-2xl font-bold text-[#C86052]"><?= $revenue ?> ₽</div>
         <div class="text-sm text-gray-600">оборот</div>
       </div>
+      <div>
+        <div class="text-xl md:text-2xl font-bold <?= $balance >= 0 ? 'text-[#C86052]' : 'text-red-600' ?>"><?= $balance ?> ₽</div>
+        <div class="text-sm text-gray-600">баланс</div>
+      </div>
     </div>
+    <?php
+    $modeNames = [
+      'berrygo_store' => 'Товар в BerryGo',
+      'own_store' => 'Со своего магазина',
+      'warehouse_delivery' => 'Со своего склада',
+    ];
+    ?>
+    <p class="text-sm text-gray-600 mt-2">Режим: <?= $modeNames[$workMode] ?? htmlspecialchars($workMode) ?></p>
   </div>
 
   <?php if (!empty($payouts)): ?>

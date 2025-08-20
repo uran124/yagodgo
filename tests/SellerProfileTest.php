@@ -37,7 +37,9 @@ class SellerProfileTest extends TestCase
 
         $pdo = new PDO('sqlite::memory:');
         $pdo->exec('CREATE TABLE seller_payouts (id INTEGER PRIMARY KEY AUTOINCREMENT, seller_id INT, gross_amount REAL, payout_amount REAL, status TEXT, created_at TEXT)');
+        $pdo->exec('CREATE TABLE users (id INT, rub_balance INT, work_mode TEXT)');
         $pdo->exec("INSERT INTO seller_payouts (seller_id, gross_amount, payout_amount, status, created_at) VALUES (1, 100, 70, 'pending', '2024-01-01')");
+        $pdo->exec("INSERT INTO users (id, rub_balance, work_mode) VALUES (1, -150, 'warehouse_delivery')");
 
         $controller = new UsersController($pdo);
         ob_start();
@@ -46,6 +48,8 @@ class SellerProfileTest extends TestCase
 
         $this->assertStringContainsString('seller_profile', $output);
         $this->assertStringContainsString('"ordersCount":1', $output);
+        $this->assertStringContainsString('"balance":-150', $output);
+        $this->assertStringContainsString('"workMode":"warehouse_delivery"', $output);
     }
 }
 
