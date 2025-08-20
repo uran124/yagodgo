@@ -64,10 +64,10 @@
       <td class="p-3 text-gray-600"><?= htmlspecialchars($u['address'] ?? '') ?></td>
       <td class="p-3 text-gray-600">
         <span><?= (int)($u['points_balance'] ?? 0) ?> 🍓</span>
-        <?php if (($u['rub_balance'] ?? 0) > 0): ?>
-          <br><span><?= (int)$u['rub_balance'] ?> ₽</span>
-        <?php endif; ?>
-      </td>
+          <?php if (($u['rub_balance'] ?? 0) != 0): ?>
+            <br><span><?= (int)$u['rub_balance'] ?> ₽</span>
+          <?php endif; ?>
+        </td>
       <td class="p-3 text-center">
         <form action="<?= $base ?>/users/toggle-block" method="post" class="inline-block">
           <input type="hidden" name="id" value="<?= $u['id'] ?>">

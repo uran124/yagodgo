@@ -79,14 +79,22 @@
       <label class="block mb-1">Адрес самовывоза</label>
       <input type="text" name="pickup_address" value="<?= htmlspecialchars($user['pickup_address'] ?? '') ?>" class="w-full border px-2 py-1 rounded">
     </div>
-    <div>
-      <label class="block mb-1">Стоимость доставки</label>
-      <input type="number" step="0.01" name="delivery_cost" value="<?= htmlspecialchars($user['delivery_cost'] ?? '') ?>" class="w-full border px-2 py-1 rounded">
-    </div>
-    <div class="flex items-center space-x-2">
-      <input type="checkbox" name="is_blocked" value="1" <?= !empty($user['is_blocked']) ? 'checked' : '' ?>>
-      <span>Заблокирован</span>
-    </div>
+      <div>
+        <label class="block mb-1">Стоимость доставки</label>
+        <input type="number" step="0.01" name="delivery_cost" value="<?= htmlspecialchars($user['delivery_cost'] ?? '') ?>" class="w-full border px-2 py-1 rounded">
+      </div>
+      <div>
+        <label class="block mb-1">Режим работы</label>
+        <select name="work_mode" class="w-full border px-2 py-1 rounded">
+          <option value="berrygo_store" <?= ($user['work_mode'] ?? '')==='berrygo_store' ? 'selected' : '' ?>>Товар в BerryGo</option>
+          <option value="own_store" <?= ($user['work_mode'] ?? '')==='own_store' ? 'selected' : '' ?>>Со своего магазина</option>
+          <option value="warehouse_delivery" <?= ($user['work_mode'] ?? '')==='warehouse_delivery' ? 'selected' : '' ?>>Со своего склада</option>
+        </select>
+      </div>
+      <div class="flex items-center space-x-2">
+        <input type="checkbox" name="is_blocked" value="1" <?= !empty($user['is_blocked']) ? 'checked' : '' ?>>
+        <span>Заблокирован</span>
+      </div>
     <?php if (!empty($user['rub_balance'])): ?>
     <div>
       <div class="mb-1">Баланс, ₽</div>
