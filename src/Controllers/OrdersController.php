@@ -601,6 +601,19 @@ class OrdersController
                             }
                         }
                     }
+
+                    // Начисляем селлерам выплаты по заказу
+                    $payoutsStmt = $this->pdo->prepare("SELECT seller_id, payout_amount FROM seller_payouts WHERE order_id = ?");
+                    $payoutsStmt->execute([$orderId]);
+                    $payoutRows = $payoutsStmt->fetchAll(PDO::FETCH_ASSOC);
+                    if ($payoutRows) {
+                        $uStmt = $this->pdo->prepare("UPDATE users SET rub_balance = rub_balance + ? WHERE id = ?");
+                        foreach ($payoutRows as $pr) {
+                            $uStmt->execute([(float)$pr['payout_amount'], (int)$pr['seller_id']]);
+                        }
+                        $this->pdo->prepare("UPDATE seller_payouts SET status = 'accrued' WHERE order_id = ?")
+                             ->execute([$orderId]);
+                    }
                 }
 
                 $stmt = $this->pdo->prepare(
