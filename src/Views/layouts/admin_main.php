@@ -262,6 +262,7 @@
         <a href="/admin/coupons" class="hover:underline">Промокоды</a>
         <a href="/admin/content" class="hover:underline">Контент</a>
         <a href="/admin/users" class="hover:underline">Пользователи</a>
+        <a href="/admin/sellers" class="hover:underline">Селлеры</a>
         <a href="/admin/apps" class="hover:underline">Приложения</a>
         <a href="/admin/settings" class="hover:underline">Настройки</a>
       </nav>
@@ -310,6 +311,10 @@
       <a href="/admin/users" class="flex items-center p-2 mb-2 rounded">
         <span class="material-icons-round mr-2">people</span>
         <span class="menu-text">Пользователи</span>
+      </a>
+      <a href="/admin/sellers" class="flex items-center p-2 mb-2 rounded">
+        <span class="material-icons-round mr-2">storefront</span>
+        <span class="menu-text">Селлеры</span>
       </a>
       <a href="/admin/apps" class="flex items-center p-2 mb-2 rounded">
         <span class="material-icons-round mr-2">apps</span>
