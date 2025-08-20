@@ -475,7 +475,7 @@ class UsersController
 
         $address = trim($_POST['address'] ?? '');
         if ($address === '') {
-            header('Location: /profile?error=Введите+корректный+адрес');
+            header('Location: /profile?error=' . urlencode('Введите корректный адрес'));
             exit;
         }
 
@@ -501,7 +501,7 @@ class UsersController
             $isPrimary
         ]);
 
-        header('Location: /profile?success=Адрес+сохранён');
+        header('Location: /profile?success=' . urlencode('Адрес сохранён'));
         exit;
     }
 
@@ -772,7 +772,7 @@ class UsersController
                 !preg_match('/^\d{4}$/', $pin) ||
                 $address === ''
             ) {
-                header('Location: ' . $this->basePath() . '/edit?error=Неверные+данные');
+                header('Location: ' . $this->basePath() . '/edit?error=' . urlencode('Неверные данные'));
                 exit;
             }
 
@@ -817,7 +817,7 @@ class UsersController
                 $this->pdo->commit();
             } catch (\Exception $e) {
                 $this->pdo->rollBack();
-                header('Location: ' . $this->basePath() . '/edit?error=Ошибка+создания');
+                header('Location: ' . $this->basePath() . '/edit?error=' . urlencode('Ошибка создания'));
                 exit;
             }
         }

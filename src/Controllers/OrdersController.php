@@ -330,7 +330,7 @@ class OrdersController
                     'pin'     => $pin,
                     'raw'     => $_POST,
                 ];
-                header('Location: ' . $this->basePath() . '/create?error=invalid+user');
+                header('Location: ' . $this->basePath() . '/create?error=' . urlencode('invalid user'));
                 exit;
             }
 
@@ -345,7 +345,7 @@ class OrdersController
                     'pin'     => $pin,
                     'raw'     => $_POST,
                 ];
-                header('Location: ' . $this->basePath() . '/create?error=phone_exists');
+                header('Location: ' . $this->basePath() . '/create?error=' . urlencode('phone_exists'));
                 exit;
             }
 
@@ -392,7 +392,7 @@ class OrdersController
           }
 
         if ($userId <= 0) {
-            header('Location: ' . $this->basePath() . '/create?error=user');
+            header('Location: ' . $this->basePath() . '/create?error=' . urlencode('user'));
             exit;
         }
 
@@ -402,7 +402,7 @@ class OrdersController
 
         $items = $_POST['items'] ?? [];
         if (!$items) {
-            header('Location: ' . $this->basePath() . '/create?error=empty');
+            header('Location: ' . $this->basePath() . '/create?error=' . urlencode('empty'));
             exit;
         }
 
@@ -689,7 +689,7 @@ class OrdersController
         $stmt->execute([$user['id']]);
         $cartItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
         if (empty($cartItems)) {
-            header('Location: /cart?error=Корзина+пуста');
+            header('Location: /cart?error=' . urlencode('Корзина пуста'));
             exit;
         }
 
@@ -779,7 +779,7 @@ class OrdersController
 
         } catch (\Exception $e) {
             $this->pdo->rollBack();
-            header('Location: /checkout?error=Ошибка+при+оформлении+заказа');
+            header('Location: /checkout?error=' . urlencode('Ошибка при оформлении заказа'));
             exit;
         }
     }

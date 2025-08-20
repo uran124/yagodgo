@@ -69,7 +69,7 @@ public function register(): void
     $pin   = trim($pinRaw);
 
     if (empty($_SESSION['reg_verified']) || $_SESSION['reg_phone'] !== $phone) {
-        header('Location: /register?error=Подтвердите+номер');
+        header('Location: /register?error=' . urlencode('Подтвердите номер'));
         exit;
     }
 
@@ -80,7 +80,7 @@ public function register(): void
         !preg_match('/^\d{4}$/', $pin) ||
         $address === ''
     ) {
-        header('Location: /register?error=Неверные+данные');
+        header('Location: /register?error=' . urlencode('Неверные данные'));
         exit;
     }
 
@@ -134,7 +134,7 @@ public function register(): void
         $this->pdo->commit();
     } catch (\Exception $e) {
         $this->pdo->rollBack();
-        header('Location: /register?error=Ошибка+регистрации');
+        header('Location: /register?error=' . urlencode('Ошибка регистрации'));
         exit;
     }
 
@@ -160,6 +160,7 @@ public function register(): void
      */
     public function showLoginForm(): void
     {
+        $error = $_GET['error'] ?? null;
         include 'src/Views/client/login.php';
     }
 
@@ -176,7 +177,7 @@ public function register(): void
 
         // Валидация формата перед запросом
         if (!preg_match('/^7\d{10}$/', $phone) || !preg_match('/^\d{4}$/', $pin)) {
-            header('Location: /login?error=Неверный+телефон+или+PIN');
+            header('Location: /login?error=' . urlencode('Неверный телефон или PIN'));
             exit;
         }
 
@@ -199,7 +200,7 @@ public function register(): void
             header('Location: /');
             exit;
         } else {
-            header('Location: /login?error=Неверный+телефон+или+PIN');
+            header('Location: /login?error=' . urlencode('Неверный телефон или PIN'));
             exit;
         }
     }
@@ -329,14 +330,14 @@ public function register(): void
         $validCode = isset($_SESSION['reset_phone'], $_SESSION['reset_code']) &&
             $_SESSION['reset_phone'] === $phone && $_SESSION['reset_code'] == $code;
         if (!$validCode || !preg_match('/^\d{4}$/', $pin)) {
-            header('Location: /reset-pin?error=Неверные+данные');
+            header('Location: /reset-pin?error=' . urlencode('Неверные данные'));
             exit;
         }
         $hash = password_hash($pin, PASSWORD_DEFAULT);
         $stmt = $this->pdo->prepare("UPDATE users SET password_hash = ? WHERE phone = ?");
         $stmt->execute([$hash, $phone]);
         unset($_SESSION['reset_phone'], $_SESSION['reset_code']);
-        header('Location: /login?success=PIN+обновлен');
+        header('Location: /login?success=' . urlencode('PIN обновлен'));
         exit;
     }
 
