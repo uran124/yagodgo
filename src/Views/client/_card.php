@@ -137,10 +137,10 @@ $regularKg  = round($price, 2);
         <!-- Акционная цена -->
         <div class="flex items-baseline space-x-2 mb-3">
           <div class="text-xs sm:text-sm text-gray-400 line-through">
-            <?= number_format($regularBox, 0, '.', ' ') ?> ₽/ящик
+            <?= number_format($regularBox, 0, '.', ' ') ?> ₽
           </div>
           <div class="text-lg sm:text-xl font-bold text-red-600 box-price">
-            <?= number_format($priceBox, 0, '.', ' ') ?> ₽/ящик
+            <?= number_format($priceBox, 0, '.', ' ') ?> ₽
           </div>
         </div>
         <div class="text-xs sm:text-sm text-gray-400 mb-3 kg-price">
@@ -150,7 +150,7 @@ $regularKg  = round($price, 2);
         <!-- Обычная цена -->
         <div class="flex justify-between items-center mb-3">
           <div class="text-xl sm:text-2xl font-bold text-gray-800 box-price">
-            <?= number_format($regularBox, 0, '.', ' ') ?> ₽/ящик
+            <?= number_format($regularBox, 0, '.', ' ') ?> ₽
           </div>
           <div class="text-xs sm:text-sm text-gray-400 kg-price">
             <?= htmlspecialchars($regularKg) ?> ₽/кг

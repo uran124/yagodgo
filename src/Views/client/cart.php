@@ -76,7 +76,7 @@
             <?php endif; ?>
           </div>
           <div class="font-semibold text-gray-800">
-            <?= number_format($unitPriceToUse, 0, '.', ' ') ?> ₽/ящик
+            <?= number_format($unitPriceToUse, 0, '.', ' ') ?> ₽
           </div>
         </div>
 
