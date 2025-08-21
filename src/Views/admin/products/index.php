@@ -1,8 +1,21 @@
 <?php /** @var array $products */ ?>
 <?php $role = $_SESSION['role'] ?? ''; $isManager = in_array($role, ['manager','partner','seller'], true); $base = $role === 'manager' ? '/manager' : ($role === 'partner' ? '/partner' : ($role === 'seller' ? '/seller' : '/admin')); ?>
 
-<a href="<?= $base ?>/products/edit" class="bg-[#C86052] text-white px-4 py-2 rounded mb-4 inline-flex items-center">
-  <span class="material-icons-round text-base mr-1">add</span> Добавить товар</a>
+<div class="flex items-center mb-4">
+  <a href="<?= $base ?>/products/edit" class="bg-[#C86052] text-white px-4 py-2 rounded inline-flex items-center">
+    <span class="material-icons-round text-base mr-1">add</span> Добавить товар
+  </a>
+  <?php if (!$isManager): ?>
+  <form method="get" action="<?= $base ?>/products" class="ml-auto">
+    <select name="seller_id" onchange="this.form.submit()" class="border rounded px-2 py-1">
+      <option value="">Все селлеры</option>
+      <?php foreach ($sellers as $s): ?>
+      <option value="<?= $s['id'] ?>" <?= ($selectedSeller ?? 0) == $s['id'] ? 'selected' : '' ?>><?= htmlspecialchars($s['company_name']) ?></option>
+      <?php endforeach; ?>
+    </select>
+  </form>
+  <?php endif; ?>
+</div>
 
 <table class="min-w-full bg-white rounded shadow overflow-hidden">
   <thead class="bg-gray-200 text-gray-700">

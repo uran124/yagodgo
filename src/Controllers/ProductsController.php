@@ -54,6 +54,8 @@ class ProductsController
     {
         $role = $_SESSION['role'] ?? '';
         $params = [];
+        $selectedSeller = 0;
+
         $sql = "SELECT
                 p.id,
                 p.alias,
@@ -73,18 +75,36 @@ class ProductsController
                 p.delivery_date
              FROM products p
              JOIN product_types t ON t.id = p.product_type_id";
+
         if ($role === 'seller') {
+            $selectedSeller = $_SESSION['user_id'] ?? 0;
             $sql .= " WHERE p.seller_id = ?";
-            $params[] = $_SESSION['user_id'] ?? 0;
+            $params[] = $selectedSeller;
+        } else {
+            $selectedSeller = (int)($_GET['seller_id'] ?? 0);
+            if ($selectedSeller > 0) {
+                $sql .= " WHERE p.seller_id = ?";
+                $params[] = $selectedSeller;
+            }
         }
+
         $sql .= " ORDER BY t.name, p.variety";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
         $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        $sellers = [];
+        if ($role !== 'seller') {
+            $sellers = $this->pdo
+                ->query("SELECT id, company_name FROM users WHERE role = 'seller' ORDER BY company_name")
+                ->fetchAll(PDO::FETCH_ASSOC);
+        }
+
         viewAdmin('products/index', [
-            'pageTitle' => 'Товары',
-            'products'  => $products,
+            'pageTitle'      => 'Товары',
+            'products'       => $products,
+            'sellers'        => $sellers,
+            'selectedSeller' => $selectedSeller,
         ]);
     }
 
