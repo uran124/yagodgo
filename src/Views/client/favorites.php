@@ -41,14 +41,14 @@
           <div class="flex justify-between items-baseline mb-3">
             <?php if ($sale > 0): ?>
               <div class="text-sm text-gray-400 line-through">
-                <?= number_format($regularBox, 0, '.', ' ') ?> ₽/ящик
+                <?= number_format($regularBox, 0, '.', ' ') ?> ₽
               </div>
               <div class="text-lg font-bold text-red-600">
-                <?= number_format($boxPrice, 0, '.', ' ') ?> ₽/ящик
+                <?= number_format($boxPrice, 0, '.', ' ') ?> ₽
               </div>
             <?php else: ?>
               <div class="text-lg font-bold">
-                <?= number_format($boxPrice, 0, '.', ' ') ?> ₽/ящик
+                <?= number_format($boxPrice, 0, '.', ' ') ?> ₽
               </div>
             <?php endif; ?>
             <div class="text-sm text-gray-500"><?= htmlspecialchars($kgPrice) ?> ₽/кг</div>
