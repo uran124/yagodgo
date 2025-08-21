@@ -171,8 +171,13 @@ class ClientController
                p.id DESC"
         )->fetchAll(PDO::FETCH_ASSOC);
 
+        // Получаем только те категории, у которых есть активные товары
         $types = $this->pdo->query(
-            "SELECT id, name, alias FROM product_types ORDER BY name"
+            "SELECT DISTINCT t.id, t.name, t.alias
+               FROM product_types t
+               JOIN products p ON p.product_type_id = t.id
+              WHERE p.is_active = 1
+              ORDER BY t.name"
         )->fetchAll(PDO::FETCH_ASSOC);
     
         $debugData = [
