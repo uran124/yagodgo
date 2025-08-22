@@ -191,7 +191,7 @@ class ProductsController
             if ($src) {
                 $w           = imagesx($src);
                 $h           = imagesy($src);
-                $targetRatio = 16 / 9;
+                $targetRatio = 1; // square
 
                 if ($w / $h > $targetRatio) {
                     $newH = $h;
@@ -212,11 +212,11 @@ class ProductsController
                     'height' => $newH,
                 ]);
                 if ($crop) {
-                    $resized = imagecreatetruecolor(640, 360);
+                    $resized = imagecreatetruecolor(640, 640);
                     imagecopyresampled(
                         $resized, $crop,
                         0, 0, 0, 0,
-                        640, 360,
+                        640, 640,
                         $newW, $newH
                     );
                     imagewebp($resized, $dst, 80);

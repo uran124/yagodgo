@@ -49,10 +49,10 @@ $regularKg  = round($price, 2);
       <a href="/catalog/<?= urlencode($p['type_alias']) ?>/<?= urlencode($p['alias']) ?>">
         <img src="<?= htmlspecialchars($img) ?>"
              alt="<?= htmlspecialchars($p['product'] ?? '') ?>"
-             class="w-full object-cover h-40 sm:h-48">
+             class="w-full object-cover" style="aspect-ratio:1/1">
       </a>
     <?php else: ?>
-      <div class="w-full h-40 sm:h-48 bg-pink-50 flex flex-col items-center justify-center">
+      <div class="w-full bg-pink-50 flex flex-col items-center justify-center" style="aspect-ratio:1/1">
         <span class="material-icons-round text-4xl text-pink-400 mb-1">image</span>
         <span class="text-pink-700 text-sm">изображение подгружается</span>
       </div>

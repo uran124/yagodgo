@@ -4,7 +4,7 @@
     <div class="md:flex md:space-x-6">
       <div class="md:w-1/2 mb-4 md:mb-0">
         <?php if (!empty($product['image_path'])): ?>
-          <img src="<?= htmlspecialchars($product['image_path']) ?>" alt="<?= htmlspecialchars($product['product']) ?>" class="w-full rounded-2xl shadow-lg" itemprop="image">
+          <img src="<?= htmlspecialchars($product['image_path']) ?>" alt="<?= htmlspecialchars($product['product']) ?>" class="w-full object-cover rounded-2xl shadow-lg" style="aspect-ratio:1/1" itemprop="image">
         <?php endif; ?>
       </div>
       <div class="md:w-1/2 space-y-4">
