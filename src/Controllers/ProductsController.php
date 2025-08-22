@@ -359,21 +359,19 @@ class ProductsController
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute($params);
         }
-        // Determine where to redirect after updating
-        $refererPath = parse_url($_SERVER['HTTP_REFERER'] ?? '', PHP_URL_PATH) ?? '';
-        if (preg_match('#^/(admin|manager|partner|seller)/#', $refererPath)) {
-            $role = $_SESSION['role'] ?? '';
-            $base = match ($role) {
-                'manager' => '/manager/products',
-                'partner' => '/partner/products',
-                'seller'  => '/seller/products',
-                default   => '/admin/products',
-            };
+        // Redirect back to the page where the price was updated.
+        // If the "Referer" header is available, return to that page
+        // (including its query string). Otherwise fallback to the
+        // appropriate products list based on the user role.
+        $referer = $_SERVER['HTTP_REFERER'] ?? '';
+        if ($referer !== '') {
+            $url = parse_url($referer);
+            $path = $url['path'] ?? '/';
+            $query = isset($url['query']) ? '?' . $url['query'] : '';
+            header('Location: ' . $path . $query);
         } else {
-            $base = '/';
+            header('Location: ' . $this->basePath());
         }
-
-        header('Location: ' . $base);
         exit;
     }
 
