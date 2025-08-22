@@ -1,6 +1,7 @@
 <?php /**
  * @var array $saleProducts
  * @var array $regularProducts
+ * @var array $sellerProducts
  * @var array $preorderProducts
  * @var string|null $userName
  */ ?>
@@ -140,6 +141,28 @@
               <p class="text-sm font-semibold text-green-800">Клубника в наличии в Красноярске: мгновенная доставка за 24 ч — прямо с фермы к вашему столу! Сорта Клери и Черный принц в фасовках от 1 кг. Купите клубнику онлайн с удобной оплатой и гарантий качества каждой ягодки. 🍓🚀</p>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Seller Products -->
+  <section class="px-4 mb-8">
+    <h2 class="text-2xl font-bold text-gray-800 mb-4">🤝 Товары от селлеров</h2>
+    <div class="embla drag-free has-arrows relative">
+      <button data-dir="left" class="hidden md:flex items-center justify-center w-8 h-8 absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
+        <span class="material-icons-round text-gray-600">chevron_left</span>
+      </button>
+      <button data-dir="right" class="hidden md:flex items-center justify-center w-8 h-8 absolute right-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
+        <span class="material-icons-round text-gray-600">chevron_right</span>
+      </button>
+      <div class="embla__viewport">
+        <div class="embla__container space-x-4 pb-2 no-scrollbar eq-row">
+          <?php foreach ($sellerProducts as $p): ?>
+            <div class="embla__slide flex-none w-[66vw] sm:w-1/2 md:w-1/3">
+              <?php include __DIR__ . '/_card.php'; ?>
+            </div>
+          <?php endforeach; ?>
         </div>
       </div>
     </div>

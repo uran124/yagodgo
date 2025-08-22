@@ -88,6 +88,32 @@ class ClientController
              LEFT JOIN users u ON u.id = p.seller_id
              WHERE p.is_active = 1
                AND p.delivery_date IS NOT NULL
+               AND p.seller_id IS NULL
+             ORDER BY p.id DESC
+             LIMIT 10"
+        )->fetchAll(PDO::FETCH_ASSOC);
+
+        $sellerProducts = $this->pdo->query(
+            "SELECT p.id,
+                    p.alias,
+                    t.name AS product,
+                    t.alias AS type_alias,
+                    p.variety,
+                    p.description,
+                    p.origin_country,
+                    p.box_size,
+                    p.box_unit,
+                    p.price,
+                    p.sale_price,
+                    p.is_active,
+                    p.image_path,
+                    p.delivery_date,
+                    COALESCE(u.company_name,u.name,'berryGo') AS seller_name
+             FROM products p
+             JOIN product_types t ON t.id = p.product_type_id
+             LEFT JOIN users u ON u.id = p.seller_id
+             WHERE p.is_active = 1
+               AND p.seller_id IS NOT NULL
              ORDER BY p.id DESC
              LIMIT 10"
         )->fetchAll(PDO::FETCH_ASSOC);
@@ -113,6 +139,7 @@ class ClientController
              LEFT JOIN users u ON u.id = p.seller_id
              WHERE p.is_active = 1
                AND p.delivery_date IS NULL
+               AND p.seller_id IS NULL
              ORDER BY p.id DESC
              LIMIT 10"
         )->fetchAll(PDO::FETCH_ASSOC);
@@ -129,6 +156,7 @@ class ClientController
         view('client/home', [
             'saleProducts'     => $sale,
             'regularProducts'  => $regular,
+            'sellerProducts'   => $sellerProducts,
             'preorderProducts' => $preorder,
             'materials'       => $materials,
             'userName'        => $_SESSION['name'] ?? null,
