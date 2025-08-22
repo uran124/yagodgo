@@ -449,6 +449,7 @@ switch ("$method $uri") {
         (new App\Controllers\ProductsController($pdo))->toggle();
         break;
     case 'POST /admin/products/update-price':
+    case 'GET /admin/products/update-price':
         requireAdmin();
         (new App\Controllers\ProductsController($pdo))->updatePrice();
         break;
@@ -770,6 +771,7 @@ switch ("$method $uri") {
         (new App\Controllers\ProductsController($pdo))->toggle();
         break;
     case 'POST /manager/products/update-price':
+    case 'GET /manager/products/update-price':
         requireManager();
         (new App\Controllers\ProductsController($pdo))->updatePrice();
         break;
