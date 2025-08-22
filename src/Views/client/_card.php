@@ -34,8 +34,8 @@ $priceBox   = $effectiveKg * $boxSize;
 $pricePerKg = round($effectiveKg, 2);
 $regularBox = $price * $boxSize;
 $role     = $_SESSION['role'] ?? '';
-$isStaff  = in_array($role, ['admin','manager','partner','seller'], true);
-$basePath = $role === 'manager' ? '/manager' : ($role === 'partner' ? '/partner' : '/admin');
+$isStaff  = in_array($role, ['admin','manager'], true);
+$basePath = $role === 'manager' ? '/manager' : '/admin';
 $regularKg  = round($price, 2);
 ?>
 <div class="product-card bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col hover:shadow-2xl transition-shadow duration-200 h-full max-w-[350px]"
@@ -139,22 +139,32 @@ $regularKg  = round($price, 2);
           <div class="text-xs sm:text-sm text-gray-400 line-through">
             <?= number_format($regularBox, 0, '.', ' ') ?> ₽
           </div>
-          <div class="text-lg sm:text-xl font-bold text-red-600 box-price">
+          <div class="text-lg sm:text-xl font-bold text-red-600 box-price <?= $isStaff ? 'cursor-pointer' : '' ?>" <?= $isStaff ? 'data-edit-price="' . $p['id'] . '"' : '' ?>>
             <?= number_format($priceBox, 0, '.', ' ') ?> ₽
           </div>
         </div>
-        <div class="text-xs sm:text-sm text-gray-400 mb-3 kg-price">
+        <div class="text-xs sm:text-sm text-gray-400 mb-3 kg-price <?= $isStaff ? 'cursor-pointer' : '' ?>" <?= $isStaff ? 'data-edit-price="' . $p['id'] . '"' : '' ?>>
           <?= htmlspecialchars($pricePerKg) ?> ₽/кг
         </div>
       <?php else: ?>
         <!-- Обычная цена -->
         <div class="flex justify-between items-center mb-3">
-          <div class="text-xl sm:text-2xl font-bold text-gray-800 box-price">
+          <div class="text-xl sm:text-2xl font-bold text-gray-800 box-price <?= $isStaff ? 'cursor-pointer' : '' ?>" <?= $isStaff ? 'data-edit-price="' . $p['id'] . '"' : '' ?>>
             <?= number_format($regularBox, 0, '.', ' ') ?> ₽
           </div>
-          <div class="text-xs sm:text-sm text-gray-400 kg-price">
+          <div class="text-xs sm:text-sm text-gray-400 kg-price <?= $isStaff ? 'cursor-pointer' : '' ?>" <?= $isStaff ? 'data-edit-price="' . $p['id'] . '"' : '' ?>>
             <?= htmlspecialchars($regularKg) ?> ₽/кг
           </div>
+        </div>
+      <?php endif; ?>
+
+      <?php if ($isStaff): ?>
+        <div class="mt-2 hidden" data-price-form="<?= $p['id'] ?>">
+          <form action="<?= $basePath ?>/products/update-price" method="post" class="flex items-center space-x-2">
+            <input type="hidden" name="id" value="<?= $p['id'] ?>">
+            <input type="number" step="0.01" name="price" value="<?= htmlspecialchars($price) ?>" class="border px-1 py-1 rounded text-sm w-24">
+            <button type="submit" class="bg-blue-500 text-white rounded px-2 py-1 text-xs">Обновить</button>
+          </form>
         </div>
       <?php endif; ?>
 

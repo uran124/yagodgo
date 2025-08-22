@@ -342,6 +342,41 @@ class ProductsController
         exit;
     }
 
+    // Обновление цены за кг
+    public function updatePrice(): void
+    {
+        $id = (int)($_POST['id'] ?? 0);
+        $raw = trim($_POST['price'] ?? '');
+        if ($id && $raw !== '') {
+            $price = (float)$raw;
+            $role = $_SESSION['role'] ?? '';
+            $params = [$price, $id];
+            $sql = "UPDATE products SET price = ? WHERE id = ?";
+            if ($role === 'seller') {
+                $sql .= " AND seller_id = ?";
+                $params[] = $_SESSION['user_id'] ?? 0;
+            }
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($params);
+        }
+        // Determine where to redirect after updating
+        $refererPath = parse_url($_SERVER['HTTP_REFERER'] ?? '', PHP_URL_PATH) ?? '';
+        if (preg_match('#^/(admin|manager|partner|seller)/#', $refererPath)) {
+            $role = $_SESSION['role'] ?? '';
+            $base = match ($role) {
+                'manager' => '/manager/products',
+                'partner' => '/partner/products',
+                'seller'  => '/seller/products',
+                default   => '/admin/products',
+            };
+        } else {
+            $base = '/';
+        }
+
+        header('Location: ' . $base);
+        exit;
+    }
+
     // Обновление даты поставки товара
     public function updateDeliveryDate(): void
     {
