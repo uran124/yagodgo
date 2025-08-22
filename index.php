@@ -448,6 +448,10 @@ switch ("$method $uri") {
         requireAdmin();
         (new App\Controllers\ProductsController($pdo))->toggle();
         break;
+    case 'POST /admin/products/update-price':
+        requireAdmin();
+        (new App\Controllers\ProductsController($pdo))->updatePrice();
+        break;
     case 'POST /admin/products/update-date':
         requireAdmin();
         (new App\Controllers\ProductsController($pdo))->updateDeliveryDate();
@@ -764,6 +768,10 @@ switch ("$method $uri") {
     case 'POST /manager/products/toggle':
         requireManager();
         (new App\Controllers\ProductsController($pdo))->toggle();
+        break;
+    case 'POST /manager/products/update-price':
+        requireManager();
+        (new App\Controllers\ProductsController($pdo))->updatePrice();
         break;
     case 'POST /manager/products/update-date':
         requireManager();

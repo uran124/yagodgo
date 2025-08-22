@@ -70,5 +70,15 @@ window.dataLayer = window.dataLayer || [];
         }
       });
     });
+
+    document.querySelectorAll('[data-edit-price]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        var id = el.getAttribute('data-edit-price');
+        var form = document.querySelector('[data-price-form="' + id + '"]');
+        if (form) {
+          form.classList.toggle('hidden');
+        }
+      });
+    });
   });
 </script>
