@@ -21,7 +21,7 @@
           <img src="<?= htmlspecialchars($img) ?>"
                alt="<?= htmlspecialchars($p['product']) ?>"
                class="w-full object-cover rounded-lg mb-3"
-               style="aspect-ratio:16/9">
+               style="aspect-ratio:1/1">
 
           <div class="flex justify-between items-center mb-2">
             <div class="font-semibold"><?= htmlspecialchars($p['product']) ?></div>
