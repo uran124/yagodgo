@@ -38,7 +38,7 @@ $isStaff  = in_array($role, ['admin','manager'], true);
 $basePath = $role === 'manager' ? '/manager' : '/admin';
 $regularKg  = round($price, 2);
 ?>
-<div class="product-card bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col hover:shadow-2xl transition-shadow duration-200 h-full max-w-[350px]"
+<div class="product-card bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col hover:shadow-2xl transition-shadow duration-200 sm:h-full max-w-[350px]"
      data-search="<?= htmlspecialchars($search) ?>"
      data-type="<?= htmlspecialchars($p['type_alias'] ?? '') ?>"
      data-sale="<?= ($p['sale_price'] ?? 0) > 0 ? '1' : '0' ?>"
@@ -104,7 +104,7 @@ $regularKg  = round($price, 2);
     <!-- Название и сорт -->
     <div class="mb-2">
       <?php $boxLabel = htmlspecialchars($boxSize . ' ' . $boxUnit); ?>
-      <h3 class="text-base sm:text-lg font-semibold text-gray-800">
+      <h3 class="text-sm sm:text-lg font-semibold text-gray-800">
         <a href="/catalog/<?= urlencode($p['type_alias']) ?>/<?= urlencode($p['alias']) ?>" class="hover:underline">
           <?= htmlspecialchars($p['product']      ?? '') ?>
           <?php if (!empty($p['variety'])): ?>
@@ -120,11 +120,9 @@ $regularKg  = round($price, 2);
     <!-- Описание (если есть) -->
 
 <?php if (!empty($p['description'])): ?>
-  <p class="text-xs sm:text-sm text-gray-600 mb-1 flex-1">
+  <p class="hidden sm:block text-xs sm:text-sm text-gray-600 mb-1">
     <?= htmlspecialchars($p['description']) ?>
   </p>
-<?php else: ?>
-  <div class="flex-1"></div>
 <?php endif; ?>
 
     <div class="text-[10px] sm:text-xs text-gray-500 mb-2">Продавец: <?= htmlspecialchars($p['seller_name'] ?? 'berryGo') ?></div>
@@ -139,7 +137,7 @@ $regularKg  = round($price, 2);
           <div class="text-xs sm:text-sm text-gray-400 line-through">
             <?= number_format($regularBox, 0, '.', ' ') ?> ₽
           </div>
-          <div class="text-lg sm:text-xl font-bold text-red-600 box-price <?= $isStaff ? 'cursor-pointer' : '' ?>" <?= $isStaff ? 'data-edit-price="' . $p['id'] . '"' : '' ?>>
+          <div class="text-base sm:text-xl font-bold text-red-600 box-price <?= $isStaff ? 'cursor-pointer' : '' ?>" <?= $isStaff ? 'data-edit-price="' . $p['id'] . '"' : '' ?>>
             <?= number_format($priceBox, 0, '.', ' ') ?> ₽
           </div>
         </div>
@@ -149,7 +147,7 @@ $regularKg  = round($price, 2);
       <?php else: ?>
         <!-- Обычная цена -->
         <div class="flex justify-between items-center mb-3">
-          <div class="text-xl sm:text-2xl font-bold text-gray-800 box-price <?= $isStaff ? 'cursor-pointer' : '' ?>" <?= $isStaff ? 'data-edit-price="' . $p['id'] . '"' : '' ?>>
+          <div class="text-lg sm:text-2xl font-bold text-gray-800 box-price <?= $isStaff ? 'cursor-pointer' : '' ?>" <?= $isStaff ? 'data-edit-price="' . $p['id'] . '"' : '' ?>>
             <?= number_format($regularBox, 0, '.', ' ') ?> ₽
           </div>
           <div class="text-xs sm:text-sm text-gray-400 kg-price <?= $isStaff ? 'cursor-pointer' : '' ?>" <?= $isStaff ? 'data-edit-price="' . $p['id'] . '"' : '' ?>>

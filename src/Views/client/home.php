@@ -105,11 +105,11 @@
       <div class="embla__viewport">
         <div class="embla__container space-x-4 pb-2 no-scrollbar eq-row">
           <?php foreach ($saleProducts as $p): ?>
-            <div class="embla__slide flex-none w-[66vw] sm:w-1/2 md:w-1/3">
+            <div class="embla__slide flex-none w-[52vw] sm:w-1/2 md:w-1/3">
               <?php include __DIR__ . '/_card.php'; ?>
             </div>
           <?php endforeach; ?>
-          <div class="embla__slide flex-none w-[66vw] sm:w-1/2 md:w-1/3">
+          <div class="embla__slide flex-none w-[52vw] sm:w-1/2 md:w-1/3">
             <div class="h-full flex items-center justify-center bg-red-50 rounded-2xl shadow-lg p-4 text-center">
               <p class="text-sm font-semibold text-red-800">Акционная клубника в Красноярске: купите спелую фермерскую ягоду со скидкой до 25 %! Лучшие сорта Клери и Черный принц по невероятно выгодным ценам. Успейте заказать сегодня — акция действует до конца недели, пока ягоды не разобрали! 🍓</p>
             </div>
@@ -132,11 +132,11 @@
       <div class="embla__viewport">
         <div class="embla__container space-x-4 pb-2 no-scrollbar eq-row">
           <?php foreach ($regularProducts as $p): ?>
-            <div class="embla__slide flex-none w-[66vw] sm:w-1/2 md:w-1/3">
+            <div class="embla__slide flex-none w-[52vw] sm:w-1/2 md:w-1/3">
               <?php include __DIR__ . '/_card.php'; ?>
             </div>
           <?php endforeach; ?>
-          <div class="embla__slide flex-none w-[66vw] sm:w-1/2 md:w-1/3">
+          <div class="embla__slide flex-none w-[52vw] sm:w-1/2 md:w-1/3">
             <div class="h-full flex items-center justify-center bg-green-50 rounded-2xl shadow-lg p-4 text-center">
               <p class="text-sm font-semibold text-green-800">Клубника в наличии в Красноярске: мгновенная доставка за 24 ч — прямо с фермы к вашему столу! Сорта Клери и Черный принц в фасовках от 1 кг. Купите клубнику онлайн с удобной оплатой и гарантий качества каждой ягодки. 🍓🚀</p>
             </div>
@@ -159,7 +159,7 @@
       <div class="embla__viewport">
         <div class="embla__container space-x-4 pb-2 no-scrollbar eq-row">
           <?php foreach ($sellerProducts as $p): ?>
-            <div class="embla__slide flex-none w-[66vw] sm:w-1/2 md:w-1/3">
+            <div class="embla__slide flex-none w-[52vw] sm:w-1/2 md:w-1/3">
               <?php include __DIR__ . '/_card.php'; ?>
             </div>
           <?php endforeach; ?>
@@ -181,11 +181,11 @@
       <div class="embla__viewport">
         <div class="embla__container space-x-4 pb-2 no-scrollbar eq-row">
           <?php foreach ($preorderProducts as $p): ?>
-            <div class="embla__slide flex-none w-[66vw] sm:w-1/2 md:w-1/3">
+            <div class="embla__slide flex-none w-[52vw] sm:w-1/2 md:w-1/3">
               <?php include __DIR__ . '/_card.php'; ?>
             </div>
           <?php endforeach; ?>
-          <div class="embla__slide flex-none w-[66vw] sm:w-1/2 md:w-1/3">
+          <div class="embla__slide flex-none w-[52vw] sm:w-1/2 md:w-1/3">
             <div class="h-full flex items-center justify-center bg-blue-50 rounded-2xl shadow-lg p-4 text-center">
               <p class="text-sm font-semibold text-blue-800">Клубника другие ягоды и фрукты под заказ с доставкой в Красноярске: эксклюзивные сорта и объёмы от 1 кг. Идеально для праздников, корпоративов и подарков! Заранее выберите свой идеальный набор — индивидуальная упаковка, свежесть гарантирована, доставка в удобное время. 🍓✨</p>
             </div>
