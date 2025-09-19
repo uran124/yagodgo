@@ -77,7 +77,72 @@
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#FF6B6B">
   <meta name="mobile-web-app-capable" content="yes">
-  
+
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "LocalBusiness",
+      "name": "BerryGo",
+      "image": "https://berrygo.ru/assets/images/icon-512.png",
+      "url": "https://berrygo.ru",
+      "telephone": "+7 902 923-77-94",
+      "email": "support@berrygo.ru",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "улица 9 Мая, 73",
+        "addressLocality": "Красноярск",
+        "addressCountry": "RU"
+      },
+      "areaServed": {
+        "@type": "City",
+        "name": "Красноярск"
+      },
+      "openingHoursSpecification": [
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday"
+          ],
+          "opens": "09:00",
+          "closes": "21:00"
+        }
+      ],
+      "sameAs": [
+        "https://t.me/klubnikovoe",
+        "https://t.me/klubnikovoe_bot"
+      ],
+      "makesOffer": {
+        "@type": "Offer",
+        "name": "Самовывоз заказов BerryGo",
+        "availableDeliveryMethod": "https://schema.org/OnSitePickup",
+        "itemOffered": {
+          "@type": "Service",
+          "name": "Самовывоз заказов BerryGo"
+        },
+        "areaServed": {
+          "@type": "City",
+          "name": "Красноярск"
+        },
+        "pickupLocation": {
+          "@type": "Place",
+          "name": "Пункт самовывоза BerryGo",
+          "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "улица 9 Мая, 73",
+            "addressLocality": "Красноярск",
+            "addressCountry": "RU"
+          }
+        }
+      }
+    }
+  </script>
+
   <style>
     :root {
       --berry-red: #FF6B6B;
