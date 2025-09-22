@@ -611,6 +611,10 @@ switch ("$method $uri") {
         requireAdmin();
         (new App\Controllers\UsersController($pdo))->save();
         break;
+    case 'POST /admin/users/delete':
+        requireAdmin();
+        (new App\Controllers\UsersController($pdo))->delete();
+        break;
     case 'POST /admin/users/toggle-block':
         requireAdmin();
         (new App\Controllers\UsersController($pdo))->toggleBlock();

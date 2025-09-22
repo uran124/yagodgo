@@ -101,8 +101,28 @@
       </div>
     </div>
     <?php endif; ?>
-    <button type="submit" class="bg-[#C86052] text-white px-4 py-2 rounded">Сохранить</button>
+    <div class="flex items-center justify-between pt-2">
+      <button type="submit" class="bg-[#C86052] text-white px-4 py-2 rounded">Сохранить</button>
+    </div>
   </form>
+  <?php if ($role === 'admin'): ?>
+    <div class="max-w-md mt-6">
+      <form
+        action="<?= $base ?>/users/delete"
+        method="post"
+        onsubmit="return confirm('Удалить пользователя? Это действие нельзя отменить.');"
+        class="inline"
+      >
+        <input type="hidden" name="id" value="<?= $user['id'] ?>">
+        <button
+          type="submit"
+          class="w-full border border-red-200 text-red-600 px-4 py-2 rounded hover:bg-red-50 transition"
+        >
+          Удалить пользователя
+        </button>
+      </form>
+    </div>
+  <?php endif; ?>
   <script>
     (function () {
       const phoneInput = document.querySelector('form[action$="/users/save"] input[name="phone"]');
