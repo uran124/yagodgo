@@ -54,11 +54,25 @@
     <input type="hidden" name="id" value="<?= $user['id'] ?>">
     <div>
       <label class="block mb-1">Имя</label>
-      <input type="text" value="<?= htmlspecialchars($user['name']) ?>" class="w-full border px-2 py-1 rounded" disabled>
+      <input
+        name="name"
+        type="text"
+        value="<?= htmlspecialchars($user['name']) ?>"
+        placeholder="<?= htmlspecialchars($user['name']) ?>"
+        class="w-full border px-2 py-1 rounded"
+        required
+      >
     </div>
     <div>
       <label class="block mb-1">Телефон</label>
-      <input type="text" value="<?= htmlspecialchars($user['phone']) ?>" class="w-full border px-2 py-1 rounded" disabled>
+      <input
+        name="phone"
+        type="tel"
+        value="<?= htmlspecialchars($user['phone']) ?>"
+        placeholder="<?= htmlspecialchars($user['phone']) ?>"
+        class="w-full border px-2 py-1 rounded"
+        required
+      >
     </div>
     <div>
       <label class="block mb-1">Роль</label>
@@ -89,5 +103,23 @@
     <?php endif; ?>
     <button type="submit" class="bg-[#C86052] text-white px-4 py-2 rounded">Сохранить</button>
   </form>
+  <script>
+    (function () {
+      const phoneInput = document.querySelector('form[action$="/users/save"] input[name="phone"]');
+      if (!phoneInput) {
+        return;
+      }
+      const cleanPhone = (value) => {
+        let digits = value.replace(/\D/g, '');
+        if (digits.startsWith('7') || digits.startsWith('8')) {
+          digits = digits.slice(1);
+        }
+        return digits.slice(0, 10);
+      };
+      phoneInput.addEventListener('input', () => {
+        phoneInput.value = cleanPhone(phoneInput.value);
+      });
+    })();
+  </script>
 <?php endif; ?>
 

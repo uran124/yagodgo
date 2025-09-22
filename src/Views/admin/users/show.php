@@ -11,14 +11,48 @@ $roleNames = [
   'partner' => 'Партнёр',
   'seller'  => 'Селлер',
 ];
+$currentPath = $_SERVER['REQUEST_URI'] ?? '';
+$redirectPath = $currentPath ? (parse_url($currentPath, PHP_URL_PATH) ?: '') : '';
 ?>
+<?php if (!empty($_GET['error'])): ?>
+  <div class="bg-red-50 border-l-4 border-red-400 p-3 mb-4 rounded">
+    <p class="text-red-700 text-sm"><?= htmlspecialchars($_GET['error']) ?></p>
+  </div>
+<?php endif; ?>
 <form action="<?= $base ?>/users/save" method="post" class="bg-white p-4 rounded shadow mb-4 space-y-4">
   <input type="hidden" name="id" value="<?= $user['id'] ?>">
+  <?php if ($redirectPath): ?>
+    <input type="hidden" name="redirect" value="<?= htmlspecialchars($redirectPath) ?>">
+  <?php endif; ?>
   <div class="flex justify-between">
     <div>
-      <div class="font-semibold">ID: <?= $user['id'] ?></div>
-      <div><?= htmlspecialchars($user['name']) ?></div>
-      <div class="text-sm text-gray-500"><?= htmlspecialchars($user['phone']) ?></div>
+      <div class="font-semibold mb-3">ID: <?= $user['id'] ?></div>
+      <div class="space-y-3">
+        <div>
+          <label for="user-name-input" class="block text-sm text-gray-600 mb-1">Имя</label>
+          <input
+            id="user-name-input"
+            name="name"
+            type="text"
+            class="border rounded px-2 py-1 w-full max-w-xs"
+            value="<?= htmlspecialchars($user['name']) ?>"
+            placeholder="<?= htmlspecialchars($user['name']) ?>"
+            required
+          >
+        </div>
+        <div>
+          <label for="user-phone-input" class="block text-sm text-gray-600 mb-1">Телефон</label>
+          <input
+            id="user-phone-input"
+            name="phone"
+            type="tel"
+            class="border rounded px-2 py-1 w-full max-w-xs"
+            value="<?= htmlspecialchars($user['phone']) ?>"
+            placeholder="<?= htmlspecialchars($user['phone']) ?>"
+            required
+          >
+        </div>
+      </div>
     </div>
     <div>
       <label class="block text-sm mb-1">Роль</label>
@@ -63,9 +97,27 @@ $roleNames = [
       <?php if ($isManager): ?>
         <div><?= (int)$user['rub_balance'] ?> ₽</div>
       <?php endif; ?>
-    </div>
+  </div>
   <button type="submit" class="bg-[#C86052] text-white px-4 py-2 rounded">Сохранить</button>
 </form>
+<script>
+  (function () {
+    const phoneInput = document.getElementById('user-phone-input');
+    if (!phoneInput) {
+      return;
+    }
+    const cleanPhone = (value) => {
+      let digits = value.replace(/\D/g, '');
+      if (digits.startsWith('7') || digits.startsWith('8')) {
+        digits = digits.slice(1);
+      }
+      return digits.slice(0, 10);
+    };
+    phoneInput.addEventListener('input', () => {
+      phoneInput.value = cleanPhone(phoneInput.value);
+    });
+  })();
+</script>
 
 <div class="bg-white p-4 rounded shadow mb-4">
   <h2 class="font-semibold mb-2">Адреса доставки</h2>
