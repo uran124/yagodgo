@@ -951,6 +951,82 @@ class UsersController
         exit;
     }
 
+    /**
+     * Удаление пользователя и связанных данных (админ)
+     */
+    public function delete(): void
+    {
+        $basePath = $this->basePath();
+        $redirectRaw = $_POST['redirect'] ?? '';
+        $redirectUrl = is_string($redirectRaw) ? trim($redirectRaw) : '';
+        if ($redirectUrl === '' || $redirectUrl[0] !== '/') {
+            $redirectUrl = '';
+        }
+
+        $id = (int)($_POST['id'] ?? 0);
+        if ($id <= 0) {
+            $destination = $redirectUrl !== '' ? $redirectUrl : $basePath;
+            header('Location: ' . $destination);
+            exit;
+        }
+
+        $auth = Auth::user();
+        if ($auth && (int)($auth['id'] ?? 0) === $id) {
+            $target = $redirectUrl !== '' ? $redirectUrl : $basePath . '/edit?id=' . $id;
+            $separator = strpos($target, '?') === false ? '?' : '&';
+            header('Location: ' . $target . $separator . 'error=' . urlencode('Нельзя удалить свою учетную запись'));
+            exit;
+        }
+
+        try {
+            $this->pdo->beginTransaction();
+
+            $orderStmt = $this->pdo->prepare("SELECT id FROM orders WHERE user_id = ?");
+            $orderStmt->execute([$id]);
+            $orderIds = $orderStmt->fetchAll(PDO::FETCH_COLUMN);
+
+            if (!empty($orderIds)) {
+                $placeholders = implode(',', array_fill(0, count($orderIds), '?'));
+                $this->pdo
+                    ->prepare("DELETE FROM order_items WHERE order_id IN ($placeholders)")
+                    ->execute($orderIds);
+                $this->pdo
+                    ->prepare("DELETE FROM points_transactions WHERE order_id IN ($placeholders)")
+                    ->execute($orderIds);
+            }
+
+            $this->pdo->prepare("DELETE FROM points_transactions WHERE user_id = ?")
+                ->execute([$id]);
+            $this->pdo->prepare("DELETE FROM referrals WHERE referrer_id = ? OR referred_id = ?")
+                ->execute([$id, $id]);
+            $this->pdo->prepare("DELETE FROM cart_items WHERE user_id = ?")
+                ->execute([$id]);
+            $this->pdo->prepare("DELETE FROM favorites WHERE user_id = ?")
+                ->execute([$id]);
+            $this->pdo->prepare("DELETE FROM addresses WHERE user_id = ?")
+                ->execute([$id]);
+            $this->pdo->prepare("DELETE FROM notifications WHERE user_id = ?")
+                ->execute([$id]);
+            $this->pdo->prepare("DELETE FROM orders WHERE user_id = ?")
+                ->execute([$id]);
+
+            $this->pdo->prepare("DELETE FROM users WHERE id = ?")
+                ->execute([$id]);
+
+            $this->pdo->commit();
+        } catch (\Exception $e) {
+            $this->pdo->rollBack();
+            $target = $redirectUrl !== '' ? $redirectUrl : $basePath . '/edit?id=' . $id;
+            $separator = strpos($target, '?') === false ? '?' : '&';
+            header('Location: ' . $target . $separator . 'error=' . urlencode('Не удалось удалить пользователя'));
+            exit;
+        }
+
+        $destination = $redirectUrl !== '' ? $redirectUrl : $basePath;
+        header('Location: ' . $destination);
+        exit;
+    }
+
     // Добавление адреса (админ/менеджер/партнёр)
     public function addAddressAdmin(): void
     {
