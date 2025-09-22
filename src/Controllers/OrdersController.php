@@ -315,6 +315,9 @@ class OrdersController
 
         if ($isNew) {
             $name  = trim($_POST['new_name'] ?? '');
+            if ($name === '') {
+                $name = 'Клиент';
+            }
             $phone = $this->normalizePhone($_POST['new_phone'] ?? '');
             $address = trim($_POST['new_address'] ?? '');
             $isPickup = $address === '';
@@ -322,7 +325,7 @@ class OrdersController
                 $address = 'Самовывоз: 9 мая, 73';
             }
             $pin   = trim($_POST['new_pin'] ?? '');
-            if ($name === '' || !preg_match('/^7\d{10}$/', $phone) || !preg_match('/^\d{4}$/', $pin)) {
+            if (!preg_match('/^7\d{10}$/', $phone) || !preg_match('/^\d{4}$/', $pin)) {
                 $_SESSION['debug_order_data'] = [
                     'name'    => $name,
                     'phone'   => $phone,
@@ -379,17 +382,31 @@ class OrdersController
             $this->pdo->commit();
             $referralDiscount = $hasUsedReferral === 1;
         } else {
-              $addrInput = $_POST['address_id'] ?? null;
-              $isPickup = ($addrInput === 'pickup');
-              if ($isPickup) {
-                  $addressId = $this->ensurePickupAddress($userId);
-              } elseif ($addrInput !== null) {
-                  $addressId = is_numeric($addrInput) ? (int)$addrInput : null;
-              } else {
-                  $addressId = null;
-              }
-              $referralDiscount = false;
-          }
+            $addrInput = $_POST['address_id'] ?? null;
+            $isPickup = ($addrInput === 'pickup');
+            if ($isPickup) {
+                $addressId = $this->ensurePickupAddress($userId);
+            } elseif ($addrInput === 'new') {
+                $newStreet = trim($_POST['address_new'] ?? '');
+                if ($newStreet === '') {
+                    header('Location: ' . $this->basePath() . '/create?error=' . urlencode('address'));
+                    exit;
+                }
+                $stmtUser = $this->pdo->prepare('SELECT name, phone FROM users WHERE id = ?');
+                $stmtUser->execute([$userId]);
+                $userRow = $stmtUser->fetch(PDO::FETCH_ASSOC) ?: ['name' => '', 'phone' => ''];
+                $stmtA = $this->pdo->prepare(
+                    "INSERT INTO addresses (user_id, street, recipient_name, recipient_phone, is_primary, created_at) VALUES (?, ?, ?, ?, 0, NOW())"
+                );
+                $stmtA->execute([$userId, $newStreet, $userRow['name'] ?? '', $userRow['phone'] ?? '']);
+                $addressId = (int)$this->pdo->lastInsertId();
+            } elseif ($addrInput !== null && $addrInput !== '') {
+                $addressId = is_numeric($addrInput) ? (int)$addrInput : null;
+            } else {
+                $addressId = null;
+            }
+            $referralDiscount = false;
+        }
 
         if ($userId <= 0) {
             header('Location: ' . $this->basePath() . '/create?error=' . urlencode('user'));
