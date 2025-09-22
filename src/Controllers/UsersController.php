@@ -705,22 +705,73 @@ class UsersController
         $auth       = Auth::user();
         $authStaff  = $auth && in_array($auth['role'], ['manager', 'partner'], true);
         $id         = (int)($_POST['id'] ?? 0);
+        $basePath   = $this->basePath();
+        $redirectRaw = $_POST['redirect'] ?? '';
+        $redirectUrl = is_string($redirectRaw) ? trim($redirectRaw) : '';
+        if ($redirectUrl === '' || $redirectUrl[0] !== '/') {
+            $redirectUrl = '';
+        }
+
+        $errorRedirect = function (string $message) use ($redirectUrl, $basePath, $id): void {
+            $fallback = $id ? $basePath . '/' . $id : $basePath . '/edit';
+            $target = $redirectUrl !== '' ? $redirectUrl : $fallback;
+            $separator = strpos($target, '?') === false ? '?' : '&';
+            header('Location: ' . $target . $separator . 'error=' . urlencode($message));
+            exit;
+        };
+
         $targetRole = 'client';
         $currentRef = null;
+        $currentUser = null;
+
+        if ($id) {
+            try {
+                $stmt = $this->pdo->prepare(
+                    "SELECT id, name, phone, role, referred_by FROM users WHERE id = ?"
+                );
+                $stmt->execute([$id]);
+            } catch (\PDOException $e) {
+                $stmt = $this->pdo->prepare(
+                    "SELECT id, name, phone, role FROM users WHERE id = ?"
+                );
+                $stmt->execute([$id]);
+            }
+            $currentUser = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+            if (!$currentUser) {
+                header('Location: ' . ($redirectUrl !== '' ? $redirectUrl : $basePath));
+                exit;
+            }
+            $targetRole = $currentUser['role'] ?? 'client';
+            $currentRef = $currentUser['referred_by'] ?? null;
+        }
 
         if ($authStaff && $id) {
-            $stmt = $this->pdo->prepare("SELECT role, referred_by FROM users WHERE id = ?");
-            $stmt->execute([$id]);
-            $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
-            $targetRole = $row['role'] ?? 'client';
-            $currentRef = $row['referred_by'] ?? null;
             if ($auth['id'] !== $id && in_array($targetRole, ['manager', 'partner'], true)) {
-                header('Location: ' . $this->basePath());
+                header('Location: ' . $basePath);
                 exit;
             }
         }
 
         if ($id) {
+            $nameSource = array_key_exists('name', $_POST)
+                ? trim((string)$_POST['name'])
+                : trim((string)($currentUser['name'] ?? ''));
+            if ($nameSource === '') {
+                $errorRedirect('Имя не может быть пустым');
+            }
+            $name = $nameSource;
+
+            $phoneSourceRaw = array_key_exists('phone', $_POST)
+                ? trim((string)$_POST['phone'])
+                : (string)($currentUser['phone'] ?? '');
+            if ($phoneSourceRaw === '' && !empty($currentUser['phone'])) {
+                $phoneSourceRaw = (string)$currentUser['phone'];
+            }
+            $phone = $this->normalizePhone($phoneSourceRaw);
+            if (!preg_match('/^7\d{10}$/', $phone)) {
+                $errorRedirect('Неверный телефон');
+            }
+
             if ($authStaff) {
                 $role  = $targetRole;
                 $refBy = $currentRef;
@@ -733,25 +784,25 @@ class UsersController
             try {
                 $stmt = $this->pdo->prepare(
                     "UPDATE users
-                     SET role = ?, is_blocked = ?, referred_by = ?
+                     SET name = ?, phone = ?, role = ?, is_blocked = ?, referred_by = ?
                      WHERE id = ?"
                 );
-                $stmt->execute([$role, $isBlocked, $refBy, $id]);
+                $stmt->execute([$name, $phone, $role, $isBlocked, $refBy, $id]);
             } catch (\PDOException $e) {
                 try {
                     $stmt = $this->pdo->prepare(
                         "UPDATE users
-                         SET role = ?, referred_by = ?
+                         SET name = ?, phone = ?, role = ?, referred_by = ?
                          WHERE id = ?"
                     );
-                    $stmt->execute([$role, $refBy, $id]);
+                    $stmt->execute([$name, $phone, $role, $refBy, $id]);
                 } catch (\PDOException $e2) {
                     $stmt = $this->pdo->prepare(
                         "UPDATE users
-                         SET role = ?
+                         SET name = ?, phone = ?, role = ?
                          WHERE id = ?"
                     );
-                    $stmt->execute([$role, $id]);
+                    $stmt->execute([$name, $phone, $role, $id]);
                 }
             }
         } else {
@@ -771,8 +822,7 @@ class UsersController
                 !preg_match('/^\d{4}$/', $pin) ||
                 $address === ''
             ) {
-                header('Location: ' . $this->basePath() . '/edit?error=' . urlencode('Неверные данные'));
-                exit;
+                $errorRedirect('Неверные данные');
             }
 
             $referredBy = null;
@@ -816,12 +866,12 @@ class UsersController
                 $this->pdo->commit();
             } catch (\Exception $e) {
                 $this->pdo->rollBack();
-                header('Location: ' . $this->basePath() . '/edit?error=' . urlencode('Ошибка создания'));
-                exit;
+                $errorRedirect('Ошибка создания');
             }
         }
 
-        header('Location: ' . $this->basePath());
+        $destination = $redirectUrl !== '' ? $redirectUrl : $basePath;
+        header('Location: ' . $destination);
         exit;
     }
 
