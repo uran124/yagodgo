@@ -15,7 +15,7 @@ class MailingController
 
     public function index(): void
     {
-        $sql = "SELECT u.id, u.name, u.phone, COALESCE(mc.allow_mailing, 1) AS allow_mailing, mc.comment, mc.nalet_number
+        $sql = "SELECT u.id, u.name, u.phone, COALESCE(mc.allow_mailing, 1) AS allow_mailing, mc.comment
                 FROM users u
                 LEFT JOIN mailing_clients mc ON mc.user_id = u.id
                 WHERE u.role = 'client'";
@@ -63,7 +63,6 @@ class MailingController
     {
         $userId = (int)($_POST['user_id'] ?? 0);
         $comment = trim((string)($_POST['comment'] ?? ''));
-        $naletNumber = trim((string)($_POST['nalet_number'] ?? ''));
 
         if ($userId <= 0) {
             $this->jsonResponse(['success' => false, 'message' => 'Некорректный пользователь'], 400);
@@ -71,11 +70,11 @@ class MailingController
         }
 
         $stmt = $this->pdo->prepare(
-            "INSERT INTO mailing_clients (user_id, comment, nalet_number)
-             VALUES (?, ?, ?)
-             ON DUPLICATE KEY UPDATE comment = VALUES(comment), nalet_number = VALUES(nalet_number), updated_at = CURRENT_TIMESTAMP"
+            "INSERT INTO mailing_clients (user_id, comment)
+             VALUES (?, ?)
+             ON DUPLICATE KEY UPDATE comment = VALUES(comment), updated_at = CURRENT_TIMESTAMP"
         );
-        $stmt->execute([$userId, $comment, $naletNumber]);
+        $stmt->execute([$userId, $comment]);
 
         $this->jsonResponse(['success' => true]);
     }
