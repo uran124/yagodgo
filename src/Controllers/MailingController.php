@@ -15,33 +15,19 @@ class MailingController
 
     public function index(): void
     {
-        $selectedNalet = trim((string)($_GET['nalet'] ?? ''));
-
-        $sql = "SELECT u.id, u.name, u.phone, mc.allow_mailing, mc.comment, mc.nalet_number
+        $sql = "SELECT u.id, u.name, u.phone, COALESCE(mc.allow_mailing, 1) AS allow_mailing, mc.comment, mc.nalet_number
                 FROM users u
                 LEFT JOIN mailing_clients mc ON mc.user_id = u.id
                 WHERE u.role = 'client'";
-        $params = [];
-
-        if ($selectedNalet !== '') {
-            $sql .= " AND mc.nalet_number = ?";
-            $params[] = $selectedNalet;
-        }
-
         $sql .= " ORDER BY u.name";
 
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($params);
+        $stmt->execute();
         $clients = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        $naletStmt = $this->pdo->query(
-            "SELECT DISTINCT nalet_number FROM mailing_clients WHERE nalet_number <> '' ORDER BY nalet_number"
-        );
-        $naletNumbers = $naletStmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
 
         $activeCount = 0;
         foreach ($clients as $client) {
-            if ((int)($client['allow_mailing'] ?? 0) === 1) {
+            if ((int)($client['allow_mailing'] ?? 1) === 1) {
                 $activeCount++;
             }
         }
@@ -49,8 +35,6 @@ class MailingController
         viewAdmin('apps/mailing', [
             'pageTitle'     => 'Рассылка',
             'clients'       => $clients,
-            'naletNumbers'  => $naletNumbers,
-            'selectedNalet' => $selectedNalet,
             'activeCount'   => $activeCount,
         ]);
     }
