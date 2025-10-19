@@ -24,7 +24,11 @@ class AppsController
 
         try {
             $mailingStatsStmt = $this->pdo->query(
-                "SELECT COUNT(*) AS total_records, SUM(allow_mailing = 1) AS active_records FROM mailing_clients"
+                "SELECT COUNT(*) AS total_records,"
+                . " SUM(CASE WHEN mc.allow_mailing = 0 THEN 0 ELSE 1 END) AS active_records"
+                . " FROM users u"
+                . " LEFT JOIN mailing_clients mc ON mc.user_id = u.id"
+                . " WHERE u.role = 'client'"
             );
             $mailingStatsRow = $mailingStatsStmt->fetch(PDO::FETCH_ASSOC) ?: [];
             $mailingStats = [

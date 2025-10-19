@@ -1,26 +1,19 @@
 <?php
 /** @var array $clients */
-/** @var array $naletNumbers */
-/** @var string $selectedNalet */
 /** @var int $activeCount */
 ?>
 <div class="space-y-6">
   <div class="bg-white p-4 rounded shadow">
-    <form method="get" class="flex flex-col md:flex-row md:items-end md:space-x-4 space-y-4 md:space-y-0">
-      <div>
-        <label for="nalet" class="block text-sm text-gray-500 mb-1">Номер налёта</label>
-        <select id="nalet" name="nalet" class="rounded border border-gray-300 bg-transparent px-3 py-2">
-          <option value="">Все</option>
-          <?php foreach ($naletNumbers as $number): ?>
-            <option value="<?= htmlspecialchars($number) ?>" <?= $number === $selectedNalet ? 'selected' : '' ?>><?= htmlspecialchars($number) ?></option>
-          <?php endforeach; ?>
-        </select>
+    <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+      <div class="w-full md:max-w-xs">
+        <label for="phoneSearch" class="block text-sm text-gray-500 mb-1">Поиск по номеру</label>
+        <input id="phoneSearch" type="text" placeholder="Введите цифры номера"
+               class="w-full rounded border border-gray-300 bg-transparent px-3 py-2"
+               autocomplete="off">
+        <p class="mt-1 text-xs text-gray-500">Фильтрация выполняется по совпадению цифр в правильном порядке.</p>
       </div>
-      <div class="flex space-x-3">
-        <button type="submit" class="px-4 py-2 rounded bg-[#C86052] text-white shadow">Применить</button>
-        <a href="/admin/apps/mailing" class="px-4 py-2 rounded border border-gray-500 text-gray-200">Сбросить</a>
-      </div>
-    </form>
+      <p class="text-sm text-gray-500 md:text-right">Начните вводить цифры, чтобы отфильтровать список клиентов для рассылки.</p>
+    </div>
   </div>
 
   <div class="bg-white p-4 rounded shadow">
@@ -44,7 +37,7 @@
         </thead>
         <tbody class="divide-y divide-gray-200" id="mailingTable">
         <?php foreach ($clients as $client):
-            $allow = (int)($client['allow_mailing'] ?? 0) === 1;
+            $allow = (int)($client['allow_mailing'] ?? 1) === 1;
             $comment = $client['comment'] ?? '';
             $naletNumber = $client['nalet_number'] ?? '';
             $phone = $client['phone'] ?? '';
@@ -64,16 +57,17 @@
             <td class="px-4 py-3 text-gray-300" data-nalet-cell><?= htmlspecialchars($naletNumber) ?></td>
             <td class="px-4 py-3">
               <label class="relative inline-flex items-center cursor-pointer select-none" onclick="event.stopPropagation();">
-                <input type="checkbox" class="sr-only mailing-toggle"
+                <input type="checkbox" class="sr-only peer mailing-toggle"
                        data-user-id="<?= (int)$client['id'] ?>"
                        <?= $allow ? 'checked' : '' ?>>
-                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 rounded-full peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
               </label>
             </td>
           </tr>
         <?php endforeach; ?>
         </tbody>
       </table>
+      <p id="noResults" class="hidden text-center text-gray-500 py-6">Нет клиентов по вашему запросу</p>
       <?php if (!$clients): ?>
         <p class="text-center text-gray-500 py-6">Нет клиентов для отображения</p>
       <?php endif; ?>
@@ -109,6 +103,10 @@
 
 <script>
   const toastEl = document.getElementById('toast');
+  const rows = Array.from(document.querySelectorAll('[data-row]'));
+  const noResultsMessage = document.getElementById('noResults');
+  const searchInput = document.getElementById('phoneSearch');
+
   function showToast(message) {
     toastEl.textContent = message;
     toastEl.classList.remove('hidden');
@@ -116,14 +114,53 @@
   }
 
   function updateActiveCounter() {
-    const rows = document.querySelectorAll('[data-row]');
     let count = 0;
     rows.forEach(row => {
-      if (row.dataset.allow === '1') {
+      if (row.dataset.allow === '1' && !row.classList.contains('hidden')) {
         count++;
       }
     });
     document.getElementById('activeCounter').textContent = count;
+  }
+
+  function normalizeDigits(value) {
+    return value.replace(/\D+/g, '');
+  }
+
+  function isSubsequence(haystack, needle) {
+    if (needle === '') {
+      return true;
+    }
+    let position = 0;
+    for (const char of needle) {
+      position = haystack.indexOf(char, position);
+      if (position === -1) {
+        return false;
+      }
+      position += 1;
+    }
+    return true;
+  }
+
+  function applySearchFilter() {
+    const query = normalizeDigits(searchInput ? searchInput.value : '');
+    let visibleCount = 0;
+
+    rows.forEach(row => {
+      const phoneDigits = normalizeDigits(row.dataset.phone || '');
+      const matches = query === '' || isSubsequence(phoneDigits, query);
+      row.classList.toggle('hidden', !matches);
+      if (matches) {
+        visibleCount++;
+      }
+    });
+
+    if (noResultsMessage) {
+      const shouldShow = visibleCount === 0 && rows.length > 0;
+      noResultsMessage.classList.toggle('hidden', !shouldShow);
+    }
+
+    updateActiveCounter();
   }
 
   document.querySelectorAll('.mailing-toggle').forEach(toggle => {
@@ -142,7 +179,7 @@
           throw new Error('Ошибка сохранения');
         }
         row.dataset.allow = allow;
-        updateActiveCounter();
+        applySearchFilter();
       } catch (err) {
         toggle.checked = !toggle.checked;
         showToast(err.message || 'Не удалось сохранить изменение');
@@ -168,7 +205,7 @@
     modal.classList.add('hidden');
   }
 
-  document.querySelectorAll('[data-row]').forEach(row => {
+  rows.forEach(row => {
     row.addEventListener('click', (event) => {
       if (event.target.closest('.mailing-toggle') || event.target.closest('label')) {
         return;
@@ -212,9 +249,8 @@
   });
 
   document.getElementById('copyActive').addEventListener('click', async () => {
-    const rows = Array.from(document.querySelectorAll('[data-row]'));
     const phones = rows
-      .filter(row => row.dataset.allow === '1' && row.dataset.phone)
+      .filter(row => row.dataset.allow === '1' && row.dataset.phone && !row.classList.contains('hidden'))
       .map(row => row.dataset.phone.trim())
       .filter(Boolean);
 
@@ -233,5 +269,9 @@
     }
   });
 
-  updateActiveCounter();
+  if (searchInput) {
+    searchInput.addEventListener('input', applySearchFilter);
+  }
+
+  applySearchFilter();
 </script>
