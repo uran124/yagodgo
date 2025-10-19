@@ -670,6 +670,19 @@ switch ("$method $uri") {
         (new App\Controllers\AppsController($pdo))->toggleItem();
         break;
 
+    case 'GET /admin/apps/mailing':
+        requireAdmin();
+        (new App\Controllers\MailingController($pdo))->index();
+        break;
+    case 'POST /admin/apps/mailing/toggle':
+        requireAdmin();
+        (new App\Controllers\MailingController($pdo))->toggle();
+        break;
+    case 'POST /admin/apps/mailing/comment':
+        requireAdmin();
+        (new App\Controllers\MailingController($pdo))->updateComment();
+        break;
+
     case 'GET /admin/apps/seo':
         requireAdmin();
         (new App\Controllers\SeoController($pdo))->index();

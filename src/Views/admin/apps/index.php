@@ -21,3 +21,14 @@
   <h2 class="text-lg font-semibold mb-2">SEO</h2>
   <a href="/admin/apps/seo" class="text-[#C86052] hover:underline">Открыть</a>
 </div>
+
+<div class="bg-white p-4 rounded shadow mt-6">
+  <div class="flex items-start justify-between">
+    <div>
+      <h2 class="text-lg font-semibold mb-1">Рассылка</h2>
+      <p class="text-sm text-gray-500">Активных номеров: <?= (int)$mailing['active'] ?> из <?= (int)$mailing['total'] ?></p>
+    </div>
+    <span class="material-icons-round text-[#C86052]">send</span>
+  </div>
+  <a href="/admin/apps/mailing" class="text-[#C86052] hover:underline mt-4 inline-block">Открыть</a>
+</div>

@@ -2,6 +2,7 @@
 namespace App\Controllers;
 
 use PDO;
+use PDOException;
 
 class AppsController
 {
@@ -21,9 +22,23 @@ class AppsController
             $sitemap = ['is_active' => 0, 'last_generated' => null];
         }
 
+        try {
+            $mailingStatsStmt = $this->pdo->query(
+                "SELECT COUNT(*) AS total_records, SUM(allow_mailing = 1) AS active_records FROM mailing_clients"
+            );
+            $mailingStatsRow = $mailingStatsStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+            $mailingStats = [
+                'total'  => (int)($mailingStatsRow['total_records'] ?? 0),
+                'active' => (int)($mailingStatsRow['active_records'] ?? 0),
+            ];
+        } catch (PDOException $e) {
+            $mailingStats = ['total' => 0, 'active' => 0];
+        }
+
         viewAdmin('apps/index', [
             'pageTitle' => 'Приложения',
             'sitemap'   => $sitemap,
+            'mailing'   => $mailingStats,
         ]);
     }
 
