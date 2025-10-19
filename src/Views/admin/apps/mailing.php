@@ -31,7 +31,6 @@
           <tr class="text-left text-xs uppercase tracking-wider text-gray-400">
             <th class="px-4 py-3">Имя</th>
             <th class="px-4 py-3">Телефон</th>
-            <th class="px-4 py-3">Налёт</th>
             <th class="px-4 py-3 text-center">Рассылка</th>
           </tr>
         </thead>
@@ -39,7 +38,6 @@
         <?php foreach ($clients as $client):
             $allow = (int)($client['allow_mailing'] ?? 1) === 1;
             $comment = $client['comment'] ?? '';
-            $naletNumber = $client['nalet_number'] ?? '';
             $phone = $client['phone'] ?? '';
         ?>
           <tr class="hover:bg-gray-50 cursor-pointer" data-row
@@ -47,14 +45,12 @@
               data-name="<?= htmlspecialchars($client['name'] ?? 'Без имени', ENT_QUOTES) ?>"
               data-phone="<?= htmlspecialchars($phone, ENT_QUOTES) ?>"
               data-comment="<?= htmlspecialchars($comment, ENT_QUOTES) ?>"
-              data-nalet="<?= htmlspecialchars($naletNumber, ENT_QUOTES) ?>"
               data-allow="<?= $allow ? '1' : '0' ?>">
             <td class="px-4 py-3 font-medium flex items-center space-x-2">
               <span class="material-icons-round text-[#C86052] text-base">person</span>
               <span><?= htmlspecialchars($client['name'] ?? 'Без имени') ?></span>
             </td>
             <td class="px-4 py-3 text-gray-300"><?= htmlspecialchars($phone) ?></td>
-            <td class="px-4 py-3 text-gray-300" data-nalet-cell><?= htmlspecialchars($naletNumber) ?></td>
             <td class="px-4 py-3">
               <label class="relative inline-flex items-center cursor-pointer select-none" onclick="event.stopPropagation();">
                 <input type="checkbox" class="sr-only peer mailing-toggle"
@@ -85,10 +81,6 @@
     <h3 class="text-xl font-semibold mb-4" id="modalTitle">Комментарий</h3>
     <form id="commentForm" class="space-y-4">
       <input type="hidden" name="user_id" id="commentUserId">
-      <div>
-        <label for="modalNalet" class="block text-sm text-gray-500 mb-1">Номер налёта</label>
-        <input id="modalNalet" name="nalet_number" type="text" class="w-full rounded border border-gray-300 bg-transparent px-3 py-2">
-      </div>
       <div>
         <label for="modalComment" class="block text-sm text-gray-500 mb-1">Комментарий</label>
         <textarea id="modalComment" name="comment" rows="5" class="w-full rounded border border-gray-300 bg-transparent px-3 py-2"></textarea>
@@ -190,13 +182,11 @@
   const modal = document.getElementById('commentModal');
   const modalTitle = document.getElementById('modalTitle');
   const modalComment = document.getElementById('modalComment');
-  const modalNalet = document.getElementById('modalNalet');
   const modalUserId = document.getElementById('commentUserId');
 
   function openModal(row) {
     modalTitle.textContent = row.dataset.name + ' — ' + row.dataset.phone;
     modalComment.value = row.dataset.comment || '';
-    modalNalet.value = row.dataset.nalet || '';
     modalUserId.value = row.dataset.userId;
     modal.classList.remove('hidden');
   }
@@ -233,13 +223,7 @@
       const row = document.querySelector(`[data-row][data-user-id="${userId}"]`);
       if (row) {
         const comment = formData.get('comment') || '';
-        const nalet = formData.get('nalet_number') || '';
         row.dataset.comment = comment;
-        row.dataset.nalet = nalet;
-        const cell = row.querySelector('[data-nalet-cell]');
-        if (cell) {
-          cell.textContent = nalet;
-        }
       }
       showToast('Комментарий сохранён');
       closeModal();
