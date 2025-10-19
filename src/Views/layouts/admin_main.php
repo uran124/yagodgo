@@ -245,130 +245,239 @@
     #sidebar a {
       -webkit-tap-highlight-color: transparent;
     }
+
+    /* Sidebar layout adjustments */
+    #sidebar {
+      width: 16rem;
+    }
+
+    #sidebar[data-collapsed="true"] {
+      width: 4.5rem !important;
+    }
+
+    #sidebar[data-collapsed="true"] .menu-text,
+    #sidebar[data-collapsed="true"] .sidebar-logo-text,
+    #sidebar[data-collapsed="true"] .sidebar-footer .menu-text {
+      display: none;
+    }
+
+    #sidebar[data-collapsed="true"] .menu-item {
+      justify-content: center;
+    }
+
+    #sidebar[data-collapsed="true"] .menu-item .material-icons-round {
+      margin-right: 0 !important;
+    }
+
+    #sidebar[data-collapsed="true"] .sidebar-logo {
+      justify-content: center;
+    }
+
+    #sidebar[data-collapsed="true"] .sidebar-footer form {
+      width: auto;
+    }
+
+    #sidebar[data-collapsed="true"] .sidebar-footer button {
+      justify-content: center;
+    }
+
+    #sidebar[data-collapsed="true"] .collapse-icon {
+      transform: rotate(0);
+    }
+
+    #sidebar .collapse-icon {
+      transition: transform 0.3s ease;
+    }
   </style>
 </head>
-<body class="flex flex-col min-h-screen bg-gray-100 font-sans">
+<body class="min-h-screen bg-gray-100 font-sans">
+  <?php
+    $currentPath = strtok($_SERVER['REQUEST_URI'] ?? '', '?') ?: '/';
+    $menuItems = [
+      ['href' => '/admin/dashboard', 'icon' => 'dashboard', 'label' => 'Dashboard'],
+      ['href' => '/admin/orders', 'icon' => 'receipt_long', 'label' => 'Заказы'],
+      ['href' => '/admin/products', 'icon' => 'inventory_2', 'label' => 'Товары'],
+      ['href' => '/admin/product-types', 'icon' => 'category', 'label' => 'Категории'],
+      ['href' => '/admin/slots', 'icon' => 'calendar_today', 'label' => 'Слоты'],
+      ['href' => '/admin/coupons', 'icon' => 'local_offer', 'label' => 'Промокоды'],
+      ['href' => '/admin/content', 'icon' => 'article', 'label' => 'Контент'],
+      ['href' => '/admin/users', 'icon' => 'people', 'label' => 'Пользователи'],
+      ['href' => '/admin/sellers', 'icon' => 'storefront', 'label' => 'Селлеры'],
+      ['href' => '/admin/apps', 'icon' => 'apps', 'label' => 'Приложения'],
+      ['href' => '/admin/settings', 'icon' => 'settings', 'label' => 'Настройки'],
+    ];
+  ?>
 
-  <!-- Header -->
-  <header class="flex items-center justify-between bg-white p-4 shadow">
-    <div class="flex items-center space-x-4">
-      <div class="font-bold text-xl text-[#C86052]">BerryGo Admin</div>
-      <nav class="hidden md:flex space-x-4">
-        <a href="/admin/dashboard" class="hover:underline">Dashboard</a>
-        <a href="/admin/orders" class="hover:underline">Заказы</a>
-        <a href="/admin/products" class="hover:underline">Товары</a>
-        <a href="/admin/product-types" class="hover:underline">Категории</a>
-        <a href="/admin/slots" class="hover:underline">Слоты</a>
-        <a href="/admin/coupons" class="hover:underline">Промокоды</a>
-        <a href="/admin/content" class="hover:underline">Контент</a>
-        <a href="/admin/users" class="hover:underline">Пользователи</a>
-        <a href="/admin/sellers" class="hover:underline">Селлеры</a>
-        <a href="/admin/apps" class="hover:underline">Приложения</a>
-        <a href="/admin/settings" class="hover:underline">Настройки</a>
+  <div class="flex h-screen overflow-hidden">
+    <!-- Sidebar -->
+    <aside id="sidebar" data-collapsed="false"
+           class="fixed md:static top-0 left-0 z-40 h-full md:h-auto md:min-h-full w-64 bg-white shadow-lg transform -translate-x-full md:translate-x-0 transition-all duration-300 flex flex-col">
+      <div class="flex items-center justify-between p-4 border-b border-gray-200 sidebar-header">
+        <div class="flex items-center space-x-2 sidebar-logo">
+          <span class="material-icons-round text-[#C86052] sidebar-logo-icon">local_florist</span>
+          <span class="font-bold text-xl text-[#C86052] sidebar-logo-text">BerryGo Admin</span>
+        </div>
+        <button id="sidebarCloseBtn" class="md:hidden p-2 text-gray-400 hover:text-white focus:outline-none" aria-label="Закрыть меню">
+          <span class="material-icons-round">close</span>
+        </button>
+        <button id="sidebarCollapseBtn" class="hidden md:flex items-center justify-center w-9 h-9 rounded-full bg-gray-800/40 text-gray-300 hover:text-white focus:outline-none focus:ring-2 focus:ring-[#C86052]"
+                aria-label="Свернуть меню" aria-expanded="true">
+          <span class="material-icons-round collapse-icon">chevron_left</span>
+        </button>
+      </div>
+      <nav class="p-4 space-y-1 overflow-y-auto">
+        <?php foreach ($menuItems as $item):
+          $isActive = strpos($currentPath, $item['href']) === 0;
+        ?>
+          <a href="<?= $item['href'] ?>"
+             class="menu-item flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors <?= $isActive ? 'bg-[#C86052]/20 text-[#C86052]' : 'text-gray-300 hover:text-white hover:bg-gray-700/30' ?>">
+            <span class="material-icons-round text-lg mr-3"><?= $item['icon'] ?></span>
+            <span class="menu-text"><?= $item['label'] ?></span>
+          </a>
+        <?php endforeach; ?>
       </nav>
-      <button id="burgerBtn" class="md:hidden p-2 text-gray-600">
-        <span class="material-icons-round">menu</span>
-      </button>
+      <div class="mt-auto p-4 border-t border-gray-200 hidden md:flex sidebar-footer">
+        <form action="/logout" method="post" class="w-full">
+          <button type="submit" class="w-full flex items-center justify-center gap-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 py-2">
+            <span class="material-icons-round text-base">logout</span>
+            <span class="menu-text">Выход</span>
+          </button>
+        </form>
+      </div>
+    </aside>
+
+    <div id="sidebarBackdrop" class="fixed inset-0 bg-black/40 z-30 hidden md:hidden"></div>
+
+    <!-- Контент -->
+    <div class="flex-1 flex flex-col md:ml-0">
+      <!-- Header -->
+      <header class="flex items-center justify-between bg-white p-4 shadow md:ml-0">
+        <div class="flex items-center space-x-3">
+          <button id="sidebarToggle" class="p-2 rounded-full text-gray-600 hover:text-[#C86052] focus:outline-none focus:ring-2 focus:ring-[#C86052]" aria-label="Меню">
+            <span class="material-icons-round">menu</span>
+          </button>
+          <div class="font-bold text-xl text-[#C86052] md:hidden">BerryGo Admin</div>
+        </div>
+        <form action="/logout" method="post" class="md:hidden">
+          <button type="submit" class="flex items-center text-red-400 hover:text-red-300">
+            <span class="material-icons-round mr-1">logout</span> Выход
+          </button>
+        </form>
+      </header>
+
+      <div class="flex-1 flex flex-col overflow-hidden">
+        <h1 class="text-2xl font-semibold text-gray-700 p-4 flex items-center gap-3">
+          <span class="material-icons-round text-[#C86052]">auto_awesome_mosaic</span>
+          <?= htmlspecialchars($pageTitle) ?>
+        </h1>
+        <main class="p-6 overflow-auto bg-gray-50 flex-1">
+          <?= $content ?>
+        </main>
+      </div>
     </div>
-    <form action="/logout" method="post">
-      <button type="submit" class="flex items-center text-red-500 hover:underline">
-        <span class="material-icons-round mr-1">logout</span> Выход
-      </button>
-    </form>
-  </header>
-
-  <!-- Sidebar for small screens -->
-  <aside id="sidebar" class="md:hidden fixed top-16 left-0 w-64 max-w-[90%] bg-white shadow-md transform -translate-x-full transition-transform duration-300 z-40">
-    <nav class="p-4">
-      <a href="/admin/dashboard" class="flex items-center p-2 mb-2 rounded">
-        <span class="material-icons-round mr-2">dashboard</span>
-        <span class="menu-text">Dashboard</span>
-      </a>
-      <a href="/admin/orders" class="flex items-center p-2 mb-2 rounded">
-        <span class="material-icons-round mr-2">receipt_long</span>
-        <span class="menu-text">Заказы</span>
-      </a>
-      <a href="/admin/products" class="flex items-center p-2 mb-2 rounded">
-        <span class="material-icons-round mr-2">inventory_2</span>
-        <span class="menu-text">Товары</span>
-      </a>
-      <a href="/admin/product-types" class="flex items-center p-2 mb-2 rounded">
-        <span class="material-icons-round mr-2">category</span>
-        <span class="menu-text">Категории</span>
-      </a>
-      <a href="/admin/slots" class="flex items-center p-2 mb-2 rounded">
-        <span class="material-icons-round mr-2">calendar_today</span>
-        <span class="menu-text">Слоты</span>
-      </a>
-      <a href="/admin/coupons" class="flex items-center p-2 mb-2 rounded">
-        <span class="material-icons-round mr-2">local_offer</span>
-        <span class="menu-text">Промокоды</span>
-      </a>
-      <a href="/admin/content" class="flex items-center p-2 mb-2 rounded">
-        <span class="material-icons-round mr-2">article</span>
-        <span class="menu-text">Контент</span>
-      </a>
-      <a href="/admin/users" class="flex items-center p-2 mb-2 rounded">
-        <span class="material-icons-round mr-2">people</span>
-        <span class="menu-text">Пользователи</span>
-      </a>
-      <a href="/admin/sellers" class="flex items-center p-2 mb-2 rounded">
-        <span class="material-icons-round mr-2">storefront</span>
-        <span class="menu-text">Селлеры</span>
-      </a>
-      <a href="/admin/apps" class="flex items-center p-2 mb-2 rounded">
-        <span class="material-icons-round mr-2">apps</span>
-        <span class="menu-text">Приложения</span>
-      </a>
-      <a href="/admin/settings" class="flex items-center p-2 rounded">
-        <span class="material-icons-round mr-2">settings</span>
-        <span class="menu-text">Настройки</span>
-      </a>
-    </nav>
-  </aside>
-
-  <!-- Контент -->
-  <div class="flex-1 flex flex-col">
-    <h1 class="text-2xl font-semibold text-gray-700 p-4"><?= htmlspecialchars($pageTitle) ?></h1>
-    <!-- Main -->
-    <main class="p-6 overflow-auto bg-gray-50 flex-1">
-      <?= $content ?>
-    </main>
   </div>
 
   <script>
     const sidebar = document.getElementById('sidebar');
-    const burgerBtn = document.getElementById('burgerBtn');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebarCollapseBtn = document.getElementById('sidebarCollapseBtn');
+    const sidebarCloseBtn = document.getElementById('sidebarCloseBtn');
+    const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+    const SIDEBAR_COLLAPSED_KEY = 'berrygo-admin-sidebar-collapsed';
 
-    function closeSidebar() {
-      sidebar.classList.add('-translate-x-full');
+    if (sidebar) {
+      const storage = (() => {
+        try {
+          const testKey = '__berrygo-admin__';
+          localStorage.setItem(testKey, '1');
+          localStorage.removeItem(testKey);
+          return localStorage;
+        } catch (error) {
+          return null;
+        }
+      })();
+
+      let isCollapsed = storage?.getItem(SIDEBAR_COLLAPSED_KEY) === '1';
+
+      const updateCollapseIcon = (collapsed) => {
+        if (!sidebarCollapseBtn) {
+          return;
+        }
+
+        const icon = sidebarCollapseBtn.querySelector('.collapse-icon');
+        if (icon) {
+          icon.textContent = collapsed ? 'chevron_right' : 'chevron_left';
+        }
+        sidebarCollapseBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      };
+
+      const applyCollapsedState = () => {
+        const shouldCollapse = window.innerWidth >= 768 && isCollapsed;
+        sidebar.setAttribute('data-collapsed', shouldCollapse ? 'true' : 'false');
+        updateCollapseIcon(shouldCollapse);
+      };
+
+      const openSidebarMobile = () => {
+        sidebar.classList.remove('-translate-x-full');
+        sidebarBackdrop?.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+        sidebar.setAttribute('data-collapsed', 'false');
+      };
+
+      const closeSidebarMobile = () => {
+        sidebar.classList.add('-translate-x-full');
+        sidebarBackdrop?.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+      };
+
+      const toggleSidebar = () => {
+        if (window.innerWidth < 768) {
+          if (sidebar.classList.contains('-translate-x-full')) {
+            openSidebarMobile();
+          } else {
+            closeSidebarMobile();
+          }
+        } else {
+          isCollapsed = !isCollapsed;
+          if (isCollapsed) {
+            storage?.setItem(SIDEBAR_COLLAPSED_KEY, '1');
+          } else {
+            storage?.removeItem(SIDEBAR_COLLAPSED_KEY);
+          }
+          applyCollapsedState();
+        }
+      };
+
+      const syncSidebarState = () => {
+        if (window.innerWidth >= 768) {
+          sidebar.classList.remove('-translate-x-full');
+          sidebarBackdrop?.classList.add('hidden');
+          document.body.classList.remove('overflow-hidden');
+        } else if (sidebarBackdrop?.classList.contains('hidden')) {
+          document.body.classList.remove('overflow-hidden');
+        }
+        applyCollapsedState();
+      };
+
+      sidebarToggle?.addEventListener('click', toggleSidebar);
+      sidebarCollapseBtn?.addEventListener('click', () => {
+        if (window.innerWidth >= 768) {
+          toggleSidebar();
+        }
+      });
+      sidebarCloseBtn?.addEventListener('click', closeSidebarMobile);
+      sidebarBackdrop?.addEventListener('click', closeSidebarMobile);
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && window.innerWidth < 768 && !sidebar.classList.contains('-translate-x-full')) {
+          closeSidebarMobile();
+        }
+      });
+
+      window.addEventListener('resize', syncSidebarState);
+
+      syncSidebarState();
     }
-
-    function openSidebar() {
-      sidebar.classList.remove('-translate-x-full');
-    }
-
-    burgerBtn?.addEventListener('click', () => {
-      if (sidebar.classList.contains('-translate-x-full')) {
-        openSidebar();
-      } else {
-        closeSidebar();
-      }
-    });
-
-    document.addEventListener('click', (e) => {
-      if (window.innerWidth < 768 && !sidebar.contains(e.target) && !burgerBtn.contains(e.target)) {
-        closeSidebar();
-      }
-    });
-
-    function handleResize() {
-      if (window.innerWidth >= 768) {
-        closeSidebar();
-      }
-    }
-
-    window.addEventListener('resize', handleResize);
   </script>
 <?php include __DIR__ . '/scripts.php'; ?>
 </body>
