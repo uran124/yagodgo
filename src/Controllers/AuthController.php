@@ -284,6 +284,17 @@ public function register(): void
         echo json_encode(['success' => $valid]);
     }
 
+    // Проверка кода для сброса PIN
+    public function verifyResetPinCode(): void
+    {
+        $phone = $this->normalizePhone($_POST['phone'] ?? '');
+        $code  = trim($_POST['code'] ?? '');
+        $valid = isset($_SESSION['reset_phone'], $_SESSION['reset_code']) &&
+            $_SESSION['reset_phone'] === $phone && $_SESSION['reset_code'] == $code;
+        header('Content-Type: application/json');
+        echo json_encode(['success' => $valid]);
+    }
+
     // Страница восстановления PIN
     public function showResetPinForm(): void
     {
