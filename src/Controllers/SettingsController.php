@@ -16,8 +16,9 @@ class SettingsController
         $all = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
         viewAdmin('settings', [
-          'pageTitle' => 'Настройки',
-          'settings'  => $all,
+          'pageTitle'   => 'Настройки',
+          'settings'    => $all,
+          'themeColors' => \get_theme_palette(),
         ]);
     }
 

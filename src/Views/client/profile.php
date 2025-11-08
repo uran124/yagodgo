@@ -106,7 +106,7 @@
 
     <!-- Бонусы -->
     <div class="bg-white rounded-3xl shadow-2xl overflow-hidden">
-      <div class="bg-gradient-to-r from-red-500 to-pink-500 px-6 py-4 border-b border-red-400">
+      <div class="bg-gradient-to-r from-red-500 to-pink-500 accent-gradient px-6 py-4 border-b border-red-400">
         <h2 class="font-bold text-white flex items-center">
           <span class="material-icons-round mr-2 text-white">card_giftcard</span>
           Бонусы

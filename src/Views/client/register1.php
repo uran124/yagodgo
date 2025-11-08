@@ -13,7 +13,7 @@
     
     <!-- Заголовок с логотипом -->
     <div class="text-center mb-8">
-      <h1 class="text-3xl font-bold bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent mb-2">
+      <h1 class="text-3xl font-bold bg-gradient-to-r from-red-500 to-pink-500 accent-gradient accent-text-gradient bg-clip-text text-transparent mb-2">
         Регистрация в BerryGo
       </h1>
       <p class="text-gray-500 text-sm">Создайте аккаунт для покупок</p>
@@ -147,7 +147,7 @@
         <!-- Кнопка регистрации -->
         <button
           type="submit"
-          class="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white font-semibold py-4 rounded-2xl hover:shadow-lg hover:scale-[1.02] transition-all text-lg flex items-center justify-center space-x-3 relative overflow-hidden group"
+          class="w-full bg-gradient-to-r from-red-500 to-pink-500 accent-gradient text-white font-semibold py-4 rounded-2xl hover:shadow-lg hover:scale-[1.02] transition-all text-lg flex items-center justify-center space-x-3 relative overflow-hidden group"
         >
           <span class="absolute inset-0 bg-gradient-to-r from-pink-500 to-red-500 opacity-0 group-hover:opacity-100 transition-opacity"></span>
           <span class="material-icons-round relative z-10">person_add</span>

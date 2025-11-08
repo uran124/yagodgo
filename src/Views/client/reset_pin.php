@@ -2,7 +2,7 @@
 <main class="bg-gradient-to-br from-orange-50 via-white to-pink-50 flex flex-col items-center justify-center px-4 py-4 fixed inset-0 overflow-auto">
   <div class="w-full max-w-md relative z-10">
     <div class="text-center mb-8">
-      <h1 class="text-3xl font-bold bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent mb-2">
+      <h1 class="text-3xl font-bold bg-gradient-to-r from-red-500 to-pink-500 accent-gradient accent-text-gradient bg-clip-text text-transparent mb-2">
         Восстановление PIN
       </h1>
     </div>
@@ -52,7 +52,7 @@
           </div>
           <input type="hidden" name="pin" id="pinHidden">
           <input type="hidden" name="code" id="codeHidden">
-          <button type="submit" id="savePinBtn" class="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-2 rounded-2xl" disabled>Сохранить PIN</button>
+          <button type="submit" id="savePinBtn" class="w-full bg-gradient-to-r from-red-500 to-pink-500 accent-gradient text-white py-2 rounded-2xl" disabled>Сохранить PIN</button>
         </div>
       </form>
     </div>

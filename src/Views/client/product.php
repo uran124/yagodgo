@@ -4,7 +4,7 @@
     <div class="md:flex md:space-x-6">
       <div class="md:w-1/2 mb-4 md:mb-0">
         <?php if (!empty($product['image_path'])): ?>
-          <img src="<?= htmlspecialchars($product['image_path']) ?>" alt="<?= htmlspecialchars($product['product']) ?>" class="w-full object-cover rounded-2xl shadow-lg" style="aspect-ratio:1/1" itemprop="image">
+          <img src="<?= htmlspecialchars($product['image_path']) ?>" alt="<?= htmlspecialchars($product['product']) ?>" class="w-full object-cover rounded-2xl shadow-lg product-image" style="aspect-ratio:1/1" itemprop="image">
         <?php endif; ?>
       </div>
       <div class="md:w-1/2 space-y-4">
@@ -97,7 +97,7 @@
                   <span class="material-icons-round text-gray-600 text-base">add</span>
                 </button>
               </div>
-              <button type="submit" class="ml-2 bg-gradient-to-r from-red-500 to-pink-500 text-white px-2 py-2 rounded-lg hover:from-pink-500 hover:to-red-500 transition-all flex items-center text-sm">
+              <button type="submit" class="ml-2 bg-gradient-to-r from-red-500 to-pink-500 accent-gradient text-white px-2 py-2 rounded-lg transition-all flex items-center text-sm">
                 <span class="material-icons-round text-base mr-1">shopping_cart</span>
                 В корзину
               </button>
@@ -106,7 +106,7 @@
             <?php if (!empty($_SESSION['user_id']) && !$active): ?>
               <button disabled class="w-full bg-gray-100 text-gray-500 px-3 py-2 rounded-lg text-sm text-center cursor-not-allowed">Товар недоступен</button>
             <?php else: ?>
-              <a href="/login" class="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white px-3 py-2 rounded-lg hover:from-pink-500 hover:to-red-500 transition-all text-sm flex items-center justify-center space-x-1">
+              <a href="/login" class="w-full bg-gradient-to-r from-red-500 to-pink-500 accent-gradient text-white px-3 py-2 rounded-lg transition-all text-sm flex items-center justify-center space-x-1">
                 <span class="material-icons-round text-base">login</span>
                 <span>Войдите, чтобы заказать</span>
               </a>
@@ -116,9 +116,9 @@
       </div>
     </div>
     <div class="flex justify-center space-x-4 pt-4">
-      <a href="/" class="bg-gradient-to-r from-red-500 to-pink-500 text-white px-6 py-3 rounded-xl hover:from-pink-500 hover:to-red-500 transition">На главную</a>
-      <a href="/catalog" class="bg-gradient-to-r from-red-500 to-pink-500 text-white px-6 py-3 rounded-xl hover:from-pink-500 hover:to-red-500 transition">В каталог</a>
-      <a href="/catalog/<?= urlencode($product['type_alias']) ?>" class="bg-gradient-to-r from-red-500 to-pink-500 text-white px-6 py-3 rounded-xl hover:from-pink-500 hover:to-red-500 transition">В раздел <?= htmlspecialchars($product['product']) ?></a>
+      <a href="/" class="bg-gradient-to-r from-red-500 to-pink-500 accent-gradient text-white px-6 py-3 rounded-xl transition">На главную</a>
+      <a href="/catalog" class="bg-gradient-to-r from-red-500 to-pink-500 accent-gradient text-white px-6 py-3 rounded-xl transition">В каталог</a>
+      <a href="/catalog/<?= urlencode($product['type_alias']) ?>" class="bg-gradient-to-r from-red-500 to-pink-500 accent-gradient text-white px-6 py-3 rounded-xl transition">В раздел <?= htmlspecialchars($product['product']) ?></a>
     </div>
   </article>
 </main>
