@@ -49,12 +49,12 @@ $regularKg  = round($price, 2);
       <a href="/catalog/<?= urlencode($p['type_alias']) ?>/<?= urlencode($p['alias']) ?>">
         <img src="<?= htmlspecialchars($img) ?>"
              alt="<?= htmlspecialchars($p['product'] ?? '') ?>"
-             class="w-full object-cover" style="aspect-ratio:1/1">
+             class="w-full object-cover product-image" style="aspect-ratio:1/1">
       </a>
     <?php else: ?>
-      <div class="w-full bg-pink-50 flex flex-col items-center justify-center" style="aspect-ratio:1/1">
-        <span class="material-icons-round text-4xl text-pink-400 mb-1">image</span>
-        <span class="text-pink-700 text-sm">изображение подгружается</span>
+      <div class="w-full product-image product-image-placeholder flex flex-col items-center justify-center" style="aspect-ratio:1/1">
+        <span class="material-icons-round text-4xl accent-text mb-1">image</span>
+        <span class="text-sm accent-text">изображение подгружается</span>
       </div>
     <?php endif; ?>
 
@@ -66,15 +66,15 @@ $regularKg  = round($price, 2);
     <?php else: ?>
       <!-- Бейджик даты / наличия -->
       <?php if ($showDate && $d <= $today): ?>
-        <span class="absolute top-3 left-3 bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded-full <?= $isStaff ? 'cursor-pointer' : '' ?>" <?= $isStaff ? 'data-edit-date="' . $p['id'] . '"' : '' ?>>
+        <span class="availability-badge availability-badge--instock absolute top-3 left-3 text-xs font-semibold <?= $isStaff ? 'cursor-pointer' : '' ?>" <?= $isStaff ? 'data-edit-date="' . $p['id'] . '"' : '' ?>>
           В наличии
         </span>
       <?php elseif ($showDate): ?>
-        <span class="absolute top-3 left-3 bg-orange-100 text-orange-800 text-xs font-semibold px-2 py-1 rounded-full <?= $isStaff ? 'cursor-pointer' : '' ?>" <?= $isStaff ? 'data-edit-date="' . $p['id'] . '"' : '' ?>>
+        <span class="availability-badge availability-badge--date absolute top-3 left-3 text-xs font-semibold <?= $isStaff ? 'cursor-pointer' : '' ?>" <?= $isStaff ? 'data-edit-date="' . $p['id'] . '"' : '' ?>>
           <?= date('d.m.Y', strtotime($d)) ?>
         </span>
       <?php else: ?>
-        <span class="absolute top-3 left-3 bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded-full <?= $isStaff ? 'cursor-pointer' : '' ?>" <?= $isStaff ? 'data-edit-date="' . $p['id'] . '"' : '' ?>>
+        <span class="availability-badge availability-badge--placeholder absolute top-3 left-3 text-xs font-semibold <?= $isStaff ? 'cursor-pointer' : '' ?>" <?= $isStaff ? 'data-edit-date="' . $p['id'] . '"' : '' ?>>
           Ближайшая возможная дата
         </span>
       <?php endif; ?>
@@ -190,7 +190,7 @@ $regularKg  = round($price, 2);
           </div>
 
           <button type="submit"
-                  class="ml-2 bg-gradient-to-r from-red-500 to-pink-500 text-white px-2 py-2 rounded-lg hover:from-pink-500 hover:to-red-500 transition-all flex items-center text-sm">
+                  class="ml-2 bg-gradient-to-r from-red-500 to-pink-500 accent-gradient text-white px-2 py-2 rounded-lg transition-all flex items-center text-sm">
             <span class="material-icons-round text-base mr-1">shopping_cart</span>
             В корзину
           </button>
@@ -204,7 +204,7 @@ $regularKg  = round($price, 2);
           </button>
         <?php else: ?>
           <a href="/login"
-             class="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white px-3 py-2 rounded-lg hover:from-pink-500 hover:to-red-500 transition-all text-sm flex items-center justify-center space-x-1">
+             class="w-full bg-gradient-to-r from-red-500 to-pink-500 accent-gradient text-white px-3 py-2 rounded-lg transition-all text-sm flex items-center justify-center space-x-1">
             <span class="material-icons-round text-base">login</span>
             <span>Войдите, чтобы заказать</span>
           </a>

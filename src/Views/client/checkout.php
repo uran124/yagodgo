@@ -44,7 +44,7 @@ $slots           = $slots           ?? [];
         <h3 class="text-xl font-semibold text-gray-600 mb-3">Корзина пуста</h3>
         <p class="text-gray-500 mb-6">Добавьте товары, чтобы оформить заказ</p>
         <a href="/catalog"
-           class="inline-flex items-center space-x-3 bg-gradient-to-r from-red-500 to-pink-500 text-white px-8 py-4 rounded-2xl font-semibold hover:shadow-xl hover:scale-105 transition-all">
+           class="inline-flex items-center space-x-3 bg-gradient-to-r from-red-500 to-pink-500 accent-gradient text-white px-8 py-4 rounded-2xl font-semibold hover:shadow-xl hover:scale-105 transition-all">
           <span class="material-icons-round">store</span>
           <span>Перейти в каталог</span>
         </a>
@@ -266,7 +266,7 @@ $slots           = $slots           ?? [];
 
             <!-- Кнопка подтверждения -->
             <button type="submit"
-                    class="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-4 rounded-2xl font-semibold text-lg hover:shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center space-x-3">
+                    class="w-full bg-gradient-to-r from-red-500 to-pink-500 accent-gradient text-white py-4 rounded-2xl font-semibold text-lg hover:shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center space-x-3">
               <span class="material-icons-round">credit_card</span>
               <span>Подтвердить</span>
               <span class="material-icons-round">arrow_forward</span>

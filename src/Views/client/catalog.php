@@ -54,7 +54,7 @@
         </div>
         <h3 class="text-2xl font-bold text-gray-600 mb-3">Каталог пока пуст</h3>
         <p class="text-gray-500 mb-6">Мы готовим для вас самые свежие ягоды и фрукты из Киргизии!</p>
-        <a href="/" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-2xl font-medium hover:shadow-lg transition-all">
+        <a href="/" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-red-500 to-pink-500 accent-gradient text-white rounded-2xl font-medium hover:shadow-lg transition-all">
           <span class="material-icons-round mr-2">home</span>
           На главную
         </a>

@@ -20,7 +20,7 @@
           <?php $img = $p['image_path'] ?: '/assets/placeholder.png'; ?>
           <img src="<?= htmlspecialchars($img) ?>"
                alt="<?= htmlspecialchars($p['product']) ?>"
-               class="w-full object-cover rounded-lg mb-3"
+               class="w-full object-cover rounded-lg mb-3 product-image"
                style="aspect-ratio:1/1">
 
           <div class="flex justify-between items-center mb-2">

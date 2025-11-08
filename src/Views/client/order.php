@@ -11,7 +11,7 @@
 
   <!-- Заголовок -->
   <div class="pt-6 px-4 mb-6">
-    <div class="bg-gradient-to-r from-red-500 to-pink-500 rounded-3xl p-6 text-white shadow-2xl">
+    <div class="bg-gradient-to-r from-red-500 to-pink-500 accent-gradient rounded-3xl p-6 text-white shadow-2xl">
       <div class="flex justify-between items-center">
         <h1 class="text-3xl font-bold mb-0">Заказ №<?= htmlspecialchars($order['id']) ?></h1>
         <?php if ($userName): ?>
@@ -70,7 +70,7 @@
       </div>
       <div class="mt-6 flex justify-end items-center space-x-2">
         <span class="text-lg font-bold text-gray-800">Итого:</span>
-        <span class="text-2xl font-extrabold bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">
+        <span class="text-2xl font-extrabold bg-gradient-to-r from-red-500 to-pink-500 accent-gradient accent-text-gradient bg-clip-text text-transparent">
           <?= number_format($order['total_amount'], 0, '.', ' ') ?> ₽
         </span>
       </div>

@@ -10,7 +10,7 @@
 
   <div class="pt-6 px-4">
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <section class="relative overflow-hidden bg-gradient-to-br from-red-500 via-pink-500 to-rose-400 text-white rounded-3xl shadow-2xl p-8 mb-6 lg:col-span-2">
+      <section class="relative overflow-hidden bg-gradient-to-br from-red-500 via-pink-500 to-rose-400 accent-gradient-via text-white rounded-3xl shadow-2xl p-8 mb-6 lg:col-span-2">
         <!-- Декоративные элементы -->
         <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
         <div class="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-12 -translate-x-12"></div>

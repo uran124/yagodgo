@@ -16,7 +16,7 @@
         <h2 class="text-2xl font-bold text-gray-600 mb-3">Ваша корзина пуста</h2>
         <p class="text-gray-500 mb-6">Свежие ягоды и фрукты из Киргизии ждут вас в каталоге!</p>
         <a href="/catalog"
-           class="inline-flex items-center px-8 py-4 bg-gradient-to-r from-red-500 to-pink-500 text-white font-semibold rounded-2xl hover:shadow-lg hover:shadow-red-500/25 transition-all hover:scale-105 space-x-3">
+           class="inline-flex items-center px-8 py-4 bg-gradient-to-r from-red-500 to-pink-500 accent-gradient text-white font-semibold rounded-2xl hover:shadow-lg hover:shadow-red-500/25 transition-all hover:scale-105 space-x-3">
           <span class="material-icons-round">store</span>
           <span>Смотреть каталог</span>
           <span class="material-icons-round">arrow_forward</span>
@@ -144,7 +144,7 @@
           </a>
           <form id="checkoutForm" action="/checkout" method="get">
             <button type="submit"
-                    class="flex items-center px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-2xl font-semibold hover:shadow-lg hover:shadow-red-500/25 transition-all space-x-1 sm:space-x-2 text-sm sm:text-base">
+                    class="flex items-center px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-red-500 to-pink-500 accent-gradient text-white rounded-2xl font-semibold hover:shadow-lg hover:shadow-red-500/25 transition-all space-x-1 sm:space-x-2 text-sm sm:text-base">
               <span>Оформить</span>
               <span class="material-icons-round">arrow_forward</span>
             </button>

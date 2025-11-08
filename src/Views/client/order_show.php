@@ -27,7 +27,7 @@ $discount = max(0, $rawSum - $order['total_amount'] + $shippingCost);
 
   <!-- Шапка заказа -->
   <div class="pt-6 px-4 mb-6">
-    <section class="relative overflow-hidden bg-gradient-to-br from-red-500 via-pink-500 to-rose-400 text-white rounded-3xl shadow-2xl p-6">
+    <section class="relative overflow-hidden bg-gradient-to-br from-red-500 via-pink-500 to-rose-400 accent-gradient-via text-white rounded-3xl shadow-2xl p-6">
       <!-- Декоративные круги -->
       <div class="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-y-12 translate-x-12"></div>
       <div class="absolute bottom-0 left-0 w-16 h-16 bg-white/10 rounded-full translate-y-8 -translate-x-8"></div>
@@ -156,7 +156,7 @@ $discount = max(0, $rawSum - $order['total_amount'] + $shippingCost);
         <span>Вернуться в заказы</span>
       </a>
       <a href="/catalog"
-         class="flex-1 inline-flex items-center justify-center bg-gradient-to-r from-red-500 to-pink-500 text-white px-6 py-3 rounded-2xl font-medium hover:shadow-lg transition-all space-x-2">
+         class="flex-1 inline-flex items-center justify-center bg-gradient-to-r from-red-500 to-pink-500 accent-gradient text-white px-6 py-3 rounded-2xl font-medium hover:shadow-lg transition-all space-x-2">
         <span class="material-icons-round">store</span>
         <span>Вернуться в каталог</span>
       </a>

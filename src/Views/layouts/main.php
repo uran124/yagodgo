@@ -34,6 +34,9 @@
   if (!empty($pageMeta)) {
       $meta = array_merge($meta, array_filter($pageMeta, static fn($v) => $v !== null && $v !== ''));
   }
+
+  $lightTheme = get_theme_colors('light');
+  $darkTheme  = get_theme_colors('dark');
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -145,14 +148,109 @@
 
   <style>
     :root {
-      --berry-red: #FF6B6B;
-      --berry-pink: #FF8E8E;
+      --berry-red: <?= htmlspecialchars($lightTheme['strong']) ?>;
+      --berry-pink: <?= htmlspecialchars($lightTheme['secondary']) ?>;
+      --accent-primary: <?= htmlspecialchars($lightTheme['primary']) ?>;
+      --accent-secondary: <?= htmlspecialchars($lightTheme['secondary']) ?>;
+      --accent-strong: <?= htmlspecialchars($lightTheme['strong']) ?>;
+      --accent-via: <?= htmlspecialchars($lightTheme['via']) ?>;
+      --accent-soft: <?= htmlspecialchars($lightTheme['soft']) ?>;
+      --accent-contrast: <?= htmlspecialchars($lightTheme['contrast']) ?>;
+      --accent-image: <?= htmlspecialchars($lightTheme['image']) ?>;
+      --accent-image-alt: <?= htmlspecialchars($lightTheme['imageAlt']) ?>;
       --fresh-green: #4ECDC4;
       --leaf-green: #45B7AA;
       --cream: #FFF8F5;
       --soft-gray: #F8FAFC;
       --text-dark: #1A202C;
       --text-gray: #4A5568;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --berry-red: <?= htmlspecialchars($darkTheme['strong']) ?>;
+        --berry-pink: <?= htmlspecialchars($darkTheme['secondary']) ?>;
+        --accent-primary: <?= htmlspecialchars($darkTheme['primary']) ?>;
+        --accent-secondary: <?= htmlspecialchars($darkTheme['secondary']) ?>;
+        --accent-strong: <?= htmlspecialchars($darkTheme['strong']) ?>;
+        --accent-via: <?= htmlspecialchars($darkTheme['via']) ?>;
+        --accent-soft: <?= htmlspecialchars($darkTheme['soft']) ?>;
+        --accent-contrast: <?= htmlspecialchars($darkTheme['contrast']) ?>;
+        --accent-image: <?= htmlspecialchars($darkTheme['image']) ?>;
+        --accent-image-alt: <?= htmlspecialchars($darkTheme['imageAlt']) ?>;
+      }
+    }
+
+    .text-\[\#C86052\] { color: var(--accent-primary) !important; }
+    .hover\:text-\[\#C86052\]:hover { color: var(--accent-secondary) !important; }
+
+    .accent-gradient {
+      --tw-gradient-from: var(--accent-strong) !important;
+      --tw-gradient-via: var(--accent-secondary) !important;
+      --tw-gradient-to: var(--accent-secondary) !important;
+      --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+      background-image: linear-gradient(135deg, var(--accent-strong), var(--accent-secondary));
+    }
+
+    .accent-gradient-via {
+      --tw-gradient-from: var(--accent-strong) !important;
+      --tw-gradient-to: var(--accent-secondary) !important;
+      --tw-gradient-stops: var(--tw-gradient-from), var(--accent-via), var(--tw-gradient-to) !important;
+      background-image: linear-gradient(135deg, var(--accent-strong), var(--accent-via), var(--accent-secondary));
+    }
+
+    .accent-text {
+      color: var(--accent-primary);
+    }
+
+    .accent-text-gradient {
+      background-image: linear-gradient(135deg, var(--accent-strong), var(--accent-secondary));
+    }
+
+    .accent-soft {
+      background-color: var(--accent-soft);
+    }
+
+    .accent-focus:focus-visible {
+      outline: 2px solid var(--accent-primary);
+      outline-offset: 2px;
+    }
+
+    .product-image,
+    .material-image,
+    .material-card-image {
+      background: radial-gradient(circle at 20% 20%, var(--accent-image), var(--accent-image-alt));
+      border: 1px solid rgba(255, 255, 255, 0.32);
+      border-radius: 1.25rem;
+    }
+
+    .product-image-placeholder {
+      background: linear-gradient(135deg, var(--accent-soft), rgba(255, 255, 255, 0.92));
+      color: var(--accent-primary);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: linear-gradient(135deg, #0f172a 0%, #1f2937 100%);
+        color: #e2e8f0;
+      }
+
+      .glass-effect {
+        background: rgba(15, 23, 42, 0.75);
+        border-color: rgba(148, 163, 184, 0.25);
+        color: inherit;
+      }
+
+      .product-image,
+      .material-image,
+      .material-card-image {
+        border-color: rgba(148, 163, 184, 0.35);
+      }
+
+      .product-image-placeholder {
+        background: linear-gradient(135deg, rgba(148, 163, 184, 0.2), var(--accent-image));
+        color: var(--accent-contrast);
+      }
     }
     
     * {
@@ -217,6 +315,68 @@
     .no-scrollbar {
       -ms-overflow-style: none;
       scrollbar-width: none;
+    }
+
+    .availability-badge {
+      --badge-bg: rgba(255, 255, 255, 0.9);
+      --badge-text: #1f2937;
+      --badge-border: rgba(15, 23, 42, 0.08);
+      background: var(--badge-bg);
+      color: var(--badge-text);
+      border: 1px solid var(--badge-border);
+      border-radius: 9999px;
+      padding: 0.35rem 0.75rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+      backdrop-filter: blur(8px);
+    }
+
+    .availability-badge--instock {
+      --badge-bg: rgba(34, 197, 94, 0.14);
+      --badge-text: #166534;
+      --badge-border: rgba(34, 197, 94, 0.32);
+    }
+
+    .availability-badge--date {
+      --badge-bg: rgba(249, 115, 22, 0.16);
+      --badge-text: #9a3412;
+      --badge-border: rgba(249, 115, 22, 0.28);
+    }
+
+    .availability-badge--placeholder {
+      --badge-bg: rgba(59, 130, 246, 0.14);
+      --badge-text: #1d4ed8;
+      --badge-border: rgba(59, 130, 246, 0.26);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .availability-badge {
+        --badge-bg: rgba(15, 23, 42, 0.7);
+        --badge-text: #f8fafc;
+        --badge-border: rgba(148, 163, 184, 0.35);
+        box-shadow: 0 10px 26px rgba(2, 6, 23, 0.45);
+      }
+
+      .availability-badge--instock {
+        --badge-bg: color-mix(in srgb, #22c55e 32%, transparent);
+        --badge-text: #bbf7d0;
+        --badge-border: rgba(74, 222, 128, 0.45);
+      }
+
+      .availability-badge--date {
+        --badge-bg: color-mix(in srgb, #f97316 32%, transparent);
+        --badge-text: #fde68a;
+        --badge-border: rgba(251, 191, 36, 0.42);
+      }
+
+      .availability-badge--placeholder {
+        --badge-bg: color-mix(in srgb, #38bdf8 30%, transparent);
+        --badge-text: #e0f2fe;
+        --badge-border: rgba(125, 211, 252, 0.4);
+      }
     }
 
     .embla {

@@ -4,6 +4,10 @@ $base = $role === 'partner' ? '/partner' : '/manager';
 $titleRole = $role === 'partner' ? 'Partner' : 'Manager';
 $labelRole = $role === 'partner' ? 'Партнёр' : 'Менеджер';
 ?>
+<?php
+  $lightTheme = get_theme_colors('light');
+  $darkTheme  = get_theme_colors('dark');
+?>
 <!DOCTYPE html>
 <html lang="ru" data-theme="dark">
 <head>
@@ -13,6 +17,32 @@ $labelRole = $role === 'partner' ? 'Партнёр' : 'Менеджер';
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
   <style>
+    :root {
+      --accent-primary: <?= htmlspecialchars($lightTheme['primary']) ?>;
+      --accent-hover: <?= htmlspecialchars($lightTheme['secondary']) ?>;
+      --accent-strong: <?= htmlspecialchars($lightTheme['strong']) ?>;
+      --accent-soft: <?= htmlspecialchars($lightTheme['soft']) ?>;
+      --accent-contrast: <?= htmlspecialchars($lightTheme['contrast']) ?>;
+    }
+
+    [data-theme='dark'] {
+      --accent-primary: <?= htmlspecialchars($darkTheme['primary']) ?>;
+      --accent-hover: <?= htmlspecialchars($darkTheme['secondary']) ?>;
+      --accent-strong: <?= htmlspecialchars($darkTheme['strong']) ?>;
+      --accent-soft: <?= htmlspecialchars($darkTheme['soft']) ?>;
+      --accent-contrast: <?= htmlspecialchars($darkTheme['contrast']) ?>;
+    }
+
+    .bg-\[\#C86052\] { background-color: var(--accent-primary) !important; color: var(--accent-contrast); }
+    .hover\:bg-\[\#C86052\]:hover { background-color: var(--accent-hover) !important; color: var(--accent-contrast); }
+    .text-\[\#C86052\] { color: var(--accent-primary) !important; }
+    .hover\:text-\[\#C86052\]:hover { color: var(--accent-hover) !important; }
+    .focus\:ring-\[\#C86052\]:focus { box-shadow: 0 0 0 2px var(--accent-primary) !important; outline: none; }
+    .bg-\[\#C86052\]\/20 { background-color: var(--accent-soft) !important; color: var(--accent-primary) !important; }
+    .accent-gradient { background: linear-gradient(135deg, var(--accent-strong), var(--accent-hover)); color: var(--accent-contrast); }
+    .accent-focus:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
+    .accent-text { color: var(--accent-primary); }
+
     /* Основная темная тема */
     [data-theme='dark'] body {
       background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
@@ -70,9 +100,10 @@ $labelRole = $role === 'partner' ? 'Партнёр' : 'Менеджер';
     }
 
     /* Неоновые акценты для активных элементов */
-    [data-theme='dark'] .text-\[\#C86052\] {
-      color: #ff6b5a !important;
-      text-shadow: 0 0 10px rgba(255, 107, 90, 0.3);
+    [data-theme='dark'] .text-\[\#C86052\],
+    [data-theme='dark'] .accent-text {
+      color: var(--accent-primary) !important;
+      text-shadow: 0 0 10px color-mix(in srgb, var(--accent-primary) 40%, transparent);
     }
 
     /* Кнопки и ссылки */
@@ -115,7 +146,7 @@ $labelRole = $role === 'partner' ? 'Партнёр' : 'Менеджер';
 
     /* Форматирование для input элементов */
     [data-theme='dark'] input[type="checkbox"] {
-      accent-color: #C86052;
+      accent-color: var(--accent-primary);
       transform: scale(1.2);
     }
 
@@ -207,14 +238,16 @@ $labelRole = $role === 'partner' ? 'Партнёр' : 'Менеджер';
       background: #f1f5f9 !important;
     }
 
-    [data-theme='dark'] .border-\[\#C86052\] {
-      border-color: #ff6b5a !important;
-      color: #ff6b5a !important;
+    [data-theme='dark'] .border-\[\#C86052\],
+    [data-theme='dark'] .accent-border {
+      border-color: color-mix(in srgb, var(--accent-primary) 65%, transparent) !important;
+      color: var(--accent-primary) !important;
     }
 
-    [data-theme='dark'] .hover\:bg-\[\#C86052\]:hover {
-      background: linear-gradient(135deg, #ff6b5a, #e55a4a) !important;
-      box-shadow: 0 4px 12px rgba(255, 107, 90, 0.4);
+    [data-theme='dark'] .hover\:bg-\[\#C86052\]:hover,
+    [data-theme='dark'] .accent-hover:hover {
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-hover)) !important;
+      box-shadow: 0 4px 12px color-mix(in srgb, var(--accent-primary) 45%, transparent);
     }
 
     [data-theme='dark'] select {
