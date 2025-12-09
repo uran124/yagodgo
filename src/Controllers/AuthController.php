@@ -296,17 +296,31 @@ public function register(): void
     public function sendResetPinCode(): void
     {
         $phone = $this->normalizePhone($_POST['phone'] ?? '');
+        header('Content-Type: application/json; charset=UTF-8');
         if (!preg_match('/^7\d{10}$/', $phone)) {
-            header('Content-Type: application/json; charset=UTF-8');
-            echo json_encode(['error' => 'Неверный номер']);
+            echo json_encode(['success' => false, 'error' => 'Неверный номер']);
             return;
         }
-        $code = random_int(1000, 9999);
+
+        $stmt = $this->pdo->prepare("SELECT chat_id FROM users WHERE phone = ?");
+        $stmt->execute([$phone]);
+        $chat = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$chat) {
+            echo json_encode(['success' => false, 'error' => 'Пользователь с таким номером не найден']);
+            return;
+        }
+        if (empty($chat['chat_id'])) {
+            echo json_encode(['success' => false, 'error' => 'Телеграм-бот не подключен для этого номера']);
+            return;
+        }
+
+        $code = random_int(10000, 99999);
         $_SESSION['reset_phone'] = $phone;
         $_SESSION['reset_code'] = $code;
-        $sms = new SmsRu($this->smsConfig['api_id'] ?? '');
-        $ok = $sms->send($phone, "Код сброса PIN: {$code}");
-        header('Content-Type: application/json; charset=UTF-8');
+
+        $tg = new TelegramSender($this->telegramConfig['bot_token'] ?? '');
+        $ok = $tg->send($chat['chat_id'], "Одноразовый код для сброса PIN: {$code}");
+
         echo json_encode(['success' => $ok]);
     }
 
@@ -315,7 +329,7 @@ public function register(): void
     {
         $phone = $this->normalizePhone($_POST['phone'] ?? '');
         $code  = trim($_POST['code'] ?? '');
-        $valid = isset($_SESSION['reset_phone'], $_SESSION['reset_code']) &&
+        $valid = preg_match('/^\d{5}$/', $code) && isset($_SESSION['reset_phone'], $_SESSION['reset_code']) &&
             $_SESSION['reset_phone'] === $phone && $_SESSION['reset_code'] == $code;
         header('Content-Type: application/json; charset=UTF-8');
         echo json_encode(['success' => $valid]);
@@ -329,7 +343,7 @@ public function register(): void
         $pin   = trim($_POST['pin'] ?? '');
         $validCode = isset($_SESSION['reset_phone'], $_SESSION['reset_code']) &&
             $_SESSION['reset_phone'] === $phone && $_SESSION['reset_code'] == $code;
-        if (!$validCode || !preg_match('/^\d{4}$/', $pin)) {
+        if (!$validCode || !preg_match('/^\d{5}$/', $code) || !preg_match('/^\d{4}$/', $pin)) {
             header('Location: /reset-pin?error=' . urlencode('Неверные данные'));
             exit;
         }
