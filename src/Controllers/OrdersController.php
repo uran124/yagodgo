@@ -4,6 +4,8 @@ namespace App\Controllers;
 use PDO;
 use App\Helpers\Auth;
 use App\Helpers\ReferralHelper;
+use App\Helpers\PhoneNormalizer;
+use App\Models\OrdersRepository;
 
 class OrdersController
 {
@@ -25,23 +27,6 @@ class OrdersController
             'partner' => '/partner/orders',
             default   => '/admin/orders',
         };
-    }
-
-    /**
-     * Normalize phone number to 7XXXXXXXXXX format
-     */
-    private function normalizePhone(string $raw): string
-    {
-        $digits = preg_replace('/\D+/', '', $raw);
-        if (strlen($digits) === 10) {
-            return '7' . $digits;
-        }
-        if (strlen($digits) === 11) {
-            $first = $digits[0];
-            $rest  = substr($digits, 1);
-            return ($first === '8' ? '7' : $first) . $rest;
-        }
-        return $digits;
     }
 
     /**
@@ -72,104 +57,20 @@ class OrdersController
     public function index(): void
     {
         $managerId = isset($_GET['manager']) ? (int)$_GET['manager'] : 0;
+        $page = max(1, (int)($_GET['page'] ?? 1));
+        $perPage = 25;
+        $offset = ($page - 1) * $perPage;
 
-        $sql = "SELECT o.id, o.status, o.total_amount, o.delivery_date,\n" .
-               "       o.points_used, o.coupon_code, o.discount_applied,\n" .
-               "       o.slot_id, d.time_from AS slot_from, d.time_to AS slot_to,\n" .
-               "       u.name AS client_name, u.phone, a.street AS address,\n" .
-               "       o.created_at, o.comment\n" .
-               "FROM orders o\n" .
-               "JOIN users u ON u.id = o.user_id\n" .
-               "LEFT JOIN addresses a ON a.id = o.address_id\n" .
-               "LEFT JOIN delivery_slots d ON d.id = o.slot_id";
-        $params = [];
-        if ($managerId > 0) {
-            $sql .= " WHERE u.referred_by = ?";
-            $params[] = $managerId;
-        }
-        $sql .= " ORDER BY o.delivery_date DESC, d.time_from DESC";
-
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($params);
-        $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        if (!$orders) {
-            $orders = [];
+        $repo = new OrdersRepository($this->pdo);
+        $totalOrders = $repo->countOrdersForIndex($managerId);
+        $totalPages = max(1, (int)ceil($totalOrders / $perPage));
+        if ($page > $totalPages) {
+            $page = $totalPages;
+            $offset = ($page - 1) * $perPage;
         }
 
-        // Load items for all orders (for manager view)
-        $orderIds = array_column($orders, 'id');
-        $itemsByOrder = [];
-        if ($orderIds) {
-            $placeholders = implode(',', array_fill(0, count($orderIds), '?'));
-            $iStmt = $this->pdo->prepare(
-                "SELECT oi.order_id, oi.quantity, oi.boxes, oi.unit_price,\n" .
-                "       t.name AS product_name, p.variety, p.box_size, p.box_unit\n" .
-                "FROM order_items oi\n" .
-                "JOIN products p ON p.id = oi.product_id\n" .
-                "JOIN product_types t ON t.id = p.product_type_id\n" .
-                "WHERE oi.order_id IN ($placeholders)\n" .
-                "ORDER BY oi.order_id"
-            );
-            $iStmt->execute($orderIds);
-            while ($row = $iStmt->fetch(PDO::FETCH_ASSOC)) {
-                $itemsByOrder[$row['order_id']][] = $row;
-            }
-        }
-
-        // Prefetch coupon info
-        $codes = array_values(array_filter(
-            array_column($orders, 'coupon_code'),
-            fn($c) => $c !== null && $c !== ''
-        ));
-        $couponInfo = [];
-        if ($codes) {
-            $placeholders = implode(',', array_fill(0, count($codes), '?'));
-            $cStmt = $this->pdo->prepare(
-                "SELECT code, type, discount, points FROM coupons WHERE code IN ($placeholders)"
-            );
-            $cStmt->execute($codes);
-            foreach ($cStmt->fetchAll(PDO::FETCH_ASSOC) as $c) {
-                $couponInfo[$c['code']] = $c;
-            }
-        }
-
-        $refStmt = $this->pdo->prepare("SELECT id FROM users WHERE referral_code = ?");
-
-        foreach ($orders as &$o) {
-            $o['items'] = $itemsByOrder[$o['id']] ?? [];
-
-            $rawTotal = 0;
-            foreach ($o['items'] as $it) {
-                $rawTotal += $it['quantity'] * $it['unit_price'];
-            }
-
-
-
-            $coupon = null;
-            if (!empty($o['coupon_code'])) {
-                $coupon = $couponInfo[$o['coupon_code']] ?? null;
-                if (!$coupon) {
-                    $refStmt->execute([$o['coupon_code']]);
-                    if ($refStmt->fetch()) {
-                        $coupon = [
-                            'code' => $o['coupon_code'],
-                            'type' => 'discount',
-                            'discount' => 10,
-                        ];
-                    }
-                }
-            }
-            $o['coupon'] = $coupon;
-
-            $pointsFromBalance = (int)($o['points_used'] ?? 0);
-            if ($coupon && $coupon['type'] === 'points') {
-                $pointsFromBalance = max(0, $pointsFromBalance - (int)$coupon['points']);
-            }
-            $o['points_from_balance'] = $pointsFromBalance;
-
-            $o['coupon_discount'] = (int)$o['discount_applied'];
-        }
-        unset($o);
+        $orders = $repo->fetchOrdersForIndex($managerId, $perPage, $offset);
+        $orders = $repo->hydrateOrders($orders);
 
         $managersStmt = $this->pdo->query("SELECT id, name FROM users WHERE role = 'manager' ORDER BY name");
         $managers = $managersStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -179,6 +80,10 @@ class OrdersController
             'orders'          => $orders,
             'managers'       => $managers,
             'selectedManager' => $managerId,
+            'page'            => $page,
+            'totalPages'      => $totalPages,
+            'totalOrders'     => $totalOrders,
+            'perPage'         => $perPage,
         ]);
     }
 
@@ -318,7 +223,7 @@ class OrdersController
             if ($name === '') {
                 $name = 'Клиент';
             }
-            $phone = $this->normalizePhone($_POST['new_phone'] ?? '');
+            $phone = PhoneNormalizer::normalize($_POST['new_phone'] ?? '');
             $address = trim($_POST['new_address'] ?? '');
             $isPickup = $address === '';
             if ($isPickup) {

@@ -293,6 +293,7 @@ $labelRole = 'Селлер';
       </button>
     </div>
     <form action="/logout" method="post">
+      <?= csrf_field() ?>
       <button type="submit" class="flex items-center text-red-500 hover:underline">
         <span class="material-icons-round mr-1">logout</span> Выход
       </button>

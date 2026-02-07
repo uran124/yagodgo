@@ -376,6 +376,7 @@
       </nav>
       <div class="mt-auto p-4 border-t border-gray-200 hidden md:flex sidebar-footer">
         <form action="/logout" method="post" class="w-full">
+            <?= csrf_field() ?>
           <button type="submit" class="w-full flex items-center justify-center gap-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 py-2">
             <span class="material-icons-round text-base">logout</span>
             <span class="menu-text">Выход</span>
@@ -397,6 +398,7 @@
           <div class="font-bold text-xl text-[#C86052] md:hidden">BerryGo Admin</div>
         </div>
         <form action="/logout" method="post" class="md:hidden">
+            <?= csrf_field() ?>
           <button type="submit" class="flex items-center text-red-400 hover:text-red-300">
             <span class="material-icons-round mr-1">logout</span> Выход
           </button>

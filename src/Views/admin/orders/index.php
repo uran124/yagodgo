@@ -57,14 +57,7 @@
         $deliveryAttr = $o['delivery_date'] ? date('Y-m-d', strtotime($o['delivery_date'])) : '';
         $slotAttr = $o['slot_id'] ?? '';
       ?>
-      <?php
-        $wa = preg_replace('/\D+/', '', $o['phone']);
-        if (strlen($wa) === 10) {
-            $wa = '7' . $wa;
-        } elseif (strlen($wa) === 11 && $wa[0] === '8') {
-            $wa = '7' . substr($wa, 1);
-        }
-      ?>
+      <?php $wa = normalize_phone($o['phone']); ?>
       <div class="order-card block bg-white p-2 sm:p-4 rounded shadow hover:bg-gray-50 <?= $bg ?>" data-status="<?= $o['status'] ?>" data-date="<?= $dateAttr ?>" data-created="<?= $createdAttr ?>" data-id="<?= $o['id'] ?>" data-delivery="<?= $deliveryAttr ?>" data-slot="<?= $slotAttr ?>">
         <div class="flex justify-between items-center">
           <a href="<?= $base ?>/orders/<?= $o['id'] ?>" class="flex flex-col font-bold<?php if($isStaff): ?> text-white decoration-white<?php endif; ?>">
@@ -110,6 +103,26 @@
       </div>
     <?php endforeach; ?>
 </div>
+
+<?php if (($totalPages ?? 1) > 1): ?>
+  <?php
+    $page = $page ?? 1;
+    $totalPages = $totalPages ?? 1;
+    $managerParam = !empty($selectedManager) ? (int)$selectedManager : null;
+    $queryBase = $managerParam ? ['manager' => $managerParam] : [];
+  ?>
+  <div class="mt-4 flex flex-wrap items-center gap-2">
+    <?php
+      $prevPage = max(1, $page - 1);
+      $nextPage = min($totalPages, $page + 1);
+      $prevQuery = http_build_query(array_merge($queryBase, ['page' => $prevPage]));
+      $nextQuery = http_build_query(array_merge($queryBase, ['page' => $nextPage]));
+    ?>
+    <a class="px-3 py-1 rounded border text-sm <?= $page <= 1 ? 'opacity-50 pointer-events-none' : '' ?>" href="?<?= $prevQuery ?>">Назад</a>
+    <span class="text-sm text-gray-600">Стр. <?= $page ?> из <?= $totalPages ?></span>
+    <a class="px-3 py-1 rounded border text-sm <?= $page >= $totalPages ? 'opacity-50 pointer-events-none' : '' ?>" href="?<?= $nextQuery ?>">Вперёд</a>
+  </div>
+<?php endif; ?>
 
 <script>
   document.addEventListener('DOMContentLoaded', function () {

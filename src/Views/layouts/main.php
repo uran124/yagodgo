@@ -510,6 +510,7 @@
       </button>
 
       <form action="/logout" method="post">
+        <?= csrf_field() ?>
         <button type="submit"
                 class="material-icons-round text-2xl text-gray-600 hover:text-red-500 transition-colors p-2 hover:bg-red-50 rounded-xl"
                 title="Выйти">

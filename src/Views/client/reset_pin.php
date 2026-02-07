@@ -20,6 +20,7 @@
     <?php endif; ?>
     <div class="bg-white rounded-3xl shadow-2xl p-8 backdrop-blur-sm">
       <form id="resetForm" action="/reset-pin" method="post" class="space-y-6">
+        <?= csrf_field() ?>
         <div class="space-y-3">
           <label class="flex items-center text-sm font-semibold text-gray-700">
             <span class="material-icons-round mr-2 text-red-500">phone</span>
@@ -85,10 +86,11 @@ sendBtn.addEventListener('click', () => {
   if (phone.length !== 10) return alert('Введите номер телефона полностью');
   sendBtn.disabled = true;
   sendHint.textContent = 'Отправляем код через Telegram…';
+  const csrfToken = document.querySelector('input[name="csrf_token"]').value;
   fetch('/reset-pin/send-code', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: 'phone=' + phone
+    body: 'phone=' + phone + '&csrf_token=' + encodeURIComponent(csrfToken)
   })
     .then(r => r.json())
     .then(d => {
@@ -114,10 +116,11 @@ function verifyResetCode() {
   const code = Array.from(codeInputs).map(i => i.value).join('');
   if (code.length !== 5) return;
   const phone = phoneInput.value.replace(/\D/g, '');
+  const csrfToken = document.querySelector('input[name="csrf_token"]').value;
   fetch('/api/verify-reset-code', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: 'phone=' + phone + '&code=' + code
+    body: 'phone=' + phone + '&code=' + code + '&csrf_token=' + encodeURIComponent(csrfToken)
   })
     .then(r => r.json())
     .then(d => {

@@ -37,6 +37,7 @@
     <!-- Форма регистрации -->
     <div class="bg-white rounded-3xl shadow-2xl p-4 sm:p-6 md:p-8 backdrop-blur-sm">
       <form id="registerForm" action="/register" method="post" class="space-y-3 sm:space-y-4">
+        <?= csrf_field() ?>
 
         <!-- Блок проверки телефона -->
         <div id="phoneBlock" class="space-y-2">
@@ -228,7 +229,8 @@ sendRegBtn.addEventListener('click', () => sendCode('sms'));
 function sendCode(method) {
   const phone = phoneInput.value.replace(/\D/g, '');
   if (phone.length !== 10) { alert('Введите номер'); return; }
-  let payload = 'phone=' + phone + '&method=' + method;
+  const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+  let payload = 'phone=' + phone + '&method=' + method + '&csrf_token=' + encodeURIComponent(csrfToken);
   fetch('/api/send-reg-code', {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: payload})
     .then(r => r.json())
     .then(d => {
@@ -259,7 +261,8 @@ function verifyRegCode() {
   const code = Array.from(regCodeInputs).map(i => i.value).join('');
   if (code.length !== 4) return;
   const phone = phoneInput.value.replace(/\D/g, '');
-  fetch('/api/verify-reg-code', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'phone='+phone+'&code='+code})
+  const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+  fetch('/api/verify-reg-code', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'phone='+phone+'&code='+code+'&csrf_token='+encodeURIComponent(csrfToken)})
     .then(r => r.json()).then(d => {
       if (d.success) {
         extraFields.disabled = false;
