@@ -31,6 +31,7 @@
     <!-- Форма входа -->
     <div class="bg-white rounded-3xl shadow-2xl p-8 backdrop-blur-sm">
       <form id="loginForm" action="/login" method="post" class="space-y-6">
+        <?= csrf_field() ?>
 
         <!-- Поле телефона -->
         <div class="space-y-2">

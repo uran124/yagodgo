@@ -5,6 +5,7 @@ namespace App\Controllers;
 use PDO;
 use App\Helpers\Auth;
 use App\Helpers\ReferralHelper;
+use App\Helpers\PhoneNormalizer;
 
 class UsersController
 {
@@ -28,22 +29,6 @@ class UsersController
         };
     }
 
-    /**
-     * Нормализует телефон к формату 7XXXXXXXXXX
-     */
-    private function normalizePhone(string $raw): string
-    {
-        $digits = preg_replace('/\D+/', '', $raw);
-        if (strlen($digits) === 10) {
-            return '7' . $digits;
-        }
-        if (strlen($digits) === 11) {
-            $first = $digits[0];
-            $rest  = substr($digits, 1);
-            return ($first === '8' ? '7' : $first) . $rest;
-        }
-        return $digits;
-    }
 
     /**
      * Просмотр профиля (клиент)
@@ -767,7 +752,7 @@ class UsersController
             if ($phoneSourceRaw === '' && !empty($currentUser['phone'])) {
                 $phoneSourceRaw = (string)$currentUser['phone'];
             }
-            $phone = $this->normalizePhone($phoneSourceRaw);
+            $phone = PhoneNormalizer::normalize($phoneSourceRaw);
             if (!preg_match('/^7\d{10}$/', $phone)) {
                 $errorRedirect('Неверный телефон');
             }
@@ -813,7 +798,7 @@ class UsersController
             $invite   = trim($_POST['invite'] ?? '');
 
             $name  = trim($nameRaw);
-            $phone = $this->normalizePhone($phoneRaw);
+            $phone = PhoneNormalizer::normalize($phoneRaw);
             $pin   = trim($pinRaw);
 
             if (

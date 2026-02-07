@@ -2,6 +2,7 @@
 namespace App\Controllers;
 
 use PDO;
+use App\Helpers\PhoneNormalizer;
 
 class ClientController
 {
@@ -23,22 +24,6 @@ class ClientController
         $_SESSION['cart_total'] = (float)$stmt->fetchColumn();
     }
 
-    /**
-     * Нормализует телефон к формату 7XXXXXXXXXX
-     */
-    private function normalizePhone(string $raw): string
-    {
-        $digits = preg_replace('/\D+/', '', $raw);
-        if (strlen($digits) === 10) {
-            return '7' . $digits;
-        }
-        if (strlen($digits) === 11) {
-            $first = $digits[0];
-            $rest  = substr($digits, 1);
-            return ($first === '8' ? '7' : $first) . $rest;
-        }
-        return $digits;
-    }
 
     /** Главная страница */
     public function home(): void
@@ -750,7 +735,7 @@ public function cart(): void
     $defaultAddress  = $postedAddresses['default'] ?? '';
     $newStreet       = trim($_POST['new_address'] ?? '');
     $recipientName   = trim($_POST['recipient_name'] ?? ($_SESSION['name'] ?? ''));
-    $recipientPhone  = $this->normalizePhone($_POST['recipient_phone'] ?? '');
+    $recipientPhone  = PhoneNormalizer::normalize($_POST['recipient_phone'] ?? '');
 
     $addressIds   = [];
     foreach ($itemsByDate as $dateKey => $_) {

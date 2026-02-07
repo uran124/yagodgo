@@ -31,6 +31,53 @@ if (!function_exists('format_time_range')) {
     }
 }
 
+if (!function_exists('normalize_phone')) {
+    /**
+     * Normalize phone number to 7XXXXXXXXXX format.
+     */
+    function normalize_phone(string $raw): string
+    {
+        return \App\Helpers\PhoneNormalizer::normalize($raw);
+    }
+}
+
+if (!function_exists('csrf_token')) {
+    /**
+     * Get or generate CSRF token for the current session.
+     */
+    function csrf_token(): string
+    {
+        if (empty($_SESSION['csrf_token']) || !is_string($_SESSION['csrf_token'])) {
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        }
+        return $_SESSION['csrf_token'];
+    }
+}
+
+if (!function_exists('csrf_field')) {
+    /**
+     * Generate hidden CSRF field for HTML forms.
+     */
+    function csrf_field(): string
+    {
+        $token = htmlspecialchars(csrf_token(), ENT_QUOTES);
+        return '<input type="hidden" name="csrf_token" value="' . $token . '">';
+    }
+}
+
+if (!function_exists('verify_csrf_token')) {
+    /**
+     * Verify a CSRF token from a request.
+     */
+    function verify_csrf_token(?string $token): bool
+    {
+        if (!is_string($token) || empty($_SESSION['csrf_token'])) {
+            return false;
+        }
+        return hash_equals($_SESSION['csrf_token'], $token);
+    }
+}
+
 if (!function_exists('get_setting')) {
     /**
      * Retrieve a setting value from the database with simple in-request caching.
@@ -227,4 +274,3 @@ if (!function_exists('get_theme_colors')) {
         return $palette[$choice][$mode] + ['key' => $choice, 'label' => $palette[$choice]['label']];
     }
 }
-

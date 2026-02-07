@@ -6,6 +6,7 @@ use App\Helpers\ReferralHelper;
 use App\Helpers\SmsRu;
 use App\Helpers\TelegramSender;
 use App\Helpers\MailSender;
+use App\Helpers\PhoneNormalizer;
 
 class AuthController
 {
@@ -22,25 +23,52 @@ class AuthController
         $this->emailConfig = $emailConfig;
     }
 
-    /**
-     * Приводит любой ввод телефона к формату "7XXXXXXXXXX"
-     */
-    private function normalizePhone(string $raw): string
+    private function validateCsrfOrFail(): bool
     {
-        // Оставляем только цифры
-        $digits = preg_replace('/\D+/', '', $raw);
-        // Если ввели 10 цифр — добавляем "7" спереди
-        if (strlen($digits) === 10) {
-            return '7' . $digits;
+        if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
+            http_response_code(419);
+            echo json_encode(['error' => 'Недействительный токен безопасности']);
+            return false;
         }
-        // Если 11 цифр и первая — 8 или 7
-        if (strlen($digits) === 11) {
-            $first = $digits[0];
-            $rest  = substr($digits, 1);
-            return ($first === '8' ? '7' : $first) . $rest;
+        return true;
+    }
+
+    private function isRateLimited(string $key, int $maxAttempts, int $windowSeconds, int $cooldownSeconds): bool
+    {
+        $now = time();
+        $rateLimits = $_SESSION['rate_limits'] ?? [];
+        $data = $rateLimits[$key] ?? [
+            'attempts' => 0,
+            'window_start' => $now,
+            'blocked_until' => 0,
+        ];
+
+        if ($data['blocked_until'] > $now) {
+            $rateLimits[$key] = $data;
+            $_SESSION['rate_limits'] = $rateLimits;
+            return true;
         }
-        // Иначе возвращаем как есть (но без плюсов и лишнего)
-        return $digits;
+
+        if ($now - $data['window_start'] > $windowSeconds) {
+            $data['attempts'] = 0;
+            $data['window_start'] = $now;
+        }
+
+        $data['attempts']++;
+        if ($data['attempts'] > $maxAttempts) {
+            $data['blocked_until'] = $now + $cooldownSeconds;
+        }
+
+        $rateLimits[$key] = $data;
+        $_SESSION['rate_limits'] = $rateLimits;
+
+        return $data['blocked_until'] > $now;
+    }
+
+    private function buildRateLimitKey(string $prefix, string $phone): string
+    {
+        $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        return $prefix . ':' . $ip . ':' . $phone;
     }
     
     /**
@@ -65,7 +93,12 @@ public function register(): void
     $inputInvite = trim($_POST['invite'] ?? '');
 
     $name  = trim($nameRaw);
-    $phone = $this->normalizePhone($phoneRaw);
+    if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
+        header('Location: /register?error=' . urlencode('Ошибка безопасности. Обновите страницу и попробуйте снова.'));
+        exit;
+    }
+
+    $phone = PhoneNormalizer::normalize($phoneRaw);
     $pin   = trim($pinRaw);
 
     if (empty($_SESSION['reg_verified']) || $_SESSION['reg_phone'] !== $phone) {
@@ -172,8 +205,19 @@ public function register(): void
         $phoneRaw = $_POST['phone'] ?? '';
         $pinRaw   = $_POST['pin'] ?? '';
 
-        $phone = $this->normalizePhone($phoneRaw);
+        $phone = PhoneNormalizer::normalize($phoneRaw);
         $pin   = trim($pinRaw);
+
+        $limitKey = $this->buildRateLimitKey('login', $phone);
+        if ($this->isRateLimited($limitKey, 5, 300, 600)) {
+            header('Location: /login?error=' . urlencode('Слишком много попыток. Попробуйте позже.'));
+            exit;
+        }
+
+        if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
+            header('Location: /login?error=' . urlencode('Ошибка безопасности. Обновите страницу и попробуйте снова.'));
+            exit;
+        }
 
         // Валидация формата перед запросом
         if (!preg_match('/^7\d{10}$/', $phone) || !preg_match('/^\d{4}$/', $pin)) {
@@ -196,7 +240,8 @@ public function register(): void
             $_SESSION['rub_balance'] = (int)$user['rub_balance'];
             $_SESSION['points_balance'] = (int)$user['points_balance'];
             $_SESSION['referral_code']  = $user['referral_code'];
-            
+            unset($_SESSION['rate_limits'][$limitKey]);
+
             header('Location: /');
             exit;
         } else {
@@ -208,10 +253,20 @@ public function register(): void
     // Отправка кода подтверждения при регистрации
     public function sendRegistrationCode(): void
     {
-        $phone = $this->normalizePhone($_POST['phone'] ?? '');
+        $phone = PhoneNormalizer::normalize($_POST['phone'] ?? '');
         $method = $_POST['method'] ?? 'sms';
         $email  = trim($_POST['email'] ?? '');
         header('Content-Type: application/json; charset=UTF-8');
+
+        if (!$this->validateCsrfOrFail()) {
+            return;
+        }
+
+        $limitKey = $this->buildRateLimitKey('reg-code', $phone);
+        if ($this->isRateLimited($limitKey, 3, 300, 600)) {
+            echo json_encode(['error' => 'Слишком много попыток. Попробуйте позже.', 'rate_limited' => true]);
+            return;
+        }
 
         if (!preg_match('/^7\d{10}$/', $phone)) {
             echo json_encode(['error' => 'Неверный номер']);
@@ -273,14 +328,18 @@ public function register(): void
     // Проверка кода для регистрации
     public function verifyRegistrationCode(): void
     {
-        $phone = $this->normalizePhone($_POST['phone'] ?? '');
+        header('Content-Type: application/json; charset=UTF-8');
+        if (!$this->validateCsrfOrFail()) {
+            return;
+        }
+
+        $phone = PhoneNormalizer::normalize($_POST['phone'] ?? '');
         $code  = trim($_POST['code'] ?? '');
         $valid = isset($_SESSION['reg_phone'], $_SESSION['reg_code']) &&
             $_SESSION['reg_phone'] === $phone && $_SESSION['reg_code'] == $code;
         if ($valid) {
             $_SESSION['reg_verified'] = true;
         }
-        header('Content-Type: application/json; charset=UTF-8');
         echo json_encode(['success' => $valid]);
     }
 
@@ -295,8 +354,19 @@ public function register(): void
     // Отправка кода для смены PIN
     public function sendResetPinCode(): void
     {
-        $phone = $this->normalizePhone($_POST['phone'] ?? '');
+        $phone = PhoneNormalizer::normalize($_POST['phone'] ?? '');
         header('Content-Type: application/json; charset=UTF-8');
+
+        if (!$this->validateCsrfOrFail()) {
+            return;
+        }
+
+        $limitKey = $this->buildRateLimitKey('reset-code', $phone);
+        if ($this->isRateLimited($limitKey, 3, 300, 600)) {
+            echo json_encode(['success' => false, 'error' => 'Слишком много попыток. Попробуйте позже.']);
+            return;
+        }
+
         if (!preg_match('/^7\d{10}$/', $phone)) {
             echo json_encode(['success' => false, 'error' => 'Неверный номер']);
             return;
@@ -327,18 +397,27 @@ public function register(): void
     // Проверка кода для восстановления PIN
     public function verifyResetPinCode(): void
     {
-        $phone = $this->normalizePhone($_POST['phone'] ?? '');
+        header('Content-Type: application/json; charset=UTF-8');
+        if (!$this->validateCsrfOrFail()) {
+            return;
+        }
+
+        $phone = PhoneNormalizer::normalize($_POST['phone'] ?? '');
         $code  = trim($_POST['code'] ?? '');
         $valid = preg_match('/^\d{5}$/', $code) && isset($_SESSION['reset_phone'], $_SESSION['reset_code']) &&
             $_SESSION['reset_phone'] === $phone && $_SESSION['reset_code'] == $code;
-        header('Content-Type: application/json; charset=UTF-8');
         echo json_encode(['success' => $valid]);
     }
 
     // Смена PIN после подтверждения
     public function resetPin(): void
     {
-        $phone = $this->normalizePhone($_POST['phone'] ?? '');
+        if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
+            header('Location: /reset-pin?error=' . urlencode('Ошибка безопасности. Обновите страницу и попробуйте снова.'));
+            exit;
+        }
+
+        $phone = PhoneNormalizer::normalize($_POST['phone'] ?? '');
         $code  = trim($_POST['code'] ?? '');
         $pin   = trim($_POST['pin'] ?? '');
         $validCode = isset($_SESSION['reset_phone'], $_SESSION['reset_code']) &&
@@ -360,6 +439,10 @@ public function register(): void
      */
     public function logout(): void
     {
+        if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
+            header('Location: /login?error=' . urlencode('Ошибка безопасности. Обновите страницу и попробуйте снова.'));
+            exit;
+        }
         session_destroy();
         header('Location: /login');
         exit;
