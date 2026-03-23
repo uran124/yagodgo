@@ -8,16 +8,21 @@ use ReflectionClass;
 
 class OrdersControllerTest extends TestCase
 {
-    public function testNormalizePhoneAddsPrefix(): void
+    public function testBasePathUsesManagerSectionForManagerRole(): void
     {
         if (!class_exists('App\\Controllers\\OrdersController')) {
             require_once __DIR__ . '/../src/Controllers/OrdersController.php';
         }
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            @session_start();
+        }
+        $_SESSION['role'] = 'manager';
+
         $controller = new OrdersController(new PDO('sqlite::memory:'));
         $ref = new ReflectionClass($controller);
-        $method = $ref->getMethod('normalizePhone');
+        $method = $ref->getMethod('basePath');
         $method->setAccessible(true);
-        $result = $method->invoke($controller, '2222222222');
-        $this->assertSame('72222222222', $result);
+        $result = $method->invoke($controller);
+        $this->assertSame('/manager/orders', $result);
     }
 }
