@@ -79,6 +79,8 @@ if (file_exists($vendorAutoload)) {
 
 require_once __DIR__ . '/src/helpers.php';
 
+$authMiddleware = new App\Middleware\AuthMiddleware();
+
 
 
 
@@ -144,53 +146,40 @@ function viewAuth(string $template, array $data = []): void
 $uri    = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $method = $_SERVER['REQUEST_METHOD'];
 
+function requireRole(string ...$roles): void
+{
+    global $authMiddleware;
+    $authMiddleware->handle($roles);
+}
+
 // Вспомогательная функция для защиты клиентских маршрутов
 function requireClient(): void
 {
-    $role = $_SESSION['role'] ?? '';
-    if (!in_array($role, ['client','partner','admin','manager','seller'], true)) {
-        header('Location: /login');
-        exit;
-    }
+    requireRole('client', 'partner', 'admin', 'manager', 'seller');
 }
 
 // Вспомогательная функция для защиты админских маршрутов
 function requireAdmin(): void
 {
-    if (($_SESSION['role'] ?? '') !== 'admin') {
-        header('Location: /login');
-        exit;
-    }
+    requireRole('admin');
 }
 
 // Manager access (manager or admin)
 function requireManager(): void
 {
-    $role = $_SESSION['role'] ?? '';
-    if (!in_array($role, ['manager', 'admin'], true)) {
-        header('Location: /login');
-        exit;
-    }
+    requireRole('manager', 'admin');
 }
 
 // Seller access (seller or admin)
 function requireSeller(): void
 {
-    $role = $_SESSION['role'] ?? '';
-    if (!in_array($role, ['seller', 'admin'], true)) {
-        header('Location: /login');
-        exit;
-    }
+    requireRole('seller', 'admin');
 }
 
 // Partner access (partner, manager or admin)
 function requirePartner(): void
 {
-    $role = $_SESSION['role'] ?? '';
-    if (!in_array($role, ['partner', 'manager', 'admin'], true)) {
-        header('Location: /login');
-        exit;
-    }
+    requireRole('partner', 'manager', 'admin');
 }
 
 // Информация о статусе заказа: название, классы бейджа и фона

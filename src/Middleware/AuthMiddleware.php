@@ -1,10 +1,31 @@
 <?php
-class AuthMiddleware {
-    public function handle($role, $next) {
-        if (empty($_SESSION['user_id']) || $_SESSION['role'] !== $role) {
-            header('Location: /login');
+namespace App\Middleware;
+
+class AuthMiddleware
+{
+    /**
+     * @param array<int, string> $allowedRoles
+     */
+    public function handle(array $allowedRoles, string $redirectTo = '/login'): void
+    {
+        if (!$this->isAuthorized($allowedRoles)) {
+            header('Location: ' . $redirectTo);
             exit;
         }
-        return $next();
+    }
+
+    /**
+     * @param array<int, string> $allowedRoles
+     * @param array<string, mixed>|null $session
+     */
+    public function isAuthorized(array $allowedRoles, ?array $session = null): bool
+    {
+        $session ??= $_SESSION;
+        if (empty($session['user_id'])) {
+            return false;
+        }
+
+        $role = $session['role'] ?? '';
+        return in_array($role, $allowedRoles, true);
     }
 }
