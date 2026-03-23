@@ -11,6 +11,15 @@ composer install
 vendor/bin/phpunit
 ```
 
+## Routing
+
+The application currently uses the manual front controller in `index.php` as the
+single source of truth for HTTP routes and access checks.
+
+Bootstrap initialization is split between `bootstrap/app.php`,
+`bootstrap/views.php`, and `bootstrap/auth.php` so environment setup, rendering
+helpers, and authorization setup stay in one predictable flow before routing.
+
 ### Database update
 
 Checkout now supports discount coupons. Add the following field to the `orders`
