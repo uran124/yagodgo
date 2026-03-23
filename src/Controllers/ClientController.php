@@ -3,6 +3,7 @@ namespace App\Controllers;
 
 use PDO;
 use App\Helpers\PhoneNormalizer;
+use App\Services\ClientCatalogService;
 
 class ClientController
 {
@@ -28,181 +29,24 @@ class ClientController
     /** Главная страница */
     public function home(): void
     {
-        $sale = $this->pdo->query(
-            "SELECT p.id,
-                    p.alias,
-                    t.name AS product,
-                    t.alias AS type_alias,
-                    p.variety,
-                    p.description,
-                    p.origin_country,
-                    p.box_size,
-                    p.box_unit,
-                    p.price,
-                    p.sale_price,
-                    p.is_active,
-                    p.image_path,
-                    p.delivery_date,
-                    COALESCE(u.company_name,u.name,'berryGo') AS seller_name
-             FROM products p
-             JOIN product_types t ON t.id = p.product_type_id
-             LEFT JOIN users u ON u.id = p.seller_id
-             WHERE p.is_active = 1 AND p.sale_price > 0
-             ORDER BY p.id DESC
-             LIMIT 10"
-        )->fetchAll(PDO::FETCH_ASSOC);
-
-        $regular = $this->pdo->query(
-            "SELECT p.id,
-                    p.alias,
-                    t.name AS product,
-                    t.alias AS type_alias,
-                    p.variety,
-                    p.description,
-                    p.origin_country,
-                    p.box_size,
-                    p.box_unit,
-                    p.price,
-                    p.sale_price,
-                    p.is_active,
-                    p.image_path,
-                    p.delivery_date,
-                    COALESCE(u.company_name,u.name,'berryGo') AS seller_name
-             FROM products p
-             JOIN product_types t ON t.id = p.product_type_id
-             LEFT JOIN users u ON u.id = p.seller_id
-             WHERE p.is_active = 1
-               AND p.delivery_date IS NOT NULL
-               AND p.seller_id IS NULL
-             ORDER BY p.id DESC
-             LIMIT 10"
-        )->fetchAll(PDO::FETCH_ASSOC);
-
-        $sellerProducts = $this->pdo->query(
-            "SELECT p.id,
-                    p.alias,
-                    t.name AS product,
-                    t.alias AS type_alias,
-                    p.variety,
-                    p.description,
-                    p.origin_country,
-                    p.box_size,
-                    p.box_unit,
-                    p.price,
-                    p.sale_price,
-                    p.is_active,
-                    p.image_path,
-                    p.delivery_date,
-                    COALESCE(u.company_name,u.name,'berryGo') AS seller_name
-             FROM products p
-             JOIN product_types t ON t.id = p.product_type_id
-             LEFT JOIN users u ON u.id = p.seller_id
-             WHERE p.is_active = 1
-               AND p.seller_id IS NOT NULL
-             ORDER BY p.id DESC
-             LIMIT 10"
-        )->fetchAll(PDO::FETCH_ASSOC);
-
-        $preorder = $this->pdo->query(
-            "SELECT p.id,
-                    p.alias,
-                    t.name AS product,
-                    t.alias AS type_alias,
-                    p.variety,
-                    p.description,
-                    p.origin_country,
-                    p.box_size,
-                    p.box_unit,
-                    p.price,
-                    p.sale_price,
-                    p.is_active,
-                    p.image_path,
-                    p.delivery_date,
-                    COALESCE(u.company_name,u.name,'berryGo') AS seller_name
-             FROM products p
-             JOIN product_types t ON t.id = p.product_type_id
-             LEFT JOIN users u ON u.id = p.seller_id
-             WHERE p.is_active = 1
-               AND p.delivery_date IS NULL
-               AND p.seller_id IS NULL
-             ORDER BY p.id DESC
-             LIMIT 10"
-        )->fetchAll(PDO::FETCH_ASSOC);
-
-        $materials = $this->pdo->query(
-            "SELECT m.id, m.alias AS mat_alias, m.title, m.short_desc, m.image_path,
-                    c.alias AS cat_alias
-               FROM materials m
-               JOIN content_categories c ON c.id = m.category_id
-               ORDER BY m.created_at DESC
-               LIMIT 5"
-        )->fetchAll(PDO::FETCH_ASSOC);
+        $catalogService = new ClientCatalogService($this->pdo);
+        $data = $catalogService->getHomePageData();
 
         view('client/home', [
-            'saleProducts'     => $sale,
-            'regularProducts'  => $regular,
-            'sellerProducts'   => $sellerProducts,
-            'preorderProducts' => $preorder,
-            'materials'       => $materials,
-            'userName'        => $_SESSION['name'] ?? null,
+            ...$data,
+            'userName' => $_SESSION['name'] ?? null,
         ]);
     }
 
     /** Каталог: сортировка по наличию/дате */
     public function catalog(): void
     {
-        $today = date('Y-m-d');
-        $all = $this->pdo->query(
-            "SELECT
-                 p.id,
-                 p.alias,
-                 t.name        AS product,
-                 t.alias       AS type_alias,
-                 p.variety,
-                 p.description,
-                 p.origin_country,
-                 p.box_size,
-                 p.box_unit,
-                 p.price,
-                 p.sale_price,
-                 p.is_active,
-                 p.image_path,
-                 p.delivery_date,
-                 COALESCE(u.company_name,u.name,'berryGo') AS seller_name
-             FROM products p
-             JOIN product_types t ON t.id = p.product_type_id
-             LEFT JOIN users u ON u.id = p.seller_id
-             WHERE p.is_active = 1
-             ORDER BY
-               CASE WHEN p.sale_price > 0 THEN 0 ELSE 1 END,
-               CASE
-                 WHEN p.delivery_date IS NULL    THEN 3
-                 WHEN p.delivery_date > '$today' THEN 2
-                 ELSE 1
-               END,
-               COALESCE(p.delivery_date, '9999-12-31'),
-               p.id DESC"
-        )->fetchAll(PDO::FETCH_ASSOC);
-
-        // Получаем только те категории, у которых есть активные товары
-        $types = $this->pdo->query(
-            "SELECT DISTINCT t.id, t.name, t.alias
-               FROM product_types t
-               JOIN products p ON p.product_type_id = t.id
-              WHERE p.is_active = 1
-              ORDER BY t.name"
-        )->fetchAll(PDO::FETCH_ASSOC);
-    
-        $debugData = [
-            'productsCount' => count($all),
-            'today'         => $today,
-        ];
+        $catalogService = new ClientCatalogService($this->pdo);
+        $data = $catalogService->getCatalogData();
     
         view('client/catalog', [
-            'products'  => $all,
-            'types'     => $types,
+            ...$data,
             'userName'  => $_SESSION['name'] ?? null,
-            'debugData' => $debugData,
             'breadcrumbs' => [ ['label' => 'Каталог'] ],
         ]);
     }

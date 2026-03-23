@@ -4,7 +4,6 @@
   "type": "project",
   "require": {
     "php": ">=8.0",
-    "bramus/router": "^1.6",
     "vlucas/phpdotenv": "^5.5"
   },
   "require-dev": {

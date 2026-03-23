@@ -1,86 +1,193 @@
 # BerryGo Web App
 
-This project contains a simple PHP application for the BerryGo delivery service.
+BerryGo Web App — PHP-приложение для доставки ягод и фруктов. В репозитории есть клиентская витрина, корзина и оформление заказа, административная часть, роли менеджера/партнёра/селлера, контентный раздел и интеграции с Telegram, SMS и email. 
 
-## Running tests
+## Требования
 
-Install dependencies using Composer and run PHPUnit:
+- PHP 8.0+
+- Composer
+- MySQL / MariaDB
+- Веб-сервер или встроенный PHP server для локальной разработки
+
+## Быстрый старт
+
+### 1. Установить зависимости
+
+```bash
+composer install
+```
+
+### 2. Настроить конфиги
+
+Приложение читает конфигурацию из PHP-файлов в каталоге `config/`. Перед локальным запуском нужно проверить и при необходимости заменить значения под своё окружение:
+
+- `config/database.php` — подключение к MySQL/MariaDB;
+- `config/telegram.php` — параметры Telegram-бота и админского чата;
+- `config/sms.php` — ключ интеграции SMS;
+- `config/email.php` — адрес отправителя для email;
+- `config/constants.php` — прикладные константы, влияющие на расчёты и поведение приложения.
+
+> Сейчас проект использует именно PHP-конфиги, а не `.env` как основной runtime-источник настроек.
+
+### 3. Подготовить базу данных
+
+В проекте пока нет автоматического migration runner. SQL-изменения лежат в каталоге `database/` и применяются вручную в порядке имени файла:
+
+```text
+database/2025_06_addresses.sql
+...
+database/2025_26_mailing_clients_set_active.sql
+```
+
+Рекомендуемый порядок для нового окружения:
+
+1. Создать пустую базу данных MySQL/MariaDB.
+2. Загрузить базовую схему проекта.
+3. Последовательно применить все SQL-файлы из `database/` в лексикографическом порядке.
+4. Проверить, что в БД присутствуют таблицы для заказов, адресов, товаров, контента, уведомлений, seller-функций и рассылок.
+
+Если вы поднимаете проект не с нуля, а на уже существующей базе, всё равно нужно убедиться, что применены последние изменения из `database/2025_19_delivery_slots.sql`–`database/2025_26_mailing_clients_set_active.sql`, так как они затрагивают слоты доставки, sellers и mailing.
+
+### 4. Запустить локально
+
+Через Composer:
+
+```bash
+composer start
+```
+
+Или напрямую:
+
+```bash
+php -S localhost:8000 -t .
+```
+
+После запуска приложение будет доступно по адресу:
+
+```text
+http://localhost:8000
+```
+
+## Как запускать тесты
 
 ```bash
 composer install
 vendor/bin/phpunit
 ```
 
-### Database update
+В проекте есть unit-тесты для middleware, сервисов и части контроллеров.
 
-Checkout now supports discount coupons. Add the following field to the `orders`
-table:
+## Как применять миграции
 
-```sql
-ALTER TABLE orders ADD COLUMN coupon_code VARCHAR(50) DEFAULT NULL;
+Так как миграции пока не автоматизированы, используйте простой регламент:
+
+1. Открыть каталог `database/`.
+2. Отсортировать файлы по имени.
+3. Выполнить SQL-файлы по порядку на нужной базе.
+4. После применения проверить критичные сценарии:
+   - авторизация;
+   - каталог;
+   - оформление заказа;
+   - админка заказов;
+   - seller/partner-функции;
+   - контент и sitemap.
+
+### Что лежит в `database/`
+
+По именам SQL-файлов видно основные блоки эволюции схемы:
+
+- адреса и коробки заказа;
+- контент и категории;
+- alias-поля для SEO URL;
+- sitemap и metadata;
+- notifications;
+- manager referral;
+- delivery slots;
+- seller и payout-логика;
+- mailing clients.
+
+## Какие роли есть в системе
+
+В проекте используются следующие роли:
+
+- `guest` — неавторизованный пользователь;
+- `client` — покупатель, может просматривать каталог, корзину, оформлять заказ, работать с профилем и своими заказами;
+- `courier` — курьерские маршруты и обновление статусов доставки;
+- `admin` — полный административный доступ;
+- `manager` — управленческие маршруты и работа со “своими” клиентами;
+- `partner` — доступ к partner-разделам и связанным клиентам;
+- `seller` — seller-кабинет, товары и seller-заказы.
+
+## Конфигурация проекта
+
+### Runtime-конфиги
+
+- `config/database.php` — PDO-конфиг базы данных;
+- `config/telegram.php` — Telegram integration;
+- `config/sms.php` — SMS integration;
+- `config/email.php` — email sender config;
+- `config/constants.php` — бизнес-константы (`placeholder_date`, `box_markup`, `discount_factor`).
+
+### Важное замечание
+
+При переносе проекта другому разработчику или на другое окружение нужно **обязательно заменить локальные секреты и реквизиты подключения** на значения соответствующей среды.
+
+## Архитектура проекта
+
+### Точка входа
+
+- `index.php` — основной front controller и единственный источник правды для HTTP-маршрутов.
+
+### Bootstrap-поток
+
+Bootstrap разбит на несколько последовательных шагов:
+
+1. `bootstrap/app.php` — инициализация окружения, автозагрузка, запуск сессии, подключение БД, конфигов, helpers и middleware.
+2. `bootstrap/views.php` — функции рендеринга layout/view.
+3. `bootstrap/auth.php` — auth wrappers и role-based guards.
+4. `index.php` — разбор URI/метода и dispatch в контроллеры.
+
+### Слои приложения
+
+- `src/Controllers/` — HTTP-контроллеры;
+- `src/Services/` — сервисы, в которые вынесена часть “толстой” логики контроллеров;
+- `src/Models/` — модели и repository-класс;
+- `src/Helpers/` и `src/helpers.php` — прикладные helpers и функции;
+- `src/Middleware/` — middleware-логика авторизации;
+- `src/Views/` — клиентские, административные и layout-шаблоны;
+- `database/` — SQL-миграции;
+- `tests/` — PHPUnit-тесты.
+
+### Роутинг и авторизация
+
+- Маршруты описаны вручную в `index.php`.
+- Основные проверки ролей подключаются через `bootstrap/auth.php`.
+- Логика проверки доступа централизована в `src/Middleware/AuthMiddleware.php`.
+
+## Операционные задачи
+
+### Sitemap
+
+Для обновления `sitemap.xml` используйте:
+
+```bash
+php bin/generate_sitemap.php
 ```
 
-To enable human readable URLs for materials, add the `alias` column to the
-`materials` table:
+Для cron на хостинге:
 
-```sql
-ALTER TABLE materials
-  ADD COLUMN alias VARCHAR(255) NOT NULL AFTER category_id,
-  ADD UNIQUE KEY alias (alias);
-```
-
-To make pretty URLs for products and categories, add alias columns:
-
-```sql
-ALTER TABLE product_types
-  ADD COLUMN alias VARCHAR(255) NOT NULL AFTER name,
-  ADD UNIQUE KEY alias (alias);
-
-ALTER TABLE products
-  ADD COLUMN alias VARCHAR(255) NOT NULL AFTER product_type_id,
-  ADD UNIQUE KEY alias (alias);
-```
-### Sitemap automation
-
-Run `bin/generate_sitemap.php` regularly to refresh `sitemap.xml`. On hosting with cron add a task:
-
-```
+```text
 0 8 * * * php /path/to/project/bin/generate_sitemap.php
 ```
 
-The schedule assumes cron uses the Asia/Krasnoyarsk time zone. If the server works in UTC set `0 1 * * *` instead.
+Если сервер живёт в UTC, используйте запуск в `0 1 * * *`.
 
+## Что полезно проверить после первого запуска
 
-### System page metadata
-
-Use the `metadata` table to customize meta tags for built-in pages. These pages have no records yet, so insert all fields explicitly:
-
-```sql
-INSERT INTO metadata (page, title, description, keywords, h1, text) VALUES
-  ('register',  'Регистрация – BerryGo', 'Создайте аккаунт для заказа свежих ягод', '', 'Регистрация', ''),
-  ('reset-pin', 'Сброс PIN – BerryGo', 'Восстановите код доступа к приложению', '', 'Сброс PIN', ''),
-  ('login',     'Вход – BerryGo', 'Авторизуйтесь для доступа к личному кабинету', '', 'Вход', '');
-```
-
-### Delivery slots update
-
-The `delivery_slots` table no longer stores a delivery date. Remove the column and seed four default time ranges:
-
-```sql
-ALTER TABLE delivery_slots DROP COLUMN date;
-TRUNCATE TABLE delivery_slots;
-INSERT INTO delivery_slots (time_from, time_to) VALUES
-  ('09:00', '12:00'),
-  ('12:00', '15:00'),
-  ('15:00', '18:00'),
-  ('18:00', '22:00');
-```
-
-
-### Orders table update
-
-Remove the obsolete `delivery_slot` column from the `orders` table. Slots are now referenced via `slot_id`.
-
-```sql
-ALTER TABLE orders DROP COLUMN delivery_slot;
-```
+- открывается `/`;
+- работает регистрация и логин;
+- отображается каталог;
+- открывается админка для пользователя с ролью `admin`;
+- работают seller/manager/partner маршруты для соответствующих ролей;
+- генерируется sitemap;
+- проходит `vendor/bin/phpunit`.
