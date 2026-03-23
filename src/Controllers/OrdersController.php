@@ -6,6 +6,7 @@ use App\Helpers\Auth;
 use App\Helpers\ReferralHelper;
 use App\Helpers\PhoneNormalizer;
 use App\Models\OrdersRepository;
+use App\Services\AdminOrdersPageService;
 
 class OrdersController
 {
@@ -59,154 +60,43 @@ class OrdersController
         $managerId = isset($_GET['manager']) ? (int)$_GET['manager'] : 0;
         $page = max(1, (int)($_GET['page'] ?? 1));
         $perPage = 25;
-        $offset = ($page - 1) * $perPage;
-
-        $repo = new OrdersRepository($this->pdo);
-        $totalOrders = $repo->countOrdersForIndex($managerId);
-        $totalPages = max(1, (int)ceil($totalOrders / $perPage));
-        if ($page > $totalPages) {
-            $page = $totalPages;
-            $offset = ($page - 1) * $perPage;
-        }
-
-        $orders = $repo->fetchOrdersForIndex($managerId, $perPage, $offset);
-        $orders = $repo->hydrateOrders($orders);
-
-        $managersStmt = $this->pdo->query("SELECT id, name FROM users WHERE role = 'manager' ORDER BY name");
-        $managers = $managersStmt->fetchAll(PDO::FETCH_ASSOC);
+        $pageService = new AdminOrdersPageService($this->pdo);
+        $data = $pageService->buildIndexData($managerId, $page, $perPage);
 
         viewAdmin('orders/index', [
-            'pageTitle'       => 'Заказы',
-            'orders'          => $orders,
-            'managers'       => $managers,
-            'selectedManager' => $managerId,
-            'page'            => $page,
-            'totalPages'      => $totalPages,
-            'totalOrders'     => $totalOrders,
-            'perPage'         => $perPage,
+            'pageTitle' => 'Заказы',
+            ...$data,
         ]);
     }
 
     // Детали заказа (админ)
     public function show(int $id): void
     {
-        $stmt = $this->pdo->prepare(
-            "SELECT o.*, d.time_from AS slot_from, d.time_to AS slot_to,\n" .
-            "       u.name AS client_name, u.phone, u.has_used_referral_coupon, a.street AS address\n" .
-            "FROM orders o\n" .
-            "JOIN users u ON u.id = o.user_id\n" .
-            "JOIN addresses a ON a.id = o.address_id\n" .
-            "LEFT JOIN delivery_slots d ON d.id = o.slot_id\n" .
-            "WHERE o.id = ?"
-        );
-        $stmt->execute([$id]);
-        $order = $stmt->fetch(PDO::FETCH_ASSOC);
+        $pageService = new AdminOrdersPageService($this->pdo);
+        $data = $pageService->findShowData($id);
 
-        if (!$order) {
+        if ($data === null) {
             $msg = urlencode("Заказ {$id} удалён");
             header('Location: ' . $this->basePath() . "?msg={$msg}");
             exit;
         }
 
-        $stmt = $this->pdo->prepare(
-            "SELECT oi.product_id, oi.quantity, oi.boxes, oi.unit_price, t.name AS product_name, p.unit, p.variety, p.box_size, p.box_unit\n" .
-            "FROM order_items oi\n" .
-            "JOIN products p ON p.id = oi.product_id\n" .
-            "JOIN product_types t ON t.id = p.product_type_id\n" .
-            "WHERE oi.order_id = ?"
-        );
-        $stmt->execute([$id]);
-        $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        $stmt = $this->pdo->prepare(
-            "SELECT pt.*\n" .
-            "FROM points_transactions pt\n" .
-            "WHERE pt.order_id = ?\n" .
-            "ORDER BY pt.created_at DESC"
-        );
-        $stmt->execute([$id]);
-        $transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        $addrStmt = $this->pdo->prepare(
-            "SELECT id, street FROM addresses WHERE user_id = ? ORDER BY is_primary DESC, created_at ASC"
-        );
-        $addrStmt->execute([$order['user_id']]);
-        $addresses = $addrStmt->fetchAll(PDO::FETCH_ASSOC);
-
-        $slotsStmt = $this->pdo->query("SELECT id, time_from, time_to FROM delivery_slots ORDER BY time_from");
-        $slots = $slotsStmt->fetchAll(PDO::FETCH_ASSOC);
-
-        $couponInfo = null;
-        $pointsFromBalance = (int)($order['points_used'] ?? 0);
-        if (!empty($order['coupon_code'])) {
-            $cStmt = $this->pdo->prepare(
-                "SELECT code, type, discount, points FROM coupons WHERE code = ?"
-            );
-            $cStmt->execute([$order['coupon_code']]);
-            $couponInfo = $cStmt->fetch(PDO::FETCH_ASSOC) ?: null;
-            if (!$couponInfo) {
-                $rStmt = $this->pdo->prepare("SELECT id FROM users WHERE referral_code = ?");
-                $rStmt->execute([$order['coupon_code']]);
-                if ($rStmt->fetch()) {
-                    $couponInfo = [
-                        'code' => $order['coupon_code'],
-                        'type' => 'discount',
-                        'discount' => 10,
-                    ];
-                }
-            }
-            if ($couponInfo && $couponInfo['type'] === 'points') {
-                $pointsFromBalance = max(0, $pointsFromBalance - (int)$couponInfo['points']);
-            }
-        }
-        $prodStmt = $this->pdo->query(
-            "SELECT p.id, t.name AS product, p.variety\n" .
-            "FROM products p\n" .
-            "JOIN product_types t ON t.id = p.product_type_id\n" .
-            "WHERE p.is_active = 1\n" .
-            "ORDER BY t.name"
-        );
-        $products = $prodStmt->fetchAll(PDO::FETCH_ASSOC);
-
         viewAdmin('orders/show', [
-            'pageTitle'    => "Заказ #{$id}",
-            'order'        => $order,
-            'items'        => $items,
-            'transactions' => $transactions,
-            'coupon'       => $couponInfo,
-            'pointsFromBalance' => $pointsFromBalance,
-            'addresses'    => $addresses,
-            'slots'        => $slots,
-            'products'     => $products,
+            'pageTitle' => "Заказ #{$id}",
+            ...$data,
         ]);
     }
 
     // Форма создания заказа вручную (админ)
     public function create(): void
     {
-        $stmt = $this->pdo->query(
-            "SELECT p.id, t.name AS product, p.variety, p.price, p.image_path, p.box_size, p.box_unit
-             FROM products p
-             JOIN product_types t ON t.id = p.product_type_id
-             WHERE p.is_active = 1
-             ORDER BY t.name"
-        );
-        $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        $slotsStmt = $this->pdo->query("SELECT id, time_from, time_to FROM delivery_slots ORDER BY time_from");
-        $slots = $slotsStmt->fetchAll(PDO::FETCH_ASSOC);
-
-        $debugData = $_SESSION['debug_order_data'] ?? [];
+        $pageService = new AdminOrdersPageService($this->pdo);
+        $data = $pageService->buildCreateData($_SESSION);
         unset($_SESSION['debug_order_data']);
-
-        $today = date('Y-m-d');
 
         viewAdmin('orders/create', [
             'pageTitle' => 'Создать заказ',
-            'products'  => $products,
-            'slots'     => $slots,
-            'debugData' => $debugData,
-            'today'     => $today,
+            ...$data,
         ]);
     }
 
