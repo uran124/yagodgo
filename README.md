@@ -11,6 +11,11 @@ composer install
 vendor/bin/phpunit
 ```
 
+## Routing
+
+The application currently uses the manual front controller in `index.php` as the
+single source of truth for HTTP routes and access checks.
+
 ### Database update
 
 Checkout now supports discount coupons. Add the following field to the `orders`
