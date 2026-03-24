@@ -63,10 +63,9 @@ class OrdersController
         $pageService = new AdminOrdersPageService($this->pdo);
         $data = $pageService->buildIndexData($managerId, $page, $perPage);
 
-        viewAdmin('orders/index', [
+        viewAdmin('orders/index', array_merge([
             'pageTitle' => 'Заказы',
-            ...$data,
-        ]);
+        ], $data));
     }
 
     // Детали заказа (админ)
@@ -81,10 +80,9 @@ class OrdersController
             exit;
         }
 
-        viewAdmin('orders/show', [
+        viewAdmin('orders/show', array_merge([
             'pageTitle' => "Заказ #{$id}",
-            ...$data,
-        ]);
+        ], $data));
     }
 
     // Форма создания заказа вручную (админ)
@@ -94,10 +92,9 @@ class OrdersController
         $data = $pageService->buildCreateData($_SESSION);
         unset($_SESSION['debug_order_data']);
 
-        viewAdmin('orders/create', [
+        viewAdmin('orders/create', array_merge([
             'pageTitle' => 'Создать заказ',
-            ...$data,
-        ]);
+        ], $data));
     }
 
     // Сохранить заказ (POST, админ)
