@@ -611,6 +611,7 @@ public function cart(): void
     // 9) СОЗДАЁМ ЗАКАЗЫ ПО КАЖДОЙ ДАТЕ, учитываем дату и слот
     $createdOrderIds = [];
         foreach ($itemsByDate as $dateKey => $block) {
+        $isReservedOrder = ($dateKey === PLACEHOLDER_DATE);
         // (7.1) Считаем сумму по блоку и применяем скидку
         $blockSum = 0;
         foreach ($block as $data) {
@@ -625,8 +626,12 @@ public function cart(): void
         $addrInput = $postedAddresses[$dateKey] ?? $defaultAddress;
         $shippingFee = ($addrInput === 'pickup') ? 0 : 300;
         $finalSum = $subAfterPickup - $pointsDiscount - $couponDiscount + $shippingFee;
+        if ($isReservedOrder) {
+            $finalSum = 0;
+        }
 
         $slotId = $_POST['slot_id'][$dateKey] ?? null; // из формы
+        $status = $isReservedOrder ? 'reserved' : 'new';
 
         // (7.2) Вставляем заказ. Поскольку у таблицы orders есть колонки discount_applied, points_used, points_accrued, нужно задать их:
         $stmtOrder = $this->pdo->prepare(
@@ -634,13 +639,14 @@ public function cart(): void
                (user_id, address_id, slot_id, status, total_amount,
                 discount_applied, points_used, points_accrued, coupon_code,
                 delivery_date, created_at)
-             VALUES (?, ?, ?, 'new', ?, ?, ?, ?, ?, ?, NOW())"
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"
         );
         $pointsAccrued = 0; // пока 0, начислим ниже, если надо
         $stmtOrder->execute([
             $userId,
             $addressIds[$dateKey],
             $slotId,
+            $status,
             $finalSum,
             $couponDiscount, // discount_applied = скидка по купону
             $pointsDiscount,  // points_used = списанные баллы
@@ -830,6 +836,76 @@ public function showOrder(int $orderId): void
         'coupon'          => $couponInfo,
         'pointsFromBalance' => $pointsFromBalance,
     ]);
+}
+
+public function confirmReservedOrder(int $orderId): void
+{
+    requireClient();
+    $userId = (int)($_SESSION['user_id'] ?? 0);
+
+    $stmt = $this->pdo->prepare("SELECT id, user_id, status, total_amount FROM orders WHERE id = ?");
+    $stmt->execute([$orderId]);
+    $order = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$order || (int)$order['user_id'] !== $userId) {
+        http_response_code(404);
+        echo 'Заказ не найден';
+        exit;
+    }
+    if (($order['status'] ?? '') !== 'reserved') {
+        header('Location: /orders/' . $orderId . '?error=' . urlencode('Заказ уже подтвержден или отменен'));
+        exit;
+    }
+    if ((int)($order['total_amount'] ?? 0) <= 0) {
+        header('Location: /orders/' . $orderId . '?error=' . urlencode('Цена еще не определена'));
+        exit;
+    }
+
+    $this->pdo->prepare("UPDATE orders SET status = 'new' WHERE id = ?")->execute([$orderId]);
+    header('Location: /orders/' . $orderId . '?msg=' . urlencode('Заказ подтвержден'));
+    exit;
+}
+
+public function cancelReservedOrder(int $orderId): void
+{
+    requireClient();
+    $userId = (int)($_SESSION['user_id'] ?? 0);
+
+    $this->pdo->beginTransaction();
+    try {
+        $stmt = $this->pdo->prepare("SELECT id, user_id, status, points_used FROM orders WHERE id = ? FOR UPDATE");
+        $stmt->execute([$orderId]);
+        $order = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$order || (int)$order['user_id'] !== $userId) {
+            throw new \RuntimeException('order_not_found');
+        }
+        if (($order['status'] ?? '') !== 'reserved') {
+            throw new \RuntimeException('invalid_status');
+        }
+
+        $pointsUsed = (int)($order['points_used'] ?? 0);
+        if ($pointsUsed > 0) {
+            $this->pdo->prepare("UPDATE users SET points_balance = points_balance + ? WHERE id = ?")
+                ->execute([$pointsUsed, $userId]);
+            $desc = "Возврат {$pointsUsed} клубничек за отмену брони #{$orderId}";
+            $this->pdo->prepare(
+                "INSERT INTO points_transactions (user_id, order_id, amount, transaction_type, description, created_at)
+                 VALUES (?, ?, ?, 'accrual', ?, NOW())"
+            )->execute([$userId, $orderId, $pointsUsed, $desc]);
+        }
+
+        $this->pdo->prepare("DELETE FROM seller_payouts WHERE order_id = ?")->execute([$orderId]);
+        $this->pdo->prepare("DELETE FROM order_items WHERE order_id = ?")->execute([$orderId]);
+        $this->pdo->prepare("DELETE FROM orders WHERE id = ?")->execute([$orderId]);
+        $this->pdo->commit();
+        header('Location: /orders?msg=' . urlencode('Бронь удалена'));
+        exit;
+    } catch (\Throwable $e) {
+        if ($this->pdo->inTransaction()) {
+            $this->pdo->rollBack();
+        }
+        header('Location: /orders/' . $orderId . '?error=' . urlencode('Не удалось отменить бронь'));
+        exit;
+    }
 }
 
 
