@@ -55,6 +55,7 @@ class ProductsController
         $role = $_SESSION['role'] ?? '';
         $params = [];
         $selectedSeller = 0;
+        $availabilityFilter = trim((string)($_GET['availability'] ?? ''));
 
         $sql = "SELECT
                 p.id,
@@ -88,6 +89,15 @@ class ProductsController
             }
         }
 
+        $placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
+        if ($availabilityFilter === 'reserved') {
+            $sql .= (stripos($sql, ' WHERE ') !== false ? " AND " : " WHERE ") . "(p.delivery_date IS NULL OR p.delivery_date = ?)";
+            $params[] = $placeholder;
+        } elseif ($availabilityFilter === 'available') {
+            $sql .= (stripos($sql, ' WHERE ') !== false ? " AND " : " WHERE ") . "(p.delivery_date IS NOT NULL AND p.delivery_date <> ?)";
+            $params[] = $placeholder;
+        }
+
         $sql .= " ORDER BY t.name, p.variety";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
@@ -105,6 +115,7 @@ class ProductsController
             'products'       => $products,
             'sellers'        => $sellers,
             'selectedSeller' => $selectedSeller,
+            'availabilityFilter' => $availabilityFilter,
         ]);
     }
 
@@ -391,6 +402,9 @@ class ProductsController
             }
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute($params);
+            if ($date !== null && $date !== '') {
+                $this->activateReservedOrdersByProduct($id, $date);
+            }
         }
         // Determine where to redirect after updating
         $refererPath = parse_url($_SERVER['HTTP_REFERER'] ?? '', PHP_URL_PATH) ?? '';
@@ -408,5 +422,45 @@ class ProductsController
 
         header('Location: ' . $base);
         exit;
+    }
+
+    /**
+     * Переводит бронь-заказы в обычные, когда для товара появляется дата поставки.
+     */
+    private function activateReservedOrdersByProduct(int $productId, string $deliveryDate): void
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT DISTINCT o.id
+             FROM orders o
+             JOIN order_items oi ON oi.order_id = o.id
+             WHERE oi.product_id = ?
+               AND o.status = 'reserved'"
+        );
+        $stmt->execute([$productId]);
+        $orderIds = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN) ?: []);
+        if (!$orderIds) {
+            return;
+        }
+
+        $sumStmt = $this->pdo->prepare(
+            "SELECT COALESCE(SUM(oi.quantity * oi.unit_price), 0)
+             FROM order_items oi
+             WHERE oi.order_id = ?"
+        );
+        $updStmt = $this->pdo->prepare(
+            "UPDATE orders
+             SET delivery_date = ?, total_amount = ?, status = 'new'
+             WHERE id = ?"
+        );
+        foreach ($orderIds as $orderId) {
+            $sumStmt->execute([$orderId]);
+            $rawSum = (float)$sumStmt->fetchColumn();
+            $metaStmt = $this->pdo->prepare("SELECT points_used, discount_applied, address_id FROM orders WHERE id = ?");
+            $metaStmt->execute([$orderId]);
+            $meta = $metaStmt->fetch(PDO::FETCH_ASSOC) ?: ['points_used' => 0, 'discount_applied' => 0, 'address_id' => null];
+            $shipping = ((int)($meta['address_id'] ?? 0) > 0) ? 300 : 0;
+            $finalTotal = max(0, (int)round($rawSum) - (int)($meta['points_used'] ?? 0) - (int)($meta['discount_applied'] ?? 0) + $shipping);
+            $updStmt->execute([$deliveryDate, $finalTotal, $orderId]);
+        }
     }
 }

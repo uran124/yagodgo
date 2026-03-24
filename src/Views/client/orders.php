@@ -13,8 +13,7 @@ function status_classes(string $status): string {
 }
 
 function resolve_order_display_status(array $order): string {
-    $placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
-    $isReservedByData = (($order['delivery_date'] ?? '') === $placeholder) && (int)($order['total_amount'] ?? 0) <= 0;
+    $isReservedByData = (($order['status'] ?? '') === 'reserved');
     if ($isReservedByData) {
         return 'reserved';
     }

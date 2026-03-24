@@ -334,7 +334,7 @@ class OrdersController
     {
         $orderId = (int)($_POST['order_id'] ?? 0);
         $status  = $_POST['status'] ?? '';
-        if ($orderId && in_array($status, ['new','processing','assigned','delivered','cancelled'], true)) {
+        if ($orderId && in_array($status, ['reserved','new','processing','assigned','delivered','cancelled'], true)) {
             // Получаем текущий статус и данные заказа
             $stmt = $this->pdo->prepare(
                 "SELECT status, user_id, total_amount, points_accrued, manager_points_accrued, points_used FROM orders WHERE id = ?"

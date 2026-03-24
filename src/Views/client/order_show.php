@@ -15,8 +15,7 @@ $pointsFromBalance = $pointsFromBalance ?? 0;
 $flashMessage = $_GET['msg'] ?? null;
 $flashError = $_GET['error'] ?? null;
 $placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
-$isReservedOrder = ((string)($order['delivery_date'] ?? '') === $placeholder && (int)($order['total_amount'] ?? 0) <= 0)
-    || (($order['status'] ?? '') === 'reserved');
+$isReservedOrder = (($order['status'] ?? '') === 'reserved');
 $displayStatus = $isReservedOrder ? 'reserved' : (string)($order['status'] ?? 'new');
 
 // Считаем «сырьевую» сумму (без учёта скидки)

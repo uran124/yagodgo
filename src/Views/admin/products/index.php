@@ -5,16 +5,21 @@
   <a href="<?= $base ?>/products/edit" class="bg-[#C86052] text-white px-4 py-2 rounded inline-flex items-center">
     <span class="material-icons-round text-base mr-1">add</span> Добавить товар
   </a>
-  <?php if (!$isManager): ?>
-  <form method="get" action="<?= $base ?>/products" class="ml-auto">
+  <form method="get" action="<?= $base ?>/products" class="ml-auto flex items-center gap-2">
+    <select name="availability" onchange="this.form.submit()" class="border rounded px-2 py-1">
+      <option value="">Все товары</option>
+      <option value="available" <?= ($availabilityFilter ?? '') === 'available' ? 'selected' : '' ?>>С датой поставки</option>
+      <option value="reserved" <?= ($availabilityFilter ?? '') === 'reserved' ? 'selected' : '' ?>>Под заказ (бронь)</option>
+    </select>
+    <?php if (!$isManager): ?>
     <select name="seller_id" onchange="this.form.submit()" class="border rounded px-2 py-1">
       <option value="">Все селлеры</option>
       <?php foreach ($sellers as $s): ?>
       <option value="<?= $s['id'] ?>" <?= ($selectedSeller ?? 0) == $s['id'] ? 'selected' : '' ?>><?= htmlspecialchars($s['company_name']) ?></option>
       <?php endforeach; ?>
     </select>
+    <?php endif; ?>
   </form>
-  <?php endif; ?>
 </div>
 
 <table class="min-w-full bg-white rounded shadow overflow-hidden">

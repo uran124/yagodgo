@@ -629,7 +629,7 @@ public function cart(): void
         }
 
         $slotId = $_POST['slot_id'][$dateKey] ?? null; // из формы
-        $status = 'new';
+        $status = $isReservedOrder ? 'reserved' : 'new';
 
         // (7.2) Вставляем заказ. Поскольку у таблицы orders есть колонки discount_applied, points_used, points_accrued, нужно задать их:
         $stmtOrder = $this->pdo->prepare(
@@ -640,6 +640,7 @@ public function cart(): void
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"
         );
         $pointsAccrued = 0; // пока 0, начислим ниже, если надо
+        $orderDeliveryDate = $isReservedOrder ? date('Y-m-d') : $dateKey;
         $stmtOrder->execute([
             $userId,
             $addressIds[$dateKey],
@@ -650,7 +651,7 @@ public function cart(): void
             $pointsDiscount,  // points_used = списанные баллы
             $pointsAccrued,   // points_accrued = пока 0
             $couponCode,
-            $dateKey
+            $orderDeliveryDate
         ]);
         $orderId = (int)$this->pdo->lastInsertId();
         $createdOrderIds[] = $orderId;
@@ -849,7 +850,7 @@ public function confirmReservedOrder(int $orderId): void
         echo 'Заказ не найден';
         exit;
     }
-    $isReservation = (($order['delivery_date'] ?? '') === PLACEHOLDER_DATE) || (($order['status'] ?? '') === 'reserved');
+    $isReservation = (($order['status'] ?? '') === 'reserved');
     if (!$isReservation) {
         header('Location: /orders/' . $orderId . '?error=' . urlencode('Заказ уже подтвержден или отменен'));
         exit;
@@ -877,7 +878,7 @@ public function cancelReservedOrder(int $orderId): void
         if (!$order || (int)$order['user_id'] !== $userId) {
             throw new \RuntimeException('order_not_found');
         }
-        $isReservation = (($order['delivery_date'] ?? '') === PLACEHOLDER_DATE) || (($order['status'] ?? '') === 'reserved');
+        $isReservation = (($order['status'] ?? '') === 'reserved');
         if (!$isReservation) {
             throw new \RuntimeException('invalid_status');
         }
@@ -953,11 +954,10 @@ public function cancelReservedOrder(int $orderId): void
         );
         $awaiting = [];
         $rest = [];
-        $placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
         foreach ($orders as &$o) {
             $itemsStmt->execute([$o['id']]);
             $o['items'] = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
-            if (empty($o['delivery_date']) || $o['delivery_date'] === $placeholder) {
+            if (($o['status'] ?? '') === 'reserved') {
                 $awaiting[] = $o;
             } else {
                 $rest[] = $o;
