@@ -32,10 +32,9 @@ class ClientController
         $catalogService = new ClientCatalogService($this->pdo);
         $data = $catalogService->getHomePageData();
 
-        view('client/home', [
-            ...$data,
+        view('client/home', array_merge($data, [
             'userName' => $_SESSION['name'] ?? null,
-        ]);
+        ]));
     }
 
     /** Каталог: сортировка по наличию/дате */
@@ -44,11 +43,10 @@ class ClientController
         $catalogService = new ClientCatalogService($this->pdo);
         $data = $catalogService->getCatalogData();
     
-        view('client/catalog', [
-            ...$data,
+        view('client/catalog', array_merge($data, [
             'userName'  => $_SESSION['name'] ?? null,
             'breadcrumbs' => [ ['label' => 'Каталог'] ],
-        ]);
+        ]));
     }
 
     /** Список товаров в корзине */
