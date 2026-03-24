@@ -111,6 +111,16 @@ switch ("$method $uri") {
         $orderId = (int)$matches[1];
         (new App\Controllers\ClientController($pdo))->showOrder($orderId);
         break;
+    case (bool) preg_match('#^POST /orders/(\d+)/confirm$#', "$method $uri", $matches):
+        requireClient();
+        $orderId = (int)$matches[1];
+        (new App\Controllers\ClientController($pdo))->confirmReservedOrder($orderId);
+        break;
+    case (bool) preg_match('#^POST /orders/(\d+)/cancel$#', "$method $uri", $matches):
+        requireClient();
+        $orderId = (int)$matches[1];
+        (new App\Controllers\ClientController($pdo))->cancelReservedOrder($orderId);
+        break;
 
     case (bool) preg_match('#^GET /content/([^/]+)/([^/]+)$#', "$method $uri", $m):
         (new App\Controllers\ClientController($pdo))->showMaterial($m[1], $m[2]);
