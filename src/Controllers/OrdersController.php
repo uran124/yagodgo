@@ -63,10 +63,9 @@ class OrdersController
         $pageService = new AdminOrdersPageService($this->pdo);
         $data = $pageService->buildIndexData($managerId, $page, $perPage);
 
-        viewAdmin('orders/index', [
+        viewAdmin('orders/index', array_merge([
             'pageTitle' => 'Заказы',
-            ...$data,
-        ]);
+        ], $data));
     }
 
     // Детали заказа (админ)
@@ -81,10 +80,9 @@ class OrdersController
             exit;
         }
 
-        viewAdmin('orders/show', [
+        viewAdmin('orders/show', array_merge([
             'pageTitle' => "Заказ #{$id}",
-            ...$data,
-        ]);
+        ], $data));
     }
 
     // Форма создания заказа вручную (админ)
@@ -94,10 +92,9 @@ class OrdersController
         $data = $pageService->buildCreateData($_SESSION);
         unset($_SESSION['debug_order_data']);
 
-        viewAdmin('orders/create', [
+        viewAdmin('orders/create', array_merge([
             'pageTitle' => 'Создать заказ',
-            ...$data,
-        ]);
+        ], $data));
     }
 
     // Сохранить заказ (POST, админ)
@@ -337,7 +334,7 @@ class OrdersController
     {
         $orderId = (int)($_POST['order_id'] ?? 0);
         $status  = $_POST['status'] ?? '';
-        if ($orderId && in_array($status, ['new','processing','assigned','delivered','cancelled'], true)) {
+        if ($orderId && in_array($status, ['reserved','new','processing','assigned','delivered','cancelled'], true)) {
             // Получаем текущий статус и данные заказа
             $stmt = $this->pdo->prepare(
                 "SELECT status, user_id, total_amount, points_accrued, manager_points_accrued, points_used FROM orders WHERE id = ?"

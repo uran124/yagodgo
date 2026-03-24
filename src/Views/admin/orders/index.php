@@ -31,6 +31,7 @@
     <option value="assigned">В работе</option>
     <option value="delivered">Выполненные</option>
     <option value="cancelled">Отмененные</option>
+    <option value="reserved">Бронь</option>
   </select>
   <?php if ($role === 'manager' || !empty($managers)): ?>
     <select id="managerFilter" class="border rounded px-3 py-2 text-sm">
@@ -98,7 +99,11 @@
         <?php endif; ?>
         <div class="flex justify-between font-semibold border-t pt-1 mt-1">
           <span>Стоимость заказа:</span>
-          <span><?= number_format($o['total_amount'], 0, '.', ' ') ?> ₽</span>
+          <?php if (($o['status'] ?? '') === 'reserved' && (int)($o['total_amount'] ?? 0) <= 0): ?>
+            <span>Цена уточняется</span>
+          <?php else: ?>
+            <span><?= number_format($o['total_amount'], 0, '.', ' ') ?> ₽</span>
+          <?php endif; ?>
         </div>
       </div>
     <?php endforeach; ?>
@@ -150,7 +155,7 @@
           const tomorrow = t.toISOString().slice(0,10);
           if (!d || d !== tomorrow) visible = false;
         } else if (dateFilter === 'upcoming') {
-          if (!['new','processing','assigned'].includes(st)) visible = false;
+          if (!['new','processing','assigned','reserved'].includes(st)) visible = false;
         } else if (dateFilter === 'completed') {
           if (st !== 'delivered') {
             visible = false;

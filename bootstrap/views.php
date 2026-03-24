@@ -82,6 +82,11 @@ if (!function_exists('order_status_info')) {
                 'badge' => 'bg-gray-100 text-gray-800',
                 'bg'    => 'bg-gray-50',
             ],
+            'reserved' => [
+                'label' => 'Бронь',
+                'badge' => 'bg-purple-100 text-purple-800',
+                'bg'    => 'bg-purple-50',
+            ],
             default => [
                 'label' => $status,
                 'badge' => 'bg-gray-100 text-gray-800',
