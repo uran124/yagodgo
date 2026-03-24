@@ -11,6 +11,15 @@ function status_classes(string $status): string {
         default => 'bg-gray-100 text-gray-800',
     };
 }
+
+function resolve_order_display_status(array $order): string {
+    $placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
+    $isReservedByData = (($order['delivery_date'] ?? '') === $placeholder) && (int)($order['total_amount'] ?? 0) <= 0;
+    if ($isReservedByData) {
+        return 'reserved';
+    }
+    return (string)($order['status'] ?? 'new');
+}
 ?>
 <main class="min-h-screen bg-gray-50 pb-6 sm:pb-10">
   <div class="p-3 sm:p-4 space-y-4" id="ordersApp">
@@ -37,8 +46,9 @@ function status_classes(string $status): string {
       <h2 class="font-semibold text-gray-800">Заказы ожидают поставки</h2>
       <div class="space-y-2">
         <?php foreach ($ordersAwaiting as $order): ?>
-          <?php $info = order_status_info($order['status']); ?>
-          <a href="/orders/<?= $order['id'] ?>" class="order-card flex p-3 rounded-lg shadow hover:shadow-md transition-colors <?= $info['bg'] ?>" data-status="<?= $order['status'] ?>" data-id="<?= $order['id'] ?>">
+          <?php $displayStatus = resolve_order_display_status($order); ?>
+          <?php $info = order_status_info($displayStatus); ?>
+          <a href="/orders/<?= $order['id'] ?>" class="order-card flex p-3 rounded-lg shadow hover:shadow-md transition-colors <?= $info['bg'] ?>" data-status="<?= $displayStatus ?>" data-id="<?= $order['id'] ?>">
           <div class="flex flex-col flex-1">
             <div class="flex justify-between items-center gap-2 flex-wrap">
               <div class="flex items-center gap-2 flex-wrap">
@@ -51,8 +61,8 @@ function status_classes(string $status): string {
                 </span>
                 <span class="order-date hidden"><?= date('d.m.Y H:i', strtotime($order['created_at'])) ?></span>
               </div>
-              <span class="status-badge text-sm px-2 py-0.5 rounded-full <?= status_classes($order['status']) ?>">
-                <?= order_status_info($order['status'])['label'] ?>
+              <span class="status-badge text-sm px-2 py-0.5 rounded-full <?= status_classes($displayStatus) ?>">
+                <?= order_status_info($displayStatus)['label'] ?>
               </span>
             </div>
             <?php foreach ($order['items'] as $idx => $it): ?>
@@ -69,7 +79,7 @@ function status_classes(string $status): string {
               $discount = max(0, $rawSum - $order['total_amount']);
             ?>
             <div class="flex justify-between items-center pt-1 border-t border-gray-200 mt-1 font-semibold">
-              <?php if (($order['status'] ?? '') === 'reserved' && (int)($order['total_amount'] ?? 0) <= 0): ?>
+              <?php if ($displayStatus === 'reserved' && (int)($order['total_amount'] ?? 0) <= 0): ?>
                 <span>Стоимость заказа:</span>
                 <span>Цена уточняется</span>
               <?php elseif ($discount > 0): ?>
@@ -77,7 +87,7 @@ function status_classes(string $status): string {
               <?php else: ?>
                 <span>Стоимость заказа:</span>
               <?php endif; ?>
-              <?php if (!(($order['status'] ?? '') === 'reserved' && (int)($order['total_amount'] ?? 0) <= 0)): ?>
+              <?php if (!(($displayStatus === 'reserved') && (int)($order['total_amount'] ?? 0) <= 0)): ?>
                 <span><?= number_format($order['total_amount'], 0, '.', ' ') ?> ₽</span>
               <?php endif; ?>
             </div>
@@ -90,8 +100,9 @@ function status_classes(string $status): string {
     <!-- Orders list -->
     <div id="ordersContainer" class="mt-4 space-y-2">
       <?php foreach ($orders as $order): ?>
-        <?php $info = order_status_info($order['status']); ?>
-        <a href="/orders/<?= $order['id'] ?>" class="order-card flex p-3 rounded-lg shadow hover:shadow-md transition-colors <?= $info['bg'] ?>" data-status="<?= $order['status'] ?>" data-id="<?= $order['id'] ?>">
+        <?php $displayStatus = resolve_order_display_status($order); ?>
+        <?php $info = order_status_info($displayStatus); ?>
+        <a href="/orders/<?= $order['id'] ?>" class="order-card flex p-3 rounded-lg shadow hover:shadow-md transition-colors <?= $info['bg'] ?>" data-status="<?= $displayStatus ?>" data-id="<?= $order['id'] ?>">
           <div class="flex flex-col flex-1">
             <div class="flex justify-between items-center gap-2 flex-wrap">
               <div class="flex items-center gap-2 flex-wrap">
@@ -104,8 +115,8 @@ function status_classes(string $status): string {
                 </span>
                 <span class="order-date hidden"><?= date('d.m.Y H:i', strtotime($order['created_at'])) ?></span>
               </div>
-              <span class="status-badge text-sm px-2 py-0.5 rounded-full <?= status_classes($order['status']) ?>">
-                <?= order_status_info($order['status'])['label'] ?>
+              <span class="status-badge text-sm px-2 py-0.5 rounded-full <?= status_classes($displayStatus) ?>">
+                <?= order_status_info($displayStatus)['label'] ?>
               </span>
             </div>
             <?php foreach ($order['items'] as $idx => $it): ?>
@@ -122,7 +133,7 @@ function status_classes(string $status): string {
               $discount = max(0, $rawSum - $order['total_amount']);
             ?>
             <div class="flex justify-between items-center pt-1 border-t border-gray-200 mt-1 font-semibold">
-              <?php if (($order['status'] ?? '') === 'reserved' && (int)($order['total_amount'] ?? 0) <= 0): ?>
+              <?php if ($displayStatus === 'reserved' && (int)($order['total_amount'] ?? 0) <= 0): ?>
                 <span>Стоимость заказа:</span>
                 <span>Цена уточняется</span>
               <?php elseif ($discount > 0): ?>
@@ -130,7 +141,7 @@ function status_classes(string $status): string {
               <?php else: ?>
                 <span>Стоимость заказа:</span>
               <?php endif; ?>
-              <?php if (!(($order['status'] ?? '') === 'reserved' && (int)($order['total_amount'] ?? 0) <= 0)): ?>
+              <?php if (!(($displayStatus === 'reserved') && (int)($order['total_amount'] ?? 0) <= 0)): ?>
                 <span><?= number_format($order['total_amount'], 0, '.', ' ') ?> ₽</span>
               <?php endif; ?>
             </div>

@@ -14,6 +14,10 @@ $coupon   = $coupon   ?? null;
 $pointsFromBalance = $pointsFromBalance ?? 0;
 $flashMessage = $_GET['msg'] ?? null;
 $flashError = $_GET['error'] ?? null;
+$placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
+$isReservedOrder = ((string)($order['delivery_date'] ?? '') === $placeholder && (int)($order['total_amount'] ?? 0) <= 0)
+    || (($order['status'] ?? '') === 'reserved');
+$displayStatus = $isReservedOrder ? 'reserved' : (string)($order['status'] ?? 'new');
 
 // Считаем «сырьевую» сумму (без учёта скидки)
 $rawSum = 0;
@@ -35,7 +39,7 @@ $discount = max(0, $rawSum - $order['total_amount'] + $shippingCost);
       <div class="absolute bottom-0 left-0 w-16 h-16 bg-white/10 rounded-full translate-y-8 -translate-x-8"></div>
       
       <div class="relative z-10 space-y-1">
-        <?php $info = order_status_info($order['status']); ?>
+        <?php $info = order_status_info($displayStatus); ?>
         <div class="flex justify-between items-center">
           <h2 class="text-2xl font-bold">📦 Заказ №<?= htmlspecialchars($order['id']) ?></h2>
           <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium <?= $info['badge'] ?>">
@@ -69,7 +73,6 @@ $discount = max(0, $rawSum - $order['total_amount'] + $shippingCost);
       </h3>
       <p class="text-gray-700 mb-2 flex items-center">
         <span class="material-icons-round align-middle mr-2">calendar_today</span>
-        <?php $placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15'; ?>
         <?php if ($order['delivery_date'] === $placeholder): ?>
           Ближайшая возможная дата
         <?php else: ?>
@@ -154,7 +157,7 @@ $discount = max(0, $rawSum - $order['total_amount'] + $shippingCost);
       <!-- Окончательная сумма -->
       <div class="flex justify-between items-center pt-2">
         <span class="font-semibold text-gray-800 text-lg">Стоимость заказа:</span>
-        <?php if (($order['status'] ?? '') === 'reserved' && (int)($order['total_amount'] ?? 0) <= 0): ?>
+        <?php if ($isReservedOrder && (int)($order['total_amount'] ?? 0) <= 0): ?>
           <span class="font-bold text-2xl text-gray-800">Цена уточняется</span>
         <?php else: ?>
           <span class="font-bold text-2xl text-gray-800">
@@ -164,7 +167,7 @@ $discount = max(0, $rawSum - $order['total_amount'] + $shippingCost);
       </div>
     </div>
 
-    <?php if (($order['status'] ?? '') === 'reserved'): ?>
+    <?php if ($isReservedOrder): ?>
       <div class="bg-white rounded-3xl shadow-lg p-6">
         <h3 class="text-lg font-semibold text-gray-800 mb-4">Управление бронью</h3>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">

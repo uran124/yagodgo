@@ -629,7 +629,7 @@ public function cart(): void
         }
 
         $slotId = $_POST['slot_id'][$dateKey] ?? null; // из формы
-        $status = $isReservedOrder ? 'reserved' : 'new';
+        $status = 'new';
 
         // (7.2) Вставляем заказ. Поскольку у таблицы orders есть колонки discount_applied, points_used, points_accrued, нужно задать их:
         $stmtOrder = $this->pdo->prepare(
@@ -841,7 +841,7 @@ public function confirmReservedOrder(int $orderId): void
     requireClient();
     $userId = (int)($_SESSION['user_id'] ?? 0);
 
-    $stmt = $this->pdo->prepare("SELECT id, user_id, status, total_amount FROM orders WHERE id = ?");
+    $stmt = $this->pdo->prepare("SELECT id, user_id, status, total_amount, delivery_date FROM orders WHERE id = ?");
     $stmt->execute([$orderId]);
     $order = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$order || (int)$order['user_id'] !== $userId) {
@@ -849,7 +849,8 @@ public function confirmReservedOrder(int $orderId): void
         echo 'Заказ не найден';
         exit;
     }
-    if (($order['status'] ?? '') !== 'reserved') {
+    $isReservation = (($order['delivery_date'] ?? '') === PLACEHOLDER_DATE) || (($order['status'] ?? '') === 'reserved');
+    if (!$isReservation) {
         header('Location: /orders/' . $orderId . '?error=' . urlencode('Заказ уже подтвержден или отменен'));
         exit;
     }
@@ -870,13 +871,14 @@ public function cancelReservedOrder(int $orderId): void
 
     $this->pdo->beginTransaction();
     try {
-        $stmt = $this->pdo->prepare("SELECT id, user_id, status, points_used FROM orders WHERE id = ? FOR UPDATE");
+        $stmt = $this->pdo->prepare("SELECT id, user_id, status, points_used, delivery_date FROM orders WHERE id = ? FOR UPDATE");
         $stmt->execute([$orderId]);
         $order = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$order || (int)$order['user_id'] !== $userId) {
             throw new \RuntimeException('order_not_found');
         }
-        if (($order['status'] ?? '') !== 'reserved') {
+        $isReservation = (($order['delivery_date'] ?? '') === PLACEHOLDER_DATE) || (($order['status'] ?? '') === 'reserved');
+        if (!$isReservation) {
             throw new \RuntimeException('invalid_status');
         }
 
