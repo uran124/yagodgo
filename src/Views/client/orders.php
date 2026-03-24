@@ -7,6 +7,7 @@ function status_classes(string $status): string {
         'assigned' => 'bg-green-100 text-green-800',
         'delivered' => 'bg-blue-100 text-blue-800',
         'cancelled' => 'bg-gray-100 text-gray-800',
+        'reserved' => 'bg-purple-100 text-purple-800',
         default => 'bg-gray-100 text-gray-800',
     };
 }
@@ -23,6 +24,7 @@ function status_classes(string $status): string {
           <option value="assigned">В работе</option>
           <option value="delivered">Выполненные</option>
           <option value="cancelled">Отмененные</option>
+          <option value="reserved">Бронь</option>
         </select>
         <button id="sortBtn" class="flex items-center border rounded-lg px-3 py-2 text-sm text-gray-600">
           <span class="material-icons-round">swap_vert</span>
@@ -67,12 +69,17 @@ function status_classes(string $status): string {
               $discount = max(0, $rawSum - $order['total_amount']);
             ?>
             <div class="flex justify-between items-center pt-1 border-t border-gray-200 mt-1 font-semibold">
-              <?php if ($discount > 0): ?>
+              <?php if (($order['status'] ?? '') === 'reserved' && (int)($order['total_amount'] ?? 0) <= 0): ?>
+                <span>Стоимость заказа:</span>
+                <span>Цена уточняется</span>
+              <?php elseif ($discount > 0): ?>
                 <span>Скидка: -<?= number_format($discount, 0, '.', ' ') ?> 🍓</span>
               <?php else: ?>
                 <span>Стоимость заказа:</span>
               <?php endif; ?>
-              <span><?= number_format($order['total_amount'], 0, '.', ' ') ?> ₽</span>
+              <?php if (!(($order['status'] ?? '') === 'reserved' && (int)($order['total_amount'] ?? 0) <= 0)): ?>
+                <span><?= number_format($order['total_amount'], 0, '.', ' ') ?> ₽</span>
+              <?php endif; ?>
             </div>
           </div>
         </a>
@@ -115,12 +122,17 @@ function status_classes(string $status): string {
               $discount = max(0, $rawSum - $order['total_amount']);
             ?>
             <div class="flex justify-between items-center pt-1 border-t border-gray-200 mt-1 font-semibold">
-              <?php if ($discount > 0): ?>
+              <?php if (($order['status'] ?? '') === 'reserved' && (int)($order['total_amount'] ?? 0) <= 0): ?>
+                <span>Стоимость заказа:</span>
+                <span>Цена уточняется</span>
+              <?php elseif ($discount > 0): ?>
                 <span>Скидка: -<?= number_format($discount, 0, '.', ' ') ?> 🍓</span>
               <?php else: ?>
                 <span>Стоимость заказа:</span>
               <?php endif; ?>
-              <span><?= number_format($order['total_amount'], 0, '.', ' ') ?> ₽</span>
+              <?php if (!(($order['status'] ?? '') === 'reserved' && (int)($order['total_amount'] ?? 0) <= 0)): ?>
+                <span><?= number_format($order['total_amount'], 0, '.', ' ') ?> ₽</span>
+              <?php endif; ?>
             </div>
           </div>
         </a>
