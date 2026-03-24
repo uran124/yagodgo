@@ -454,8 +454,8 @@
   <!-- Header -->
 <header class="fixed top-0 left-0 right-0 glass-effect flex items-center justify-between p-4 z-20 border-b border-white/20">
   <a href="/" id="logoLink" class="flex items-center">
-    <div class="w-10 h-10 berry-gradient rounded-2xl flex items-center justify-center floating-animation">
-      <img src="assets/berrygo_strawberry.svg" alt="BerryGo" class="w-6 h-6 filter brightness-0 invert">
+    <div class="w-10 h-10 flex items-center justify-center floating-animation">
+      <img src="assets/berrygo_strawberry.svg" alt="BerryGo" class="w-10 h-10">
     </div>
   </a>
   <button id="installLogoBtn" class="group flex flex-row items-center text-center space-x-1 install-pulse" style="display:none;">
