@@ -240,6 +240,11 @@ class ProductsController
         }
 
         if ($id) {
+            $oldDeliveryDate = null;
+            $oldStmt = $this->pdo->prepare("SELECT delivery_date FROM products WHERE id = ?");
+            $oldStmt->execute([(int)$id]);
+            $oldDeliveryDate = $oldStmt->fetchColumn() ?: null;
+
             // UPDATE
             $sql = "UPDATE products SET
                         product_type_id = ?,
@@ -283,6 +288,12 @@ class ProductsController
 
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute($params);
+            $placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
+            $wasUnknown = ($oldDeliveryDate === null || $oldDeliveryDate === '' || $oldDeliveryDate === $placeholder);
+            $isNowKnown = ($deliveryDate !== null && $deliveryDate !== '' && $deliveryDate !== $placeholder);
+            if ($stmt->rowCount() > 0 && $isNowKnown && $wasUnknown) {
+                $this->activateReservedOrdersByProduct((int)$id, $deliveryDate);
+            }
 
         } else {
             // INSERT
@@ -402,7 +413,8 @@ class ProductsController
             }
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute($params);
-            if ($date !== null && $date !== '') {
+            $placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
+            if ($date !== null && $date !== '' && $date !== $placeholder) {
                 $this->activateReservedOrdersByProduct($id, $date);
             }
         }
