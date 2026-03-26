@@ -35,6 +35,8 @@ $pricePerKg = round($effectiveKg, 2);
 $regularBox = $price * $boxSize;
 $role     = $_SESSION['role'] ?? '';
 $isStaff  = in_array($role, ['admin','manager'], true);
+$isRegularViewer = in_array($role, ['', 'client'], true);
+$hidePriceForPreorder = (!$showDate && $isRegularViewer);
 $basePath = $role === 'manager' ? '/manager' : '/admin';
 $regularKg  = round($price, 2);
 ?>
@@ -131,7 +133,13 @@ $regularKg  = round($price, 2);
 
     <!-- Блок цены -->
     <div class="mt-auto">
-      <?php if ($sale > 0): ?>
+      <?php if ($hidePriceForPreorder): ?>
+        <div class="flex justify-between items-center mb-3">
+          <div class="text-lg sm:text-2xl font-bold text-gray-600">
+            Ожидается
+          </div>
+        </div>
+      <?php elseif ($sale > 0): ?>
         <!-- Акционная цена -->
         <div class="flex items-baseline space-x-2 mb-3">
           <div class="text-xs sm:text-sm text-gray-400 line-through">
