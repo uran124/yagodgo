@@ -43,43 +43,52 @@ if ($dryRun && $command === 'status') {
     exit(1);
 }
 
-$tableExists = static function (PDO $pdo): bool {
-    $stmt = $pdo->query("SHOW TABLES LIKE 'schema_migrations'");
-    return (bool)$stmt?->fetchColumn();
-};
-
 $ensureSchemaMigrations = static function (PDO $pdo): void {
     $pdo->exec(
         'CREATE TABLE IF NOT EXISTS schema_migrations (
             id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
             filename VARCHAR(255) NOT NULL UNIQUE,
-            applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+            checksum VARCHAR(64) NULL,
+            applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            execution_time_ms INT UNSIGNED NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
     );
-};
 
-$getAppliedMap = static function (PDO $pdo): array {
-    $stmt = $pdo->query('SELECT filename FROM schema_migrations ORDER BY filename ASC');
-    $applied = $stmt ? $stmt->fetchAll(PDO::FETCH_COLUMN) : [];
-    return array_fill_keys($applied, true);
-};
+    $columnsStmt = $pdo->query('SHOW COLUMNS FROM schema_migrations');
+    $columns = $columnsStmt ? array_map(static fn (array $row): string => (string) $row['Field'], $columnsStmt->fetchAll(PDO::FETCH_ASSOC)) : [];
 
-if ($command === 'status') {
-    if (!$tableExists($pdo)) {
-        fwrite(STDOUT, "Applied: 0\n");
-        fwrite(STDOUT, "Pending: " . count($files) . "\n");
-        foreach ($files as $filename) {
-            fwrite(STDOUT, "  [pending] {$filename}\n");
-        }
-        exit(0);
+    if (!in_array('checksum', $columns, true)) {
+        $pdo->exec('ALTER TABLE schema_migrations ADD COLUMN checksum VARCHAR(64) NULL AFTER filename');
     }
 
-    $appliedMap = $getAppliedMap($pdo);
+    if (!in_array('execution_time_ms', $columns, true)) {
+        $pdo->exec('ALTER TABLE schema_migrations ADD COLUMN execution_time_ms INT UNSIGNED NULL AFTER applied_at');
+    }
+};
+
+$getAppliedRows = static function (PDO $pdo): array {
+    $stmt = $pdo->query('SELECT filename, checksum FROM schema_migrations ORDER BY filename ASC');
+    if (!$stmt) {
+        return [];
+    }
+
+    $map = [];
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $map[(string) $row['filename']] = $row['checksum'] !== null ? (string) $row['checksum'] : null;
+    }
+
+    return $map;
+};
+
+$ensureSchemaMigrations($pdo);
+
+if ($command === 'status') {
+    $appliedMap = $getAppliedRows($pdo);
     $applied = [];
     $pending = [];
 
     foreach ($files as $filename) {
-        if (isset($appliedMap[$filename])) {
+        if (array_key_exists($filename, $appliedMap)) {
             $applied[] = $filename;
         } else {
             $pending[] = $filename;
@@ -100,12 +109,8 @@ if ($command === 'status') {
 }
 
 if ($dryRun) {
-    if (!$tableExists($pdo)) {
-        fwrite(STDOUT, "[dry-run] would create table schema_migrations\n");
-    }
-
-    $appliedMap = $tableExists($pdo) ? $getAppliedMap($pdo) : [];
-    $pending = array_values(array_filter($files, static fn (string $file): bool => !isset($appliedMap[$file])));
+    $appliedMap = $getAppliedRows($pdo);
+    $pending = array_values(array_filter($files, static fn (string $file): bool => !array_key_exists($file, $appliedMap)));
 
     fwrite(STDOUT, "[dry-run] pending migrations: " . count($pending) . "\n");
     foreach ($pending as $filename) {
@@ -115,13 +120,33 @@ if ($dryRun) {
     exit(0);
 }
 
-$ensureSchemaMigrations($pdo);
-$appliedMap = $getAppliedMap($pdo);
-$pending = array_values(array_filter($files, static fn (string $file): bool => !isset($appliedMap[$file])));
+$appliedMap = $getAppliedRows($pdo);
+$pending = array_values(array_filter($files, static fn (string $file): bool => !array_key_exists($file, $appliedMap)));
 
 if ($pending === []) {
     fwrite(STDOUT, "No pending migrations.\n");
     exit(0);
+}
+
+foreach ($files as $filename) {
+    if (!array_key_exists($filename, $appliedMap)) {
+        continue;
+    }
+
+    $path = $migrationsDir . '/' . $filename;
+    $sql = file_get_contents($path);
+    if ($sql === false) {
+        fwrite(STDERR, "Failed to read migration file: {$filename}\n");
+        exit(1);
+    }
+
+    $currentChecksum = hash('sha256', $sql);
+    $storedChecksum = $appliedMap[$filename];
+
+    if ($storedChecksum !== null && $storedChecksum !== $currentChecksum) {
+        fwrite(STDERR, "Checksum mismatch for applied migration {$filename}.\n");
+        exit(1);
+    }
 }
 
 foreach ($pending as $filename) {
@@ -132,15 +157,24 @@ foreach ($pending as $filename) {
         exit(1);
     }
 
+    $checksum = hash('sha256', $sql);
+
     try {
         $pdo->beginTransaction();
+        $startedAt = microtime(true);
+
         $pdo->exec($sql);
 
-        $stmt = $pdo->prepare('INSERT INTO schema_migrations (filename) VALUES (:filename)');
-        $stmt->execute(['filename' => $filename]);
+        $executionTimeMs = (int) round((microtime(true) - $startedAt) * 1000);
+        $stmt = $pdo->prepare('INSERT INTO schema_migrations (filename, checksum, execution_time_ms) VALUES (:filename, :checksum, :execution_time_ms)');
+        $stmt->execute([
+            'filename' => $filename,
+            'checksum' => $checksum,
+            'execution_time_ms' => $executionTimeMs,
+        ]);
 
         $pdo->commit();
-        fwrite(STDOUT, "Applied {$filename}\n");
+        fwrite(STDOUT, "Applied {$filename} ({$executionTimeMs} ms)\n");
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
