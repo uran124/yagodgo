@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 return [
-    'from' => 'noreply@yagodgo.ru'
+    'from' => getenv('EMAIL_FROM') ?: '',
 ];

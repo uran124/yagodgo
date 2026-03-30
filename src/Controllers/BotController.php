@@ -2,6 +2,7 @@
 // src/Controllers/BotController.php
 namespace App\Controllers;
 
+use App\Helpers\SensitiveData;
 use Telegram\Bot\Api; // Предполагаем, что в проекте установлена библиотека irazasyed/telegram-bot-sdk через Composer
 // Если вы используете другую, замените на соответствующий класс.
 
@@ -49,7 +50,8 @@ class BotController
 
             // Другие типы (например, edited_message и др.) пока не обрабатываем
         } catch (\Throwable $e) {
-            $logMessage = sprintf("[%s] %s\n%s\n", date('Y-m-d H:i:s'), $e->getMessage(), $e->getTraceAsString());
+            $rawLogMessage = sprintf("[%s] %s\n%s\n", date('Y-m-d H:i:s'), $e->getMessage(), $e->getTraceAsString());
+            $logMessage = SensitiveData::sanitizeText($rawLogMessage, [$this->config['bot_token'] ?? '', $this->config['secret_token'] ?? '']);
             error_log($logMessage, 3, __DIR__ . '/../../log/webhook.log');
             http_response_code(200);
         }

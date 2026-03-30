@@ -1,25 +1,19 @@
 <?php
 
-// Конфигурация подключения к базе данных
-return [
-    // Адрес сервера базы данных
-    'host'      => '188.127.239.143',
-    // Имя базы данных
-    'dbname'    => 'yago',
-    // Пользователь базы данных
-    'user'      => 'yago',
-    // Пароль пользователя
-    'password'  => 'yago11!!',
-    // Кодировка соединения
-    'charset'   => 'utf8mb4',
+declare(strict_types=1);
 
-    // Дополнительные параметры PDO
+// Конфигурация подключения к базе данных.
+// Для локальной разработки задайте переменные окружения DB_*.
+return [
+    'host'      => getenv('DB_HOST') ?: '',
+    'dbname'    => getenv('DB_NAME') ?: '',
+    'user'      => getenv('DB_USER') ?: '',
+    'password'  => getenv('DB_PASSWORD') ?: '',
+    'charset'   => getenv('DB_CHARSET') ?: 'utf8mb4',
+
     'options'   => [
-        // Выбрасывать исключения при ошибках
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-        // Использовать ассоциативные массивы по умолчанию
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        // Настройка эмуляции подготовленных выражений
         PDO::ATTR_EMULATE_PREPARES   => false,
     ],
 ];

@@ -2,6 +2,7 @@
 namespace App\Controllers;
 
 use PDO;
+use App\Helpers\SensitiveData;
 use App\Helpers\Auth;
 use App\Helpers\ReferralHelper;
 use App\Helpers\PhoneNormalizer;
@@ -710,10 +711,12 @@ class OrdersController
         // Логируем результат (в файл или через ваш логгер)
         $logEntry = date('Y-m-d H:i:s')
             . " | notifyAdmins | order={$orderId} | http_code={$httpCode}";
+        $safeResponse = $response === false ? 'false' : SensitiveData::sanitizeText((string)$response, [$token]);
+        $safeError = SensitiveData::sanitizeText((string)$error, [$token]);
         if ($errno) {
-            $logEntry .= " | curl_error={$error}";
+            $logEntry .= " | curl_error={$safeError}";
         }
-        $logEntry .= " | response=" . ($response === false ? 'false' : $response) . "\n";
+        $logEntry .= " | response=" . $safeResponse . "\n";
         file_put_contents(__DIR__ . '/../../log/telegram_notify.log', $logEntry, FILE_APPEND);
         // если используете PSR-3 логгер:
         // $this->logger?->error('notifyAdmins', ['orderId'=>$orderId,'http'=>$httpCode,'curlErr'=>$error,'resp'=>$response]);
