@@ -15,7 +15,9 @@
     }
   },
   "scripts": {
-    "start": "php -S localhost:8000 -t ."
+    "start": "php -S localhost:8000 -t .",
+    "migrate": "php bin/migrate.php up",
+    "test": "vendor/bin/phpunit"
   },
   "config": {
     "optimize-autoloader": true
