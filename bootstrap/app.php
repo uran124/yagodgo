@@ -35,7 +35,50 @@ if (file_exists($vendorAutoload)) {
     });
 }
 
+/**
+ * @param array<string, mixed> $config
+ * @param array<int, string> $requiredKeys
+ */
+function ensureRequiredConfig(string $configName, array $config, array $requiredKeys): void
+{
+    $missing = [];
+    foreach ($requiredKeys as $key) {
+        $value = $config[$key] ?? null;
+        if ($value === null || (is_string($value) && trim($value) === '')) {
+            $missing[] = $configName . '.' . $key;
+        }
+    }
+
+    if ($missing !== []) {
+        http_response_code(500);
+        echo 'Ошибка конфигурации: отсутствуют обязательные ключи: ' . htmlspecialchars(implode(', ', $missing));
+        exit;
+    }
+}
+
 $dbConfig = require __DIR__ . '/../config/database.php';
+$telegramConfig = require __DIR__ . '/../config/telegram.php';
+$smsConfig = require __DIR__ . '/../config/sms.php';
+$emailConfig = require __DIR__ . '/../config/email.php';
+$constants = require __DIR__ . '/../config/constants.php';
+
+ensureRequiredConfig('database', $dbConfig, ['host', 'dbname', 'user', 'password', 'charset']);
+ensureRequiredConfig('telegram', $telegramConfig, ['bot_token', 'admin_chat_id']);
+ensureRequiredConfig('sms', $smsConfig, ['api_id']);
+ensureRequiredConfig('email', $emailConfig, ['from']);
+
+if (!filter_var($emailConfig['from'], FILTER_VALIDATE_EMAIL)) {
+    http_response_code(500);
+    echo 'Ошибка конфигурации: email.from должен быть валидным email-адресом.';
+    exit;
+}
+
+set_error_handler(static function (int $severity, string $message, string $file, int $line): bool {
+    $safeMessage = \App\Helpers\SensitiveData::sanitizeText($message);
+    error_log(sprintf('[%s] PHP error: %s in %s:%d', date('Y-m-d H:i:s'), $safeMessage, $file, $line));
+    return false;
+});
+
 $dsn = "mysql:host={$dbConfig['host']};dbname={$dbConfig['dbname']};charset={$dbConfig['charset']}";
 try {
     $pdo = new PDO(
@@ -46,7 +89,8 @@ try {
     );
 } catch (PDOException $e) {
     http_response_code(500);
-    echo "Ошибка подключения к базе данных: " . htmlspecialchars($e->getMessage());
+    echo 'Ошибка подключения к базе данных. Проверьте корректность database.* в конфиге.';
+    error_log(\App\Helpers\SensitiveData::sanitizeText($e->getMessage()));
     exit;
 }
 
@@ -57,11 +101,6 @@ if (!empty($_SESSION['user_id'])) {
     $_SESSION['points_balance'] = $bal !== false ? (int)$bal['points_balance'] : 0;
     $_SESSION['rub_balance'] = $bal !== false ? (int)$bal['rub_balance'] : 0;
 }
-
-$telegramConfig = require __DIR__ . '/../config/telegram.php';
-$smsConfig = require __DIR__ . '/../config/sms.php';
-$emailConfig = require __DIR__ . '/../config/email.php';
-$constants = require __DIR__ . '/../config/constants.php';
 
 define('PLACEHOLDER_DATE', $constants['placeholder_date']);
 define('BOX_MARKUP', $constants['box_markup']);

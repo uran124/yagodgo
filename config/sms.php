@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 return [
-    'api_id' => '4f14fa2d-ed20-ebc4-2928-55a31be83b4a'
+    'api_id' => getenv('SMS_API_ID') ?: '',
 ];

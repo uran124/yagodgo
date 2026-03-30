@@ -1,16 +1,12 @@
 <?php
-// config/telegram.php
+
+declare(strict_types=1);
 
 return [
-    // Токен вашего бота
-    'bot_token'     => '8101596626:AAFekmWOpK7OI9AYtuJ49cxMIGjwBZ-Ydtg',
-
-    // Chat ID вашей группы администраторов
-    'admin_chat_id' => '-1002688754570',
-
-    // ID темы (thread) внутри группы для уведомлений
-    'admin_topic_id' => 77,
-
-    // Если не используете секретный токен для webhook, оставьте пустым
-    'secret_token'  => '',
+    'bot_token'      => getenv('TELEGRAM_BOT_TOKEN') ?: '',
+    'admin_chat_id'  => getenv('TELEGRAM_ADMIN_CHAT_ID') ?: '',
+    'admin_topic_id' => getenv('TELEGRAM_ADMIN_TOPIC_ID') !== false
+        ? (int)getenv('TELEGRAM_ADMIN_TOPIC_ID')
+        : null,
+    'secret_token'   => getenv('TELEGRAM_SECRET_TOKEN') ?: '',
 ];
