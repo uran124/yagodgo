@@ -379,6 +379,12 @@ public function cart(): void
                 }
             }
         }
+        if ($couponError === null) {
+            $incomingCouponError = trim((string)($_GET['coupon_error'] ?? ''));
+            if ($incomingCouponError !== '') {
+                $couponError = $incomingCouponError;
+            }
+        }
     
         // 6) Рассчитываем, сколько баллов можно списать (не более суммы заказа)
         $pointsToUse = min($pointsBalance, (int)$subtotal);
@@ -596,9 +602,17 @@ public function cart(): void
             $streetVal = $newStreet;
         } elseif (is_numeric($addrInput)) {
             $addressIds[$dateKey] = (int)$addrInput;
-            $stmtAddr = $this->pdo->prepare("SELECT street FROM addresses WHERE id = ?");
-            $stmtAddr->execute([(int)$addrInput]);
-            $streetVal = (string)$stmtAddr->fetchColumn();
+            $stmtAddr = $this->pdo->prepare("SELECT street FROM addresses WHERE id = ? AND user_id = ?");
+            $stmtAddr->execute([(int)$addrInput, $userId]);
+            $street = $stmtAddr->fetchColumn();
+            if ($street === false) {
+                if ($this->pdo->inTransaction()) {
+                    $this->pdo->rollBack();
+                }
+                header('Location: /checkout?coupon_error=' . urlencode('Выбран недоступный адрес доставки'));
+                exit;
+            }
+            $streetVal = (string)$street;
         } else {
             $addressIds[$dateKey] = $this->ensureAddress($userId, $addrInput, $recipientName, $recipientPhone);
             $streetVal = $addrInput;
