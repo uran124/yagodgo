@@ -6,6 +6,7 @@ BerryGo Web App — PHP-приложение для доставки ягод и
 
 - PHP 8.0+
 - Composer
+- GNU Make
 - MySQL / MariaDB
 - Веб-сервер или встроенный PHP server для локальной разработки
 
@@ -34,7 +35,7 @@ composer install
 SQL-изменения лежат в каталоге `database/` и применяются через CLI-миграции:
 
 ```bash
-php bin/migrate.php up
+make migrate
 ```
 
 При первом запуске будет автоматически создана таблица `schema_migrations` и применены все `.sql`-файлы из `database/` в лексикографическом порядке. Повторный запуск безопасен: уже применённые файлы пропускаются.
@@ -81,7 +82,7 @@ http://localhost:8000
 
 ```bash
 composer install
-vendor/bin/phpunit
+make test
 ```
 
 В проекте есть unit-тесты для middleware, сервисов и части контроллеров.
@@ -91,13 +92,13 @@ vendor/bin/phpunit
 ### Применить pending-миграции
 
 ```bash
-php bin/migrate.php up
+make migrate
 ```
 
 ### Проверить статус
 
 ```bash
-php bin/migrate.php status
+make status
 ```
 
 ### Dry-run для CI
@@ -107,6 +108,20 @@ php bin/migrate.php up --dry-run
 ```
 
 Dry-run не изменяет базу и показывает, какие миграции были бы применены.
+
+## Новые команды для ежедневной работы
+
+```bash
+make migrate   # применить pending-миграции
+make status    # показать applied/pending
+make test      # запустить PHPUnit
+```
+
+## Документация для handoff
+
+- ADR по инфраструктурным решениям: `docs/adr/0001-migration-runner-routes-split-ci.md`.
+- Runbook при падении деплоя/миграций: `docs/runbooks/deploy-and-migrations.md`.
+- 1-page план следующей итерации: `docs/next-iteration-plan.md`.
 
 ### Что лежит в `database/`
 
