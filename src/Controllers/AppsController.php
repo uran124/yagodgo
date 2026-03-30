@@ -123,7 +123,11 @@ class AppsController
         }
 
         $xml->asXML(__DIR__ . '/../../sitemap.xml');
-        $this->pdo->exec("UPDATE sitemap_settings SET last_generated = NOW() WHERE id=1");
+        try {
+            $this->pdo->exec("UPDATE sitemap_settings SET last_generated = NOW() WHERE id=1");
+        } catch (PDOException $e) {
+            $this->pdo->exec("UPDATE sitemap_settings SET last_generated = CURRENT_TIMESTAMP WHERE id=1");
+        }
 
         if (PHP_SAPI !== 'cli') {
             header('Location: /admin/apps/sitemap');
