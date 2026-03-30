@@ -68,6 +68,24 @@ php -S localhost:8000 -t .
 http://localhost:8000
 ```
 
+## CI и обязательные checks для merge
+
+В репозитории добавлен GitHub Actions workflow `.github/workflows/ci.yml`, который на каждый `push` и `pull_request` делает:
+
+1. `composer install`;
+2. поднимает MySQL test DB;
+3. применяет тестовую базовую схему и все SQL-миграции из `database/`;
+4. запускает `phpunit`.
+
+Если любой шаг падает, job завершается с ошибкой (fast-fail), а при падении тестов в артефакты загружаются логи (`phpunit-output.log` и `phpunit-junit.xml`).
+
+Чтобы падение тестов **блокировало merge**, в настройках GitHub репозитория для защищаемой ветки (обычно `main`) нужно включить:
+
+- **Require status checks to pass before merging**;
+- обязательный check: **`PHPUnit`** (job из workflow `CI`).
+
+После этого любой красный pipeline по тестам автоматически блокирует merge.
+
 ## Как запускать тесты
 
 ```bash
