@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: PHPUnit
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: berrygo_test
+          MYSQL_USER: berrygo
+          MYSQL_PASSWORD: berrygo
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: berrygo_test
+      DB_USERNAME: berrygo
+      DB_PASSWORD: berrygo
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, pdo, pdo_mysql
+          tools: composer:v2
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Wait for MySQL
+        run: |
+          set -euo pipefail
+          for i in {1..30}; do
+            if mysqladmin ping -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USERNAME" -p"$DB_PASSWORD" --silent; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "MySQL is not ready in time" >&2
+          exit 1
+
+      - name: Run migrations on test DB
+        run: .github/scripts/run-test-migrations.sh
+
+      - name: Run PHPUnit
+        run: |
+          set -euo pipefail
+          mkdir -p .ci-artifacts
+          vendor/bin/phpunit --testdox --log-junit .ci-artifacts/phpunit-junit.xml | tee .ci-artifacts/phpunit-output.log
+
+      - name: Upload test logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phpunit-logs
+          path: .ci-artifacts/
+          if-no-files-found: ignore
