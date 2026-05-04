@@ -2,12 +2,22 @@
 <?php $role = $_SESSION['role'] ?? ''; $isManager = in_array($role, ['manager','partner'], true); $base = $role === 'manager' ? '/manager' : ($role === 'partner' ? '/partner' : '/admin'); ?>
 <style>
   @media (max-width: 640px) {
-    .order-details button { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
-    .order-details span { font-size: 0.75rem; }
+    .order-details { font-size: 0.8125rem; }
+    .order-details .card { padding: 0.5rem; }
+    .order-details button,
+    .order-details .action-link,
+    .order-details input,
+    .order-details select,
+    .order-details textarea {
+      padding: 0.2rem 0.4rem;
+      font-size: 0.75rem;
+    }
+    .order-details .row-gap { gap: 0.35rem; }
+    .order-details .compact { margin: 0.125rem 0; }
   }
 </style>
 <div class="order-details space-y-4">
-  <div class="flex justify-between items-center bg-white p-4 rounded shadow">
+  <div class="flex justify-between items-center bg-white p-4 rounded shadow card">
     <div class="flex flex-wrap items-center gap-2">
       <span class="font-semibold">Заказ #<?= $order['id'] ?></span>
       <span><?= htmlspecialchars($order['client_name']) ?></span>
@@ -21,10 +31,10 @@
     </div>
   </div>
 
-  <div class="bg-white p-4 rounded shadow space-y-1">
+  <div class="bg-white p-4 rounded shadow card space-y-1">
     <?php foreach ($items as $it): ?>
       <?php $lineCost = $it['quantity'] * $it['unit_price']; ?>
-      <div class="flex justify-between items-center py-1">
+      <div class="flex justify-between items-center py-1 compact">
         <span>
           <?= htmlspecialchars($it['product_name']) ?>
           <?php if (!empty($it['variety'])): ?> <?= htmlspecialchars($it['variety']) ?><?php endif; ?>
@@ -32,19 +42,19 @@
             <?= ' ' . $it['box_size'] . ' ' . htmlspecialchars($it['box_unit']) ?>
           <?php endif; ?>
         </span>
-        <form action="<?= $base ?>/orders/update-item" method="post" class="flex items-center space-x-2">
+        <form action="<?= $base ?>/orders/update-item" method="post" class="flex items-center space-x-2 row-gap" data-autosave="true">
           <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
           <input type="hidden" name="product_id" value="<?= $it['product_id'] ?>">
           <input type="number" name="quantity" value="<?= $it['quantity'] ?>" step="0.01" class="w-20 border px-1 py-0.5 rounded"> кг
           <input type="number" name="unit_price" value="<?= $it['unit_price'] ?>" step="1" class="w-20 border px-1 py-0.5 rounded"> ₽
-          <button type="submit" class="bg-[#C86052] text-white px-2 py-1 rounded">OK</button>
-          <button type="submit" formaction="<?= $base ?>/orders/delete-item" class="text-red-600" onclick="return confirm('Удалить позицию?');">✕</button>
+          <button type="submit" class="bg-[#C86052] text-white px-2 py-1 rounded" title="Сохранить">💾</button>
+          <button type="submit" formaction="<?= $base ?>/orders/delete-item" class="text-red-600" onclick="return confirm('Удалить позицию?');" title="Удалить">✕</button>
           <span class="ml-2"><?= number_format($lineCost, 0, '.', ' ') ?> ₽</span>
         </form>
       </div>
     <?php endforeach; ?>
 
-    <form action="<?= $base ?>/orders/add-item" method="post" class="flex items-center space-x-2 pt-2 border-t">
+    <form action="<?= $base ?>/orders/add-item" method="post" class="flex items-center space-x-2 pt-2 border-t row-gap">
       <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
       <select name="product_id" class="border px-1 py-0.5 rounded">
         <?php foreach ($products as $p): ?>
@@ -53,7 +63,7 @@
       </select>
       <input type="number" name="quantity" step="0.01" placeholder="Кг" class="w-20 border px-1 py-0.5 rounded">
       <input type="number" name="unit_price" step="1" placeholder="₽" class="w-20 border px-1 py-0.5 rounded">
-      <button type="submit" class="bg-green-700 text-white px-2 py-1 rounded">Добавить</button>
+      <button type="submit" class="bg-green-700 text-white px-2 py-1 rounded" title="Добавить">➕</button>
     </form>
 
     <?php if (($pointsFromBalance ?? 0) > 0): ?>
@@ -82,16 +92,15 @@
     </div>
   </div>
 
-  <form action="<?= $base ?>/orders/comment" method="post" class="bg-white p-4 rounded shadow space-y-2">
+  <form action="<?= $base ?>/orders/comment" method="post" class="bg-white p-4 rounded shadow card space-y-2" data-autosave="true">
     <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
     <label class="block">
       <span class="block mb-1">Комментарий:</span>
       <textarea name="comment" rows="3" class="w-full border px-2 py-1 rounded"><?= htmlspecialchars($order['comment'] ?? '') ?></textarea>
     </label>
-    <button type="submit" class="bg-blue-700 text-white px-3 py-1 rounded">Сохранить</button>
   </form>
 
-  <form action="<?= $base ?>/orders/referral" method="post" class="bg-white p-4 rounded shadow space-y-2">
+  <form action="<?= $base ?>/orders/referral" method="post" class="bg-white p-4 rounded shadow card space-y-2" data-autosave="true">
     <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
     <input type="hidden" name="user_id" value="<?= $order['user_id'] ?>">
     <label class="inline-flex items-center cursor-pointer">
@@ -100,12 +109,11 @@
       <div class="w-10 h-5 bg-gray-200 rounded-full peer-checked:bg-[#C86052] relative transition-colors after:content-[''] after:absolute after:left-1 after:top-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-transform peer-checked:after:translate-x-5"></div>
       <span class="ml-2 text-sm">Скидка 10% на первый заказ</span>
     </label>
-    <button type="submit" class="bg-blue-700 text-white px-3 py-1 rounded">Сохранить</button>
   </form>
 
-  <form action="<?= $base ?>/orders/update-delivery" method="post" class="bg-white p-4 rounded shadow space-y-2">
+  <form action="<?= $base ?>/orders/update-delivery" method="post" class="bg-white p-4 rounded shadow card space-y-2" data-autosave="true">
     <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
-    <div class="space-x-2 flex flex-wrap items-center">
+    <div class="space-x-2 flex flex-wrap items-center row-gap">
       <label>
         <span class="mr-1">Адрес:</span>
         <select name="address_id" class="border px-2 py-1 rounded">
@@ -127,7 +135,6 @@
           <?php endforeach; ?>
         </select>
       </label>
-      <button type="submit" class="bg-blue-700 text-white px-3 py-1 rounded">Сохранить</button>
     </div>
   </form>
 
@@ -152,11 +159,32 @@
     <?php endforeach; ?>
     <form class="ml-auto" action="<?= $base ?>/orders/delete" method="post" onsubmit="return confirm('Удалить этот заказ?');">
       <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
-      <button class="px-3 py-1 rounded text-white bg-red-700 hover:bg-red-800" type="submit">Удалить</button>
+      <button class="px-3 py-1 rounded text-white bg-red-700 hover:bg-red-800" type="submit" title="Удалить">🗑️</button>
     </form>
   </div>
 
   <div>
-    <a href="<?= $base ?>/orders" class="inline-block px-4 py-2 rounded text-white bg-purple-700 hover:bg-purple-800">Вернуться к заказам</a>
+    <a href="<?= $base ?>/orders" class="inline-block px-4 py-2 rounded text-white bg-purple-700 hover:bg-purple-800 action-link" title="К заказам">←</a>
   </div>
 </div>
+
+<script>
+  (() => {
+    document.querySelectorAll('form[data-autosave="true"]').forEach((form) => {
+      let dirty = false;
+      form.querySelectorAll('input, select, textarea').forEach((field) => {
+        if (field.type === 'hidden') return;
+        field.addEventListener('change', () => { dirty = true; });
+        field.addEventListener('blur', () => {
+          if (!dirty) return;
+          dirty = false;
+          if (typeof form.requestSubmit === 'function') {
+            form.requestSubmit();
+          } else {
+            form.submit();
+          }
+        });
+      });
+    });
+  })();
+</script>
