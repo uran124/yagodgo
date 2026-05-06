@@ -131,7 +131,7 @@
         <span class="mr-1">Слот:</span>
         <select name="slot_id" class="border px-2 py-1 rounded">
           <?php foreach ($slots as $s): ?>
-            <option value="<?= $s['id'] ?>" <?= $s['id'] == $order['slot_id'] ? 'selected' : '' ?>><?= htmlspecialchars($s['time_from']) ?>-<?= htmlspecialchars($s['time_to']) ?></option>
+            <option value="<?= $s['id'] ?>" <?= $s['id'] == $order['slot_id'] ? 'selected' : '' ?>><?= htmlspecialchars(format_time_range($s['time_from'], $s['time_to'])) ?></option>
           <?php endforeach; ?>
         </select>
       </label>
