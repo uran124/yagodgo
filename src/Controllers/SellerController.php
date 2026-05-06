@@ -85,10 +85,14 @@ class SellerController
     public function orders(): void
     {
         $sellerId = (int)($_SESSION['user_id'] ?? 0);
+        $statusFilter = trim((string)($_GET['status'] ?? ''));
+        $allowedFilters = ['new', 'processing', 'assigned', 'delivered', 'cancelled'];
+        if (!in_array($statusFilter, $allowedFilters, true)) {
+            $statusFilter = '';
+        }
 
         // Получаем список заказов, в которых присутствуют товары текущего селлера
-        $stmt = $this->pdo->prepare(
-            "SELECT o.id, o.status, o.points_used, o.delivery_date,\n"
+        $sql = "SELECT o.id, o.status, o.points_used, o.delivery_date,\n"
             . "       d.time_from AS slot_from, d.time_to AS slot_to,\n"
             . "       u.name AS client_name, u.phone, a.street AS address,\n"
             . "       SUM(oi.quantity * oi.unit_price) AS seller_subtotal,\n"
@@ -99,11 +103,17 @@ class SellerController
             . "JOIN users u ON u.id = o.user_id\n"
             . "LEFT JOIN addresses a ON a.id = o.address_id\n"
             . "LEFT JOIN delivery_slots d ON d.id = o.slot_id\n"
-            . "WHERE p.seller_id = ?\n"
-            . "GROUP BY o.id, o.status, o.points_used, o.delivery_date, d.time_from, d.time_to, u.name, u.phone, a.street\n"
-            . "ORDER BY o.delivery_date DESC, d.time_from DESC"
-        );
-        $stmt->execute([$sellerId]);
+            . "WHERE p.seller_id = ?";
+        $params = [$sellerId];
+        if ($statusFilter !== '') {
+            $sql .= " AND o.status = ?";
+            $params[] = $statusFilter;
+        }
+        $sql .= "\nGROUP BY o.id, o.status, o.points_used, o.delivery_date, d.time_from, d.time_to, u.name, u.phone, a.street\n"
+            . "ORDER BY o.delivery_date DESC, d.time_from DESC";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
         $orders = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
         // Получаем позиции заказа только для текущего селлера
@@ -150,6 +160,51 @@ class SellerController
         viewAdmin('seller_orders', [
             'pageTitle' => 'Заказы',
             'orders'    => $orders,
+            'statusFilter' => $statusFilter,
         ]);
+    }
+
+    public function updateOrderStatus(): void
+    {
+        $sellerId = (int)($_SESSION['user_id'] ?? 0);
+        $orderId = (int)($_POST['order_id'] ?? 0);
+        $status = trim((string)($_POST['status'] ?? ''));
+        $allowedStatuses = ['processing', 'assigned', 'cancelled'];
+
+        if ($orderId <= 0 || !in_array($status, $allowedStatuses, true)) {
+            header('Location: /seller/orders?error=invalid_status');
+            exit;
+        }
+
+        $ownershipStmt = $this->pdo->prepare(
+            "SELECT COUNT(*) FROM order_items oi
+             JOIN products p ON p.id = oi.product_id
+             WHERE oi.order_id = ? AND p.seller_id = ?"
+        );
+        $ownershipStmt->execute([$orderId, $sellerId]);
+        if ((int)$ownershipStmt->fetchColumn() === 0) {
+            header('Location: /seller/orders?error=forbidden');
+            exit;
+        }
+
+        $currentStatusStmt = $this->pdo->prepare("SELECT status FROM orders WHERE id = ?");
+        $currentStatusStmt->execute([$orderId]);
+        $currentStatus = (string)($currentStatusStmt->fetchColumn() ?: '');
+        $allowedTransitions = [
+            'new' => ['processing', 'cancelled'],
+            'processing' => ['assigned', 'cancelled'],
+            'assigned' => ['assigned'],
+        ];
+
+        if (!isset($allowedTransitions[$currentStatus]) || !in_array($status, $allowedTransitions[$currentStatus], true)) {
+            header('Location: /seller/orders?error=transition');
+            exit;
+        }
+
+        $updateStmt = $this->pdo->prepare("UPDATE orders SET status = ? WHERE id = ?");
+        $updateStmt->execute([$status, $orderId]);
+
+        header('Location: /seller/orders?updated=1');
+        exit;
     }
 }
