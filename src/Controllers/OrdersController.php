@@ -680,7 +680,6 @@ class OrdersController
 
         $text = $line1 . "\n" . $line2 . "\n" . $line3;
 
-        $url = "https://api.telegram.org/bot{$token}/sendMessage";
         $payloadData = [
             'chat_id'    => $chatId,
             'text'       => $text,
@@ -688,6 +687,20 @@ class OrdersController
         ];
         if (!empty($cfg['admin_topic_id'])) {
             $payloadData['message_thread_id'] = (int)$cfg['admin_topic_id'];
+        }
+
+        $relayUrl = trim((string)($cfg['relay_url'] ?? ''));
+        $relaySecret = (string)($cfg['relay_secret'] ?? '');
+        if ($relayUrl !== '') {
+            $url = $relayUrl;
+            $payloadData = [
+                'bot_token' => $token,
+                'method' => 'sendMessage',
+                'params' => $payloadData,
+                'secret' => $relaySecret,
+            ];
+        } else {
+            $url = "https://api.telegram.org/bot{$token}/sendMessage";
         }
 
         $payload = json_encode($payloadData, JSON_UNESCAPED_UNICODE);
