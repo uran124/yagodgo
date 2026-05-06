@@ -12,9 +12,53 @@ $topicId      = $telegramConfig['admin_topic_id'] ?? null;
 // Файл лога для отладки
 $logFile = __DIR__ . '/telegram_testbot.log';
 
+function telegramApiRequest(string $botToken, string $method, array $data = []): array
+{
+    $url = "https://api.telegram.org/bot{$botToken}/{$method}";
+    $payload = json_encode($data, JSON_UNESCAPED_UNICODE);
+    $response = false;
+    $transportError = null;
+
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json; charset=UTF-8'],
+            CURLOPT_POSTFIELDS => $payload,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_TIMEOUT => 10,
+        ]);
+        $response = curl_exec($ch);
+        if ($response === false) {
+            $transportError = 'cURL: ' . curl_error($ch);
+        }
+        curl_close($ch);
+    }
+
+    if ($response === false) {
+        $context = stream_context_create([
+            'http' => [
+                'header' => "Content-Type: application/json; charset=UTF-8\r\n",
+                'method' => 'POST',
+                'content' => $payload,
+                'timeout' => 5,
+            ],
+        ]);
+        $response = @file_get_contents($url, false, $context);
+        if ($response === false) {
+            $lastError = error_get_last();
+            $streamError = $lastError['message'] ?? 'неизвестная ошибка stream';
+            $transportError = $transportError ? ($transportError . '; stream: ' . $streamError) : ('stream: ' . $streamError);
+        }
+    }
+
+    return ['response' => $response, 'error' => $transportError];
+}
+
 // Обработка отправки формы
 $sendResult = null;
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['message'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['action'] ?? '') === 'send_message') && !empty($_POST['message'])) {
     $text = trim($_POST['message']);
     // Отправляем сообщение через API Telegram
     $url = "https://api.telegram.org/bot{$botToken}/sendMessage";
@@ -25,18 +69,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['message'])) {
     if ($topicId !== null) {
         $data['message_thread_id'] = (int)$topicId;
     }
-    $options = [
-        'http' => [
-            'header'  => "Content-Type: application/json; charset=UTF-8\r\n",
-            'method'  => 'POST',
-            'content' => json_encode($data),
-            'timeout' => 5,
-        ],
-    ];
-    $context = stream_context_create($options);
-    $response = @file_get_contents($url, false, $context);
+    $request = telegramApiRequest($botToken, 'sendMessage', $data);
+    $response = $request['response'];
+    $transportError = $request['error'];
+
     if ($response === false) {
-        $sendResult = 'Ошибка при отправке запроса.';
+        $sendResult = 'Ошибка при отправке запроса. ' . $transportError;
     } else {
         $sendResult = htmlspecialchars($response);
     }
@@ -44,6 +82,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['message'])) {
     $logEntry = date('Y-m-d H:i:s') . " | SendMessage: {$text} | Response: {$sendResult}\n";
     file_put_contents($logFile, $logEntry, FILE_APPEND);
 }
+
+$webhookResult = null;
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['action'] ?? '') === 'set_webhook')) {
+    $webhookUrl = trim($_POST['webhook_url'] ?? '');
+    if ($webhookUrl === '') {
+        $webhookResult = 'Укажите webhook URL.';
+    } else {
+        $request = telegramApiRequest($botToken, 'setWebhook', ['url' => $webhookUrl]);
+        if ($request['response'] === false) {
+            $webhookResult = 'Ошибка setWebhook. ' . $request['error'];
+        } else {
+            $webhookResult = htmlspecialchars($request['response']);
+        }
+        $logEntry = date('Y-m-d H:i:s') . " | SetWebhook: {$webhookUrl} | Response: {$webhookResult}\n";
+        file_put_contents($logFile, $logEntry, FILE_APPEND);
+    }
+}
+
+$webhookInfo = telegramApiRequest($botToken, 'getWebhookInfo');
+$webhookInfoText = $webhookInfo['response'] !== false ? $webhookInfo['response'] : ('Ошибка getWebhookInfo. ' . $webhookInfo['error']);
 
 // Считываем последние строки лог-файла
 $debugInfo = '';
@@ -74,6 +132,7 @@ if (file_exists($logFile)) {
         <div class="column left">
             <h2>Отправить сообщение</h2>
             <form method="post">
+                <input type="hidden" name="action" value="send_message">
                 <label for="message">Текст сообщения:</label><br>
                 <textarea id="message" name="message" required><?php echo isset($_POST['message']) ? htmlspecialchars($_POST['message']) : ''; ?></textarea><br>
                 <button type="submit">Отправить</button>
@@ -84,8 +143,24 @@ if (file_exists($logFile)) {
                     <pre><?php echo $sendResult; ?></pre>
                 </div>
             <?php endif; ?>
+
+            <h2 style="margin-top: 30px;">Webhook</h2>
+            <form method="post">
+                <input type="hidden" name="action" value="set_webhook">
+                <label for="webhook_url">Webhook URL:</label><br>
+                <input id="webhook_url" name="webhook_url" type="url" style="width:100%;" placeholder="https://your-domain.tld/webhook.php" required>
+                <button type="submit">Установить webhook</button>
+            </form>
+            <?php if ($webhookResult !== null): ?>
+                <div style="margin-top: 15px; padding: 10px; background: #fff0e0; border: 1px solid #cc7a00;">
+                    <strong>SetWebhook:</strong>
+                    <pre><?php echo $webhookResult; ?></pre>
+                </div>
+            <?php endif; ?>
         </div>
         <div class="column right">
+            <h2>Webhook info</h2>
+            <pre><?php echo htmlspecialchars($webhookInfoText); ?></pre>
             <h2>Отладка формы</h2>
             <pre><?php echo htmlspecialchars($sendResult ?? ''); ?></pre>
         </div>
