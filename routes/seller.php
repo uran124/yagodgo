@@ -8,6 +8,7 @@ return [
             'GET /seller/dashboard' => ['App\\Controllers\\SellerController', 'dashboard'],
             'GET /seller/profile' => ['App\\Controllers\\UsersController', 'sellerProfile'],
             'GET /seller/orders' => ['App\\Controllers\\SellerController', 'orders'],
+            'POST /seller/orders/status' => ['App\\Controllers\\SellerController', 'updateOrderStatus'],
             'GET /seller/products' => ['App\\Controllers\\ProductsController', 'index'],
             'GET /seller/products/edit' => ['App\\Controllers\\ProductsController', 'edit'],
             'POST /seller/products/save' => ['App\\Controllers\\ProductsController', 'save'],
