@@ -33,10 +33,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['message'])) {
             'timeout' => 5,
         ],
     ];
-    $context = stream_context_create($options);
-    $response = @file_get_contents($url, false, $context);
+    $payload = json_encode($data, JSON_UNESCAPED_UNICODE);
+    $response = false;
+    $transportError = null;
+
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json; charset=UTF-8'],
+            CURLOPT_POSTFIELDS => $payload,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_TIMEOUT => 10,
+        ]);
+        $response = curl_exec($ch);
+        if ($response === false) {
+            $transportError = 'cURL: ' . curl_error($ch);
+        }
+        curl_close($ch);
+    }
+
     if ($response === false) {
-        $sendResult = 'Ошибка при отправке запроса.';
+        $options['http']['content'] = $payload;
+        $context = stream_context_create($options);
+        $response = @file_get_contents($url, false, $context);
+        if ($response === false) {
+            $lastError = error_get_last();
+            $streamError = $lastError['message'] ?? 'неизвестная ошибка stream';
+            $transportError = $transportError ? ($transportError . '; stream: ' . $streamError) : ('stream: ' . $streamError);
+        }
+    }
+
+    if ($response === false) {
+        $sendResult = 'Ошибка при отправке запроса. ' . $transportError;
     } else {
         $sendResult = htmlspecialchars($response);
     }
