@@ -9,4 +9,6 @@ return [
         ? (int)getenv('TELEGRAM_ADMIN_TOPIC_ID')
         : null,
     'secret_token'   => getenv('TELEGRAM_SECRET_TOKEN') ?: '',
+    'relay_url'      => getenv('TELEGRAM_RELAY_URL') ?: '',
+    'relay_secret'   => getenv('TELEGRAM_RELAY_SECRET') ?: '',
 ];

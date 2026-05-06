@@ -14,8 +14,23 @@ $logFile = __DIR__ . '/telegram_testbot.log';
 
 function telegramApiRequest(string $botToken, string $method, array $data = []): array
 {
-    $url = "https://api.telegram.org/bot{$botToken}/{$method}";
-    $payload = json_encode($data, JSON_UNESCAPED_UNICODE);
+    global $telegramConfig;
+
+    $relayUrl = trim((string)($telegramConfig['relay_url'] ?? ''));
+    $relaySecret = (string)($telegramConfig['relay_secret'] ?? '');
+
+    if ($relayUrl !== '') {
+        $url = $relayUrl;
+        $payload = json_encode([
+            'bot_token' => $botToken,
+            'method' => $method,
+            'params' => $data,
+            'secret' => $relaySecret,
+        ], JSON_UNESCAPED_UNICODE);
+    } else {
+        $url = "https://api.telegram.org/bot{$botToken}/{$method}";
+        $payload = json_encode($data, JSON_UNESCAPED_UNICODE);
+    }
     $response = false;
     $transportError = null;
 
@@ -60,8 +75,7 @@ function telegramApiRequest(string $botToken, string $method, array $data = []):
 $sendResult = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['action'] ?? '') === 'send_message') && !empty($_POST['message'])) {
     $text = trim($_POST['message']);
-    // Отправляем сообщение через API Telegram
-    $url = "https://api.telegram.org/bot{$botToken}/sendMessage";
+    // Отправляем сообщение через API Telegram / relay
     $data = [
         'chat_id' => $chatId,
         'text'    => $text,
@@ -98,6 +112,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['action'] ?? '') === 'set_
         $logEntry = date('Y-m-d H:i:s') . " | SetWebhook: {$webhookUrl} | Response: {$webhookResult}\n";
         file_put_contents($logFile, $logEntry, FILE_APPEND);
     }
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['action'] ?? '') === 'delete_webhook')) {
+    $dropPendingUpdates = (($_POST['drop_pending_updates'] ?? '0') === '1');
+    $request = telegramApiRequest($botToken, 'deleteWebhook', ['drop_pending_updates' => $dropPendingUpdates]);
+    if ($request['response'] === false) {
+        $webhookResult = 'Ошибка deleteWebhook. ' . $request['error'];
+    } else {
+        $webhookResult = htmlspecialchars($request['response']);
+    }
+    $logEntry = date('Y-m-d H:i:s') . " | DeleteWebhook: drop_pending_updates=" . ($dropPendingUpdates ? '1' : '0') . " | Response: {$webhookResult}\n";
+    file_put_contents($logFile, $logEntry, FILE_APPEND);
 }
 
 $webhookInfo = telegramApiRequest($botToken, 'getWebhookInfo');
@@ -151,9 +177,19 @@ if (file_exists($logFile)) {
                 <input id="webhook_url" name="webhook_url" type="url" style="width:100%;" placeholder="https://your-domain.tld/webhook.php" required>
                 <button type="submit">Установить webhook</button>
             </form>
+
+            <form method="post" style="margin-top: 10px;">
+                <input type="hidden" name="action" value="delete_webhook">
+                <label style="display:block; margin-bottom: 8px;">
+                    <input type="checkbox" name="drop_pending_updates" value="1">
+                    Удалить pending updates
+                </label>
+                <button type="submit" style="background:#ffe6e6; border:1px solid #cc0000;">Удалить webhook</button>
+            </form>
+
             <?php if ($webhookResult !== null): ?>
                 <div style="margin-top: 15px; padding: 10px; background: #fff0e0; border: 1px solid #cc7a00;">
-                    <strong>SetWebhook:</strong>
+                    <strong>Webhook result:</strong>
                     <pre><?php echo $webhookResult; ?></pre>
                 </div>
             <?php endif; ?>
