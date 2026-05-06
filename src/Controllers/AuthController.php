@@ -308,7 +308,11 @@ public function register(): void
             $stmt->execute([$phone]);
             $chat = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($chat && $chat['chat_id']) {
-                $tg = new TelegramSender($this->telegramConfig['bot_token'] ?? '');
+                $tg = new TelegramSender(
+                    $this->telegramConfig['bot_token'] ?? '',
+                    $this->telegramConfig['relay_url'] ?? null,
+                    $this->telegramConfig['relay_secret'] ?? null
+                );
                 $topicId = $this->telegramConfig['admin_topic_id'] ?? null;
                 $ok = $tg->send($chat['chat_id'], "Код подтверждения: {$code}", $topicId);
             }
@@ -388,7 +392,11 @@ public function register(): void
         $_SESSION['reset_phone'] = $phone;
         $_SESSION['reset_code'] = $code;
 
-        $tg = new TelegramSender($this->telegramConfig['bot_token'] ?? '');
+        $tg = new TelegramSender(
+            $this->telegramConfig['bot_token'] ?? '',
+            $this->telegramConfig['relay_url'] ?? null,
+            $this->telegramConfig['relay_secret'] ?? null
+        );
         $ok = $tg->send($chat['chat_id'], "Одноразовый код для сброса PIN: {$code}");
 
         echo json_encode(['success' => $ok]);
