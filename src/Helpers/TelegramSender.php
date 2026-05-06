@@ -4,10 +4,14 @@ namespace App\Helpers;
 class TelegramSender
 {
     private string $botToken;
+    private ?string $proxyUrl;
+    private ?string $proxySecret;
 
-    public function __construct(string $botToken)
+    public function __construct(string $botToken, ?string $proxyUrl = null, ?string $proxySecret = null)
     {
         $this->botToken = $botToken;
+        $this->proxyUrl = $proxyUrl ? rtrim($proxyUrl, '/') : null;
+        $this->proxySecret = $proxySecret;
     }
 
     public function send(int|string $chatId, string $message, ?int $topicId = null): bool
@@ -20,6 +24,17 @@ class TelegramSender
         if ($topicId !== null) {
             $payload['message_thread_id'] = $topicId;
         }
+
+        if ($this->proxyUrl) {
+            $url = $this->proxyUrl;
+            $payload = [
+                'bot_token' => $this->botToken,
+                'method' => 'sendMessage',
+                'params' => $payload,
+                'secret' => $this->proxySecret,
+            ];
+        }
+
         $options = [
             'http' => [
                 'header'  => "Content-Type: application/json; charset=UTF-8\r\n",
