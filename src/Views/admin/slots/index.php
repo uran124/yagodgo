@@ -13,8 +13,8 @@
   <tbody>
     <?php foreach ($slots as $s): ?>
     <tr class="border-b hover:bg-gray-50 transition-all duration-200">
-      <td class="p-3 text-gray-600"><?= htmlspecialchars($s['time_from']) ?></td>
-      <td class="p-3 text-gray-600"><?= htmlspecialchars($s['time_to']) ?></td>
+      <td class="p-3 text-gray-600"><?= htmlspecialchars(format_time_short($s['time_from'])) ?></td>
+      <td class="p-3 text-gray-600"><?= htmlspecialchars(format_time_short($s['time_to'])) ?></td>
       <td class="p-3 flex space-x-2 justify-center">
         <a href="/admin/slots/edit?id=<?= $s['id'] ?>" class="text-[#C86052]">
           <span class="material-icons-round">edit</span>

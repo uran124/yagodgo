@@ -26,15 +26,18 @@
       <input type="text" name="new_address" placeholder="Адрес" class="border px-2 py-1 rounded w-full">
     </div>
     <div>
-      <label>Дата доставки:</label>
-      <input type="date" name="delivery_date" value="<?= $today ?>" class="border px-2 py-1 rounded">
-      <select name="slot_id" class="border px-2 py-1 rounded">
+      <label class="font-medium">Получение:</label>
+      <div class="inline-flex items-center gap-2">
+      <input type="date" id="deliveryDate" name="delivery_date" value="<?= $today ?>" class="sr-only">
+      <button type="button" id="deliveryDateTrigger" class="border px-3 py-1.5 rounded bg-white min-w-24 text-left"></button>
+      <select name="slot_id" class="border px-2 py-1.5 rounded">
         <?php foreach ($slots as $i => $s): ?>
           <option value="<?= $s['id'] ?>" <?= $i === 0 ? 'selected' : '' ?>>
-            <?= htmlspecialchars($s['time_from']) ?>-<?= htmlspecialchars($s['time_to']) ?>
+            <?= htmlspecialchars(format_time_range($s['time_from'], $s['time_to'])) ?>
           </option>
         <?php endforeach; ?>
       </select>
+      </div>
     </div>
     <button type="button" id="toStep2" class="bg-[#C86052] text-white px-4 py-2 rounded">Далее</button>
   </div>
@@ -98,6 +101,8 @@
 </form>
 
 <script>
+  const deliveryDateInput = document.getElementById('deliveryDate');
+  const deliveryDateTrigger = document.getElementById('deliveryDateTrigger');
   const existBlock = document.getElementById('existBlock');
   const newBlock = document.getElementById('newBlock');
   const userInfo = document.getElementById('userInfo');
@@ -136,6 +141,27 @@
   const referralToggle = document.getElementById('referralToggle');
   const couponInput = document.querySelector('input[name="coupon_code"]');
   const myReferralCode = "<?= htmlspecialchars($_SESSION['referral_code'] ?? '') ?>";
+
+  function formatDateShort(iso) {
+    if (!iso) return '--.--';
+    const [y, m, d] = iso.split('-');
+    return `${d}.${m}`;
+  }
+
+  function syncDeliveryDateLabel() {
+    deliveryDateTrigger.textContent = formatDateShort(deliveryDateInput.value);
+  }
+
+  deliveryDateTrigger.addEventListener('click', () => {
+    if (typeof deliveryDateInput.showPicker === 'function') {
+      deliveryDateInput.showPicker();
+    } else {
+      deliveryDateInput.focus();
+      deliveryDateInput.click();
+    }
+  });
+  deliveryDateInput.addEventListener('change', syncDeliveryDateLabel);
+  syncDeliveryDateLabel();
   function cleanPhone(val) {
     let digits = val.replace(/\D/g,'');
     if (digits.startsWith('7') || digits.startsWith('8')) digits = digits.slice(1);

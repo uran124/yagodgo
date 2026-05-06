@@ -31,6 +31,19 @@ if (!function_exists('format_time_range')) {
     }
 }
 
+if (!function_exists('format_time_short')) {
+    /**
+     * Format DB time (HH:MM[:SS]) as HH:MM.
+     */
+    function format_time_short(?string $time): string
+    {
+        if (!$time) {
+            return '';
+        }
+        return substr($time, 0, 5);
+    }
+}
+
 if (!function_exists('normalize_phone')) {
     /**
      * Normalize phone number to 7XXXXXXXXXX format.

@@ -4,7 +4,7 @@
   <?php $info = order_status_info($o['status']); ?>
   <div class="mb-6 p-4 border rounded">
     <div class="font-semibold mb-1 flex justify-between">
-      <span>#<?= htmlspecialchars($o['id']) ?> | <?= htmlspecialchars($o['delivery_date']) ?> <?= htmlspecialchars($o['slot_from']) ?>–<?= htmlspecialchars($o['slot_to']) ?></span>
+      <span>#<?= htmlspecialchars($o['id']) ?> | <?= htmlspecialchars($o['delivery_date']) ?> <?= htmlspecialchars(format_time_range($o['slot_from'], $o['slot_to'])) ?></span>
       <span><?= htmlspecialchars($info['label']) ?></span>
     </div>
     <div class="text-sm mb-2"><?= htmlspecialchars($o['client_name']) ?>, <?= htmlspecialchars($o['phone']) ?>, <?= htmlspecialchars($o['address']) ?></div>
