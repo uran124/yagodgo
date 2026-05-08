@@ -97,6 +97,8 @@ return [
             'GET /admin/content/materials' => ['App\\Controllers\\ContentController', 'materials'],
             'GET /admin/content/materials/edit' => ['App\\Controllers\\ContentController', 'editMaterial'],
             'POST /admin/content/materials/save' => ['App\\Controllers\\ContentController', 'saveMaterial'],
+            'POST /admin/content/materials/toggle-active' => ['App\\Controllers\\ContentController', 'toggleMaterialActive'],
+            'POST /admin/content/materials/toggle-home' => ['App\\Controllers\\ContentController', 'toggleMaterialHome'],
             'GET /admin/users' => ['App\\Controllers\\UsersController', 'index'],
             'GET /admin/users/search' => ['App\\Controllers\\UsersController', 'searchPhone'],
             'GET /admin/users/addresses' => ['App\\Controllers\\UsersController', 'addresses'],
