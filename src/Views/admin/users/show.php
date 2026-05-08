@@ -100,19 +100,28 @@ $redirectPath = $currentPath ? (parse_url($currentPath, PHP_URL_PATH) ?: '') : '
   </div>
   <div class="flex items-center justify-between">
     <button type="submit" class="bg-[#C86052] text-white px-4 py-2 rounded">Сохранить</button>
-    <?php if ($role === 'admin'): ?>
-      <button
-        type="submit"
-        formaction="<?= $base ?>/users/delete"
-        formmethod="post"
-        onclick="return confirm('Удалить пользователя? Это действие нельзя отменить.');"
-        class="border border-red-200 text-red-600 px-4 py-2 rounded hover:bg-red-50 transition"
-      >
-        Удалить
-      </button>
-    <?php endif; ?>
   </div>
 </form>
+
+<?php if ($role === 'admin'): ?>
+  <form
+    action="<?= $base ?>/users/delete"
+    method="post"
+    onsubmit="return confirm('Удалить пользователя? Это действие нельзя отменить.');"
+    class="mb-4"
+  >
+    <input type="hidden" name="id" value="<?= $user['id'] ?>">
+    <?php if ($redirectPath): ?>
+      <input type="hidden" name="redirect" value="<?= htmlspecialchars($redirectPath) ?>">
+    <?php endif; ?>
+    <button
+      type="submit"
+      class="border border-red-200 text-red-600 px-4 py-2 rounded hover:bg-red-50 transition"
+    >
+      Удалить
+    </button>
+  </form>
+<?php endif; ?>
 <script>
   (function () {
     const phoneInput = document.getElementById('user-phone-input');
