@@ -80,6 +80,33 @@ class ContentController
         ]);
     }
 
+
+    public function toggleMaterialActive(): void
+    {
+        $id = (int)($_POST['id'] ?? 0);
+        $categoryId = (int)($_POST['category_id'] ?? 0);
+        if ($id > 0) {
+            $stmt = $this->pdo->prepare("UPDATE materials SET is_active = CASE WHEN is_active=1 THEN 0 ELSE 1 END WHERE id=?");
+            $stmt->execute([$id]);
+        }
+
+        header('Location: /admin/content/materials?category_id=' . $categoryId);
+        exit;
+    }
+
+    public function toggleMaterialHome(): void
+    {
+        $id = (int)($_POST['id'] ?? 0);
+        $categoryId = (int)($_POST['category_id'] ?? 0);
+        if ($id > 0) {
+            $stmt = $this->pdo->prepare("UPDATE materials SET show_on_home = CASE WHEN show_on_home=1 THEN 0 ELSE 1 END WHERE id=?");
+            $stmt->execute([$id]);
+        }
+
+        header('Location: /admin/content/materials?category_id=' . $categoryId);
+        exit;
+    }
+
     public function editMaterial(): void
     {
         $id = $_GET['id'] ?? null;

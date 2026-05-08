@@ -122,6 +122,7 @@ class ClientCatalogService
             "       c.alias AS cat_alias\n" .
             "FROM materials m\n" .
             "JOIN content_categories c ON c.id = m.category_id\n" .
+            "WHERE m.is_active = 1 AND m.show_on_home = 1\n" .
             "ORDER BY m.created_at DESC\n" .
             "LIMIT 5"
         );
