@@ -98,7 +98,20 @@ $redirectPath = $currentPath ? (parse_url($currentPath, PHP_URL_PATH) ?: '') : '
         <div><?= (int)$user['rub_balance'] ?> ₽</div>
       <?php endif; ?>
   </div>
-  <button type="submit" class="bg-[#C86052] text-white px-4 py-2 rounded">Сохранить</button>
+  <div class="flex items-center justify-between">
+    <button type="submit" class="bg-[#C86052] text-white px-4 py-2 rounded">Сохранить</button>
+    <?php if ($role === 'admin'): ?>
+      <button
+        type="submit"
+        formaction="<?= $base ?>/users/delete"
+        formmethod="post"
+        onclick="return confirm('Удалить пользователя? Это действие нельзя отменить.');"
+        class="border border-red-200 text-red-600 px-4 py-2 rounded hover:bg-red-50 transition"
+      >
+        Удалить
+      </button>
+    <?php endif; ?>
+  </div>
 </form>
 <script>
   (function () {
