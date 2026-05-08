@@ -1,4 +1,5 @@
 <?php /** @var string|null $error */ ?>
+<?php $debugAuth = $_GET['debug_auth'] ?? null; ?>
 
 <main class="bg-gradient-to-br from-orange-50 via-white to-pink-50 flex flex-col items-center justify-center px-4 py-4 fixed inset-0 overflow-auto">
 
@@ -26,6 +27,13 @@
           <p class="text-red-700 font-medium"><?= htmlspecialchars($error) ?></p>
         </div>
       </div>
+    <?php endif; ?>
+
+    <?php if (!empty($debugAuth)): ?>
+      <details class="bg-gray-50 border border-gray-200 p-4 rounded-2xl mb-6">
+        <summary class="text-sm font-semibold text-gray-700 cursor-pointer">Debug авторизации (admin/manager)</summary>
+        <pre class="text-xs text-gray-600 mt-3 whitespace-pre-wrap"><?= htmlspecialchars($debugAuth) ?></pre>
+      </details>
     <?php endif; ?>
 
     <!-- Форма входа -->
