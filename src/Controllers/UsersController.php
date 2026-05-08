@@ -992,6 +992,12 @@ class UsersController
                 ->execute([$id]);
             $this->pdo->prepare("DELETE FROM notifications WHERE user_id = ?")
                 ->execute([$id]);
+
+            // Снимаем назначения пользователя с заказов (например, курьер/менеджер),
+            // чтобы не упереться в внешние ключи при удалении пользователя.
+            $this->pdo->prepare("UPDATE orders SET assigned_to = NULL WHERE assigned_to = ?")
+                ->execute([$id]);
+
             $this->pdo->prepare("DELETE FROM orders WHERE user_id = ?")
                 ->execute([$id]);
 
