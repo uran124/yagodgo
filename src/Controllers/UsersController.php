@@ -1006,10 +1006,20 @@ class UsersController
 
             $this->pdo->commit();
         } catch (\Exception $e) {
-            $this->pdo->rollBack();
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
             $target = $redirectUrl !== '' ? $redirectUrl : $basePath . '/edit?id=' . $id;
             $separator = strpos($target, '?') === false ? '?' : '&';
-            header('Location: ' . $target . $separator . 'error=' . urlencode('Не удалось удалить пользователя'));
+            $debug = sprintf(
+                'delete_user_failed | user_id=%d | type=%s | code=%s | message=%s',
+                $id,
+                get_class($e),
+                (string)$e->getCode(),
+                $e->getMessage()
+            );
+            error_log($debug);
+            header('Location: ' . $target . $separator . 'error=' . urlencode('Не удалось удалить пользователя') . '&debug_delete=' . urlencode($debug));
             exit;
         }
 
