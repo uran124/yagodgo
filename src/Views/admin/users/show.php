@@ -13,12 +13,38 @@ $roleNames = [
 ];
 $currentPath = $_SERVER['REQUEST_URI'] ?? '';
 $redirectPath = $currentPath ? (parse_url($currentPath, PHP_URL_PATH) ?: '') : '';
+$debugDelete = $_GET['debug_delete'] ?? '';
 ?>
 <?php if (!empty($_GET['error'])): ?>
   <div class="bg-red-50 border-l-4 border-red-400 p-3 mb-4 rounded">
     <p class="text-red-700 text-sm"><?= htmlspecialchars($_GET['error']) ?></p>
   </div>
 <?php endif; ?>
+
+<?php if (!empty($debugDelete)): ?>
+  <div id="delete-debug-console" class="fixed bottom-4 right-4 z-50 w-full max-w-xl bg-[#0f172a] text-slate-100 rounded-xl shadow-2xl border border-slate-700">
+    <div class="flex items-center justify-between px-4 py-2 border-b border-slate-700">
+      <strong class="text-sm">Debugger: удаление пользователя</strong>
+      <button type="button" id="delete-debug-close" class="text-slate-300 hover:text-white">✕</button>
+    </div>
+    <div class="p-4">
+      <p class="text-xs text-slate-400 mb-2">Техническая ошибка:</p>
+      <pre class="text-xs whitespace-pre-wrap break-words bg-slate-900/70 p-3 rounded"><?= htmlspecialchars($debugDelete) ?></pre>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const panel = document.getElementById('delete-debug-console');
+      const closeBtn = document.getElementById('delete-debug-close');
+      if (!panel || !closeBtn) return;
+      closeBtn.addEventListener('click', function () {
+        panel.style.display = 'none';
+      });
+      console.error('Delete user debug:', <?= json_encode($debugDelete, JSON_UNESCAPED_UNICODE) ?>);
+    })();
+  </script>
+<?php endif; ?>
+
 <form action="<?= $base ?>/users/save" method="post" class="bg-white p-4 rounded shadow mb-4 space-y-4">
   <input type="hidden" name="id" value="<?= $user['id'] ?>">
   <?php if ($redirectPath): ?>
