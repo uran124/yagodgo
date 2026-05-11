@@ -3,6 +3,7 @@ namespace App\Controllers;
 
 use App\Services\PurchaseBatchService;
 use PDO;
+use RuntimeException;
 
 class PurchaseBatchesController
 {
@@ -29,6 +30,7 @@ class PurchaseBatchesController
         viewAdmin('purchases/index', [
             'pageTitle' => 'Закупки',
             'batches' => $stmt->fetchAll(PDO::FETCH_ASSOC),
+            'basePath' => $this->basePath(),
         ]);
     }
 
@@ -45,6 +47,8 @@ class PurchaseBatchesController
         viewAdmin('purchases/create', [
             'pageTitle' => 'Новая закупка',
             'products' => $products,
+            'basePath' => $this->basePath(),
+            'error' => trim((string)($_GET['error'] ?? '')),
         ]);
     }
 
@@ -62,9 +66,24 @@ class PurchaseBatchesController
             'comment' => trim((string)($_POST['comment'] ?? '')),
         ];
 
-        $this->purchaseBatchService->createBatch($payload);
+        try {
+            $this->purchaseBatchService->createBatch($payload);
+        } catch (RuntimeException $e) {
+            header('Location: ' . $this->basePath() . '/purchases/create?error=' . urlencode($e->getMessage()));
+            exit;
+        }
 
-        header('Location: /admin/purchases');
+        header('Location: ' . $this->basePath() . '/purchases');
         exit;
+    }
+
+    private function basePath(): string
+    {
+        $role = (string)($_SESSION['role'] ?? '');
+        return match ($role) {
+            'manager' => '/manager',
+            'buyer' => '/buyer',
+            default => '/admin',
+        };
     }
 }

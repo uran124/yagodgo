@@ -1,6 +1,7 @@
 <?php /** @var array<int,array<string,mixed>> $batches */ ?>
+<?php $basePath = $basePath ?? '/admin'; ?>
 <div class="flex items-center mb-4">
-  <a href="/admin/purchases/create" class="bg-[#C86052] text-white px-4 py-2 rounded inline-flex items-center">
+  <a href="<?= $basePath ?>/purchases/create" class="bg-[#C86052] text-white px-4 py-2 rounded inline-flex items-center">
     <span class="material-icons-round text-base mr-1">add</span> Добавить закупку
   </a>
 </div>

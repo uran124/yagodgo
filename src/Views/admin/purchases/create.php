@@ -1,5 +1,12 @@
 <?php /** @var array<int,array<string,mixed>> $products */ ?>
-<form action="/admin/purchases/store" method="post" class="bg-white p-6 rounded shadow max-w-2xl mx-auto space-y-4">
+<?php $basePath = $basePath ?? '/admin'; ?>
+<?php $error = $error ?? ''; ?>
+<form action="<?= $basePath ?>/purchases/store" method="post" class="bg-white p-6 rounded shadow max-w-2xl mx-auto space-y-4">
+  <?php if ($error !== ''): ?>
+    <div class="bg-red-50 border border-red-200 text-red-700 p-3 rounded">
+      <?= htmlspecialchars($error) ?>
+    </div>
+  <?php endif; ?>
   <div>
     <label class="block mb-1">Товар</label>
     <select name="product_id" class="w-full border px-2 py-1 rounded" required>
