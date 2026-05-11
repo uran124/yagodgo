@@ -31,6 +31,7 @@ class PurchaseBatchesController
             'pageTitle' => 'Закупки',
             'batches' => $stmt->fetchAll(PDO::FETCH_ASSOC),
             'basePath' => $this->basePath(),
+            'flash' => $this->pullFlash(),
         ]);
     }
 
@@ -48,7 +49,7 @@ class PurchaseBatchesController
             'pageTitle' => 'Новая закупка',
             'products' => $products,
             'basePath' => $this->basePath(),
-            'error' => trim((string)($_GET['error'] ?? '')),
+            'flash' => $this->pullFlash(),
         ]);
     }
 
@@ -67,6 +68,7 @@ class PurchaseBatchesController
         $batch = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$batch) {
+            $this->setFlash('error', 'Партия не найдена.');
             header('Location: ' . $this->basePath() . '/purchases');
             exit;
         }
@@ -91,6 +93,7 @@ class PurchaseBatchesController
             'batch' => $batch,
             'movements' => $movementsStmt->fetchAll(PDO::FETCH_ASSOC),
             'photos' => $photosStmt->fetchAll(PDO::FETCH_ASSOC),
+            'flash' => $this->pullFlash(),
         ]);
     }
 
@@ -113,8 +116,10 @@ class PurchaseBatchesController
         try {
             $batchId = $this->purchaseBatchService->createBatch($payload);
             $this->storeBatchPhotos($batchId);
+            $this->setFlash('success', 'Закупка успешно создана.');
         } catch (RuntimeException $e) {
-            header('Location: ' . $this->basePath() . '/purchases/create?error=' . urlencode($e->getMessage()));
+            $this->setFlash('error', $e->getMessage());
+            header('Location: ' . $this->basePath() . '/purchases/create');
             exit;
         }
 
@@ -128,6 +133,7 @@ class PurchaseBatchesController
         $batchId = (int)($_POST['batch_id'] ?? 0);
         if ($batchId > 0) {
             $this->purchaseBatchService->markArrived($batchId);
+            $this->setFlash('success', 'Партия отмечена как поступившая.');
         }
         header('Location: ' . $this->basePath() . '/purchases');
         exit;
@@ -140,6 +146,7 @@ class PurchaseBatchesController
         $boxes = (float)($_POST['boxes'] ?? 0);
         if ($batchId > 0 && $boxes > 0) {
             $this->purchaseBatchService->moveToDiscountStock($batchId, $boxes);
+            $this->setFlash('success', 'Часть партии переведена в выгодный остаток.');
         }
         header('Location: ' . $this->basePath() . '/purchases');
         exit;
@@ -153,6 +160,7 @@ class PurchaseBatchesController
         $comment = trim((string)($_POST['comment'] ?? 'Write-off'));
         if ($batchId > 0 && $boxes > 0) {
             $this->purchaseBatchService->writeOff($batchId, $boxes, $comment);
+            $this->setFlash('success', 'Списание выполнено.');
         }
         header('Location: ' . $this->basePath() . '/purchases');
         exit;
@@ -164,6 +172,7 @@ class PurchaseBatchesController
         $batchId = (int)($_POST['batch_id'] ?? 0);
         if ($batchId > 0) {
             $this->purchaseBatchService->closeBatch($batchId);
+            $this->setFlash('success', 'Партия закрыта.');
         }
         header('Location: ' . $this->basePath() . '/purchases');
         exit;
@@ -182,6 +191,7 @@ class PurchaseBatchesController
         $stmt->execute([$photoId]);
         $photo = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$photo) {
+            $this->setFlash('error', 'Фото не найдено.');
             header('Location: ' . $this->basePath() . '/purchases');
             exit;
         }
@@ -194,6 +204,7 @@ class PurchaseBatchesController
             @unlink($path);
         }
 
+        $this->setFlash('success', 'Фото удалено.');
         header('Location: ' . $this->basePath() . '/purchases/' . (int)$photo['purchase_batch_id']);
         exit;
     }
@@ -252,8 +263,31 @@ class PurchaseBatchesController
     private function ensureCsrfOrRedirect(): void
     {
         if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
-            header('Location: ' . $this->basePath() . '/purchases?error=csrf');
+            $this->setFlash('error', 'Неверный CSRF токен.');
+            header('Location: ' . $this->basePath() . '/purchases');
             exit;
         }
+    }
+
+    private function setFlash(string $type, string $message): void
+    {
+        $_SESSION['flash'] = ['type' => $type, 'message' => $message];
+    }
+
+    /**
+     * @return array<string, string>|null
+     */
+    private function pullFlash(): ?array
+    {
+        $flash = $_SESSION['flash'] ?? null;
+        unset($_SESSION['flash']);
+        if (!is_array($flash)) {
+            return null;
+        }
+
+        return [
+            'type' => (string)($flash['type'] ?? ''),
+            'message' => (string)($flash['message'] ?? ''),
+        ];
     }
 }

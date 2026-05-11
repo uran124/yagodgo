@@ -1,5 +1,11 @@
 <?php /** @var array<int,array<string,mixed>> $batches */ ?>
 <?php $basePath = $basePath ?? '/admin'; ?>
+<?php $flash = $flash ?? null; ?>
+<?php if (is_array($flash) && !empty($flash['message'])): ?>
+  <div class="<?= ($flash['type'] ?? '') === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-700' ?> border p-3 rounded mb-4">
+    <?= htmlspecialchars((string)$flash['message']) ?>
+  </div>
+<?php endif; ?>
 <div class="flex items-center mb-4">
   <a href="<?= $basePath ?>/purchases/create" class="bg-[#C86052] text-white px-4 py-2 rounded inline-flex items-center">
     <span class="material-icons-round text-base mr-1">add</span> Добавить закупку

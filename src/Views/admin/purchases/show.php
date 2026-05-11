@@ -2,10 +2,17 @@
 <?php /** @var array<int,array<string,mixed>> $movements */ ?>
 <?php /** @var array<int,array<string,mixed>> $photos */ ?>
 <?php $basePath = $basePath ?? '/admin'; ?>
+<?php $flash = $flash ?? null; ?>
 
 <div class="mb-4">
   <a href="<?= $basePath ?>/purchases" class="text-[#C86052] hover:underline">← К списку закупок</a>
 </div>
+
+<?php if (is_array($flash) && !empty($flash['message'])): ?>
+  <div class="<?= ($flash['type'] ?? '') === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-700' ?> border p-3 rounded mb-4">
+    <?= htmlspecialchars((string)$flash['message']) ?>
+  </div>
+<?php endif; ?>
 
 <div class="bg-white p-4 rounded shadow mb-4">
   <h2 class="text-xl font-semibold mb-2">Партия #<?= (int)$batch['id'] ?></h2>
