@@ -517,7 +517,8 @@ class UsersController
         $params     = [];
         $conditions = [];
         if ($search !== '') {
-            $conditions[] = "(u.phone LIKE ? OR EXISTS(SELECT 1 FROM addresses a WHERE a.user_id = u.id AND a.street LIKE ?))";
+            $conditions[] = "(u.name LIKE ? OR u.phone LIKE ? OR EXISTS(SELECT 1 FROM addresses a WHERE a.user_id = u.id AND a.street LIKE ?))";
+            $params[]     = "%$search%";
             $params[]     = "%$search%";
             $params[]     = "%$search%";
         }
@@ -544,7 +545,8 @@ class UsersController
             $conditions = [];
             $params     = [];
             if ($search !== '') {
-                $conditions[] = "(u.phone LIKE ? OR EXISTS(SELECT 1 FROM addresses a WHERE a.user_id = u.id AND a.street LIKE ?))";
+                $conditions[] = "(u.name LIKE ? OR u.phone LIKE ? OR EXISTS(SELECT 1 FROM addresses a WHERE a.user_id = u.id AND a.street LIKE ?))";
+                $params[]     = "%$search%";
                 $params[]     = "%$search%";
                 $params[]     = "%$search%";
             }
