@@ -86,6 +86,10 @@ return [
         requireAdmin(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->close(); return true;
     },
     static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('POST', '/admin/purchases/photos/delete', $method, $uri)) return false;
+        requireAdmin(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->deletePhoto(); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
         if (!routeExact('GET', '/admin/orders/create', $method, $uri)) return false;
         requireAdmin(); (new App\Controllers\OrdersController($c['pdo']))->create(); return true;
     },

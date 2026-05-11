@@ -43,6 +43,7 @@ return [
             'POST /manager/purchases/move-to-discount' => ['App\\Controllers\\PurchaseBatchesController', 'moveToDiscount'],
             'POST /manager/purchases/write-off' => ['App\\Controllers\\PurchaseBatchesController', 'writeOff'],
             'POST /manager/purchases/close' => ['App\\Controllers\\PurchaseBatchesController', 'close'],
+            'POST /manager/purchases/photos/delete' => ['App\\Controllers\\PurchaseBatchesController', 'deletePhoto'],
         ];
 
         $key = $method . ' ' . $uri;

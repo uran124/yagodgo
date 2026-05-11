@@ -163,6 +163,34 @@ class PurchaseBatchesController
         exit;
     }
 
+    public function deletePhoto(): void
+    {
+        $photoId = (int)($_POST['photo_id'] ?? 0);
+        if ($photoId <= 0) {
+            header('Location: ' . $this->basePath() . '/purchases');
+            exit;
+        }
+
+        $stmt = $this->pdo->prepare('SELECT id, purchase_batch_id, image_path FROM purchase_batch_photos WHERE id = ? LIMIT 1');
+        $stmt->execute([$photoId]);
+        $photo = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$photo) {
+            header('Location: ' . $this->basePath() . '/purchases');
+            exit;
+        }
+
+        $del = $this->pdo->prepare('DELETE FROM purchase_batch_photos WHERE id = ?');
+        $del->execute([$photoId]);
+
+        $path = __DIR__ . '/../../' . ltrim((string)$photo['image_path'], '/');
+        if (is_file($path)) {
+            @unlink($path);
+        }
+
+        header('Location: ' . $this->basePath() . '/purchases/' . (int)$photo['purchase_batch_id']);
+        exit;
+    }
+
     private function basePath(): string
     {
         $role = (string)($_SESSION['role'] ?? '');
