@@ -199,14 +199,18 @@
 
     rows.forEach(row => {
       const phoneDigits = normalizeDigits(row.dataset.phone || '');
+      const hasOrders = row.dataset.orders !== undefined && row.dataset.orders !== '';
+      const hasPoints = row.dataset.points !== undefined && row.dataset.points !== '';
+      const hasLastOrder = row.dataset.lastOrderDate !== undefined && row.dataset.lastOrderDate !== '';
       const orders = Number(row.dataset.orders || 0);
       const points = Number(row.dataset.points || 0);
-      const rowLastOrder = row.dataset.lastOrderDate ? new Date(row.dataset.lastOrderDate) : null;
+      const rowLastOrder = hasLastOrder ? new Date(row.dataset.lastOrderDate) : null;
+      const hasValidLastOrder = rowLastOrder instanceof Date && !Number.isNaN(rowLastOrder.getTime());
       const matchesPhone = query === '' || isSubsequence(phoneDigits, query);
-      const matchesOrders = orders >= ordersFrom && orders <= ordersTo;
-      const matchesPoints = points >= pointsFrom && points <= pointsTo;
-      const matchesLastOrderFrom = !lastOrderFrom || (rowLastOrder && rowLastOrder >= lastOrderFrom);
-      const matchesLastOrderTo = !lastOrderTo || (rowLastOrder && rowLastOrder <= lastOrderTo);
+      const matchesOrders = !hasOrders || (orders >= ordersFrom && orders <= ordersTo);
+      const matchesPoints = !hasPoints || (points >= pointsFrom && points <= pointsTo);
+      const matchesLastOrderFrom = !lastOrderFrom || !hasValidLastOrder || rowLastOrder >= lastOrderFrom;
+      const matchesLastOrderTo = !lastOrderTo || !hasValidLastOrder || rowLastOrder <= lastOrderTo;
       const matches = matchesPhone && matchesOrders && matchesPoints && matchesLastOrderFrom && matchesLastOrderTo;
       row.classList.toggle('hidden', !matches);
       if (matches) {
