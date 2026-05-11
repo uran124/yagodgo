@@ -158,6 +158,57 @@ class PurchaseBatchService
         return $this->pricingService->calculateFromPurchase($purchasePricePerBox, $boxSize);
     }
 
+    public function markArrived(int $batchId): void
+    {
+        $this->updateBatchStatus($batchId, 'arrived');
+    }
+
+    public function moveToDiscountStock(int $batchId, float $boxes): void
+    {
+        if ($boxes <= 0) {
+            throw new RuntimeException('Discount boxes must be greater than zero.');
+        }
+
+        $batch = $this->loadBatch($batchId);
+        if ((float)$batch['boxes_free'] < $boxes) {
+            throw new RuntimeException('Not enough free boxes to move into discount stock.');
+        }
+
+        $stmt = $this->pdo->prepare(
+            'UPDATE purchase_batches
+             SET boxes_free = boxes_free - :boxes,
+                 boxes_discount = boxes_discount + :boxes
+             WHERE id = :id'
+        );
+        $stmt->execute(['boxes' => $boxes, 'id' => $batchId]);
+    }
+
+    public function writeOff(int $batchId, float $boxes, string $comment): void
+    {
+        if ($boxes <= 0) {
+            throw new RuntimeException('Write-off boxes must be greater than zero.');
+        }
+
+        $batch = $this->loadBatch($batchId);
+        if ((float)$batch['boxes_remaining'] < $boxes) {
+            throw new RuntimeException('Not enough boxes remaining for write-off.');
+        }
+
+        $stmt = $this->pdo->prepare(
+            'UPDATE purchase_batches
+             SET boxes_written_off = boxes_written_off + :boxes,
+                 boxes_remaining = boxes_remaining - :boxes,
+                 comment = :comment
+             WHERE id = :id'
+        );
+        $stmt->execute(['boxes' => $boxes, 'comment' => $comment, 'id' => $batchId]);
+    }
+
+    public function closeBatch(int $batchId): void
+    {
+        $this->updateBatchStatus($batchId, 'closed');
+    }
+
     /**
      * @param array<string, mixed> $settings
      * @return array<string, float>
@@ -199,6 +250,27 @@ class PurchaseBatchService
         }
 
         return $product;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function loadBatch(int $batchId): array
+    {
+        $stmt = $this->pdo->prepare('SELECT * FROM purchase_batches WHERE id = ? LIMIT 1');
+        $stmt->execute([$batchId]);
+        $batch = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$batch) {
+            throw new RuntimeException('Purchase batch not found.');
+        }
+
+        return $batch;
+    }
+
+    private function updateBatchStatus(int $batchId, string $status): void
+    {
+        $stmt = $this->pdo->prepare('UPDATE purchase_batches SET status = ? WHERE id = ?');
+        $stmt->execute([$status, $batchId]);
     }
 
     /**

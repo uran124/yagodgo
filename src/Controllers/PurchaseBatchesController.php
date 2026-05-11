@@ -77,6 +77,49 @@ class PurchaseBatchesController
         exit;
     }
 
+    public function markArrived(): void
+    {
+        $batchId = (int)($_POST['batch_id'] ?? 0);
+        if ($batchId > 0) {
+            $this->purchaseBatchService->markArrived($batchId);
+        }
+        header('Location: ' . $this->basePath() . '/purchases');
+        exit;
+    }
+
+    public function moveToDiscount(): void
+    {
+        $batchId = (int)($_POST['batch_id'] ?? 0);
+        $boxes = (float)($_POST['boxes'] ?? 0);
+        if ($batchId > 0 && $boxes > 0) {
+            $this->purchaseBatchService->moveToDiscountStock($batchId, $boxes);
+        }
+        header('Location: ' . $this->basePath() . '/purchases');
+        exit;
+    }
+
+    public function writeOff(): void
+    {
+        $batchId = (int)($_POST['batch_id'] ?? 0);
+        $boxes = (float)($_POST['boxes'] ?? 0);
+        $comment = trim((string)($_POST['comment'] ?? 'Write-off'));
+        if ($batchId > 0 && $boxes > 0) {
+            $this->purchaseBatchService->writeOff($batchId, $boxes, $comment);
+        }
+        header('Location: ' . $this->basePath() . '/purchases');
+        exit;
+    }
+
+    public function close(): void
+    {
+        $batchId = (int)($_POST['batch_id'] ?? 0);
+        if ($batchId > 0) {
+            $this->purchaseBatchService->closeBatch($batchId);
+        }
+        header('Location: ' . $this->basePath() . '/purchases');
+        exit;
+    }
+
     private function basePath(): string
     {
         $role = (string)($_SESSION['role'] ?? '');
