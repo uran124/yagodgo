@@ -62,6 +62,10 @@ return [
         requireAdmin(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->create(); return true;
     },
     static function (string $method, string $uri, array $c): bool {
+        if (!routeRegex('GET', '#^/admin/purchases/(\d+)$#', $method, $uri, $m)) return false;
+        requireAdmin(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->show((int)$m[1]); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
         if (!routeExact('POST', '/admin/purchases/store', $method, $uri)) return false;
         requireAdmin(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->store(); return true;
     },

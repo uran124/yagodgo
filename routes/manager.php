@@ -60,4 +60,8 @@ return [
         if (!routeRegex('GET', '#^/manager/users/(\d+)$#', $method, $uri, $m)) return false;
         requireManager(); (new App\Controllers\UsersController($c['pdo']))->show((int)$m[1]); return true;
     },
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeRegex('GET', '#^/manager/purchases/(\d+)$#', $method, $uri, $m)) return false;
+        requireManager(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->show((int)$m[1]); return true;
+    },
 ];

@@ -52,6 +52,48 @@ class PurchaseBatchesController
         ]);
     }
 
+    public function show(int $id): void
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT pb.*, p.variety, t.name AS product_name, u.name AS buyer_name
+             FROM purchase_batches pb
+             JOIN products p ON p.id = pb.product_id
+             JOIN product_types t ON t.id = p.product_type_id
+             LEFT JOIN users u ON u.id = pb.buyer_user_id
+             WHERE pb.id = ?
+             LIMIT 1'
+        );
+        $stmt->execute([$id]);
+        $batch = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$batch) {
+            header('Location: ' . $this->basePath() . '/purchases');
+            exit;
+        }
+
+        $movementsStmt = $this->pdo->prepare(
+            'SELECT sm.*, u.name AS user_name
+             FROM stock_movements sm
+             LEFT JOIN users u ON u.id = sm.user_id
+             WHERE sm.purchase_batch_id = ?
+             ORDER BY sm.id DESC'
+        );
+        $movementsStmt->execute([$id]);
+
+        $photosStmt = $this->pdo->prepare(
+            'SELECT * FROM purchase_batch_photos WHERE purchase_batch_id = ? ORDER BY id DESC'
+        );
+        $photosStmt->execute([$id]);
+
+        viewAdmin('purchases/show', [
+            'pageTitle' => 'Партия #' . $id,
+            'basePath' => $this->basePath(),
+            'batch' => $batch,
+            'movements' => $movementsStmt->fetchAll(PDO::FETCH_ASSOC),
+            'photos' => $photosStmt->fetchAll(PDO::FETCH_ASSOC),
+        ]);
+    }
+
     public function store(): void
     {
         $payload = [

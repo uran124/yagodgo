@@ -35,6 +35,7 @@
         <td class="p-3"><?= htmlspecialchars((string)$batch['status']) ?></td>
         <td class="p-3">
           <div class="flex flex-wrap gap-2">
+            <a class="text-xs bg-green-100 px-2 py-1 rounded" href="<?= $basePath ?>/purchases/<?= (int)$batch['id'] ?>">Открыть</a>
             <form method="post" action="<?= $basePath ?>/purchases/arrived">
               <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
               <button class="text-xs bg-blue-100 px-2 py-1 rounded" type="submit">Поступила</button>
