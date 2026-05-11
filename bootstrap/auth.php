@@ -42,3 +42,10 @@ if (!function_exists('requirePartner')) {
         requireRole('partner', 'manager', 'admin');
     }
 }
+
+if (!function_exists('requireBuyer')) {
+    function requireBuyer(): void
+    {
+        requireRole('buyer', 'manager', 'admin');
+    }
+}
