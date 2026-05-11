@@ -15,8 +15,20 @@ class MailingController
 
     public function index(): void
     {
-        $sql = "SELECT u.id, u.name, u.phone, COALESCE(mc.allow_mailing, 1) AS allow_mailing, mc.comment
+        $sql = "SELECT u.id, u.name, u.phone,
+                       u.points_balance AS points,
+                       COALESCE(ord.orders_count, 0) AS orders_count,
+                       ord.last_order_date,
+                       COALESCE(mc.allow_mailing, 1) AS allow_mailing,
+                       mc.comment
                 FROM users u
+                LEFT JOIN (
+                    SELECT o.user_id,
+                           COUNT(*) AS orders_count,
+                           MAX(DATE(o.created_at)) AS last_order_date
+                    FROM orders o
+                    GROUP BY o.user_id
+                ) ord ON ord.user_id = u.id
                 LEFT JOIN mailing_clients mc ON mc.user_id = u.id
                 WHERE u.role = 'client'";
         $sql .= " ORDER BY u.name";
