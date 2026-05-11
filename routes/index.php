@@ -10,6 +10,7 @@ $groups = [
     require __DIR__ . '/courier.php',
     require __DIR__ . '/admin.php',
     require __DIR__ . '/manager.php',
+    require __DIR__ . '/buyer.php',
     require __DIR__ . '/partner.php',
     require __DIR__ . '/seller.php',
 ];
