@@ -32,7 +32,7 @@
   </table>
 <?php endif; ?>
 <form method="get" class="mb-4 flex">
-  <input type="text" name="q" value="<?= htmlspecialchars($search ?? '') ?>" placeholder="Телефон или адрес" class="border rounded px-3 py-2 mr-2 flex-grow">
+  <input type="text" name="q" value="<?= htmlspecialchars($search ?? '') ?>" placeholder="Имя, телефон или адрес" class="border rounded px-3 py-2 mr-2 flex-grow">
   <button type="submit" class="bg-[#C86052] text-white px-4 py-2 rounded">Поиск</button>
 </form>
 <a href="<?= $base ?>/users/edit" class="bg-[#C86052] text-white px-4 py-2 rounded mb-4 inline-flex items-center">
