@@ -5,15 +5,38 @@
 <div class="space-y-6">
   <div class="bg-white p-4 rounded shadow">
     <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-      <div class="w-full md:max-w-xs">
-        <label for="phoneSearch" class="block text-sm text-gray-500 mb-1">Поиск по номеру</label>
-        <input id="phoneSearch" type="text" placeholder="Введите цифры номера"
-               class="w-full rounded border border-gray-300 bg-transparent px-3 py-2"
-               autocomplete="off">
-        <p class="mt-1 text-xs text-gray-500">Фильтрация выполняется по совпадению цифр в правильном порядке.</p>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-3 w-full">
+        <div>
+          <label for="phoneSearch" class="block text-sm text-gray-500 mb-1">Поиск по номеру</label>
+          <input id="phoneSearch" type="text" placeholder="Введите цифры номера"
+                 class="w-full rounded border border-gray-300 bg-transparent px-3 py-2"
+                 autocomplete="off">
+        </div>
+        <div>
+          <label class="block text-sm text-gray-500 mb-1">Заказы (от / до)</label>
+          <div class="grid grid-cols-2 gap-2">
+            <input id="ordersFrom" type="number" min="0" placeholder="От" class="w-full rounded border border-gray-300 bg-transparent px-3 py-2">
+            <input id="ordersTo" type="number" min="0" placeholder="До" class="w-full rounded border border-gray-300 bg-transparent px-3 py-2">
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm text-gray-500 mb-1">Последний заказ (от / до)</label>
+          <div class="grid grid-cols-2 gap-2">
+            <input id="lastOrderFrom" type="date" class="w-full rounded border border-gray-300 bg-transparent px-3 py-2">
+            <input id="lastOrderTo" type="date" class="w-full rounded border border-gray-300 bg-transparent px-3 py-2">
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm text-gray-500 mb-1">Клубнички (от / до)</label>
+          <div class="grid grid-cols-2 gap-2">
+            <input id="pointsFrom" type="number" min="0" placeholder="От" class="w-full rounded border border-gray-300 bg-transparent px-3 py-2">
+            <input id="pointsTo" type="number" min="0" placeholder="До" class="w-full rounded border border-gray-300 bg-transparent px-3 py-2">
+          </div>
+        </div>
       </div>
       <p class="text-sm text-gray-500 md:text-right">Начните вводить цифры, чтобы отфильтровать список клиентов для рассылки.</p>
     </div>
+    <p class="mt-1 text-xs text-gray-500">Можно комбинировать фильтры по номеру, заказам, дате последнего заказа и клубничкам.</p>
   </div>
 
   <div class="bg-white p-4 rounded shadow">
@@ -22,7 +45,10 @@
         <h2 class="text-lg font-semibold">Клиенты для рассылки</h2>
         <p class="text-sm text-gray-500">Активных номеров: <span id="activeCounter"><?= (int)$activeCount ?></span></p>
       </div>
-      <button type="button" id="copyActive" class="px-4 py-2 rounded bg-green-600 text-white shadow">Сохранить</button>
+      <div class="flex gap-2">
+        <button type="button" id="exportOpen" class="px-4 py-2 rounded bg-blue-600 text-white shadow">Выгрузить</button>
+        <button type="button" id="copyActive" class="px-4 py-2 rounded bg-green-600 text-white shadow">Сохранить</button>
+      </div>
     </div>
 
     <div class="overflow-x-auto">
@@ -44,6 +70,9 @@
               data-user-id="<?= (int)$client['id'] ?>"
               data-name="<?= htmlspecialchars($client['name'] ?? 'Без имени', ENT_QUOTES) ?>"
               data-phone="<?= htmlspecialchars($phone, ENT_QUOTES) ?>"
+              data-orders="<?= (int)($client['orders_count'] ?? 0) ?>"
+              data-last-order-date="<?= htmlspecialchars((string)($client['last_order_date'] ?? ''), ENT_QUOTES) ?>"
+              data-points="<?= (int)($client['points'] ?? 0) ?>"
               data-comment="<?= htmlspecialchars($comment, ENT_QUOTES) ?>"
               data-allow="<?= $allow ? '1' : '0' ?>">
             <td class="px-4 py-3 font-medium flex items-center space-x-2">
@@ -92,12 +121,36 @@
     </form>
   </div>
 </div>
+<div id="exportModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 hidden">
+  <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6 relative">
+    <button type="button" id="exportClose" class="absolute top-3 right-3 text-gray-400 hover:text-white">
+      <span class="material-icons-round">close</span>
+    </button>
+    <h3 class="text-xl font-semibold mb-4">Выгрузка полей</h3>
+    <div class="space-y-2 mb-5">
+      <label class="flex items-center gap-2"><input type="checkbox" class="export-field" value="phone" checked> Телефон</label>
+      <label class="flex items-center gap-2"><input type="checkbox" class="export-field" value="name" checked> Имя</label>
+      <label class="flex items-center gap-2"><input type="checkbox" class="export-field" value="orders"> Заказы</label>
+      <label class="flex items-center gap-2"><input type="checkbox" class="export-field" value="points"> Клубнички</label>
+    </div>
+    <div class="flex justify-end gap-3">
+      <button type="button" class="px-4 py-2 rounded border border-gray-500" id="exportCancel">Отмена</button>
+      <button type="button" class="px-4 py-2 rounded bg-[#C86052] text-white" id="exportSubmit">Выгрузить</button>
+    </div>
+  </div>
+</div>
 
 <script>
   const toastEl = document.getElementById('toast');
   const rows = Array.from(document.querySelectorAll('[data-row]'));
   const noResultsMessage = document.getElementById('noResults');
   const searchInput = document.getElementById('phoneSearch');
+  const ordersFromInput = document.getElementById('ordersFrom');
+  const ordersToInput = document.getElementById('ordersTo');
+  const lastOrderFromInput = document.getElementById('lastOrderFrom');
+  const lastOrderToInput = document.getElementById('lastOrderTo');
+  const pointsFromInput = document.getElementById('pointsFrom');
+  const pointsToInput = document.getElementById('pointsTo');
 
   function showToast(message) {
     toastEl.textContent = message;
@@ -136,11 +189,25 @@
 
   function applySearchFilter() {
     const query = normalizeDigits(searchInput ? searchInput.value : '');
+    const ordersFrom = Number(ordersFromInput?.value || 0);
+    const ordersTo = Number(ordersToInput?.value || Number.MAX_SAFE_INTEGER);
+    const pointsFrom = Number(pointsFromInput?.value || 0);
+    const pointsTo = Number(pointsToInput?.value || Number.MAX_SAFE_INTEGER);
+    const lastOrderFrom = lastOrderFromInput?.value ? new Date(lastOrderFromInput.value) : null;
+    const lastOrderTo = lastOrderToInput?.value ? new Date(lastOrderToInput.value) : null;
     let visibleCount = 0;
 
     rows.forEach(row => {
       const phoneDigits = normalizeDigits(row.dataset.phone || '');
-      const matches = query === '' || isSubsequence(phoneDigits, query);
+      const orders = Number(row.dataset.orders || 0);
+      const points = Number(row.dataset.points || 0);
+      const rowLastOrder = row.dataset.lastOrderDate ? new Date(row.dataset.lastOrderDate) : null;
+      const matchesPhone = query === '' || isSubsequence(phoneDigits, query);
+      const matchesOrders = orders >= ordersFrom && orders <= ordersTo;
+      const matchesPoints = points >= pointsFrom && points <= pointsTo;
+      const matchesLastOrderFrom = !lastOrderFrom || (rowLastOrder && rowLastOrder >= lastOrderFrom);
+      const matchesLastOrderTo = !lastOrderTo || (rowLastOrder && rowLastOrder <= lastOrderTo);
+      const matches = matchesPhone && matchesOrders && matchesPoints && matchesLastOrderFrom && matchesLastOrderTo;
       row.classList.toggle('hidden', !matches);
       if (matches) {
         visibleCount++;
@@ -256,6 +323,54 @@
   if (searchInput) {
     searchInput.addEventListener('input', applySearchFilter);
   }
+  [ordersFromInput, ordersToInput, lastOrderFromInput, lastOrderToInput, pointsFromInput, pointsToInput]
+    .forEach(input => input && input.addEventListener('input', applySearchFilter));
+
+  const exportModal = document.getElementById('exportModal');
+  const exportOpenBtn = document.getElementById('exportOpen');
+  const exportCloseBtn = document.getElementById('exportClose');
+  const exportCancelBtn = document.getElementById('exportCancel');
+  const exportSubmitBtn = document.getElementById('exportSubmit');
+
+  function closeExportModal() {
+    exportModal.classList.add('hidden');
+  }
+
+  exportOpenBtn.addEventListener('click', () => exportModal.classList.remove('hidden'));
+  exportCloseBtn.addEventListener('click', closeExportModal);
+  exportCancelBtn.addEventListener('click', closeExportModal);
+
+  exportSubmitBtn.addEventListener('click', async () => {
+    const selectedFields = Array.from(document.querySelectorAll('.export-field:checked')).map(el => el.value);
+    if (!selectedFields.length) {
+      showToast('Выберите хотя бы одно поле');
+      return;
+    }
+
+    const lines = rows
+      .filter(row => !row.classList.contains('hidden'))
+      .map(row => selectedFields.map(field => {
+        if (field === 'phone') return (row.dataset.phone || '').trim();
+        if (field === 'name') return (row.dataset.name || '').trim();
+        if (field === 'orders') return String(Number(row.dataset.orders || 0));
+        if (field === 'points') return String(Number(row.dataset.points || 0));
+        return '';
+      }).join(' ').trim())
+      .filter(Boolean);
+
+    if (!lines.length) {
+      showToast('Нет данных для выгрузки');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(lines.join('\n'));
+      showToast('Данные скопированы в буфер обмена');
+      closeExportModal();
+    } catch (err) {
+      showToast('Не удалось скопировать данные');
+    }
+  });
 
   applySearchFilter();
 </script>
