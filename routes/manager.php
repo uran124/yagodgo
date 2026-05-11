@@ -36,6 +36,13 @@ return [
             'POST /manager/users/toggle-block' => ['App\\Controllers\\UsersController', 'toggleBlock'],
             'POST /manager/users/add-address' => ['App\\Controllers\\UsersController', 'addAddressAdmin'],
             'POST /manager/users/delete-address' => ['App\\Controllers\\UsersController', 'deleteAddressAdmin'],
+            'GET /manager/purchases' => ['App\\Controllers\\PurchaseBatchesController', 'index'],
+            'GET /manager/purchases/create' => ['App\\Controllers\\PurchaseBatchesController', 'create'],
+            'POST /manager/purchases/store' => ['App\\Controllers\\PurchaseBatchesController', 'store'],
+            'POST /manager/purchases/arrived' => ['App\\Controllers\\PurchaseBatchesController', 'markArrived'],
+            'POST /manager/purchases/move-to-discount' => ['App\\Controllers\\PurchaseBatchesController', 'moveToDiscount'],
+            'POST /manager/purchases/write-off' => ['App\\Controllers\\PurchaseBatchesController', 'writeOff'],
+            'POST /manager/purchases/close' => ['App\\Controllers\\PurchaseBatchesController', 'close'],
         ];
 
         $key = $method . ' ' . $uri;
