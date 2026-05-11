@@ -2,6 +2,7 @@
 <?php $basePath = $basePath ?? '/admin'; ?>
 <?php $error = $error ?? ''; ?>
 <form action="<?= $basePath ?>/purchases/store" method="post" enctype="multipart/form-data" class="bg-white p-6 rounded shadow max-w-2xl mx-auto space-y-4">
+  <?= csrf_field() ?>
   <?php if ($error !== ''): ?>
     <div class="bg-red-50 border border-red-200 text-red-700 p-3 rounded">
       <?= htmlspecialchars($error) ?>

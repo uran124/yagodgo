@@ -26,6 +26,7 @@
           <img src="<?= htmlspecialchars((string)$photo['image_path']) ?>" class="w-full h-32 object-cover rounded" alt="Фото партии">
           <?php if ($basePath !== '/buyer'): ?>
             <form method="post" action="<?= $basePath ?>/purchases/photos/delete" class="mt-1">
+              <?= csrf_field() ?>
               <input type="hidden" name="photo_id" value="<?= (int)$photo['id'] ?>">
               <button type="submit" class="text-xs text-red-600 hover:underline">Удалить фото</button>
             </form>

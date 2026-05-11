@@ -96,6 +96,8 @@ class PurchaseBatchesController
 
     public function store(): void
     {
+        $this->ensureCsrfOrRedirect();
+
         $payload = [
             'product_id' => (int)($_POST['product_id'] ?? 0),
             'buyer_user_id' => (int)($_SESSION['user_id'] ?? 0),
@@ -122,6 +124,7 @@ class PurchaseBatchesController
 
     public function markArrived(): void
     {
+        $this->ensureCsrfOrRedirect();
         $batchId = (int)($_POST['batch_id'] ?? 0);
         if ($batchId > 0) {
             $this->purchaseBatchService->markArrived($batchId);
@@ -132,6 +135,7 @@ class PurchaseBatchesController
 
     public function moveToDiscount(): void
     {
+        $this->ensureCsrfOrRedirect();
         $batchId = (int)($_POST['batch_id'] ?? 0);
         $boxes = (float)($_POST['boxes'] ?? 0);
         if ($batchId > 0 && $boxes > 0) {
@@ -143,6 +147,7 @@ class PurchaseBatchesController
 
     public function writeOff(): void
     {
+        $this->ensureCsrfOrRedirect();
         $batchId = (int)($_POST['batch_id'] ?? 0);
         $boxes = (float)($_POST['boxes'] ?? 0);
         $comment = trim((string)($_POST['comment'] ?? 'Write-off'));
@@ -155,6 +160,7 @@ class PurchaseBatchesController
 
     public function close(): void
     {
+        $this->ensureCsrfOrRedirect();
         $batchId = (int)($_POST['batch_id'] ?? 0);
         if ($batchId > 0) {
             $this->purchaseBatchService->closeBatch($batchId);
@@ -165,6 +171,7 @@ class PurchaseBatchesController
 
     public function deletePhoto(): void
     {
+        $this->ensureCsrfOrRedirect();
         $photoId = (int)($_POST['photo_id'] ?? 0);
         if ($photoId <= 0) {
             header('Location: ' . $this->basePath() . '/purchases');
@@ -239,6 +246,14 @@ class PurchaseBatchesController
                 'batch_id' => $batchId,
                 'image_path' => $relPath,
             ]);
+        }
+    }
+
+    private function ensureCsrfOrRedirect(): void
+    {
+        if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
+            header('Location: ' . $this->basePath() . '/purchases?error=csrf');
+            exit;
         }
     }
 }
