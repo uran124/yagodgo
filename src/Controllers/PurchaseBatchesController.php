@@ -109,7 +109,8 @@ class PurchaseBatchesController
         ];
 
         try {
-            $this->purchaseBatchService->createBatch($payload);
+            $batchId = $this->purchaseBatchService->createBatch($payload);
+            $this->storeBatchPhotos($batchId);
         } catch (RuntimeException $e) {
             header('Location: ' . $this->basePath() . '/purchases/create?error=' . urlencode($e->getMessage()));
             exit;
@@ -170,5 +171,46 @@ class PurchaseBatchesController
             'buyer' => '/buyer',
             default => '/admin',
         };
+    }
+
+    private function storeBatchPhotos(int $batchId): void
+    {
+        if (!isset($_FILES['photos']) || !is_array($_FILES['photos']['tmp_name'] ?? null)) {
+            return;
+        }
+
+        $tmpFiles = $_FILES['photos']['tmp_name'];
+        $errors = $_FILES['photos']['error'] ?? [];
+        $names = $_FILES['photos']['name'] ?? [];
+        foreach ($tmpFiles as $idx => $tmpPath) {
+            $errorCode = (int)($errors[$idx] ?? UPLOAD_ERR_NO_FILE);
+            if ($errorCode !== UPLOAD_ERR_OK || !is_string($tmpPath) || $tmpPath === '') {
+                continue;
+            }
+
+            $src = @imagecreatefromstring((string)file_get_contents($tmpPath));
+            if (!$src) {
+                continue;
+            }
+
+            $extSafeName = pathinfo((string)($names[$idx] ?? ''), PATHINFO_FILENAME);
+            $fileName = uniqid('batch_' . preg_replace('/[^a-zA-Z0-9_-]/', '', $extSafeName) . '_', true) . '.webp';
+            $absPath = __DIR__ . '/../../uploads/' . $fileName;
+            $ok = imagewebp($src, $absPath, 82);
+            imagedestroy($src);
+
+            if (!$ok) {
+                continue;
+            }
+
+            $relPath = '/uploads/' . $fileName;
+            $stmt = $this->pdo->prepare(
+                'INSERT INTO purchase_batch_photos (purchase_batch_id, image_path) VALUES (:batch_id, :image_path)'
+            );
+            $stmt->execute([
+                'batch_id' => $batchId,
+                'image_path' => $relPath,
+            ]);
+        }
     }
 }
