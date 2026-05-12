@@ -23,3 +23,15 @@ php bin/supply_smoke.php
 - Exit code `0` — smoke-check пройден.
 - Exit code `1` — есть проблемы в checks.
 - Exit code `2` — ошибка подключения к БД.
+
+
+## Композитная проверка релиза
+
+```bash
+php bin/supply_release_check.php
+```
+
+Скрипт последовательно запускает:
+- `php bin/migrate.php status` (и проверяет, что `Pending: 0`),
+- `php bin/supply_smoke.php`,
+- `php bin/supply_digest.php --threshold=2`.

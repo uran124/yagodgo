@@ -1,4 +1,4 @@
-.PHONY: migrate status test supply-smoke supply-digest
+.PHONY: migrate status test supply-smoke supply-digest supply-release-check
 
 migrate:
 	php bin/migrate.php up
@@ -14,3 +14,7 @@ supply-smoke:
 
 supply-digest:
 	php bin/supply_digest.php --threshold=2
+
+
+supply-release-check:
+	php bin/supply_release_check.php
