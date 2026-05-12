@@ -222,6 +222,10 @@ $slots           = $slots           ?? [];
               </div>
             <?php endif; ?>
 
+            <div id="discountStockNotice" class="hidden bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl p-3 text-sm">
+              Выбран режим «Выгодный остаток»: купоны и клубнички не применяются.
+            </div>
+
             <!-- Промокод -->
             <div class="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-2xl p-4">
               <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -234,10 +238,10 @@ $slots           = $slots           ?? [];
                          class="flex-1 border-2 border-gray-200 rounded-2xl px-4 py-3 bg-gray-100 cursor-not-allowed" />
                   <input type="hidden" name="coupon_code" value="<?= htmlspecialchars($couponCode) ?>">
                 <?php else: ?>
-                  <input type="text" name="coupon_code" value="<?= htmlspecialchars($couponCode ?? '') ?>"
+                  <input id="couponInput" type="text" name="coupon_code" value="<?= htmlspecialchars($couponCode ?? '') ?>"
                          placeholder="Введите промокод"
                          class="flex-1 border-2 border-gray-200 rounded-2xl px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all" />
-                  <button type="submit" name="apply_coupon" value="1"
+                  <button id="couponApplyBtn" type="submit" name="apply_coupon" value="1"
                           formaction="/checkout" formmethod="get"
                           class="bg-red-500 text-white px-4 py-3 rounded-2xl font-semibold">Применить</button>
                 <?php endif; ?>
@@ -296,7 +300,10 @@ $slots           = $slots           ?? [];
 <script>
   const select = document.getElementById('addressSelect');
   const block = document.getElementById('newAddressBlock');
+  const modeSelects = document.querySelectorAll('select[name^="order_mode["]');
+
   function toggleBlock() {
+    if (!select || !block) return;
     if (select.value === 'new') {
       block.classList.remove('hidden');
     } else {
@@ -319,7 +326,7 @@ $slots           = $slots           ?? [];
     const groups = parseInt(finalEl.dataset.groups);
     const shipPer = parseFloat(finalEl.dataset.shipping);
 
-    const shipping = select.value === 'pickup' ? 0 : shipPer * groups;
+    const shipping = select && select.value === 'pickup' ? 0 : shipPer * groups;
 
     const pointsDiscount = Math.min(points + couponPts, subtotal);
     const afterPoints = subtotal - pointsDiscount;
@@ -332,7 +339,7 @@ $slots           = $slots           ?? [];
     finalEl.textContent = format(final) + ' ₽';
 
     document.querySelectorAll('[data-shipping-row]').forEach(row => {
-      if (select.value === 'pickup') {
+      if (select && select.value === 'pickup') {
         row.classList.add('hidden');
       } else {
         row.classList.remove('hidden');
@@ -340,10 +347,43 @@ $slots           = $slots           ?? [];
     });
   }
 
-  if (select) {
-    select.addEventListener('change', () => {
-      updateTotal();
-    });
+  function updateDiscountStockState() {
+    const hasDiscountStock = Array.from(modeSelects).some(sel => sel.value === 'discount_stock');
+
+    const notice = document.getElementById('discountStockNotice');
+    if (notice) notice.classList.toggle('hidden', !hasDiscountStock);
+
+    const couponInput = document.getElementById('couponInput');
+    const couponApplyBtn = document.getElementById('couponApplyBtn');
+
+    if (couponInput) {
+      couponInput.disabled = hasDiscountStock;
+      if (hasDiscountStock) {
+        couponInput.value = '';
+        couponInput.placeholder = 'Недоступно для выгодного остатка';
+      }
+    }
+
+    if (couponApplyBtn) {
+      couponApplyBtn.disabled = hasDiscountStock;
+      couponApplyBtn.classList.toggle('opacity-50', hasDiscountStock);
+      couponApplyBtn.classList.toggle('cursor-not-allowed', hasDiscountStock);
+    }
+
+    const finalEl = document.getElementById('finalTotal');
+    if (finalEl) {
+      finalEl.dataset.pointstouse = hasDiscountStock ? '0' : '<?= (int)$pointsToUse ?>';
+      finalEl.dataset.couponpoints = hasDiscountStock ? '0' : '<?= (int)$couponPoints ?>';
+      finalEl.dataset.discountpercent = hasDiscountStock ? '0' : '<?= (float)$discountPercent ?>';
+    }
+
     updateTotal();
   }
+
+  if (select) {
+    select.addEventListener('change', updateTotal);
+  }
+  modeSelects.forEach(sel => sel.addEventListener('change', updateDiscountStockState));
+
+  updateDiscountStockState();
 </script>
