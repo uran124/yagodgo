@@ -22,6 +22,22 @@
   <p><b>Куплено:</b> <?= (float)$batch['boxes_total'] ?> | <b>Свободно:</b> <?= (float)$batch['boxes_free'] ?> | <b>Резерв:</b> <?= (float)$batch['boxes_reserved'] ?></p>
 </div>
 
+
+<div class="bg-white p-4 rounded shadow mb-4">
+  <h3 class="font-semibold mb-2">P&L партии</h3>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+    <p><b>Выручка (продано):</b> <?= number_format((float)($pnl['revenue_sold'] ?? 0), 2, '.', ' ') ?> ₽</p>
+    <p><b>Выручка (выгодный остаток):</b> <?= number_format((float)($pnl['revenue_discount'] ?? 0), 2, '.', ' ') ?> ₽</p>
+    <p><b>Выручка (итого):</b> <?= number_format((float)($pnl['revenue_total'] ?? 0), 2, '.', ' ') ?> ₽</p>
+    <p><b>Себестоимость (продано):</b> <?= number_format((float)($pnl['cost_sold'] ?? 0), 2, '.', ' ') ?> ₽</p>
+    <p><b>Себестоимость (выгодный остаток):</b> <?= number_format((float)($pnl['cost_discount'] ?? 0), 2, '.', ' ') ?> ₽</p>
+    <p><b>Себестоимость (списано):</b> <?= number_format((float)($pnl['cost_written_off'] ?? 0), 2, '.', ' ') ?> ₽</p>
+    <p><b>Себестоимость (признано):</b> <?= number_format((float)($pnl['cost_total_recognized'] ?? 0), 2, '.', ' ') ?> ₽</p>
+    <p><b>Валовая маржа:</b> <?= number_format((float)($pnl['gross_margin'] ?? 0), 2, '.', ' ') ?> ₽</p>
+    <p><b>Остаток в деньгах:</b> <?= number_format((float)($pnl['inventory_value_remaining'] ?? 0), 2, '.', ' ') ?> ₽</p>
+  </div>
+</div>
+
 <div class="bg-white p-4 rounded shadow mb-4">
   <h3 class="font-semibold mb-2">Фото партии</h3>
   <?php if ($photos === []): ?>
