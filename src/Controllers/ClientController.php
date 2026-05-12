@@ -487,6 +487,9 @@ public function cart(): void
         ];
     }
 
+    $postedOrderModes = is_array($_POST['order_mode'] ?? null) ? $_POST['order_mode'] : [];
+    $orderModeByDate = $this->normalizeOrderModes($itemsByDate, $postedOrderModes);
+
     // 3) Считаем общий чек
     $allTotal = 0;
     foreach ($itemsByDate as $block) {
@@ -546,8 +549,14 @@ public function cart(): void
         }
     }
 
+    $hasDiscountStockOrder = $this->shouldDisableRewardsForModes($orderModeByDate);
+    if ($hasDiscountStockOrder) {
+        $discountPercent = 0.0;
+        $couponPoints = 0;
+    }
+
     // 5) Считаем, сколько баллов списать (не более суммы заказа)
-    $pointsToUse  = min($pointsBalance, $allTotal);
+    $pointsToUse  = $hasDiscountStockOrder ? 0 : min($pointsBalance, $allTotal);
 
     $this->pdo->beginTransaction();
 
@@ -650,11 +659,16 @@ public function cart(): void
             "INSERT INTO orders
                (user_id, address_id, slot_id, status, total_amount,
                 discount_applied, points_used, points_accrued, coupon_code,
-                delivery_date, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"
+                delivery_date, created_at, order_mode, bonuses_allowed, coupons_allowed, reserved_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?)"
         );
         $pointsAccrued = 0; // пока 0, начислим ниже, если надо
         $orderDeliveryDate = $isReservedOrder ? date('Y-m-d') : $dateKey;
+        $orderMode = (string)($orderModeByDate[$dateKey] ?? ($isReservedOrder ? 'preorder' : 'instant'));
+        $reservedAt = $isReservedOrder ? date('Y-m-d H:i:s') : null;
+        $bonusesAllowed = $orderMode === 'discount_stock' ? 0 : 1;
+        $couponsAllowed = $orderMode === 'discount_stock' ? 0 : 1;
+
         $stmtOrder->execute([
             $userId,
             $addressIds[$dateKey],
@@ -664,16 +678,20 @@ public function cart(): void
             $couponDiscount, // discount_applied = скидка по купону
             $pointsDiscount,  // points_used = списанные баллы
             $pointsAccrued,   // points_accrued = пока 0
-            $couponCode,
-            $orderDeliveryDate
+            $couponsAllowed ? $couponCode : '',
+            $orderDeliveryDate,
+            $orderMode,
+            $bonusesAllowed,
+            $couponsAllowed,
+            $reservedAt,
         ]);
         $orderId = (int)$this->pdo->lastInsertId();
         $createdOrderIds[] = $orderId;
 
         // (7.3) Вставляем позиции в order_items
         $stmtItem = $this->pdo->prepare(
-            "INSERT INTO order_items (order_id, product_id, quantity, boxes, unit_price)\n" .
-            "VALUES (?, ?, ?, ?, ?)"
+            "INSERT INTO order_items (order_id, product_id, quantity, boxes, unit_price, stock_mode)\n" .
+            "VALUES (?, ?, ?, ?, ?, ?)"
         );
         foreach ($block as $prodId => $data) {
             $kgQty   = $data['quantity'] * $data['box_size'];
@@ -686,6 +704,7 @@ public function cart(): void
                 $kgQty,
                 $data['quantity'],
                 $kgPrice,
+                $orderMode,
             ]);
         }
 
@@ -1210,4 +1229,32 @@ public function cancelReservedOrder(int $orderId): void
             'showMetaText' => false,
         ]);
     }
+
+    /**
+     * @param array<string, mixed> $itemsByDate
+     * @param array<string, mixed> $postedOrderModes
+     * @return array<string, string>
+     */
+    public function normalizeOrderModes(array $itemsByDate, array $postedOrderModes): array
+    {
+        $allowedModes = ['preorder', 'instant', 'discount_stock'];
+        $result = [];
+
+        foreach ($itemsByDate as $dateKey => $_) {
+            $rawMode = (string)($postedOrderModes[$dateKey] ?? '');
+            if (!in_array($rawMode, $allowedModes, true)) {
+                $rawMode = ($dateKey === PLACEHOLDER_DATE) ? 'preorder' : 'instant';
+            }
+            $result[(string)$dateKey] = $rawMode;
+        }
+
+        return $result;
+    }
+
+    /** @param array<string, string> $orderModeByDate */
+    public function shouldDisableRewardsForModes(array $orderModeByDate): bool
+    {
+        return in_array('discount_stock', $orderModeByDate, true);
+    }
+
 }
