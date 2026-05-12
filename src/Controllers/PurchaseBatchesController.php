@@ -87,12 +87,15 @@ class PurchaseBatchesController
         );
         $photosStmt->execute([$id]);
 
+        $pnl = $this->purchaseBatchService->calculateBatchPnl($id);
+
         viewAdmin('purchases/show', [
             'pageTitle' => 'Партия #' . $id,
             'basePath' => $this->basePath(),
             'batch' => $batch,
             'movements' => $movementsStmt->fetchAll(PDO::FETCH_ASSOC),
             'photos' => $photosStmt->fetchAll(PDO::FETCH_ASSOC),
+            'pnl' => $pnl,
             'flash' => $this->pullFlash(),
         ]);
     }
