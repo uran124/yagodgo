@@ -85,4 +85,14 @@ class StockServiceTest extends TestCase
         $this->assertSame(0.0, (float)$batch['boxes_reserved']);
         $this->assertSame(5.0, (float)$batch['boxes_sold']);
     }
+
+    public function testWriteOffRejectsInvariantViolationAndRollsBack(): void
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Batch invariant failed: boxes_remaining mismatch.');
+
+        $this->service->writeOff(1, 31, 7, 'Too much write off');
+    }
+
 }
+

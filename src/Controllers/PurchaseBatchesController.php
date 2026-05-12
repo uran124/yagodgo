@@ -87,14 +87,67 @@ class PurchaseBatchesController
         );
         $photosStmt->execute([$id]);
 
+        $pnl = $this->purchaseBatchService->calculateBatchPnl($id);
+
         viewAdmin('purchases/show', [
             'pageTitle' => 'Партия #' . $id,
             'basePath' => $this->basePath(),
             'batch' => $batch,
             'movements' => $movementsStmt->fetchAll(PDO::FETCH_ASSOC),
             'photos' => $photosStmt->fetchAll(PDO::FETCH_ASSOC),
+            'pnl' => $pnl,
             'flash' => $this->pullFlash(),
         ]);
+    }
+
+
+    public function exportPnlCsv(int $id): void
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT pb.id, pb.purchased_at, pb.status, p.variety, t.name AS product_name
+             FROM purchase_batches pb
+             JOIN products p ON p.id = pb.product_id
+             JOIN product_types t ON t.id = p.product_type_id
+             WHERE pb.id = ?
+             LIMIT 1'
+        );
+        $stmt->execute([$id]);
+        $batch = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$batch) {
+            http_response_code(404);
+            echo 'Batch not found';
+            return;
+        }
+
+        $pnl = $this->purchaseBatchService->calculateBatchPnl($id);
+
+        $fileName = 'purchase_batch_' . $id . '_pnl.csv';
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="' . $fileName . '"');
+
+        $out = fopen('php://output', 'wb');
+        if ($out === false) {
+            return;
+        }
+
+        fwrite($out, "ï»¿");
+
+        fputcsv($out, ['batch_id', 'product', 'purchased_at', 'status', 'metric', 'value']);
+        $productTitle = trim((string)$batch['product_name'] . ' ' . (string)$batch['variety']);
+
+        foreach ($pnl as $metric => $value) {
+            fputcsv($out, [
+                (int)$batch['id'],
+                $productTitle,
+                (string)$batch['purchased_at'],
+                (string)$batch['status'],
+                (string)$metric,
+                (float)$value,
+            ]);
+        }
+
+        fclose($out);
     }
 
     public function store(): void
