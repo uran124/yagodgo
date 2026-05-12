@@ -17,7 +17,7 @@ php bin/supply_digest.php
 Порог возраста партии в днях (по умолчанию 2):
 
 ```bash
-php bin/supply_digest.php 3
+php bin/supply_digest.php --threshold=3
 ```
 
 ## Рекомендация по cron
@@ -27,7 +27,10 @@ php bin/supply_digest.php 3
 ## Отправка summary в Telegram
 
 ```bash
-php bin/supply_digest.php 2 --telegram
+php bin/supply_digest.php --threshold=2 --max-items=10 --telegram
 ```
 
 Требуются `TELEGRAM_BOT_TOKEN` и `TELEGRAM_ADMIN_CHAT_ID` (берутся из `config/telegram.php`).
+
+
+Поддерживаются оба формата порога: `3` и `--threshold=3`.

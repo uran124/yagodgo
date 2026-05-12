@@ -11,8 +11,35 @@ $dsn = sprintf(
     $dbConfig['charset']
 );
 
-$thresholdDays = max(1, (int)($argv[1] ?? 2));
-$sendTelegram = in_array('--telegram', $argv, true);
+$thresholdDays = 2;
+$sendTelegram = false;
+$maxItems = 5;
+
+for ($i = 1; $i < count($argv); $i++) {
+    $arg = (string)$argv[$i];
+
+    if ($arg === '--telegram') {
+        $sendTelegram = true;
+        continue;
+    }
+
+    if (str_starts_with($arg, '--threshold=')) {
+        $thresholdDays = (int)substr($arg, strlen('--threshold='));
+        continue;
+    }
+
+    if (str_starts_with($arg, '--max-items=')) {
+        $maxItems = (int)substr($arg, strlen('--max-items='));
+        continue;
+    }
+
+    if (preg_match('/^\d+$/', $arg) === 1) {
+        $thresholdDays = (int)$arg;
+    }
+}
+
+$thresholdDays = max(1, $thresholdDays);
+$maxItems = max(1, $maxItems);
 
 try {
     $pdo = new PDO($dsn, $dbConfig['user'], $dbConfig['password'], $dbConfig['options']);
@@ -103,7 +130,6 @@ if ($sendTelegram) {
         'Статусы: ' . json_encode($statusCounts, JSON_UNESCAPED_UNICODE),
     ];
 
-    $maxItems = 5;
     if ($stale !== []) {
         $summaryLines[] = '---';
         $summaryLines[] = 'Топ зависших:';
