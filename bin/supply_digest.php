@@ -22,7 +22,7 @@ try {
 }
 
 $sql = 'SELECT pb.id, pb.product_id, pb.purchased_at, pb.status,
-               pb.boxes_total, pb.boxes_remaining, pb.boxes_written_off,
+               pb.boxes_total, pb.boxes_remaining, pb.boxes_sold, pb.boxes_written_off,
                p.variety, t.name AS product_name
         FROM purchase_batches pb
         JOIN products p ON p.id = pb.product_id
@@ -34,6 +34,7 @@ $rows = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
 $now = new DateTimeImmutable('now');
 $stale = [];
 $anomalies = [];
+$statusCounts = [];
 
 foreach ($rows as $row) {
     $purchasedAt = new DateTimeImmutable((string)$row['purchased_at']);
@@ -42,6 +43,9 @@ foreach ($rows as $row) {
     $remaining = (float)$row['boxes_remaining'];
     $total = (float)$row['boxes_total'];
     $writtenOff = (float)$row['boxes_written_off'];
+    $sold = (float)($row['boxes_sold'] ?? 0);
+    $status = (string)$row['status'];
+    $statusCounts[$status] = ($statusCounts[$status] ?? 0) + 1;
 
     if ($remaining > 0 && $ageDays >= $thresholdDays) {
         $stale[] = [
@@ -53,13 +57,18 @@ foreach ($rows as $row) {
         ];
     }
 
-    if ($remaining < 0 || $writtenOff > $total) {
+    $expectedRemaining = $total - $sold - $writtenOff;
+    $remainingMismatch = abs($remaining - $expectedRemaining) > 0.01;
+
+    if ($remaining < 0 || $writtenOff > $total || $remainingMismatch) {
         $anomalies[] = [
             'id' => (int)$row['id'],
             'title' => trim((string)$row['product_name'] . ' ' . (string)$row['variety']),
             'remaining' => $remaining,
             'written_off' => $writtenOff,
             'total' => $total,
+            'expected_remaining' => $expectedRemaining,
+            'remaining_mismatch' => $remainingMismatch,
         ];
     }
 }
@@ -69,6 +78,7 @@ $result = [
     'threshold_days' => $thresholdDays,
     'stale_batches' => $stale,
     'anomalies' => $anomalies,
+    'status_counts' => $statusCounts,
 ];
 
 fwrite(STDOUT, json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . PHP_EOL);
@@ -90,6 +100,7 @@ if ($sendTelegram) {
         'Порог: ' . $thresholdDays . ' дн.',
         'Зависшие партии: ' . count($stale),
         'Аномалии: ' . count($anomalies),
+        'Статусы: ' . json_encode($statusCounts, JSON_UNESCAPED_UNICODE),
     ];
 
     $maxItems = 5;
