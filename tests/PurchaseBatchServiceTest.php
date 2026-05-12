@@ -107,4 +107,36 @@ class PurchaseBatchServiceTest extends TestCase
             'purchase_price_per_box' => 1000,
         ]);
     }
+
+    public function testCalculateBatchPnlReturnsExpectedMetrics(): void
+    {
+        $this->pdo->exec("INSERT INTO purchase_batches (
+            id, product_id, buyer_user_id, box_size_snapshot, box_unit_snapshot,
+            boxes_total, boxes_reserved, boxes_free, boxes_remaining,
+            purchase_price_per_box, extra_cost_per_box, cost_price_per_box,
+            preorder_margin_percent, instant_margin_percent, discount_markup_fixed,
+            preorder_price_per_box, instant_price_per_box, discount_price_per_box,
+            preorder_unit_price, instant_unit_price, discount_unit_price,
+            boxes_sold, boxes_discount, boxes_written_off, status
+        ) VALUES (
+            99, 1, NULL, 2.0, 'кг',
+            30, 0, 0, 20,
+            1000, 20, 1020,
+            30, 50, 100,
+            1300, 1500, 1100,
+            650, 750, 550,
+            5, 3, 2, 'active'
+        )");
+
+        $pnl = $this->service->calculateBatchPnl(99);
+
+        $this->assertSame(7500.0, $pnl['revenue_sold']);
+        $this->assertSame(3300.0, $pnl['revenue_discount']);
+        $this->assertSame(10800.0, $pnl['revenue_total']);
+        $this->assertSame(10200.0, $pnl['cost_total_recognized']);
+        $this->assertSame(600.0, $pnl['gross_margin']);
+        $this->assertSame(20400.0, $pnl['inventory_value_remaining']);
+    }
+
 }
+
