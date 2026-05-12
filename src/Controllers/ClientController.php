@@ -487,16 +487,8 @@ public function cart(): void
         ];
     }
 
-    $postedOrderModes = $_POST['order_mode'] ?? [];
-    $allowedModes = ['preorder', 'instant', 'discount_stock'];
-    $orderModeByDate = [];
-    foreach ($itemsByDate as $dateKey => $_) {
-        $rawMode = (string)($postedOrderModes[$dateKey] ?? '');
-        if (!in_array($rawMode, $allowedModes, true)) {
-            $rawMode = ($dateKey === PLACEHOLDER_DATE) ? 'preorder' : 'instant';
-        }
-        $orderModeByDate[$dateKey] = $rawMode;
-    }
+    $postedOrderModes = is_array($_POST['order_mode'] ?? null) ? $_POST['order_mode'] : [];
+    $orderModeByDate = $this->normalizeOrderModes($itemsByDate, $postedOrderModes);
 
     // 3) Считаем общий чек
     $allTotal = 0;
@@ -557,7 +549,7 @@ public function cart(): void
         }
     }
 
-    $hasDiscountStockOrder = in_array('discount_stock', $orderModeByDate, true);
+    $hasDiscountStockOrder = $this->shouldDisableRewardsForModes($orderModeByDate);
     if ($hasDiscountStockOrder) {
         $discountPercent = 0.0;
         $couponPoints = 0;
@@ -1237,4 +1229,32 @@ public function cancelReservedOrder(int $orderId): void
             'showMetaText' => false,
         ]);
     }
+
+    /**
+     * @param array<string, mixed> $itemsByDate
+     * @param array<string, mixed> $postedOrderModes
+     * @return array<string, string>
+     */
+    public function normalizeOrderModes(array $itemsByDate, array $postedOrderModes): array
+    {
+        $allowedModes = ['preorder', 'instant', 'discount_stock'];
+        $result = [];
+
+        foreach ($itemsByDate as $dateKey => $_) {
+            $rawMode = (string)($postedOrderModes[$dateKey] ?? '');
+            if (!in_array($rawMode, $allowedModes, true)) {
+                $rawMode = ($dateKey === PLACEHOLDER_DATE) ? 'preorder' : 'instant';
+            }
+            $result[(string)$dateKey] = $rawMode;
+        }
+
+        return $result;
+    }
+
+    /** @param array<string, string> $orderModeByDate */
+    public function shouldDisableRewardsForModes(array $orderModeByDate): bool
+    {
+        return in_array('discount_stock', $orderModeByDate, true);
+    }
+
 }
