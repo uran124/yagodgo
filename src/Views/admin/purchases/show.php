@@ -16,6 +16,7 @@
 
 <div class="bg-white p-4 rounded shadow mb-4">
   <h2 class="text-xl font-semibold mb-2">Партия #<?= (int)$batch['id'] ?></h2>
+  <p class="mb-2"><a class="text-sm text-[#C86052] hover:underline" href="<?= $basePath ?>/purchases/<?= (int)$batch['id'] ?>/pnl.csv">Скачать P&L CSV</a></p>
   <p><b>Товар:</b> <?= htmlspecialchars(trim(($batch['product_name'] ?? '') . ' ' . ($batch['variety'] ?? ''))) ?></p>
   <p><b>Закупщик:</b> <?= htmlspecialchars((string)($batch['buyer_name'] ?? '—')) ?></p>
   <p><b>Статус:</b> <?= htmlspecialchars((string)$batch['status']) ?></p>
