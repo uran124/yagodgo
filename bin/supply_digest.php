@@ -12,6 +12,7 @@ $dsn = sprintf(
 );
 
 $thresholdDays = max(1, (int)($argv[1] ?? 2));
+$sendTelegram = in_array('--telegram', $argv, true);
 
 try {
     $pdo = new PDO($dsn, $dbConfig['user'], $dbConfig['password'], $dbConfig['options']);
@@ -71,3 +72,51 @@ $result = [
 ];
 
 fwrite(STDOUT, json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . PHP_EOL);
+
+if ($sendTelegram) {
+    require_once $baseDir . '/src/Helpers/TelegramSender.php';
+
+    $tgConfig = require $baseDir . '/config/telegram.php';
+    $botToken = (string)($tgConfig['bot_token'] ?? '');
+    $chatId = (string)($tgConfig['admin_chat_id'] ?? '');
+
+    if ($botToken === '' || $chatId === '') {
+        fwrite(STDERR, "Telegram is not configured: TELEGRAM_BOT_TOKEN and TELEGRAM_ADMIN_CHAT_ID are required.\n");
+        exit(2);
+    }
+
+    $summaryLines = [
+        '📦 Supply digest',
+        'Порог: ' . $thresholdDays . ' дн.',
+        'Зависшие партии: ' . count($stale),
+        'Аномалии: ' . count($anomalies),
+    ];
+
+    $maxItems = 5;
+    if ($stale !== []) {
+        $summaryLines[] = '---';
+        $summaryLines[] = 'Топ зависших:';
+        foreach (array_slice($stale, 0, $maxItems) as $item) {
+            $summaryLines[] = sprintf(
+                '#%d %s | остаток: %s | %d дн.',
+                (int)$item['id'],
+                (string)$item['title'],
+                (string)$item['remaining'],
+                (int)$item['age_days']
+            );
+        }
+    }
+
+    $sender = new \App\Helpers\TelegramSender(
+        $botToken,
+        (string)($tgConfig['relay_url'] ?? ''),
+        (string)($tgConfig['relay_secret'] ?? '')
+    );
+
+    $topicId = isset($tgConfig['admin_topic_id']) ? (int)$tgConfig['admin_topic_id'] : null;
+    $ok = $sender->send($chatId, implode("\n", $summaryLines), $topicId);
+    if (!$ok) {
+        fwrite(STDERR, "Telegram send failed.\n");
+        exit(3);
+    }
+}
