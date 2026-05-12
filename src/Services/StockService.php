@@ -53,6 +53,7 @@ class StockService
                 'boxes_reserved' => $boxes,
                 'boxes_remaining' => $boxes,
             ]);
+            $this->assertBatchInvariants($batchId);
             $this->syncProductStock($productId);
             $this->pdo->commit();
         } catch (Throwable $e) {
@@ -76,6 +77,7 @@ class StockService
                 'boxes_reserved' => -$boxes,
                 'boxes_sold' => $boxes,
             ]);
+            $this->assertBatchInvariants($batchId);
             $this->syncProductStock($productId);
             $this->pdo->commit();
         } catch (Throwable $e) {
@@ -101,6 +103,7 @@ class StockService
                 'boxes_written_off' => $boxes,
                 'boxes_remaining' => -$boxes,
             ]);
+            $this->assertBatchInvariants($batchId);
             $this->syncProductStock($productId);
             $this->pdo->commit();
         } catch (Throwable $e) {
@@ -191,6 +194,7 @@ class StockService
             }
 
             $this->updateBatchCounters($batchId, $updates);
+            $this->assertBatchInvariants($batchId);
             $this->syncProductStock($productId);
             $this->pdo->commit();
         } catch (Throwable $e) {
@@ -255,6 +259,34 @@ class StockService
         $sql = 'UPDATE purchase_batches SET ' . implode(', ', $parts) . ' WHERE id = ?';
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
+    }
+
+
+
+    private function assertBatchInvariants(int $batchId): void
+    {
+        $batch = $this->loadBatch($batchId);
+
+        $nonNegativeColumns = [
+            'boxes_total',
+            'boxes_reserved',
+            'boxes_free',
+            'boxes_discount',
+            'boxes_sold',
+            'boxes_written_off',
+            'boxes_remaining',
+        ];
+
+        foreach ($nonNegativeColumns as $column) {
+            if ((float)$batch[$column] < 0) {
+                throw new RuntimeException('Batch invariant failed: ' . $column . ' can not be negative.');
+            }
+        }
+
+        $expectedRemaining = (float)$batch['boxes_total'] - (float)$batch['boxes_sold'] - (float)$batch['boxes_written_off'];
+        if (abs((float)$batch['boxes_remaining'] - $expectedRemaining) > 0.0001) {
+            throw new RuntimeException('Batch invariant failed: boxes_remaining mismatch.');
+        }
     }
 
     private function appendMovement(

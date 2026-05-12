@@ -16,10 +16,27 @@
 
 <div class="bg-white p-4 rounded shadow mb-4">
   <h2 class="text-xl font-semibold mb-2">Партия #<?= (int)$batch['id'] ?></h2>
+  <p class="mb-2"><a class="text-sm text-[#C86052] hover:underline" href="<?= $basePath ?>/purchases/<?= (int)$batch['id'] ?>/pnl.csv">Скачать P&L CSV</a></p>
   <p><b>Товар:</b> <?= htmlspecialchars(trim(($batch['product_name'] ?? '') . ' ' . ($batch['variety'] ?? ''))) ?></p>
   <p><b>Закупщик:</b> <?= htmlspecialchars((string)($batch['buyer_name'] ?? '—')) ?></p>
   <p><b>Статус:</b> <?= htmlspecialchars((string)$batch['status']) ?></p>
   <p><b>Куплено:</b> <?= (float)$batch['boxes_total'] ?> | <b>Свободно:</b> <?= (float)$batch['boxes_free'] ?> | <b>Резерв:</b> <?= (float)$batch['boxes_reserved'] ?></p>
+</div>
+
+
+<div class="bg-white p-4 rounded shadow mb-4">
+  <h3 class="font-semibold mb-2">P&L партии</h3>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+    <p><b>Выручка (продано):</b> <?= number_format((float)($pnl['revenue_sold'] ?? 0), 2, '.', ' ') ?> ₽</p>
+    <p><b>Выручка (выгодный остаток):</b> <?= number_format((float)($pnl['revenue_discount'] ?? 0), 2, '.', ' ') ?> ₽</p>
+    <p><b>Выручка (итого):</b> <?= number_format((float)($pnl['revenue_total'] ?? 0), 2, '.', ' ') ?> ₽</p>
+    <p><b>Себестоимость (продано):</b> <?= number_format((float)($pnl['cost_sold'] ?? 0), 2, '.', ' ') ?> ₽</p>
+    <p><b>Себестоимость (выгодный остаток):</b> <?= number_format((float)($pnl['cost_discount'] ?? 0), 2, '.', ' ') ?> ₽</p>
+    <p><b>Себестоимость (списано):</b> <?= number_format((float)($pnl['cost_written_off'] ?? 0), 2, '.', ' ') ?> ₽</p>
+    <p><b>Себестоимость (признано):</b> <?= number_format((float)($pnl['cost_total_recognized'] ?? 0), 2, '.', ' ') ?> ₽</p>
+    <p><b>Валовая маржа:</b> <?= number_format((float)($pnl['gross_margin'] ?? 0), 2, '.', ' ') ?> ₽</p>
+    <p><b>Остаток в деньгах:</b> <?= number_format((float)($pnl['inventory_value_remaining'] ?? 0), 2, '.', ' ') ?> ₽</p>
+  </div>
 </div>
 
 <div class="bg-white p-4 rounded shadow mb-4">
