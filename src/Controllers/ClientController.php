@@ -487,6 +487,17 @@ public function cart(): void
         ];
     }
 
+    $postedOrderModes = $_POST['order_mode'] ?? [];
+    $allowedModes = ['preorder', 'instant', 'discount_stock'];
+    $orderModeByDate = [];
+    foreach ($itemsByDate as $dateKey => $_) {
+        $rawMode = (string)($postedOrderModes[$dateKey] ?? '');
+        if (!in_array($rawMode, $allowedModes, true)) {
+            $rawMode = ($dateKey === PLACEHOLDER_DATE) ? 'preorder' : 'instant';
+        }
+        $orderModeByDate[$dateKey] = $rawMode;
+    }
+
     // 3) Считаем общий чек
     $allTotal = 0;
     foreach ($itemsByDate as $block) {
@@ -546,8 +557,14 @@ public function cart(): void
         }
     }
 
+    $hasDiscountStockOrder = in_array('discount_stock', $orderModeByDate, true);
+    if ($hasDiscountStockOrder) {
+        $discountPercent = 0.0;
+        $couponPoints = 0;
+    }
+
     // 5) Считаем, сколько баллов списать (не более суммы заказа)
-    $pointsToUse  = min($pointsBalance, $allTotal);
+    $pointsToUse  = $hasDiscountStockOrder ? 0 : min($pointsBalance, $allTotal);
 
     $this->pdo->beginTransaction();
 
@@ -655,8 +672,10 @@ public function cart(): void
         );
         $pointsAccrued = 0; // пока 0, начислим ниже, если надо
         $orderDeliveryDate = $isReservedOrder ? date('Y-m-d') : $dateKey;
-        $orderMode = $isReservedOrder ? 'preorder' : 'instant';
+        $orderMode = (string)($orderModeByDate[$dateKey] ?? ($isReservedOrder ? 'preorder' : 'instant'));
         $reservedAt = $isReservedOrder ? date('Y-m-d H:i:s') : null;
+        $bonusesAllowed = $orderMode === 'discount_stock' ? 0 : 1;
+        $couponsAllowed = $orderMode === 'discount_stock' ? 0 : 1;
 
         $stmtOrder->execute([
             $userId,
@@ -667,11 +686,11 @@ public function cart(): void
             $couponDiscount, // discount_applied = скидка по купону
             $pointsDiscount,  // points_used = списанные баллы
             $pointsAccrued,   // points_accrued = пока 0
-            $couponCode,
+            $couponsAllowed ? $couponCode : '',
             $orderDeliveryDate,
             $orderMode,
-            1,
-            1,
+            $bonusesAllowed,
+            $couponsAllowed,
             $reservedAt,
         ]);
         $orderId = (int)$this->pdo->lastInsertId();
