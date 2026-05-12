@@ -158,6 +158,45 @@ class PurchaseBatchService
         return $this->pricingService->calculateFromPurchase($purchasePricePerBox, $boxSize);
     }
 
+
+    /** @return array<string, float> */
+    public function calculateBatchPnl(int $batchId): array
+    {
+        $batch = $this->loadBatch($batchId);
+
+        $costPerBox = (float)$batch['cost_price_per_box'];
+        $instantPricePerBox = (float)$batch['instant_price_per_box'];
+        $discountPricePerBox = (float)$batch['discount_price_per_box'];
+
+        $soldBoxes = (float)$batch['boxes_sold'];
+        $discountBoxes = (float)$batch['boxes_discount'];
+        $writtenOffBoxes = (float)$batch['boxes_written_off'];
+        $remainingBoxes = (float)$batch['boxes_remaining'];
+
+        $costSold = $soldBoxes * $costPerBox;
+        $costDiscount = $discountBoxes * $costPerBox;
+        $costWrittenOff = $writtenOffBoxes * $costPerBox;
+
+        $revenueSold = $soldBoxes * $instantPricePerBox;
+        $revenueDiscount = $discountBoxes * $discountPricePerBox;
+        $totalRevenue = $revenueSold + $revenueDiscount;
+
+        $totalCostRecognized = $costSold + $costDiscount + $costWrittenOff;
+        $grossMargin = $totalRevenue - $totalCostRecognized;
+
+        return [
+            'revenue_sold' => $revenueSold,
+            'revenue_discount' => $revenueDiscount,
+            'revenue_total' => $totalRevenue,
+            'cost_sold' => $costSold,
+            'cost_discount' => $costDiscount,
+            'cost_written_off' => $costWrittenOff,
+            'cost_total_recognized' => $totalCostRecognized,
+            'gross_margin' => $grossMargin,
+            'inventory_value_remaining' => $remainingBoxes * $costPerBox,
+        ];
+    }
+
     public function markArrived(int $batchId): void
     {
         $this->updateBatchStatus($batchId, 'arrived');
