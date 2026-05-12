@@ -650,11 +650,14 @@ public function cart(): void
             "INSERT INTO orders
                (user_id, address_id, slot_id, status, total_amount,
                 discount_applied, points_used, points_accrued, coupon_code,
-                delivery_date, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"
+                delivery_date, created_at, order_mode, bonuses_allowed, coupons_allowed, reserved_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?)"
         );
         $pointsAccrued = 0; // пока 0, начислим ниже, если надо
         $orderDeliveryDate = $isReservedOrder ? date('Y-m-d') : $dateKey;
+        $orderMode = $isReservedOrder ? 'preorder' : 'instant';
+        $reservedAt = $isReservedOrder ? date('Y-m-d H:i:s') : null;
+
         $stmtOrder->execute([
             $userId,
             $addressIds[$dateKey],
@@ -665,15 +668,19 @@ public function cart(): void
             $pointsDiscount,  // points_used = списанные баллы
             $pointsAccrued,   // points_accrued = пока 0
             $couponCode,
-            $orderDeliveryDate
+            $orderDeliveryDate,
+            $orderMode,
+            1,
+            1,
+            $reservedAt,
         ]);
         $orderId = (int)$this->pdo->lastInsertId();
         $createdOrderIds[] = $orderId;
 
         // (7.3) Вставляем позиции в order_items
         $stmtItem = $this->pdo->prepare(
-            "INSERT INTO order_items (order_id, product_id, quantity, boxes, unit_price)\n" .
-            "VALUES (?, ?, ?, ?, ?)"
+            "INSERT INTO order_items (order_id, product_id, quantity, boxes, unit_price, stock_mode)\n" .
+            "VALUES (?, ?, ?, ?, ?, ?)"
         );
         foreach ($block as $prodId => $data) {
             $kgQty   = $data['quantity'] * $data['box_size'];
@@ -686,6 +693,7 @@ public function cart(): void
                 $kgQty,
                 $data['quantity'],
                 $kgPrice,
+                $orderMode,
             ]);
         }
 
