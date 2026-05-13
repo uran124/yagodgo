@@ -203,7 +203,7 @@ class StockService
     private function resolveModeColumn(string $mode, bool $forBatch = false): string
     {
         if ($mode === 'preorder') {
-            return $forBatch ? 'boxes_reserved' : 'reserved_stock_boxes';
+            return $forBatch ? 'boxes_free' : 'reserved_stock_boxes';
         }
         if ($mode === 'instant') {
             return $forBatch ? 'boxes_free' : 'free_stock_boxes';
