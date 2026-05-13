@@ -32,3 +32,13 @@ php bin/supply_discount_rollover.php --min-age-days=1 --limit=50
 2. Переводит весь `boxes_free` в `boxes_discount`.
 3. Пишет движение в `stock_movements` с типом `move_to_discount`.
 4. Синхронизирует агрегированные остатки в `products`.
+
+
+## Блокировка и настройки
+
+Скрипт использует MySQL lock `supply_discount_rollover_lock` и завершится без ошибок, если уже запущен другой экземпляр.
+
+Если в `settings` заданы ключи, они переопределяют дефолты запуска:
+
+- `pricing_discount_stock_rollover_min_age_days`
+- `pricing_discount_stock_rollover_limit`

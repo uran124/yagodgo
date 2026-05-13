@@ -41,6 +41,34 @@ try {
     exit(1);
 }
 
+
+$settingsStmt = $pdo->query(
+    "SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('pricing_discount_stock_rollover_min_age_days', 'pricing_discount_stock_rollover_limit')"
+);
+$settings = [];
+foreach ($settingsStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+    $settings[(string)$row['setting_key']] = (string)$row['setting_value'];
+}
+
+if (isset($settings['pricing_discount_stock_rollover_min_age_days']) && $settings['pricing_discount_stock_rollover_min_age_days'] !== '') {
+    $minAgeDays = max(1, (int)$settings['pricing_discount_stock_rollover_min_age_days']);
+}
+if (isset($settings['pricing_discount_stock_rollover_limit']) && $settings['pricing_discount_stock_rollover_limit'] !== '') {
+    $limit = max(1, (int)$settings['pricing_discount_stock_rollover_limit']);
+}
+
+$lockStmt = $pdo->query("SELECT GET_LOCK('supply_discount_rollover_lock', 1)");
+$lockAcquired = (int)$lockStmt->fetchColumn() === 1;
+if (!$lockAcquired) {
+    fwrite(STDOUT, json_encode([
+        'generated_at' => (new DateTimeImmutable('now'))->format(DATE_ATOM),
+        'dry_run' => $dryRun,
+        'locked' => false,
+        'message' => 'Another rollover process is running; skipped.',
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . PHP_EOL);
+    exit(0);
+}
+
 $sql = 'SELECT id, product_id, purchased_at, boxes_free, status
         FROM purchase_batches
         WHERE status IN ("active", "arrived", "purchased")
@@ -156,6 +184,13 @@ $result = [
     'limit' => $limit,
     'processed_count' => count($processed),
     'processed' => $processed,
+    'locked' => true,
+    'settings_applied' => [
+        'pricing_discount_stock_rollover_min_age_days' => $settings['pricing_discount_stock_rollover_min_age_days'] ?? null,
+        'pricing_discount_stock_rollover_limit' => $settings['pricing_discount_stock_rollover_limit'] ?? null,
+    ],
 ];
+
+$pdo->query("SELECT RELEASE_LOCK('supply_discount_rollover_lock')");
 
 fwrite(STDOUT, json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . PHP_EOL);
