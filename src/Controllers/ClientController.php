@@ -4,6 +4,7 @@ namespace App\Controllers;
 use PDO;
 use App\Helpers\PhoneNormalizer;
 use App\Services\StockService;
+use App\Services\OrderStockOrchestrator;
 use App\Services\ClientCatalogService;
 
 class ClientController
@@ -564,6 +565,7 @@ public function cart(): void
 
     $this->pdo->beginTransaction();
     $stockService = new StockService($this->pdo);
+    $orderStock = new OrderStockOrchestrator($this->pdo, $stockService);
 
     // 6) Если списываем баллы — обновляем баланс и фиксируем транзакцию
     if ($pointsToUse > 0) {
@@ -704,46 +706,26 @@ public function cart(): void
                 ? $data['unit_price'] / $data['box_size']
                 : $data['unit_price'];
 
-            $allocations = [];
-            if (in_array($orderMode, ['preorder', 'instant', 'discount_stock'], true)) {
-                $allocations = $this->allocateFifoBatches((int)$prodId, (float)$data['quantity'], $orderMode);
-            }
-
-            if ($allocations === []) {
-                $stmtItem->execute([
-                    $orderId,
-                    $prodId,
-                    $kgQty,
-                    $data['quantity'],
-                    $kgPrice,
-                    $orderMode,
-                    null,
-                ]);
-                continue;
-            }
-
-            foreach ($allocations as $allocation) {
-                $allocatedBoxes = (float)$allocation['boxes'];
-                $allocatedKgQty = $allocatedBoxes * (float)$data['box_size'];
-
-                $stmtItem->execute([
-                    $orderId,
-                    $prodId,
-                    $allocatedKgQty,
-                    $allocatedBoxes,
-                    $kgPrice,
-                    $orderMode,
-                    (int)$allocation['batch_id'],
-                ]);
-
-                $stockService->reserve((int)$prodId, (int)$allocation['batch_id'], $allocatedBoxes, $orderId, $orderMode);
-                if (!$isReservedOrder) {
-                    $stockService->sell((int)$prodId, (int)$allocation['batch_id'], $allocatedBoxes, $orderId);
-                }
-            }
+            $orderStock->persistOrderItemWithStock(
+                $stmtItem,
+                $orderId,
+                (int)$prodId,
+                [
+                    'quantity' => (float)$data['quantity'],
+                    'box_size' => (float)$data['box_size'],
+                    'unit_price' => (float)$data['unit_price'],
+                ],
+                $orderMode,
+                $isReservedOrder
+            );
         }
 
         // (7.4) Создаём записи выплат для селлеров
+        // Для discount_stock выплаты не формируем (низкомаржинальный режим)
+        if ($orderMode === 'discount_stock') {
+            continue;
+        }
+
         $sellerTotals = [];
         foreach ($block as $prodId => $data) {
             $sid = $data['seller_id'] ?? null;
@@ -940,6 +922,7 @@ public function cancelReservedOrder(int $orderId): void
 
     $this->pdo->beginTransaction();
     $stockService = new StockService($this->pdo);
+    $orderStock = new OrderStockOrchestrator($this->pdo, $stockService);
     try {
         $stmt = $this->pdo->prepare("SELECT id, user_id, status, points_used, delivery_date FROM orders WHERE id = ? FOR UPDATE");
         $stmt->execute([$orderId]);
@@ -952,20 +935,7 @@ public function cancelReservedOrder(int $orderId): void
             throw new \RuntimeException('invalid_status');
         }
 
-        $itemsStmt = $this->pdo->prepare(
-            "SELECT product_id, purchase_batch_id, boxes, stock_mode FROM order_items WHERE order_id = ? AND purchase_batch_id IS NOT NULL"
-        );
-        $itemsStmt->execute([$orderId]);
-        $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($items as $item) {
-            $stockService->unreserve(
-                (int)$item['product_id'],
-                (int)$item['purchase_batch_id'],
-                (float)$item['boxes'],
-                $orderId,
-                (string)($item['stock_mode'] ?? 'instant')
-            );
-        }
+        $orderStock->rollbackReservationByOrderId($orderId);
 
         $pointsUsed = (int)($order['points_used'] ?? 0);
         if ($pointsUsed > 0) {
@@ -1292,47 +1262,8 @@ public function cancelReservedOrder(int $orderId): void
      */
     private function allocateFifoBatches(int $productId, float $requiredBoxes, string $mode): array
     {
-        if ($requiredBoxes <= 0) {
-            return [];
-        }
-
-        $column = $mode === 'discount_stock' ? 'boxes_discount' : 'boxes_free';
-        $stmt = $this->pdo->prepare(
-            "SELECT id, {$column} AS available_boxes
-" .
-            "FROM purchase_batches
-" .
-            "WHERE product_id = ? AND status IN ('active', 'arrived', 'purchased') AND {$column} > 0
-" .
-            "ORDER BY purchased_at ASC, id ASC"
-        );
-        $stmt->execute([$productId]);
-
-        $allocations = [];
-        $left = $requiredBoxes;
-        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-            if ($left <= 0) {
-                break;
-            }
-
-            $available = (float)($row['available_boxes'] ?? 0);
-            if ($available <= 0) {
-                continue;
-            }
-
-            $take = min($left, $available);
-            $allocations[] = [
-                'batch_id' => (int)$row['id'],
-                'boxes' => $take,
-            ];
-            $left -= $take;
-        }
-
-        if ($left > 0.0001) {
-            throw new \RuntimeException('Недостаточно остатков партии для отгрузки по FIFO.');
-        }
-
-        return $allocations;
+        $orchestrator = new OrderStockOrchestrator($this->pdo);
+        return $orchestrator->allocateFifoBatches($productId, $requiredBoxes, $mode);
     }
 
     public function normalizeOrderModes(array $itemsByDate, array $postedOrderModes): array
