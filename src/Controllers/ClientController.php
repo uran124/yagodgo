@@ -553,6 +553,9 @@ public function cart(): void
     if ($hasDiscountStockOrder) {
         $discountPercent = 0.0;
         $couponPoints = 0;
+        $couponCode = '';
+        $referralUsed = false;
+        $referrerId = null;
     }
 
     // 5) Считаем, сколько баллов списать (не более суммы заказа)
