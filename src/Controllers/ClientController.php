@@ -3,6 +3,8 @@ namespace App\Controllers;
 
 use PDO;
 use App\Helpers\PhoneNormalizer;
+use App\Services\StockService;
+use App\Services\OrderStockOrchestrator;
 use App\Services\ClientCatalogService;
 
 class ClientController
@@ -553,12 +555,17 @@ public function cart(): void
     if ($hasDiscountStockOrder) {
         $discountPercent = 0.0;
         $couponPoints = 0;
+        $couponCode = '';
+        $referralUsed = false;
+        $referrerId = null;
     }
 
     // 5) Считаем, сколько баллов списать (не более суммы заказа)
     $pointsToUse  = $hasDiscountStockOrder ? 0 : min($pointsBalance, $allTotal);
 
     $this->pdo->beginTransaction();
+    $stockService = new StockService($this->pdo);
+    $orderStock = new OrderStockOrchestrator($this->pdo, $stockService);
 
     // 6) Если списываем баллы — обновляем баланс и фиксируем транзакцию
     if ($pointsToUse > 0) {
@@ -690,25 +697,35 @@ public function cart(): void
 
         // (7.3) Вставляем позиции в order_items
         $stmtItem = $this->pdo->prepare(
-            "INSERT INTO order_items (order_id, product_id, quantity, boxes, unit_price, stock_mode)\n" .
-            "VALUES (?, ?, ?, ?, ?, ?)"
+            "INSERT INTO order_items (order_id, product_id, quantity, boxes, unit_price, stock_mode, purchase_batch_id)\n" .
+            "VALUES (?, ?, ?, ?, ?, ?, ?)"
         );
         foreach ($block as $prodId => $data) {
             $kgQty   = $data['quantity'] * $data['box_size'];
             $kgPrice = $data['box_size'] > 0
                 ? $data['unit_price'] / $data['box_size']
                 : $data['unit_price'];
-            $stmtItem->execute([
+
+            $orderStock->persistOrderItemWithStock(
+                $stmtItem,
                 $orderId,
-                $prodId,
-                $kgQty,
-                $data['quantity'],
-                $kgPrice,
+                (int)$prodId,
+                [
+                    'quantity' => (float)$data['quantity'],
+                    'box_size' => (float)$data['box_size'],
+                    'unit_price' => (float)$data['unit_price'],
+                ],
                 $orderMode,
-            ]);
+                $isReservedOrder
+            );
         }
 
         // (7.4) Создаём записи выплат для селлеров
+        // Для discount_stock выплаты не формируем (низкомаржинальный режим)
+        if ($orderMode === 'discount_stock') {
+            continue;
+        }
+
         $sellerTotals = [];
         foreach ($block as $prodId => $data) {
             $sid = $data['seller_id'] ?? null;
@@ -904,6 +921,8 @@ public function cancelReservedOrder(int $orderId): void
     $userId = (int)($_SESSION['user_id'] ?? 0);
 
     $this->pdo->beginTransaction();
+    $stockService = new StockService($this->pdo);
+    $orderStock = new OrderStockOrchestrator($this->pdo, $stockService);
     try {
         $stmt = $this->pdo->prepare("SELECT id, user_id, status, points_used, delivery_date FROM orders WHERE id = ? FOR UPDATE");
         $stmt->execute([$orderId]);
@@ -915,6 +934,8 @@ public function cancelReservedOrder(int $orderId): void
         if (!$isReservation) {
             throw new \RuntimeException('invalid_status');
         }
+
+        $orderStock->rollbackReservationByOrderId($orderId);
 
         $pointsUsed = (int)($order['points_used'] ?? 0);
         if ($pointsUsed > 0) {
@@ -1235,6 +1256,16 @@ public function cancelReservedOrder(int $orderId): void
      * @param array<string, mixed> $postedOrderModes
      * @return array<string, string>
      */
+
+    /**
+     * @return array<int, array{batch_id:int, boxes:float}>
+     */
+    private function allocateFifoBatches(int $productId, float $requiredBoxes, string $mode): array
+    {
+        $orchestrator = new OrderStockOrchestrator($this->pdo);
+        return $orchestrator->allocateFifoBatches($productId, $requiredBoxes, $mode);
+    }
+
     public function normalizeOrderModes(array $itemsByDate, array $postedOrderModes): array
     {
         $allowedModes = ['preorder', 'instant', 'discount_stock'];

@@ -18,18 +18,70 @@ class PurchaseBatchesController
 
     public function index(): void
     {
-        $stmt = $this->pdo->query(
-            'SELECT pb.*, p.variety, t.name AS product_name, u.name AS buyer_name
-             FROM purchase_batches pb
-             JOIN products p ON p.id = pb.product_id
-             JOIN product_types t ON t.id = p.product_type_id
-             LEFT JOIN users u ON u.id = pb.buyer_user_id
-             ORDER BY pb.id DESC'
+        $statusFilter = trim((string)($_GET['status'] ?? ''));
+        $buyerFilter = (int)($_GET['buyer_id'] ?? 0);
+
+        $sql =
+            'SELECT pb.*, p.variety, t.name AS product_name, u.name AS buyer_name,
+'
+          . '       TIMESTAMPDIFF(DAY, pb.purchased_at, NOW()) AS age_days
+'
+          . 'FROM purchase_batches pb
+'
+          . 'JOIN products p ON p.id = pb.product_id
+'
+          . 'JOIN product_types t ON t.id = p.product_type_id
+'
+          . 'LEFT JOIN users u ON u.id = pb.buyer_user_id';
+
+        $conditions = [];
+        $params = [];
+        if ($statusFilter !== '') {
+            $conditions[] = 'pb.status = ?';
+            $params[] = $statusFilter;
+        }
+        if ($buyerFilter > 0) {
+            $conditions[] = 'pb.buyer_user_id = ?';
+            $params[] = $buyerFilter;
+        }
+        if ($conditions) {
+            $sql .= '
+WHERE ' . implode(' AND ', $conditions);
+        }
+
+        $sql .= '
+ORDER BY pb.id DESC';
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        $batches = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $buyers = $this->pdo->query("SELECT id, name FROM users WHERE role = 'buyer' OR role = 'admin' OR role = 'manager' ORDER BY name")
+            ->fetchAll(PDO::FETCH_ASSOC);
+
+        $summaryStmt = $this->pdo->query(
+            'SELECT
+'
+          . '  COUNT(*) AS total_batches,
+'
+          . '  COALESCE(SUM(CASE WHEN status IN ("active","arrived","purchased") THEN boxes_remaining ELSE 0 END), 0) AS remaining_boxes,
+'
+          . '  COALESCE(SUM(boxes_written_off), 0) AS written_off_boxes,
+'
+          . '  COALESCE(AVG(TIMESTAMPDIFF(DAY, purchased_at, NOW())), 0) AS avg_age_days
+'
+          . 'FROM purchase_batches'
         );
+        $summary = $summaryStmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
         viewAdmin('purchases/index', [
             'pageTitle' => 'Закупки',
-            'batches' => $stmt->fetchAll(PDO::FETCH_ASSOC),
+            'batches' => $batches,
+            'buyers' => $buyers,
+            'filters' => [
+                'status' => $statusFilter,
+                'buyer_id' => $buyerFilter,
+            ],
+            'summary' => $summary,
             'basePath' => $this->basePath(),
             'flash' => $this->pullFlash(),
         ]);
