@@ -1,11 +1,46 @@
 <?php /** @var array<int,array<string,mixed>> $batches */ ?>
 <?php $basePath = $basePath ?? '/admin'; ?>
 <?php $flash = $flash ?? null; ?>
+<?php $buyers = $buyers ?? []; ?>
+<?php $filters = $filters ?? ['status' => '', 'buyer_id' => 0]; ?>
+<?php $summary = $summary ?? []; ?>
 <?php if (is_array($flash) && !empty($flash['message'])): ?>
   <div class="<?= ($flash['type'] ?? '') === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-700' ?> border p-3 rounded mb-4">
     <?= htmlspecialchars((string)$flash['message']) ?>
   </div>
 <?php endif; ?>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+  <div class="bg-white rounded border p-3"><div class="text-xs text-gray-500">Всего партий</div><div class="text-xl font-semibold"><?= (int)($summary['total_batches'] ?? 0) ?></div></div>
+  <div class="bg-white rounded border p-3"><div class="text-xs text-gray-500">Остаток (ящ.)</div><div class="text-xl font-semibold"><?= number_format((float)($summary['remaining_boxes'] ?? 0), 2, '.', ' ') ?></div></div>
+  <div class="bg-white rounded border p-3"><div class="text-xs text-gray-500">Списано (ящ.)</div><div class="text-xl font-semibold text-red-600"><?= number_format((float)($summary['written_off_boxes'] ?? 0), 2, '.', ' ') ?></div></div>
+  <div class="bg-white rounded border p-3"><div class="text-xs text-gray-500">Средний возраст</div><div class="text-xl font-semibold"><?= number_format((float)($summary['avg_age_days'] ?? 0), 1, '.', ' ') ?> дн.</div></div>
+</div>
+
+<form method="get" class="bg-white rounded border p-3 mb-4 grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+  <div>
+    <label class="text-xs text-gray-600">Статус</label>
+    <select name="status" class="w-full border rounded px-2 py-2 text-sm">
+      <option value="">Все</option>
+      <?php foreach (['planned','purchased','arrived','active','sold_out','closed','cancelled'] as $st): ?>
+        <option value="<?= $st ?>" <?= (($filters['status'] ?? '') === $st) ? 'selected' : '' ?>><?= $st ?></option>
+      <?php endforeach; ?>
+    </select>
+  </div>
+  <div>
+    <label class="text-xs text-gray-600">Закупщик</label>
+    <select name="buyer_id" class="w-full border rounded px-2 py-2 text-sm">
+      <option value="0">Все</option>
+      <?php foreach ($buyers as $buyer): ?>
+        <option value="<?= (int)$buyer['id'] ?>" <?= ((int)($filters['buyer_id'] ?? 0) === (int)$buyer['id']) ? 'selected' : '' ?>><?= htmlspecialchars((string)$buyer['name']) ?></option>
+      <?php endforeach; ?>
+    </select>
+  </div>
+  <div class="md:col-span-2 flex gap-2">
+    <button class="bg-gray-900 text-white px-4 py-2 rounded" type="submit">Применить</button>
+    <a class="bg-gray-100 px-4 py-2 rounded" href="<?= $basePath ?>/purchases">Сбросить</a>
+  </div>
+</form>
+
 <div class="flex items-center mb-4">
   <a href="<?= $basePath ?>/purchases/create" class="bg-[#C86052] text-white px-4 py-2 rounded inline-flex items-center">
     <span class="material-icons-round text-base mr-1">add</span> Добавить закупку
@@ -24,6 +59,7 @@
       <th class="p-3 text-left font-semibold">Цена закупки</th>
       <th class="p-3 text-left font-semibold">Цена сейчас</th>
       <th class="p-3 text-left font-semibold">Статус</th>
+      <th class="p-3 text-left font-semibold">Возраст</th>
       <th class="p-3 text-left font-semibold">Действия</th>
     </tr>
   </thead>
@@ -39,6 +75,7 @@
         <td class="p-3"><?= number_format((float)$batch['purchase_price_per_box'], 2, '.', ' ') ?> ₽</td>
         <td class="p-3"><?= number_format((float)$batch['instant_price_per_box'], 2, '.', ' ') ?> ₽</td>
         <td class="p-3"><?= htmlspecialchars((string)$batch['status']) ?></td>
+        <td class="p-3"><?= (int)($batch['age_days'] ?? 0) ?> дн.</td>
         <td class="p-3">
           <div class="flex flex-wrap gap-2">
             <a class="text-xs bg-green-100 px-2 py-1 rounded" href="<?= $basePath ?>/purchases/<?= (int)$batch['id'] ?>">Открыть</a>
