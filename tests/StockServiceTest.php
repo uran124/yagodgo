@@ -103,6 +103,17 @@ class StockServiceTest extends TestCase
         $this->assertSame(-2.0, (float)$movement['boxes_delta']);
     }
 
+    public function testUnreserveRestoresModeStockAndDecreasesReserved(): void
+    {
+        $this->service->reserve(1, 1, 4, 55, 'instant');
+        $this->service->unreserve(1, 1, 4, 55, 'instant');
+
+        $batch = $this->pdo->query('SELECT boxes_free, boxes_reserved, boxes_remaining FROM purchase_batches WHERE id = 1')->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame(10.0, (float)$batch['boxes_free']);
+        $this->assertSame(0.0, (float)$batch['boxes_reserved']);
+        $this->assertSame(30.0, (float)$batch['boxes_remaining']);
+    }
+
     public function testWriteOffRejectsInvariantViolationAndRollsBack(): void
     {
         $this->expectException(\RuntimeException::class);

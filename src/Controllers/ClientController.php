@@ -952,6 +952,21 @@ public function cancelReservedOrder(int $orderId): void
             throw new \RuntimeException('invalid_status');
         }
 
+        $itemsStmt = $this->pdo->prepare(
+            "SELECT product_id, purchase_batch_id, boxes, stock_mode FROM order_items WHERE order_id = ? AND purchase_batch_id IS NOT NULL"
+        );
+        $itemsStmt->execute([$orderId]);
+        $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($items as $item) {
+            $stockService->unreserve(
+                (int)$item['product_id'],
+                (int)$item['purchase_batch_id'],
+                (float)$item['boxes'],
+                $orderId,
+                (string)($item['stock_mode'] ?? 'instant')
+            );
+        }
+
         $pointsUsed = (int)($order['points_used'] ?? 0);
         if ($pointsUsed > 0) {
             $this->pdo->prepare("UPDATE users SET points_balance = points_balance + ? WHERE id = ?")
