@@ -63,7 +63,7 @@ class StockServiceTest extends TestCase
         $batch = $this->pdo->query('SELECT boxes_free, boxes_reserved, boxes_remaining FROM purchase_batches WHERE id = 1')->fetch(PDO::FETCH_ASSOC);
         $this->assertSame(7.0, (float)$batch['boxes_free']);
         $this->assertSame(3.0, (float)$batch['boxes_reserved']);
-        $this->assertSame(27.0, (float)$batch['boxes_remaining']);
+        $this->assertSame(30.0, (float)$batch['boxes_remaining']);
 
         $product = $this->pdo->query('SELECT free_stock_boxes, reserved_stock_boxes, stock_status FROM products WHERE id = 1')->fetch(PDO::FETCH_ASSOC);
         $this->assertSame(7.0, (float)$product['free_stock_boxes']);
@@ -81,9 +81,10 @@ class StockServiceTest extends TestCase
         $this->service->reserve(1, 1, 5, 42, 'instant');
         $this->service->sell(1, 1, 5, 42);
 
-        $batch = $this->pdo->query('SELECT boxes_reserved, boxes_sold FROM purchase_batches WHERE id = 1')->fetch(PDO::FETCH_ASSOC);
+        $batch = $this->pdo->query('SELECT boxes_reserved, boxes_sold, boxes_remaining FROM purchase_batches WHERE id = 1')->fetch(PDO::FETCH_ASSOC);
         $this->assertSame(0.0, (float)$batch['boxes_reserved']);
         $this->assertSame(5.0, (float)$batch['boxes_sold']);
+        $this->assertSame(25.0, (float)$batch['boxes_remaining']);
     }
 
     public function testWriteOffRejectsInvariantViolationAndRollsBack(): void
