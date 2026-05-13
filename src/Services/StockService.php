@@ -40,18 +40,23 @@ class StockService
         $this->changeStock($productId, $batchId, $orderId, $mode, -$boxes, 'reserve');
     }
 
-    public function unreserve(int $productId, int $batchId, float $boxes, int $orderId): void
+    public function unreserve(int $productId, int $batchId, float $boxes, int $orderId, string $mode = 'instant'): void
     {
         if ($boxes <= 0) {
             throw new RuntimeException('Unreserve boxes must be greater than zero.');
         }
+        if (!in_array($mode, ['preorder', 'instant', 'discount_stock'], true)) {
+            throw new RuntimeException('Unsupported stock mode for unreserve.');
+        }
+
+        $batchColumn = $this->resolveModeColumn($mode, true);
 
         try {
             $this->pdo->beginTransaction();
-            $this->appendMovement($batchId, $productId, $orderId, null, 'unreserve', 'internal', $boxes);
+            $this->appendMovement($batchId, $productId, $orderId, null, 'unreserve', $mode, $boxes);
             $this->updateBatchCounters($batchId, [
-                'boxes_reserved' => $boxes,
-                'boxes_remaining' => $boxes,
+                'boxes_reserved' => -$boxes,
+                $batchColumn => $boxes,
             ]);
             $this->assertBatchInvariants($batchId);
             $this->syncProductStock($productId);
@@ -101,7 +106,6 @@ class StockService
             $this->appendMovement($batchId, $productId, null, $userId, 'writeoff', 'internal', -$boxes, $comment);
             $this->updateBatchCounters($batchId, [
                 'boxes_written_off' => $boxes,
-                'boxes_remaining' => -$boxes,
             ]);
             $this->assertBatchInvariants($batchId);
             $this->syncProductStock($productId);
@@ -189,9 +193,6 @@ class StockService
             if ($movementType === 'reserve') {
                 $updates['boxes_reserved'] = abs($delta);
             }
-            if (in_array($mode, ['instant', 'discount_stock'], true)) {
-                $updates['boxes_remaining'] = $delta;
-            }
 
             $this->updateBatchCounters($batchId, $updates);
             $this->assertBatchInvariants($batchId);
@@ -208,7 +209,7 @@ class StockService
     private function resolveModeColumn(string $mode, bool $forBatch = false): string
     {
         if ($mode === 'preorder') {
-            return $forBatch ? 'boxes_reserved' : 'reserved_stock_boxes';
+            return $forBatch ? 'boxes_free' : 'reserved_stock_boxes';
         }
         if ($mode === 'instant') {
             return $forBatch ? 'boxes_free' : 'free_stock_boxes';
