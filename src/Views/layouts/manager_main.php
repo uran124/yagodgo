@@ -283,6 +283,7 @@ $labelRole = $role === 'partner' ? 'Партнёр' : 'Менеджер';
       <div class="font-bold text-lg md:text-xl text-[#C86052]">BerryGo <?= htmlspecialchars($titleRole) ?></div>
       <nav class="hidden md:flex space-x-2 md:space-x-4">
         <a href="<?= $base ?>/orders" class="hover:underline">Заказы</a>
+        <a href="<?= $base ?>/purchases" class="hover:underline">Закупки</a>
         <a href="<?= $base ?>/products" class="hover:underline">Товары</a>
         <a href="<?= $base ?>/users" class="hover:underline">Пользователи</a>
         <a href="<?= $base ?>/profile" class="hover:underline">Профиль</a>
@@ -305,6 +306,10 @@ $labelRole = $role === 'partner' ? 'Партнёр' : 'Менеджер';
       <a href="<?= $base ?>/orders" class="flex items-center p-2 mb-2 rounded hover:bg-gray-200">
         <span class="material-icons-round mr-2 text-base md:text-lg">receipt_long</span>
         <span class="menu-text text-sm md:text-base">Заказы</span>
+      </a>
+      <a href="<?= $base ?>/purchases" class="flex items-center p-2 mb-2 rounded hover:bg-gray-200">
+        <span class="material-icons-round mr-2 text-base md:text-lg">local_shipping</span>
+        <span class="menu-text text-sm md:text-base">Закупки</span>
       </a>
       <a href="<?= $base ?>/products" class="flex items-center p-2 mb-2 rounded hover:bg-gray-200">
         <span class="material-icons-round mr-2 text-base md:text-lg">inventory_2</span>
