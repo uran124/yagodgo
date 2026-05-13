@@ -334,6 +334,7 @@
     $menuItems = [
       ['href' => '/admin/dashboard', 'icon' => 'dashboard', 'label' => 'Dashboard'],
       ['href' => '/admin/orders', 'icon' => 'receipt_long', 'label' => 'Заказы'],
+      ['href' => '/admin/purchases', 'icon' => 'local_shipping', 'label' => 'Закупки'],
       ['href' => '/admin/products', 'icon' => 'inventory_2', 'label' => 'Товары'],
       ['href' => '/admin/product-types', 'icon' => 'category', 'label' => 'Категории'],
       ['href' => '/admin/slots', 'icon' => 'calendar_today', 'label' => 'Слоты'],
