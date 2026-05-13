@@ -51,7 +51,6 @@ class StockService
             $this->appendMovement($batchId, $productId, $orderId, null, 'unreserve', 'internal', $boxes);
             $this->updateBatchCounters($batchId, [
                 'boxes_reserved' => $boxes,
-                'boxes_remaining' => $boxes,
             ]);
             $this->assertBatchInvariants($batchId);
             $this->syncProductStock($productId);
@@ -101,7 +100,6 @@ class StockService
             $this->appendMovement($batchId, $productId, null, $userId, 'writeoff', 'internal', -$boxes, $comment);
             $this->updateBatchCounters($batchId, [
                 'boxes_written_off' => $boxes,
-                'boxes_remaining' => -$boxes,
             ]);
             $this->assertBatchInvariants($batchId);
             $this->syncProductStock($productId);
@@ -189,9 +187,6 @@ class StockService
             if ($movementType === 'reserve') {
                 $updates['boxes_reserved'] = abs($delta);
             }
-            if (in_array($mode, ['instant', 'discount_stock'], true)) {
-                $updates['boxes_remaining'] = $delta;
-            }
 
             $this->updateBatchCounters($batchId, $updates);
             $this->assertBatchInvariants($batchId);
@@ -208,7 +203,7 @@ class StockService
     private function resolveModeColumn(string $mode, bool $forBatch = false): string
     {
         if ($mode === 'preorder') {
-            return $forBatch ? 'boxes_reserved' : 'reserved_stock_boxes';
+            return $forBatch ? 'boxes_free' : 'reserved_stock_boxes';
         }
         if ($mode === 'instant') {
             return $forBatch ? 'boxes_free' : 'free_stock_boxes';

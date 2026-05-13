@@ -1,4 +1,4 @@
-.PHONY: migrate status test supply-smoke supply-digest supply-release-check
+.PHONY: migrate status test supply-smoke supply-digest supply-release-check supply-discount-rollover
 
 migrate:
 	php bin/migrate.php up
@@ -18,3 +18,7 @@ supply-digest:
 
 supply-release-check:
 	php bin/supply_release_check.php
+
+
+supply-discount-rollover:
+	php bin/supply_discount_rollover.php --dry-run --min-age-days=1
