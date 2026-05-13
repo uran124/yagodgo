@@ -376,7 +376,17 @@ class OrdersController
                             $refRole = $refInfo['role'] ?? '';
                             $mgrId   = (int)($refInfo['referred_by'] ?? 0);
 
-                            $refPercent   = ($refRole === 'partner') ? 0.10 : 0.03;
+                            $isPartnerReferrer = ($refRole === 'partner');
+                            $isFirstClientOrder = false;
+                            if ($isPartnerReferrer) {
+                                $ordersCountStmt = $this->pdo->prepare(
+                                    "SELECT COUNT(*) FROM orders WHERE user_id = ? AND status = 'delivered' AND id <> ?"
+                                );
+                                $ordersCountStmt->execute([$userId, $orderId]);
+                                $isFirstClientOrder = ((int)$ordersCountStmt->fetchColumn() === 0);
+                            }
+
+                            $refPercent   = ($isPartnerReferrer && $isFirstClientOrder) ? 0.10 : 0.03;
                             $refBonus     = (int) floor($sum * $refPercent);
                             $managerBonus = 0;
 

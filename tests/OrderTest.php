@@ -32,6 +32,7 @@ class OrderTest extends TestCase
     public function testCalculateReferralBonus(): void
     {
         $this->assertSame(3, \App\Models\Order::calculateReferralBonus(100));
-        $this->assertSame(10, \App\Models\Order::calculateReferralBonus(100, true));
+        $this->assertSame(10, \App\Models\Order::calculateReferralBonus(100, true, true));
+        $this->assertSame(3, \App\Models\Order::calculateReferralBonus(100, true, false));
     }
 }
