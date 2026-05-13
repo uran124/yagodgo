@@ -705,7 +705,7 @@ public function cart(): void
                 : $data['unit_price'];
 
             $allocations = [];
-            if (in_array($orderMode, ['instant', 'discount_stock'], true)) {
+            if (in_array($orderMode, ['preorder', 'instant', 'discount_stock'], true)) {
                 $allocations = $this->allocateFifoBatches((int)$prodId, (float)$data['quantity'], $orderMode);
             }
 
