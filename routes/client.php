@@ -206,4 +206,40 @@ return [
         (new App\Controllers\ClientController($c['pdo']))->placeOrder();
         return true;
     },
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('POST', '/preorder-intents', $method, $uri)) {
+            return false;
+        }
+
+        requireClient();
+        (new App\Controllers\ClientController($c['pdo']))->createPreorderIntent();
+        return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeRegex('POST', '#^/preorder-intents/(\d+)/confirm$#', $method, $uri, $m)) {
+            return false;
+        }
+
+        requireClient();
+        (new App\Controllers\ClientController($c['pdo']))->confirmPreorderIntent((int)$m[1]);
+        return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeRegex('POST', '#^/preorder-intents/(\d+)/decline$#', $method, $uri, $m)) {
+            return false;
+        }
+
+        requireClient();
+        (new App\Controllers\ClientController($c['pdo']))->declinePreorderIntent((int)$m[1]);
+        return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeRegex('GET', '#^/preorder/continue/([^/]+)$#', $method, $uri, $m)) {
+            return false;
+        }
+
+        requireClient();
+        (new App\Controllers\ClientController($c['pdo']))->continuePreorderCheckout($m[1]);
+        return true;
+    },
 ];
