@@ -809,6 +809,7 @@ public function cart(): void
         $this->pdo->prepare(
             "UPDATE preorder_intents SET status = 'checkout_completed', updated_at = NOW() WHERE id = ? AND user_id = ? AND status = 'confirmed'"
         )->execute([$preorderIntentId, $userId]);
+        $this->logPreorderEvent($preorderIntentId, 'checkout_completed', 'confirmed', 'checkout_completed');
     }
 
     if ($referralUsed && $referrerId !== null) {
@@ -1398,11 +1399,13 @@ public function cancelReservedOrder(int $orderId): void
                 "UPDATE preorder_intents SET requested_boxes = ?, status = 'intent_created', offered_price_per_box = NULL, offer_expires_at = NULL, checkout_token = NULL WHERE id = ?"
             )->execute([$requestedBoxes, (int)$existingId]);
             $intentId = (int)$existingId;
+            $this->logPreorderEvent($intentId, 'intent_updated', null, 'intent_created', ['requested_boxes' => $requestedBoxes]);
         } else {
             $this->pdo->prepare(
                 "INSERT INTO preorder_intents (user_id, product_id, requested_boxes, status, created_at, updated_at) VALUES (?, ?, ?, 'intent_created', NOW(), NOW())"
             )->execute([$userId, $productId, $requestedBoxes]);
             $intentId = (int)$this->pdo->lastInsertId();
+            $this->logPreorderEvent($intentId, 'intent_created', null, 'intent_created', ['requested_boxes' => $requestedBoxes]);
         }
 
         header('Content-Type: application/json; charset=utf-8');
@@ -1451,6 +1454,7 @@ public function cancelReservedOrder(int $orderId): void
         $this->pdo->prepare(
             "UPDATE preorder_intents SET status = 'confirmed', checkout_token = ?, updated_at = NOW() WHERE id = ?"
         )->execute([$token, $intentId]);
+        $this->logPreorderEvent($intentId, 'offer_confirmed', 'offer_sent', 'confirmed');
 
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode([
@@ -1484,6 +1488,7 @@ public function cancelReservedOrder(int $orderId): void
 
         $this->pdo->prepare("UPDATE preorder_intents SET status = 'declined', updated_at = NOW() WHERE id = ?")
             ->execute([$intentId]);
+        $this->logPreorderEvent($intentId, 'offer_declined', 'offer_sent', 'declined');
 
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(['ok' => true, 'status' => 'declined'], JSON_UNESCAPED_UNICODE);
@@ -1512,6 +1517,24 @@ public function cancelReservedOrder(int $orderId): void
         ];
         header('Location: /checkout');
         exit;
+    }
+
+    private function logPreorderEvent(int $intentId, string $eventType, ?string $fromStatus, ?string $toStatus, ?array $meta = null): void
+    {
+        try {
+            $this->pdo->prepare(
+                "INSERT INTO preorder_intent_events (preorder_intent_id, event_type, from_status, to_status, meta_json, created_at)
+                 VALUES (?, ?, ?, ?, ?, NOW())"
+            )->execute([
+                $intentId,
+                $eventType,
+                $fromStatus,
+                $toStatus,
+                $meta ? json_encode($meta, JSON_UNESCAPED_UNICODE) : null,
+            ]);
+        } catch (\Throwable) {
+            // non-blocking audit write
+        }
     }
 
     /**

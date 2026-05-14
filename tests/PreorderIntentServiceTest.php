@@ -26,6 +26,15 @@ class PreorderIntentServiceTest extends TestCase
             created_at TEXT,
             updated_at TEXT
         )");
+        $this->pdo->exec("CREATE TABLE preorder_intent_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            preorder_intent_id INTEGER,
+            event_type TEXT,
+            from_status TEXT,
+            to_status TEXT,
+            meta_json TEXT,
+            created_at TEXT
+        )");
     }
 
     public function testAllocateOfferWaveUsesFifoWithinAvailableBoxes(): void
@@ -46,6 +55,8 @@ class PreorderIntentServiceTest extends TestCase
         $this->assertSame('offer_sent', $statuses[1]);
         $this->assertSame('offer_sent', $statuses[2]);
         $this->assertSame('intent_created', $statuses[3]);
+        $eventCount = (int)$this->pdo->query("SELECT COUNT(*) FROM preorder_intent_events WHERE event_type = 'offer_sent'")->fetchColumn();
+        $this->assertSame(2, $eventCount);
     }
 
     public function testExpireOffersUpdatesOnlyExpiredOfferSentRows(): void
@@ -64,6 +75,8 @@ class PreorderIntentServiceTest extends TestCase
         $status2 = $this->pdo->query("SELECT status FROM preorder_intents WHERE id = 2")->fetchColumn();
         $this->assertSame('expired', $status1);
         $this->assertSame('offer_sent', $status2);
+        $expireEvents = (int)$this->pdo->query("SELECT COUNT(*) FROM preorder_intent_events WHERE event_type = 'offer_expired'")->fetchColumn();
+        $this->assertSame(1, $expireEvents);
     }
 
     public function testReallocateForProductSendsOffersWithProvidedPrice(): void

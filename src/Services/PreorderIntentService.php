@@ -50,6 +50,10 @@ class PreorderIntentService
                 }
 
                 $update->execute([$pricePerBox, $expiresAt, (int)$intent['id']]);
+                $this->logEvent((int)$intent['id'], 'offer_sent', 'intent_created', 'offer_sent', [
+                    'offered_price_per_box' => $pricePerBox,
+                    'offer_expires_at' => $expiresAt,
+                ]);
                 $allocated += $need;
                 $offeredCount++;
 
@@ -70,6 +74,14 @@ class PreorderIntentService
 
     public function expireOffers(): int
     {
+        $idsStmt = $this->pdo->query(
+            "SELECT id FROM preorder_intents
+             WHERE status = 'offer_sent'
+               AND offer_expires_at IS NOT NULL
+               AND offer_expires_at < CURRENT_TIMESTAMP"
+        );
+        $ids = $idsStmt ? $idsStmt->fetchAll(PDO::FETCH_COLUMN) : [];
+
         $stmt = $this->pdo->prepare(
             "UPDATE preorder_intents
              SET status = 'expired', updated_at = CURRENT_TIMESTAMP
@@ -78,12 +90,34 @@ class PreorderIntentService
                AND offer_expires_at < CURRENT_TIMESTAMP"
         );
         $stmt->execute();
-        return $stmt->rowCount();
+        $affected = $stmt->rowCount();
+        foreach ($ids as $id) {
+            $this->logEvent((int)$id, 'offer_expired', 'offer_sent', 'expired');
+        }
+        return $affected;
     }
 
     /** @return array{offered_count:int,allocated_boxes:float} */
     public function reallocateForProduct(int $productId, float $freedBoxes, float $pricePerBox, int $ttlHours = 4): array
     {
         return $this->allocateOfferWave($productId, $freedBoxes, $pricePerBox, $ttlHours);
+    }
+
+    private function logEvent(int $intentId, string $eventType, ?string $fromStatus, ?string $toStatus, ?array $meta = null): void
+    {
+        try {
+            $this->pdo->prepare(
+                "INSERT INTO preorder_intent_events (preorder_intent_id, event_type, from_status, to_status, meta_json, created_at)
+                 VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)"
+            )->execute([
+                $intentId,
+                $eventType,
+                $fromStatus,
+                $toStatus,
+                $meta ? json_encode($meta, JSON_UNESCAPED_UNICODE) : null,
+            ]);
+        } catch (Throwable) {
+            // non-blocking audit write
+        }
     }
 }
