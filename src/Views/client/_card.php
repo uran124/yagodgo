@@ -175,7 +175,7 @@ $regularKg  = round($price, 2);
       <?php endif; ?>
 
       <!-- Кнопка «В корзину» или «Войдите» -->
-      <?php if (in_array((string)($_SESSION['role'] ?? ''), ['client','partner','seller']) && $active): ?>
+      <?php if (in_array((string)($_SESSION['role'] ?? ''), ['client','partner','seller','admin']) && $active): ?>
         <form action="/cart/add" method="post" class="flex items-center space-x-2 add-to-cart-form" data-id="<?= $p['id'] ?>" data-name="<?= htmlspecialchars($p['product'] . ($p['variety'] ? ' ' . $p['variety'] : '')) ?>" data-price="<?= $priceBox ?>">
           <input type="hidden" name="product_id" value="<?= $p['id'] ?>">
           <input type="hidden" name="stock_mode" value="instant">
