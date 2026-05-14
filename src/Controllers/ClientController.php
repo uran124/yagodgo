@@ -1519,6 +1519,28 @@ public function cancelReservedOrder(int $orderId): void
         exit;
     }
 
+    public function showPreorderIntentOffer(int $intentId): void
+    {
+        requireClient();
+        $userId = (int)($_SESSION['user_id'] ?? 0);
+        $stmt = $this->pdo->prepare(
+            "SELECT pi.id, pi.status, pi.requested_boxes, pi.offered_price_per_box, pi.offer_expires_at,
+                    p.alias AS product_alias, p.variety, pt.alias AS type_alias, pt.name AS product_name
+             FROM preorder_intents pi
+             JOIN products p ON p.id = pi.product_id
+             JOIN product_types pt ON pt.id = p.product_type_id
+             WHERE pi.id = ? AND pi.user_id = ? LIMIT 1"
+        );
+        $stmt->execute([$intentId, $userId]);
+        $offer = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$offer) {
+            http_response_code(404);
+            echo 'Оффер не найден';
+            return;
+        }
+        view('client/preorder_offer', ['offer' => $offer]);
+    }
+
     private function logPreorderEvent(int $intentId, string $eventType, ?string $fromStatus, ?string $toStatus, ?array $meta = null): void
     {
         try {

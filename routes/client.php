@@ -242,4 +242,13 @@ return [
         (new App\Controllers\ClientController($c['pdo']))->continuePreorderCheckout($m[1]);
         return true;
     },
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeRegex('GET', '#^/preorder-intents/(\d+)$#', $method, $uri, $m)) {
+            return false;
+        }
+
+        requireClient();
+        (new App\Controllers\ClientController($c['pdo']))->showPreorderIntentOffer((int)$m[1]);
+        return true;
+    },
 ];
