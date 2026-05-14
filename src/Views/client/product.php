@@ -88,6 +88,7 @@
           <?php if (in_array((string)($_SESSION['role'] ?? ''), ['client','partner','seller']) && $active): ?>
             <form action="/cart/add" method="post" class="flex items-center space-x-2 add-to-cart-form" data-id="<?= $product['id'] ?>" data-name="<?= htmlspecialchars($product['product'] . ($product['variety'] ? ' ' . $product['variety'] : '')) ?>" data-price="<?= $priceBox ?>">
               <input type="hidden" name="product_id" value="<?= $product['id'] ?>">
+              <input type="hidden" name="stock_mode" value="instant">
               <div class="flex items-center space-x-2">
                 <button type="button" class="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full" onclick="let inp=this.nextElementSibling; if(+inp.value>1) inp.value=+inp.value-1;">
                   <span class="material-icons-round text-gray-600 text-base">remove</span>

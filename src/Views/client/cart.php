@@ -4,6 +4,14 @@
 */ ?>
 
 <main class="bg-gradient-to-br from-orange-50 via-white to-pink-50 min-h-screen pb-24">
+  <?php if (!empty($_SESSION['cart_error'])): ?>
+    <div class="px-4 pt-4">
+      <div class="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3">
+        <?= htmlspecialchars((string)$_SESSION['cart_error']) ?>
+      </div>
+    </div>
+    <?php unset($_SESSION['cart_error']); ?>
+  <?php endif; ?>
 
 
   <?php if (empty($items)): ?>

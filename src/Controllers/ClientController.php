@@ -145,6 +145,10 @@ public function cart(): void
         $userId    = $_SESSION['user_id'];
         $productId = (int)($_POST['product_id'] ?? 0);
         $quantity  = (float)($_POST['quantity'] ?? 1.0);
+        $stockMode = (string)($_POST['stock_mode'] ?? 'instant');
+        if (!in_array($stockMode, ['preorder', 'instant', 'discount_stock'], true)) {
+            $stockMode = 'instant';
+        }
 
         // читаем выбор даты
         $dateOpt = $_POST['delivery_date'][$productId] ?? null;
@@ -154,25 +158,54 @@ public function cart(): void
 
         if ($productId && $quantity > 0) {
             $priceStmt = $this->pdo->prepare(
-                "SELECT price, sale_price, box_size FROM products WHERE id = ?"
+                "SELECT price, sale_price, box_size, preorder_unit_price, instant_unit_price, discount_unit_price, current_purchase_batch_id
+                 FROM products WHERE id = ?"
             );
             $priceStmt->execute([$productId]);
             $row = $priceStmt->fetch(PDO::FETCH_ASSOC);
             $priceBox = 0.0;
+            $purchaseBatchId = null;
             if ($row) {
+                $boxSize = (float)($row['box_size'] ?? 0);
                 $sale    = (float)($row['sale_price'] ?? 0); // per kg
                 $regular = (float)($row['price'] ?? 0);      // per kg
-                $boxSize = (float)($row['box_size'] ?? 0);
-                $kgPrice = $sale > 0 ? $sale : $regular;
+                $fallbackKgPrice = $sale > 0 ? $sale : $regular;
+                $kgPrice = match ($stockMode) {
+                    'preorder' => (float)($row['preorder_unit_price'] ?? 0),
+                    'discount_stock' => (float)($row['discount_unit_price'] ?? 0),
+                    default => (float)($row['instant_unit_price'] ?? 0),
+                };
+                if ($kgPrice <= 0) {
+                    $kgPrice = $fallbackKgPrice;
+                }
                 $priceBox = $kgPrice * $boxSize;
+                if ($stockMode !== 'preorder') {
+                    $purchaseBatchId = isset($row['current_purchase_batch_id']) ? (int)$row['current_purchase_batch_id'] : null;
+                }
+            }
+
+            $modeCheckStmt = $this->pdo->prepare(
+                "SELECT stock_mode FROM cart_items WHERE user_id = ? AND product_id = ? LIMIT 1"
+            );
+            $modeCheckStmt->execute([$userId, $productId]);
+            $existingMode = $modeCheckStmt->fetchColumn();
+            if ($existingMode !== false && (string)$existingMode !== $stockMode) {
+                $_SESSION['cart_error'] = 'Этот товар уже есть в корзине в другом режиме. Оформите текущую корзину или замените режим заказа.';
+                $referer = $_SERVER['HTTP_REFERER'] ?? '/cart';
+                header('Location: ' . $referer);
+                exit;
             }
 
             $this->pdo->prepare(
-                "INSERT INTO cart_items (user_id, product_id, quantity, unit_price)" .
-                " VALUES (?, ?, ?, ?)" .
+                "INSERT INTO cart_items (user_id, product_id, quantity, unit_price, stock_mode, purchase_batch_id, boxes, sale_price_per_box)" .
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?)" .
                 " ON DUPLICATE KEY UPDATE quantity = quantity + VALUES(quantity)," .
-                " unit_price = VALUES(unit_price)"
-            )->execute([$userId, $productId, $quantity, $priceBox]);
+                " unit_price = VALUES(unit_price)," .
+                " stock_mode = VALUES(stock_mode)," .
+                " purchase_batch_id = VALUES(purchase_batch_id)," .
+                " boxes = VALUES(boxes)," .
+                " sale_price_per_box = VALUES(sale_price_per_box)"
+            )->execute([$userId, $productId, $quantity, $priceBox, $stockMode, $purchaseBatchId, $quantity, $priceBox]);
         }
 
         $this->refreshCartTotal();
@@ -204,8 +237,8 @@ public function cart(): void
                 default    => $current,
             };
             $this->pdo->prepare(
-                "UPDATE cart_items SET quantity = ? WHERE user_id = ? AND product_id = ?"
-            )->execute([$newQty, $userId, $productId]);
+                "UPDATE cart_items SET quantity = ?, boxes = ? WHERE user_id = ? AND product_id = ?"
+            )->execute([$newQty, $newQty, $userId, $productId]);
         }
 
         $this->refreshCartTotal();
