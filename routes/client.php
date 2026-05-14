@@ -206,4 +206,13 @@ return [
         (new App\Controllers\ClientController($c['pdo']))->placeOrder();
         return true;
     },
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('POST', '/preorder-intents', $method, $uri)) {
+            return false;
+        }
+
+        requireClient();
+        (new App\Controllers\ClientController($c['pdo']))->createPreorderIntent();
+        return true;
+    },
 ];
