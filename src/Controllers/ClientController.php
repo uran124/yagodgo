@@ -1284,6 +1284,156 @@ public function cancelReservedOrder(int $orderId): void
         ]);
     }
 
+    public function createPreorderIntent(): void
+    {
+        requireClient();
+        $userId = (int)($_SESSION['user_id'] ?? 0);
+        $productId = (int)($_POST['product_id'] ?? 0);
+        $requestedBoxes = round((float)($_POST['requested_boxes'] ?? 0), 2);
+
+        if ($userId <= 0 || $productId <= 0 || $requestedBoxes <= 0) {
+            http_response_code(422);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => false, 'error' => 'Некорректные параметры предзаказа'], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        $productStmt = $this->pdo->prepare("SELECT id FROM products WHERE id = ? AND is_active = 1 LIMIT 1");
+        $productStmt->execute([$productId]);
+        if (!$productStmt->fetchColumn()) {
+            http_response_code(404);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => false, 'error' => 'Товар не найден'], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        $existingStmt = $this->pdo->prepare(
+            "SELECT id FROM preorder_intents WHERE user_id = ? AND product_id = ? AND status IN ('intent_created','offer_sent') ORDER BY id DESC LIMIT 1"
+        );
+        $existingStmt->execute([$userId, $productId]);
+        $existingId = $existingStmt->fetchColumn();
+
+        if ($existingId) {
+            $this->pdo->prepare(
+                "UPDATE preorder_intents SET requested_boxes = ?, status = 'intent_created', offered_price_per_box = NULL, offer_expires_at = NULL, checkout_token = NULL WHERE id = ?"
+            )->execute([$requestedBoxes, (int)$existingId]);
+            $intentId = (int)$existingId;
+        } else {
+            $this->pdo->prepare(
+                "INSERT INTO preorder_intents (user_id, product_id, requested_boxes, status, created_at, updated_at) VALUES (?, ?, ?, 'intent_created', NOW(), NOW())"
+            )->execute([$userId, $productId, $requestedBoxes]);
+            $intentId = (int)$this->pdo->lastInsertId();
+        }
+
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'ok' => true,
+            'intent_id' => $intentId,
+            'status' => 'intent_created',
+            'message' => 'Предзаказ сохранён. Мы уведомим вас после поступления партии.',
+        ], JSON_UNESCAPED_UNICODE);
+    }
+
+    public function confirmPreorderIntent(int $intentId): void
+    {
+        requireClient();
+        $userId = (int)($_SESSION['user_id'] ?? 0);
+        $stmt = $this->pdo->prepare(
+            "SELECT id, status, offer_expires_at FROM preorder_intents WHERE id = ? AND user_id = ? LIMIT 1"
+        );
+        $stmt->execute([$intentId, $userId]);
+        $intent = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$intent) {
+            http_response_code(404);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => false, 'error' => 'Предзаказ не найден'], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+        if ((string)$intent['status'] !== 'offer_sent') {
+            http_response_code(409);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => false, 'error' => 'Оффер недоступен для подтверждения'], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        $expiresAt = $intent['offer_expires_at'] ?? null;
+        if ($expiresAt === null || strtotime((string)$expiresAt) < time()) {
+            $this->pdo->prepare("UPDATE preorder_intents SET status = 'expired', updated_at = NOW() WHERE id = ?")
+                ->execute([$intentId]);
+            http_response_code(409);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => false, 'error' => 'Время подтверждения истекло'], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        $token = bin2hex(random_bytes(24));
+        $this->pdo->prepare(
+            "UPDATE preorder_intents SET status = 'confirmed', checkout_token = ?, updated_at = NOW() WHERE id = ?"
+        )->execute([$token, $intentId]);
+
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'ok' => true,
+            'status' => 'confirmed',
+            'continue_url' => '/preorder/continue/' . $token,
+        ], JSON_UNESCAPED_UNICODE);
+    }
+
+    public function declinePreorderIntent(int $intentId): void
+    {
+        requireClient();
+        $userId = (int)($_SESSION['user_id'] ?? 0);
+        $stmt = $this->pdo->prepare(
+            "SELECT id, status FROM preorder_intents WHERE id = ? AND user_id = ? LIMIT 1"
+        );
+        $stmt->execute([$intentId, $userId]);
+        $intent = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$intent) {
+            http_response_code(404);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => false, 'error' => 'Предзаказ не найден'], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+        if ((string)$intent['status'] !== 'offer_sent') {
+            http_response_code(409);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => false, 'error' => 'Оффер недоступен для отказа'], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        $this->pdo->prepare("UPDATE preorder_intents SET status = 'declined', updated_at = NOW() WHERE id = ?")
+            ->execute([$intentId]);
+
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['ok' => true, 'status' => 'declined'], JSON_UNESCAPED_UNICODE);
+    }
+
+    public function continuePreorderCheckout(string $token): void
+    {
+        requireClient();
+        $userId = (int)($_SESSION['user_id'] ?? 0);
+        $stmt = $this->pdo->prepare(
+            "SELECT id, product_id, requested_boxes, status FROM preorder_intents WHERE checkout_token = ? AND user_id = ? LIMIT 1"
+        );
+        $stmt->execute([$token, $userId]);
+        $intent = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$intent || (string)$intent['status'] !== 'confirmed') {
+            http_response_code(404);
+            echo 'Ссылка продолжения недействительна';
+            return;
+        }
+
+        $_SESSION['preorder_continue'] = [
+            'intent_id' => (int)$intent['id'],
+            'product_id' => (int)$intent['product_id'],
+            'requested_boxes' => (float)$intent['requested_boxes'],
+        ];
+        header('Location: /checkout');
+        exit;
+    }
+
     /**
      * @param array<string, mixed> $itemsByDate
      * @param array<string, mixed> $postedOrderModes
