@@ -51,8 +51,12 @@ class StockService
 
         $batchColumn = $this->resolveModeColumn($mode, true);
 
+        $ownsTransaction = !$this->pdo->inTransaction();
+
         try {
-            $this->pdo->beginTransaction();
+            if ($ownsTransaction) {
+                $this->pdo->beginTransaction();
+            }
             $this->appendMovement($batchId, $productId, $orderId, null, 'unreserve', $mode, $boxes);
             $this->updateBatchCounters($batchId, [
                 'boxes_reserved' => -$boxes,
@@ -60,9 +64,11 @@ class StockService
             ]);
             $this->assertBatchInvariants($batchId);
             $this->syncProductStock($productId);
-            $this->pdo->commit();
+            if ($ownsTransaction) {
+                $this->pdo->commit();
+            }
         } catch (Throwable $e) {
-            if ($this->pdo->inTransaction()) {
+            if ($ownsTransaction && $this->pdo->inTransaction()) {
                 $this->pdo->rollBack();
             }
             throw $e;
@@ -75,8 +81,12 @@ class StockService
             throw new RuntimeException('Sell boxes must be greater than zero.');
         }
 
+        $ownsTransaction = !$this->pdo->inTransaction();
+
         try {
-            $this->pdo->beginTransaction();
+            if ($ownsTransaction) {
+                $this->pdo->beginTransaction();
+            }
             $this->appendMovement($batchId, $productId, $orderId, null, 'sale', 'internal', -$boxes);
             $this->updateBatchCounters($batchId, [
                 'boxes_reserved' => -$boxes,
@@ -84,9 +94,11 @@ class StockService
             ]);
             $this->assertBatchInvariants($batchId);
             $this->syncProductStock($productId);
-            $this->pdo->commit();
+            if ($ownsTransaction) {
+                $this->pdo->commit();
+            }
         } catch (Throwable $e) {
-            if ($this->pdo->inTransaction()) {
+            if ($ownsTransaction && $this->pdo->inTransaction()) {
                 $this->pdo->rollBack();
             }
             throw $e;
@@ -101,17 +113,23 @@ class StockService
 
         $productId = $this->getBatchProductId($batchId);
 
+        $ownsTransaction = !$this->pdo->inTransaction();
+
         try {
-            $this->pdo->beginTransaction();
+            if ($ownsTransaction) {
+                $this->pdo->beginTransaction();
+            }
             $this->appendMovement($batchId, $productId, null, $userId, 'writeoff', 'internal', -$boxes, $comment);
             $this->updateBatchCounters($batchId, [
                 'boxes_written_off' => $boxes,
             ]);
             $this->assertBatchInvariants($batchId);
             $this->syncProductStock($productId);
-            $this->pdo->commit();
+            if ($ownsTransaction) {
+                $this->pdo->commit();
+            }
         } catch (Throwable $e) {
-            if ($this->pdo->inTransaction()) {
+            if ($ownsTransaction && $this->pdo->inTransaction()) {
                 $this->pdo->rollBack();
             }
             throw $e;
@@ -184,8 +202,12 @@ class StockService
             throw new RuntimeException('Not enough stock in selected mode.');
         }
 
+        $ownsTransaction = !$this->pdo->inTransaction();
+
         try {
-            $this->pdo->beginTransaction();
+            if ($ownsTransaction) {
+                $this->pdo->beginTransaction();
+            }
 
             $this->appendMovement($batchId, $productId, $orderId, null, $movementType, $mode, $delta);
 
@@ -197,9 +219,11 @@ class StockService
             $this->updateBatchCounters($batchId, $updates);
             $this->assertBatchInvariants($batchId);
             $this->syncProductStock($productId);
-            $this->pdo->commit();
+            if ($ownsTransaction) {
+                $this->pdo->commit();
+            }
         } catch (Throwable $e) {
-            if ($this->pdo->inTransaction()) {
+            if ($ownsTransaction && $this->pdo->inTransaction()) {
                 $this->pdo->rollBack();
             }
             throw $e;
@@ -256,6 +280,8 @@ class StockService
             $params[] = $delta;
         }
         $params[] = $batchId;
+
+        $parts[] = 'boxes_remaining = boxes_total - boxes_sold - boxes_written_off';
 
         $sql = 'UPDATE purchase_batches SET ' . implode(', ', $parts) . ' WHERE id = ?';
         $stmt = $this->pdo->prepare($sql);
