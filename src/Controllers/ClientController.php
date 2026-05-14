@@ -288,6 +288,7 @@ public function cart(): void
     {
         requireClient();
         $userId = $_SESSION['user_id'];
+        $this->syncPreorderContinueToCart($userId);
     
         // 0) Если в GET переданы новые даты для продуктов, сохраняем их в сессии:
         if (!empty($_GET['delivery_date']) && is_array($_GET['delivery_date'])) {
@@ -837,9 +838,64 @@ public function cart(): void
         $ordersController->notifyAdmins($oid);
     }
 
-    header('Location: /orders');
-    exit;
-}
+        header('Location: /orders');
+        exit;
+    }
+
+    private function syncPreorderContinueToCart(int $userId): void
+    {
+        $pre = $_SESSION['preorder_continue'] ?? null;
+        if (!is_array($pre)) {
+            return;
+        }
+
+        $intentId = (int)($pre['intent_id'] ?? 0);
+        $productId = (int)($pre['product_id'] ?? 0);
+        $requestedBoxes = (float)($pre['requested_boxes'] ?? 0);
+        if ($intentId <= 0 || $productId <= 0 || $requestedBoxes <= 0) {
+            unset($_SESSION['preorder_continue']);
+            return;
+        }
+
+        $intentStmt = $this->pdo->prepare(
+            "SELECT status, offered_price_per_box FROM preorder_intents WHERE id = ? AND user_id = ? AND product_id = ? LIMIT 1"
+        );
+        $intentStmt->execute([$intentId, $userId, $productId]);
+        $intent = $intentStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$intent || (string)$intent['status'] !== 'confirmed') {
+            unset($_SESSION['preorder_continue']);
+            return;
+        }
+
+        $productStmt = $this->pdo->prepare(
+            "SELECT box_size, preorder_price_per_box, preorder_unit_price FROM products WHERE id = ? AND is_active = 1 LIMIT 1"
+        );
+        $productStmt->execute([$productId]);
+        $product = $productStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$product) {
+            unset($_SESSION['preorder_continue']);
+            return;
+        }
+
+        $priceBox = (float)($intent['offered_price_per_box'] ?? 0);
+        if ($priceBox <= 0) {
+            $priceBox = (float)($product['preorder_price_per_box'] ?? 0);
+        }
+        if ($priceBox <= 0) {
+            $boxSize = max(0.0, (float)($product['box_size'] ?? 0));
+            $unitPreorder = (float)($product['preorder_unit_price'] ?? 0);
+            $priceBox = $boxSize > 0 ? $unitPreorder * $boxSize : $unitPreorder;
+        }
+
+        $this->pdo->prepare(
+            "INSERT INTO cart_items (user_id, product_id, quantity, unit_price, stock_mode, purchase_batch_id, boxes, sale_price_per_box)
+             VALUES (?, ?, ?, ?, 'preorder', NULL, ?, ?)
+             ON DUPLICATE KEY UPDATE quantity = VALUES(quantity), unit_price = VALUES(unit_price), stock_mode = 'preorder', purchase_batch_id = NULL, boxes = VALUES(boxes), sale_price_per_box = VALUES(sale_price_per_box)"
+        )->execute([$userId, $productId, $requestedBoxes, $priceBox, $requestedBoxes, $priceBox]);
+
+        unset($_SESSION['preorder_continue']);
+        $this->refreshCartTotal();
+    }
 
 
 
