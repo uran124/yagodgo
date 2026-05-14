@@ -281,6 +281,8 @@ class StockService
         }
         $params[] = $batchId;
 
+        $parts[] = 'boxes_remaining = boxes_total - boxes_sold - boxes_written_off';
+
         $sql = 'UPDATE purchase_batches SET ' . implode(', ', $parts) . ' WHERE id = ?';
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
