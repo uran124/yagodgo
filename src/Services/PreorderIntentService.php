@@ -80,4 +80,10 @@ class PreorderIntentService
         $stmt->execute();
         return $stmt->rowCount();
     }
+
+    /** @return array{offered_count:int,allocated_boxes:float} */
+    public function reallocateForProduct(int $productId, float $freedBoxes, float $pricePerBox, int $ttlHours = 4): array
+    {
+        return $this->allocateOfferWave($productId, $freedBoxes, $pricePerBox, $ttlHours);
+    }
 }
