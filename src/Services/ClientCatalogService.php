@@ -42,6 +42,12 @@ class ClientCatalogService
                 [],
                 10
             ),
+            'discountProducts' => $this->fetchProducts(
+                'p.is_active = 1 AND p.discount_stock_boxes > 0',
+                'p.discount_stock_boxes DESC, p.id DESC',
+                [],
+                10
+            ),
             'materials' => $this->fetchLatestMaterials(),
         ];
     }
