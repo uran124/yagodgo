@@ -330,7 +330,7 @@ class PurchaseBatchService
                  preorder_unit_price = :preorder_unit_price,
                  instant_unit_price = :instant_unit_price,
                  discount_unit_price = :discount_unit_price,
-                 price = :instant_unit_price,
+                 price = :price,
                  stock_status = :stock_status
              WHERE id = :product_id'
         );
@@ -345,6 +345,7 @@ class PurchaseBatchService
             'preorder_unit_price' => $prices['preorder_unit_price'],
             'instant_unit_price' => $prices['instant_unit_price'],
             'discount_unit_price' => $prices['discount_unit_price'],
+            'price' => $prices['instant_unit_price'],
             'stock_status' => $stockStatus,
             'product_id' => $productId,
         ]);
