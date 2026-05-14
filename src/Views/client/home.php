@@ -3,6 +3,7 @@
  * @var array $regularProducts
  * @var array $sellerProducts
  * @var array $preorderProducts
+ * @var array $discountProducts
  * @var string|null $userName
  */ ?>
 
@@ -197,6 +198,31 @@
                 <p class="text-sm font-semibold text-blue-800">Клубника другие ягоды и фрукты под заказ с доставкой в Красноярске: эксклюзивные сорта и объёмы от 1 кг. Идеально для праздников, корпоративов и подарков! Заранее выберите свой идеальный набор — индивидуальная упаковка, свежесть гарантирована, доставка в удобное время. 🍓✨</p>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  <?php endif; ?>
+
+  <?php if (!empty($discountProducts)): ?>
+    <!-- Discount Stock Products -->
+    <section class="px-4 mb-8">
+      <h2 class="text-2xl font-bold text-gray-800 mb-4">🏷️ Выгодные остатки</h2>
+      <p class="text-sm text-gray-500 mb-3">Отдельная витрина товаров после перевода в режим discount stock.</p>
+      <div class="embla drag-free has-arrows relative">
+        <button data-dir="left" class="hidden md:flex items-center justify-center w-8 h-8 absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
+          <span class="material-icons-round text-gray-600">chevron_left</span>
+        </button>
+        <button data-dir="right" class="hidden md:flex items-center justify-center w-8 h-8 absolute right-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
+          <span class="material-icons-round text-gray-600">chevron_right</span>
+        </button>
+        <div class="embla__viewport">
+          <div class="embla__container space-x-4 pb-2 no-scrollbar eq-row">
+            <?php foreach ($discountProducts as $p): ?>
+              <div class="embla__slide flex-none w-[52vw] sm:w-1/2 md:w-1/3">
+                <?php include __DIR__ . '/_card.php'; ?>
+              </div>
+            <?php endforeach; ?>
           </div>
         </div>
       </div>
