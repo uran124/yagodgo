@@ -65,4 +65,29 @@ class PreorderIntentServiceTest extends TestCase
         $this->assertSame('expired', $status1);
         $this->assertSame('offer_sent', $status2);
     }
+
+    public function testReallocateForProductSendsOffersWithProvidedPrice(): void
+    {
+        $this->pdo->exec("INSERT INTO preorder_intents (user_id, product_id, requested_boxes, status, created_at, updated_at) VALUES
+            (10, 33, 1, 'intent_created', '2026-01-02 10:00:00', '2026-01-02 10:00:00'),
+            (11, 33, 1, 'intent_created', '2026-01-02 10:01:00', '2026-01-02 10:01:00')
+        ");
+
+        $service = new PreorderIntentService($this->pdo);
+        $result = $service->reallocateForProduct(33, 1, 1450, 4);
+
+        $this->assertSame(1, $result['offered_count']);
+        $this->assertSame(1.0, $result['allocated_boxes']);
+
+        $row = $this->pdo
+            ->query("SELECT status, offered_price_per_box FROM preorder_intents WHERE id = 1")
+            ->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame('offer_sent', $row['status']);
+        $this->assertSame(1450.0, (float)$row['offered_price_per_box']);
+
+        $row2 = $this->pdo
+            ->query("SELECT status FROM preorder_intents WHERE id = 2")
+            ->fetchColumn();
+        $this->assertSame('intent_created', $row2);
+    }
 }
