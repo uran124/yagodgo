@@ -232,3 +232,12 @@
 ### 9.3 DoD этапа 9
 - Утвержден roadmap v2.
 - Закрыты основные техдолги первого релиза.
+
+---
+
+## Операционные артефакты в репозитории
+
+- Этап 5 (операционка): `docs/runbooks/preorder-ops.md`, `docs/runbooks/preorder-support-sop.md`.
+- Этап 7 (QA/security): `docs/runbooks/preorder-qa-security.md`.
+- Этап 8 (go-live): `docs/runbooks/preorder-go-live.md`.
+- Этап 9 (post-release): `docs/runbooks/preorder-postrelease.md`.
