@@ -804,6 +804,13 @@ public function cart(): void
     $_SESSION['delivery_date'] = [];
     $this->refreshCartTotal();
 
+    $preorderIntentId = (int)($_SESSION['preorder_checkout_intent_id'] ?? 0);
+    if ($preorderIntentId > 0) {
+        $this->pdo->prepare(
+            "UPDATE preorder_intents SET status = 'checkout_completed', updated_at = NOW() WHERE id = ? AND user_id = ? AND status = 'confirmed'"
+        )->execute([$preorderIntentId, $userId]);
+    }
+
     if ($referralUsed && $referrerId !== null) {
         $this->pdo->prepare(
             "UPDATE users SET referred_by = ?, has_used_referral_coupon = 1 WHERE id = ?"
@@ -837,9 +844,10 @@ public function cart(): void
     foreach ($createdOrderIds as $oid) {
         $ordersController->notifyAdmins($oid);
     }
+    unset($_SESSION['preorder_checkout_intent_id']);
 
-        header('Location: /orders');
-        exit;
+    header('Location: /orders');
+    exit;
     }
 
     private function syncPreorderContinueToCart(int $userId): void
@@ -893,6 +901,7 @@ public function cart(): void
              ON DUPLICATE KEY UPDATE quantity = VALUES(quantity), unit_price = VALUES(unit_price), stock_mode = 'preorder', purchase_batch_id = NULL, boxes = VALUES(boxes), sale_price_per_box = VALUES(sale_price_per_box)"
         )->execute([$userId, $productId, $requestedBoxes, $priceBox, $requestedBoxes, $priceBox]);
 
+        $_SESSION['preorder_checkout_intent_id'] = $intentId;
         unset($_SESSION['preorder_continue']);
         $this->refreshCartTotal();
     }
