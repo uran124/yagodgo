@@ -496,9 +496,10 @@ public function cart(): void
     $userId = $_SESSION['user_id'];
 
     // 1) Получаем товары из корзины
-    $stmt = $this->pdo->prepare(
-      "SELECT ci.product_id, ci.quantity, ci.unit_price,
-              p.box_size, p.box_unit, t.name AS product, t.alias AS type_alias, p.alias, p.variety, p.seller_id
+       $stmt = $this->pdo->prepare(
+           "SELECT ci.product_id, ci.quantity, ci.unit_price,
+              p.box_size, p.box_unit, t.name AS product, t.alias AS type_alias, p.alias, p.variety, p.seller_id,
+              ci.stock_mode
        FROM cart_items ci
        JOIN products p ON p.id = ci.product_id
        JOIN product_types t ON t.id = p.product_type_id
@@ -508,8 +509,8 @@ public function cart(): void
     $rawItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // 2) Группируем товары по дате доставки, храня выбранную дату из сессии
-    $itemsByDate = [];
-    foreach ($rawItems as $it) {
+        $itemsByDate = [];
+        foreach ($rawItems as $it) {
         $pid = $it['product_id'];
         $dateKey = $_SESSION['delivery_date'][$pid] ?? PLACEHOLDER_DATE;
         if (!isset($itemsByDate[$dateKey])) {
@@ -523,8 +524,8 @@ public function cart(): void
         ];
     }
 
-    $postedOrderModes = is_array($_POST['order_mode'] ?? null) ? $_POST['order_mode'] : [];
-    $orderModeByDate = $this->normalizeOrderModes($itemsByDate, $postedOrderModes);
+        $postedOrderModes = is_array($_POST['order_mode'] ?? null) ? $_POST['order_mode'] : [];
+    $orderModeByDate = $this->resolveOrderModesFromCart($itemsByDate, $rawItems, $postedOrderModes);
 
     // 3) Считаем общий чек
     $allTotal = 0;
@@ -1588,6 +1589,43 @@ public function cancelReservedOrder(int $orderId): void
         }
 
         return $result;
+    }
+
+    /**
+     * @param array<string, mixed> $itemsByDate
+     * @param array<int, array<string, mixed>> $rawItems
+     * @param array<string, mixed> $postedOrderModes
+     * @return array<string, string>
+     */
+    private function resolveOrderModesFromCart(array $itemsByDate, array $rawItems, array $postedOrderModes): array
+    {
+        $allowedModes = ['preorder', 'instant', 'discount_stock'];
+        $modeByDate = [];
+
+        foreach ($rawItems as $it) {
+            $pid = (int)$it['product_id'];
+            $dateKey = $_SESSION['delivery_date'][$pid] ?? PLACEHOLDER_DATE;
+            $mode = (string)($it['stock_mode'] ?? 'instant');
+            if (!in_array($mode, $allowedModes, true)) {
+                $mode = ($dateKey === PLACEHOLDER_DATE) ? 'preorder' : 'instant';
+            }
+            if (!isset($modeByDate[$dateKey])) {
+                $modeByDate[$dateKey] = $mode;
+            }
+        }
+
+        // compatibility fallback: allow posted mode only when mode for date cannot be inferred
+        foreach ($itemsByDate as $dateKey => $_) {
+            if (!isset($modeByDate[$dateKey])) {
+                $rawMode = (string)($postedOrderModes[$dateKey] ?? '');
+                if (!in_array($rawMode, $allowedModes, true)) {
+                    $rawMode = ($dateKey === PLACEHOLDER_DATE) ? 'preorder' : 'instant';
+                }
+                $modeByDate[$dateKey] = $rawMode;
+            }
+        }
+
+        return $modeByDate;
     }
 
     /** @param array<string, string> $orderModeByDate */
