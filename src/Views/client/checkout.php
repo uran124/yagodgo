@@ -109,16 +109,12 @@ $slots           = $slots           ?? [];
                 </div>
               </div>
               <div class="mt-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  <span class="material-icons-round text-sm mr-1 align-middle">tune</span>
-                  Режим заказа
-                </label>
-                <select name="order_mode[<?= htmlspecialchars($dateKey) ?>]"
-                        class="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all bg-white">
-                  <option value="preorder" <?= ($dateKey === (defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15')) ? 'selected' : '' ?>>Предзаказ</option>
-                  <option value="instant" <?= ($dateKey !== (defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15')) ? 'selected' : '' ?>>Свободная продажа</option>
-                  <option value="discount_stock">Выгодный остаток (без бонусов/купонов)</option>
-                </select>
+                <input type="hidden"
+                       name="order_mode[<?= htmlspecialchars($dateKey) ?>]"
+                       value="<?= ($dateKey === (defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15')) ? 'preorder' : 'instant' ?>">
+                <div class="text-xs text-gray-500">
+                  Режим заказа определяется на этапе выбора товара.
+                </div>
               </div>
 
             </div>
