@@ -10,6 +10,13 @@
 - Архивировать старые intents/events по retention-политике.
 - Оптимизировать индексы по реальной нагрузке.
 
+### Практическая процедура архивирования
+```bash
+php bin/preorder_archive_old.php [retention_days=120]
+```
+По умолчанию архивируются закрытые intents (`checkout_completed`, `declined`, `expired`) старше 120 дней
+в таблицы `preorder_intents_archive` и `preorder_intent_events_archive`.
+
 ## 3) Наблюдаемость
 - Дашборд SLA по jobs (send/expire/remind/reallocate).
 - Алертинг на spike `failed` у reminder job.
