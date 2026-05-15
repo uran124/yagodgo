@@ -241,3 +241,7 @@
 - Этап 7 (QA/security): `docs/runbooks/preorder-qa-security.md`.
 - Этап 8 (go-live): `docs/runbooks/preorder-go-live.md`.
 - Этап 9 (post-release): `docs/runbooks/preorder-postrelease.md`.
+- Фактическое выполнение go-live: `docs/runbooks/preorder-go-live-execution-log.md`.
+- Артефакты нагрузочных прогонов: `docs/runbooks/preorder-load-test-evidence.md`.
+- Протокол security-проверок в средах: `docs/runbooks/preorder-security-evidence.md`.
+- Backlog roadmap v2: `docs/runbooks/preorder-v2-backlog.md`.
