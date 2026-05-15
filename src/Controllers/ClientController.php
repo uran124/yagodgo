@@ -602,6 +602,8 @@ public function cart(): void
     $stockService = new StockService($this->pdo);
     $orderStock = new OrderStockOrchestrator($this->pdo, $stockService);
 
+    try {
+
     // 6) Если списываем баллы — обновляем баланс и фиксируем транзакцию
     if ($pointsToUse > 0) {
         $this->pdo->prepare(
@@ -825,6 +827,19 @@ public function cart(): void
     }
 
     $this->pdo->commit();
+    } catch (\Throwable $e) {
+        if ($this->pdo->inTransaction()) {
+            $this->pdo->rollBack();
+        }
+
+        $message = 'Не удалось оформить заказ. Проверьте остатки и попробуйте снова.';
+        if ($e instanceof \RuntimeException) {
+            $message = $e->getMessage();
+        }
+
+        header('Location: /checkout?coupon_error=' . urlencode($message));
+        exit;
+    }
 
     // Оповещаем администраторов о новых заказах
     $ordersController = new OrdersController($this->pdo);
