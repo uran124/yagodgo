@@ -3,6 +3,15 @@
 <?php /** @var array<int,array<string,mixed>> $photos */ ?>
 <?php $basePath = $basePath ?? '/admin'; ?>
 <?php $flash = $flash ?? null; ?>
+<?php $statusLabels = [
+  'planned' => 'Запланирована',
+  'purchased' => 'Закуплена',
+  'arrived' => 'Поступила',
+  'active' => 'В продаже',
+  'sold_out' => 'Распродана',
+  'closed' => 'Закрыта',
+  'cancelled' => 'Отменена',
+]; ?>
 
 <div class="mb-4">
   <a href="<?= $basePath ?>/purchases" class="text-[#C86052] hover:underline">← К списку закупок</a>
@@ -19,7 +28,7 @@
   <p class="mb-2"><a class="text-sm text-[#C86052] hover:underline" href="<?= $basePath ?>/purchases/<?= (int)$batch['id'] ?>/pnl.csv">Скачать P&L CSV</a></p>
   <p><b>Товар:</b> <?= htmlspecialchars(trim(($batch['product_name'] ?? '') . ' ' . ($batch['variety'] ?? ''))) ?></p>
   <p><b>Закупщик:</b> <?= htmlspecialchars((string)($batch['buyer_name'] ?? '—')) ?></p>
-  <p><b>Статус:</b> <?= htmlspecialchars((string)$batch['status']) ?></p>
+  <p><b>Статус:</b> <?= htmlspecialchars((string)($statusLabels[(string)$batch['status']] ?? (string)$batch['status'])) ?></p>
   <p><b>Куплено:</b> <?= (float)$batch['boxes_total'] ?> | <b>Свободно:</b> <?= (float)$batch['boxes_free'] ?> | <b>Резерв:</b> <?= (float)$batch['boxes_reserved'] ?></p>
 </div>
 

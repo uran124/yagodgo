@@ -4,6 +4,15 @@
 <?php $buyers = $buyers ?? []; ?>
 <?php $filters = $filters ?? ['status' => '', 'buyer_id' => 0]; ?>
 <?php $summary = $summary ?? []; ?>
+<?php $statusLabels = [
+  'planned' => 'Запланирована',
+  'purchased' => 'Закуплена',
+  'arrived' => 'Поступила',
+  'active' => 'В продаже',
+  'sold_out' => 'Распродана',
+  'closed' => 'Закрыта',
+  'cancelled' => 'Отменена',
+]; ?>
 <?php if (is_array($flash) && !empty($flash['message'])): ?>
   <div class="<?= ($flash['type'] ?? '') === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-700' ?> border p-3 rounded mb-4">
     <?= htmlspecialchars((string)$flash['message']) ?>
@@ -22,7 +31,7 @@
     <select name="status" class="w-full border rounded px-2 py-2 text-sm">
       <option value="">Все</option>
       <?php foreach (['planned','purchased','arrived','active','sold_out','closed','cancelled'] as $st): ?>
-        <option value="<?= $st ?>" <?= (($filters['status'] ?? '') === $st) ? 'selected' : '' ?>><?= $st ?></option>
+        <option value="<?= $st ?>" <?= (($filters['status'] ?? '') === $st) ? 'selected' : '' ?>><?= htmlspecialchars((string)($statusLabels[$st] ?? $st)) ?></option>
       <?php endforeach; ?>
     </select>
   </div>
@@ -74,7 +83,7 @@
         <td class="p-3"><?= (float)$batch['boxes_reserved'] ?></td>
         <td class="p-3"><?= number_format((float)$batch['purchase_price_per_box'], 2, '.', ' ') ?> ₽</td>
         <td class="p-3"><?= number_format((float)$batch['instant_price_per_box'], 2, '.', ' ') ?> ₽</td>
-        <td class="p-3"><?= htmlspecialchars((string)$batch['status']) ?></td>
+        <td class="p-3"><?= htmlspecialchars((string)($statusLabels[(string)$batch['status']] ?? (string)$batch['status'])) ?></td>
         <td class="p-3"><?= (int)($batch['age_days'] ?? 0) ?> дн.</td>
         <td class="p-3">
           <div class="flex flex-wrap gap-2">
