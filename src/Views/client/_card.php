@@ -39,6 +39,7 @@ $isRegularViewer = in_array($role, ['', 'client'], true);
 $hidePriceForPreorder = (!$showDate && $isRegularViewer);
 $basePath = $role === 'manager' ? '/manager' : '/admin';
 $regularKg  = round($price, 2);
+$preorderPurchaseDate = !empty($p['latest_purchase_date']) ? date('d.m.Y', strtotime((string)$p['latest_purchase_date'])) : '';
 ?>
 <div class="product-card bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col hover:shadow-2xl transition-shadow duration-200 sm:h-full max-w-[350px]"
      data-search="<?= htmlspecialchars($search) ?>"
@@ -210,6 +211,9 @@ $regularKg  = round($price, 2);
                   data-product-id="<?= (int)$p['id'] ?>">
             Предзаказ -10%
           </button>
+          <?php if ($preorderPurchaseDate !== ''): ?>
+            <div class="text-xs text-gray-500">Дата закупки: <?= htmlspecialchars($preorderPurchaseDate) ?></div>
+          <?php endif; ?>
           <div class="text-xs text-gray-500 hidden preorder-intent-hint"></div>
         </div>
       <?php else: ?>

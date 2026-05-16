@@ -22,6 +22,10 @@
 
   <div class="grid grid-cols-2 gap-4">
     <div>
+      <label class="block mb-1">Дата закупки</label>
+      <input name="purchased_at" type="date" class="w-full border px-2 py-1 rounded" value="<?= date('Y-m-d') ?>" required>
+    </div>
+    <div>
       <label class="block mb-1">Количество ящиков</label>
       <input name="boxes_total" type="number" step="0.01" class="w-full border px-2 py-1 rounded" required>
     </div>

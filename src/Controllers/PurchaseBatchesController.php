@@ -215,6 +215,7 @@ ORDER BY pb.id DESC';
             'purchase_price_per_box' => (float)($_POST['purchase_price_per_box'] ?? 0),
             'extra_cost_per_box' => (float)($_POST['extra_cost_per_box'] ?? 0),
             'status' => (string)($_POST['status'] ?? 'purchased'),
+            'purchased_at' => (string)($_POST['purchased_at'] ?? ''),
             'comment' => trim((string)($_POST['comment'] ?? '')),
         ];
 

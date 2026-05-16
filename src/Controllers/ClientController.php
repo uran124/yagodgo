@@ -1338,10 +1338,12 @@ public function cancelReservedOrder(int $orderId): void
 
         $pStmt = $this->pdo->prepare(
             "SELECT p.id, p.alias, t.name AS product, t.alias AS type_alias, p.variety, p.description, p.origin_country, p.box_size, p.box_unit, p.price, p.sale_price, p.is_active, p.image_path, p.delivery_date,
-                    COALESCE(u.company_name,u.name,'berryGo') AS seller_name
+                    COALESCE(u.company_name,u.name,'berryGo') AS seller_name,
+                    pb_latest.purchased_at AS latest_purchase_date
              FROM products p
              JOIN product_types t ON t.id = p.product_type_id
              LEFT JOIN users u ON u.id = p.seller_id
+             LEFT JOIN purchase_batches pb_latest ON pb_latest.id = p.current_purchase_batch_id
              WHERE p.product_type_id = ? AND p.is_active = 1"
         );
         $pStmt->execute([$type['id']]);
