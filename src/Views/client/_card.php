@@ -201,9 +201,10 @@ $preorderPurchaseDate = !empty($p['latest_purchase_date']) ? date('d.m.Y', strto
             </div>
 
             <button type="submit"
-                    class="ml-2 bg-gradient-to-r from-red-500 to-pink-500 accent-gradient text-white px-2 py-2 rounded-lg transition-all flex items-center text-sm">
-              <span class="material-icons-round text-base mr-1">shopping_cart</span>
-              Купить сейчас
+                    aria-label="Добавить в корзину"
+                    title="Добавить в корзину"
+                    class="ml-2 bg-gradient-to-r from-red-500 to-pink-500 accent-gradient text-white w-10 h-10 rounded-full transition-all flex items-center justify-center shrink-0">
+              <span class="material-icons-round text-lg">add_shopping_cart</span>
             </button>
           </form>
           <button type="button"
