@@ -29,6 +29,7 @@ class PurchaseBatchService
         $extraCostPerBox = (float)($data['extra_cost_per_box'] ?? 0);
         $buyerUserId = isset($data['buyer_user_id']) ? (int)$data['buyer_user_id'] : null;
         $comment = isset($data['comment']) ? (string)$data['comment'] : null;
+        $purchasedAt = trim((string)($data['purchased_at'] ?? ''));
 
         if ($productId <= 0) {
             throw new RuntimeException('Invalid product_id for purchase batch.');
@@ -77,6 +78,7 @@ class PurchaseBatchService
                     instant_unit_price,
                     discount_unit_price,
                     status,
+                    purchased_at,
                     comment
                 ) VALUES (
                     :product_id,
@@ -100,6 +102,7 @@ class PurchaseBatchService
                     :instant_unit_price,
                     :discount_unit_price,
                     :status,
+                    :purchased_at,
                     :comment
                 )'
             );
@@ -127,6 +130,7 @@ class PurchaseBatchService
                 'instant_unit_price' => $prices['instant_unit_price'],
                 'discount_unit_price' => $prices['discount_unit_price'],
                 'status' => (string)($data['status'] ?? 'purchased'),
+                'purchased_at' => $purchasedAt !== '' ? $purchasedAt : date('Y-m-d'),
                 'comment' => $comment,
             ]);
 
