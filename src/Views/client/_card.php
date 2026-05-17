@@ -121,50 +121,53 @@ $preorderPurchaseDate = !empty($p['latest_purchase_date']) ? date('d.m.Y', strto
     </div>
 
     <!-- Описание (если есть) -->
-
-<?php if (!empty($p['description'])): ?>
-  <p class="hidden sm:block text-xs sm:text-sm text-gray-600 mb-1">
-    <?= htmlspecialchars($p['description']) ?>
-  </p>
-<?php endif; ?>
+    <?php if (!empty($p['description'])): ?>
+      <p class="hidden sm:block text-xs sm:text-sm text-gray-600 mb-1">
+        <?= htmlspecialchars($p['description']) ?>
+      </p>
+    <?php endif; ?>
 
     <div class="text-[10px] sm:text-xs text-gray-500 mb-2">Продавец: <?= htmlspecialchars($p['seller_name'] ?? 'berryGo') ?></div>
 
+    <!-- ───────────── БЛОК ЦЕНЫ И КНОПОК ───────────── -->
+    <div class="mt-auto pt-3 border-t border-gray-100">
 
-
-    <!-- Блок цены -->
-    <div class="mt-auto">
+      <!-- Цена -->
       <?php if ($hidePriceForPreorder): ?>
-        <div class="flex justify-between items-center mb-3">
-          <div class="text-lg sm:text-2xl font-bold text-gray-600">
-            Ожидается
-          </div>
-        </div>
+        <p class="text-base font-semibold text-gray-400 mb-3">Цена уточняется</p>
+
       <?php elseif ($sale > 0): ?>
         <!-- Акционная цена -->
-        <div class="flex items-baseline space-x-2 mb-3">
-          <div class="text-xs sm:text-sm text-gray-400 line-through">
-            <?= number_format($regularBox, 0, '.', ' ') ?> ₽
-          </div>
-          <div class="text-base sm:text-xl font-bold text-red-600 box-price <?= $isStaff ? 'cursor-pointer' : '' ?>" <?= $isStaff ? 'data-edit-price="' . $p['id'] . '"' : '' ?>>
+        <div class="flex items-end gap-2 mb-1">
+          <span class="text-xl sm:text-2xl font-bold text-gray-900 box-price leading-none <?= $isStaff ? 'cursor-pointer' : '' ?>"
+                <?= $isStaff ? 'data-edit-price="' . $p['id'] . '"' : '' ?>>
             <?= number_format($priceBox, 0, '.', ' ') ?> ₽
-          </div>
+          </span>
+          <span class="text-sm text-gray-400 line-through leading-none pb-0.5">
+            <?= number_format($regularBox, 0, '.', ' ') ?> ₽
+          </span>
         </div>
-        <div class="text-xs sm:text-sm text-gray-400 mb-3 kg-price <?= $isStaff ? 'cursor-pointer' : '' ?>" <?= $isStaff ? 'data-edit-price="' . $p['id'] . '"' : '' ?>>
+        <p class="text-xs text-gray-400 mb-3 kg-price <?= $isStaff ? 'cursor-pointer' : '' ?>"
+           <?= $isStaff ? 'data-edit-price="' . $p['id'] . '"' : '' ?>>
           <?= htmlspecialchars($pricePerKg) ?> ₽/кг
-        </div>
+        </p>
+
       <?php else: ?>
         <!-- Обычная цена -->
-        <div class="flex justify-between items-center mb-3">
-          <div class="text-lg sm:text-2xl font-bold text-gray-800 box-price <?= $isStaff ? 'cursor-pointer' : '' ?>" <?= $isStaff ? 'data-edit-price="' . $p['id'] . '"' : '' ?>>
+        <div class="flex items-end justify-between mb-1">
+          <span class="text-xl sm:text-2xl font-bold text-gray-900 box-price leading-none <?= $isStaff ? 'cursor-pointer' : '' ?>"
+                <?= $isStaff ? 'data-edit-price="' . $p['id'] . '"' : '' ?>>
             <?= number_format($regularBox, 0, '.', ' ') ?> ₽
-          </div>
-          <div class="text-xs sm:text-sm text-gray-400 kg-price <?= $isStaff ? 'cursor-pointer' : '' ?>" <?= $isStaff ? 'data-edit-price="' . $p['id'] . '"' : '' ?>>
+          </span>
+          <span class="text-xs text-gray-400 kg-price leading-none pb-0.5 <?= $isStaff ? 'cursor-pointer' : '' ?>"
+                <?= $isStaff ? 'data-edit-price="' . $p['id'] . '"' : '' ?>>
             <?= htmlspecialchars($regularKg) ?> ₽/кг
-          </div>
+          </span>
         </div>
+        <div class="mb-3"></div>
       <?php endif; ?>
 
+      <!-- Форма редактирования цены (только стафф) -->
       <?php if ($isStaff): ?>
         <div class="mt-2 hidden" data-price-form="<?= $p['id'] ?>">
           <form action="<?= $basePath ?>/products/update-price" method="post" class="flex items-center space-x-2">
@@ -175,64 +178,82 @@ $preorderPurchaseDate = !empty($p['latest_purchase_date']) ? date('d.m.Y', strto
         </div>
       <?php endif; ?>
 
-      <!-- Кнопка «В корзину» или «Войдите» -->
+      <!-- Кнопки действий -->
       <?php if (in_array((string)($_SESSION['role'] ?? ''), ['client','partner','seller','admin']) && $active): ?>
-        <div class="space-y-2">
-          <form action="/cart/add" method="post" class="flex items-center space-x-2 add-to-cart-form" data-id="<?= $p['id'] ?>" data-name="<?= htmlspecialchars($p['product'] . ($p['variety'] ? ' ' . $p['variety'] : '')) ?>" data-price="<?= $priceBox ?>">
-            <input type="hidden" name="product_id" value="<?= $p['id'] ?>">
-            <input type="hidden" name="stock_mode" value="instant">
-            <div class="flex items-center space-x-2">
+
+        <form action="/cart/add" method="post"
+              class="add-to-cart-form"
+              data-id="<?= $p['id'] ?>"
+              data-name="<?= htmlspecialchars($p['product'] . ($p['variety'] ? ' ' . $p['variety'] : '')) ?>"
+              data-price="<?= $priceBox ?>">
+
+          <input type="hidden" name="product_id" value="<?= $p['id'] ?>">
+          <input type="hidden" name="stock_mode" value="instant">
+
+          <!-- Строка: qty-stepper + кнопка корзины -->
+          <div class="flex items-center gap-2 mb-2">
+            <!-- Qty stepper -->
+            <div class="flex items-center rounded-xl border border-gray-200 bg-gray-50 overflow-hidden h-10 shrink-0">
               <button type="button"
-                      class="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full"
+                      class="w-9 h-10 flex items-center justify-center text-gray-500 hover:bg-gray-100 active:bg-gray-200 transition-colors"
                       onclick="let inp=this.nextElementSibling; if(+inp.value>1) inp.value=+inp.value-1;">
-                <span class="material-icons-round text-gray-600 text-base">remove</span>
+                <span class="material-icons-round text-base leading-none">remove</span>
               </button>
               <input type="number"
                      name="quantity"
                      value="1"
                      min="1"
                      step="1"
-                     class="w-12 text-center border border-gray-200 rounded-md preorder-qty" />
+                     class="w-10 h-10 text-center text-sm font-medium bg-transparent border-x border-gray-200 focus:outline-none preorder-qty" />
               <button type="button"
-                      class="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full"
+                      class="w-9 h-10 flex items-center justify-center text-gray-500 hover:bg-gray-100 active:bg-gray-200 transition-colors"
                       onclick="let inp=this.previousElementSibling; inp.value=+inp.value+1;">
-                <span class="material-icons-round text-gray-600 text-base">add</span>
+                <span class="material-icons-round text-base leading-none">add</span>
               </button>
             </div>
 
+            <!-- Кнопка «В корзину» — растягивается на всю оставшуюся ширину -->
             <button type="submit"
-                    aria-label="Добавить в корзину"
-                    title="Добавить в корзину"
-                    class="ml-2 bg-gradient-to-r from-red-500 to-pink-500 accent-gradient text-white w-10 h-10 rounded-full transition-all flex items-center justify-center shrink-0">
-              <span class="material-icons-round text-lg">add_shopping_cart</span>
+                    class="flex-1 h-10 flex items-center justify-center gap-1.5 bg-gradient-to-r from-red-500 to-pink-500 accent-gradient text-white font-semibold text-sm rounded-xl transition-opacity hover:opacity-90 active:opacity-80 shrink-0">
+              <span class="material-icons-round text-base leading-none">add_shopping_cart</span>
+              <span class="hidden sm:inline">В корзину</span>
             </button>
-          </form>
-          <button type="button"
-                  class="w-full bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm font-semibold preorder-intent-btn"
-                  data-product-id="<?= (int)$p['id'] ?>">
-            Предзаказ -10%
-          </button>
-          <?php if ($preorderPurchaseDate !== ''): ?>
-            <div class="text-xs text-gray-500">Дата закупки: <?= htmlspecialchars($preorderPurchaseDate) ?></div>
-          <?php endif; ?>
-          <div class="text-xs text-gray-500 hidden preorder-intent-hint"></div>
-        </div>
+          </div>
+        </form>
+
+        <!-- Предзаказ — вторичное действие: outline-стиль, меньше веса -->
+        <button type="button"
+                class="w-full h-9 flex items-center justify-center gap-1.5 border border-emerald-500 text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100 font-medium text-xs sm:text-sm rounded-xl transition-colors preorder-intent-btn"
+                data-product-id="<?= (int)$p['id'] ?>">
+          <span class="material-icons-round text-base leading-none">schedule</span>
+          Предзаказ −10%
+        </button>
+
+        <?php if ($preorderPurchaseDate !== ''): ?>
+          <p class="mt-1.5 text-[11px] text-gray-400 text-center">Дата закупки: <?= htmlspecialchars($preorderPurchaseDate) ?></p>
+        <?php endif; ?>
+
+        <p class="mt-1.5 text-[11px] text-gray-400 hidden preorder-intent-hint"></p>
+
       <?php else: ?>
         <!-- Гость или неактивный товар -->
         <?php if (!empty($_SESSION['user_id']) && !$active): ?>
           <button disabled
-                  class="w-full bg-gray-100 text-gray-500 px-3 py-2 rounded-lg text-sm text-center cursor-not-allowed">
+                  class="w-full h-10 bg-gray-100 text-gray-400 text-sm rounded-xl cursor-not-allowed">
             Товар недоступен
           </button>
         <?php else: ?>
           <a href="/login"
-             class="w-full bg-gradient-to-r from-red-500 to-pink-500 accent-gradient text-white px-3 py-2 rounded-lg transition-all text-sm flex items-center justify-center space-x-1">
+             class="w-full h-10 flex items-center justify-center gap-1.5 bg-gradient-to-r from-red-500 to-pink-500 accent-gradient text-white font-semibold text-sm rounded-xl transition-opacity hover:opacity-90">
             <span class="material-icons-round text-base">login</span>
-            <span>Войдите, чтобы заказать</span>
+            Войдите, чтобы заказать
           </a>
         <?php endif; ?>
       <?php endif; ?>
+
     </div>
+    <!-- ───────────── / БЛОК ЦЕНЫ И КНОПОК ───────────── -->
+
   </div>
 </div>
 <script>
