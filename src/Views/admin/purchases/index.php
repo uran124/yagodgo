@@ -6,12 +6,8 @@
 <?php $summary = $summary ?? []; ?>
 <?php $statusLabels = [
   'planned' => 'Запланирована',
-  'purchased' => 'Закуплена',
-  'arrived' => 'Поступила',
-  'active' => 'В продаже',
-  'sold_out' => 'Распродана',
-  'closed' => 'Закрыта',
-  'cancelled' => 'Отменена',
+  'purchased' => 'Выкуплена',
+  'arrived' => 'Готова к выдаче',
 ]; ?>
 <?php if (is_array($flash) && !empty($flash['message'])): ?>
   <div class="<?= ($flash['type'] ?? '') === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-700' ?> border p-3 rounded mb-4">
@@ -30,7 +26,7 @@
     <label class="text-xs text-gray-600">Статус</label>
     <select name="status" class="w-full border rounded px-2 py-2 text-sm">
       <option value="">Все</option>
-      <?php foreach (['planned','purchased','arrived','active','sold_out','closed','cancelled'] as $st): ?>
+      <?php foreach (['planned','purchased','arrived'] as $st): ?>
         <option value="<?= $st ?>" <?= (($filters['status'] ?? '') === $st) ? 'selected' : '' ?>><?= htmlspecialchars((string)($statusLabels[$st] ?? $st)) ?></option>
       <?php endforeach; ?>
     </select>
