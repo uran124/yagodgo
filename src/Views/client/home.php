@@ -80,6 +80,7 @@
           <div class="embla__container space-x-4 pb-2 no-scrollbar eq-row">
             <?php foreach ($saleProducts as $p): ?>
               <div class="embla__slide flex-none w-[64vw] sm:w-1/2 md:w-1/3">
+                <?php $cardSection = 'sale'; ?>
                 <?php include __DIR__ . '/_card.php'; ?>
               </div>
             <?php endforeach; ?>
@@ -108,6 +109,7 @@
           <div class="embla__container space-x-4 pb-2 no-scrollbar eq-row">
             <?php foreach ($regularProducts as $p): ?>
               <div class="embla__slide flex-none w-[64vw] sm:w-1/2 md:w-1/3">
+                <?php $cardSection = 'in_stock'; ?>
                 <?php include __DIR__ . '/_card.php'; ?>
               </div>
             <?php endforeach; ?>
@@ -136,6 +138,7 @@
           <div class="embla__container space-x-4 pb-2 no-scrollbar eq-row">
             <?php foreach ($sellerProducts as $p): ?>
               <div class="embla__slide flex-none w-[64vw] sm:w-1/2 md:w-1/3">
+                <?php $cardSection = 'seller'; ?>
                 <?php include __DIR__ . '/_card.php'; ?>
               </div>
             <?php endforeach; ?>
@@ -159,6 +162,7 @@
           <div class="embla__container space-x-4 pb-2 no-scrollbar eq-row">
             <?php foreach ($preorderProducts as $p): ?>
               <div class="embla__slide flex-none w-[64vw] sm:w-1/2 md:w-1/3">
+                <?php $cardSection = 'preorder'; ?>
                 <?php include __DIR__ . '/_card.php'; ?>
               </div>
             <?php endforeach; ?>
@@ -187,6 +191,7 @@
           <div class="embla__container space-x-4 pb-2 no-scrollbar eq-row">
             <?php foreach ($discountProducts as $p): ?>
               <div class="embla__slide flex-none w-[64vw] sm:w-1/2 md:w-1/3">
+                <?php $cardSection = 'sale'; ?>
                 <?php include __DIR__ . '/_card.php'; ?>
               </div>
             <?php endforeach; ?>
