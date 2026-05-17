@@ -452,18 +452,24 @@
 <body class="bg-gradient-to-br from-orange-50 via-white to-pink-50 text-gray-800 min-h-screen">
 
   <!-- Header -->
+<div id="installPromptBar" class="fixed top-0 left-0 right-0 z-30 px-4 pt-3" style="display:none;">
+  <div class="glass-effect border border-white/30 rounded-2xl px-4 py-3 flex items-center justify-between shadow-lg">
+    <button id="installLogoBtn" class="group flex flex-row items-center text-left space-x-2 install-pulse">
+      <span id="installLogoBtnText" class="font-bold text-sm leading-tight bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent transition-opacity duration-500">
+        Установите<br>приложение
+      </span>
+      <span class="material-icons-round text-red-500">install_mobile</span>
+    </button>
+    <button id="installPromptClose" class="material-icons-round text-gray-500 hover:text-gray-700 p-1" aria-label="Скрыть блок установки приложения">close</button>
+  </div>
+</div>
+
 <header class="fixed top-0 left-0 right-0 glass-effect flex items-center justify-between p-4 z-20 border-b border-white/20">
   <a href="/" id="logoLink" class="flex items-center">
     <div class="w-10 h-10 flex items-center justify-center floating-animation">
       <img src="assets/berrygo_strawberry.svg" alt="BerryGo" class="w-10 h-10">
     </div>
   </a>
-  <button id="installLogoBtn" class="group flex flex-row items-center text-center space-x-1 install-pulse" style="display:none;">
-    <span id="installLogoBtnText" class="font-bold text-sm leading-tight bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent transition-opacity duration-500">
-      Установите<br>приложение
-    </span>
-    <span class="material-icons-round text-red-500">install_mobile</span>
-  </button>
 
   <div class="flex items-center space-x-3">
     <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
@@ -867,15 +873,21 @@
     let deferredPrompt = null;
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 
+    const installPromptBar = document.getElementById('installPromptBar');
+    const siteHeader = document.querySelector('header');
     const installLogoBtn = document.getElementById('installLogoBtn');
-    const installLogoBtnText = document.getElementById('installLogoBtnText');
+    const installPromptClose = document.getElementById('installPromptClose');
 
     function showInstalled() {
-      if (installLogoBtn) installLogoBtn.style.display = 'none';
+      if (installPromptBar) installPromptBar.style.display = 'none';
+      if (siteHeader) siteHeader.style.top = '0';
     }
 
     function showInstall() {
-      if (installLogoBtn) installLogoBtn.style.display = 'flex';
+      if (installPromptBar && sessionStorage.getItem('installPromptClosed') !== '1') {
+        installPromptBar.style.display = 'block';
+        if (siteHeader) siteHeader.style.top = '84px';
+      }
     }
 
     window.addEventListener('beforeinstallprompt', (e) => {
@@ -898,6 +910,12 @@
       }
 
 
+
+
+      installPromptClose?.addEventListener('click', () => {
+        sessionStorage.setItem('installPromptClosed', '1');
+        showInstalled();
+      });
 
       installLogoBtn?.addEventListener('click', () => {
         if (deferredPrompt) {
