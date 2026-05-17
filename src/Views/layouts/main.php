@@ -693,83 +693,85 @@
   }
   ?>
   
-  <nav class="fixed bottom-0 left-0 w-full glass-effect border-t border-white/20 shadow-2xl z-20">
-    <ul class="flex justify-between px-2 py-2">      
+    <nav class="fixed bottom-0 left-0 w-full glass-effect border-t border-white/20 shadow-2xl z-20">
+    <ul class="flex justify-between px-1 py-2">
+ 
       <!-- Каталог -->
-      <li class="flex-1 mx-1">
-        <a href="/catalog" class="nav-item flex flex-col items-center py-3 px-2 rounded-2xl transition-all <?= isActive('/catalog') ?>">
-          <span class="material-icons-round text-xl mb-1">grid_view</span>
-          <span class="text-xs font-medium">Каталог</span>
+      <li class="flex-1">
+        <a href="/catalog" class="nav-item flex flex-col items-center py-2 px-1 rounded-xl transition-all <?= isActive('/catalog') ?>">
+          <span class="material-icons-round text-[22px] mb-0.5">grid_view</span>
+          <span class="text-[10px] font-medium leading-tight">Каталог</span>
         </a>
       </li>
-      
+ 
       <!-- Корзина -->
       <?php
         $cartClass = ($cartTotal > 0 || $uri === '/cart')
                      ? 'text-red-500 bg-red-50' : 'text-gray-500';
       ?>
-      <li class="flex-1 mx-1">
-        <a href="/cart" class="nav-item flex flex-col items-center py-3 px-2 rounded-2xl transition-all <?= $cartClass ?> relative">
+      <li class="flex-1">
+        <a href="/cart" class="nav-item flex flex-col items-center py-2 px-1 rounded-xl transition-all <?= $cartClass ?> relative">
           <?php if ($cartTotal > 0): ?>
-            <div class="absolute -top-1 -right-5 px-1 h-5 berry-gradient rounded-sm flex items-center justify-center">
-              <span class="text-xs font text-white"><?= $cartTotal ?>₽</span>
+            <div class="absolute top-1 right-1 px-1 h-4 berry-gradient rounded-sm flex items-center justify-center">
+              <span class="text-[9px] font-bold text-white leading-none"><?= $cartTotal ?>₽</span>
             </div>
           <?php endif; ?>
-          <span class="material-icons-round text-xl mb-1">shopping_cart</span>
-          <span class="text-xs font-medium">Корзина</span>
+          <span class="material-icons-round text-[22px] mb-0.5">shopping_cart</span>
+          <span class="text-[10px] font-medium leading-tight">Корзина</span>
         </a>
       </li>
-      
-      <!-- Мои заказы -->
+ 
+      <!-- Заказы -->
       <?php if (in_array($role, ['client','partner','manager','admin','seller'])): ?>
-        <li class="flex-1 mx-1">
-          <a href="/orders" class="nav-item flex flex-col items-center py-3 px-2 rounded-2xl transition-all <?= isActive('/orders') ?>">
-            <span class="material-icons-round text-xl mb-1">receipt_long</span>
-            <span class="text-xs font-medium">Заказы</span>
+        <li class="flex-1">
+          <a href="/orders" class="nav-item flex flex-col items-center py-2 px-1 rounded-xl transition-all <?= isActive('/orders') ?>">
+            <span class="material-icons-round text-[22px] mb-0.5">receipt_long</span>
+            <span class="text-[10px] font-medium leading-tight">Заказы</span>
           </a>
         </li>
       <?php else: ?>
-        <li class="flex-1 ml-1">
-          <div class="nav-item flex flex-col items-center py-3 px-2 rounded-2xl text-gray-400">
-            <span class="material-icons-round text-xl mb-1">receipt_long</span>
-            <span class="text-xs font-medium">Заказы</span>
+        <li class="flex-1">
+          <div class="nav-item flex flex-col items-center py-2 px-1 rounded-xl text-gray-300">
+            <span class="material-icons-round text-[22px] mb-0.5">receipt_long</span>
+            <span class="text-[10px] font-medium leading-tight">Заказы</span>
           </div>
         </li>
       <?php endif; ?>
-
+ 
       <!-- Уведомления -->
       <?php if ($role === 'admin'): ?>
-        <li class="flex-1 mx-1">
-          <a href="/notifications" class="nav-item flex flex-col items-center py-3 px-2 rounded-2xl transition-all <?= isActive('/notifications') ?>">
-            <span class="material-icons-round text-xl mb-1">notifications</span>
-            <span class="text-xs font-medium">Уведомления</span>
+        <li class="flex-1">
+          <a href="/notifications" class="nav-item flex flex-col items-center py-2 px-1 rounded-xl transition-all <?= isActive('/notifications') ?>">
+            <span class="material-icons-round text-[22px] mb-0.5">notifications</span>
+            <span class="text-[10px] font-medium leading-tight text-center">Уведом.</span>
           </a>
         </li>
       <?php else: ?>
-        <li class="flex-1 mx-1">
-          <div class="nav-item flex flex-col items-center py-3 px-2 rounded-2xl text-gray-400">
-            <span class="material-icons-round text-xl mb-1">notifications</span>
-            <span class="text-xs font-medium">Уведомления</span>
+        <li class="flex-1">
+          <div class="nav-item flex flex-col items-center py-2 px-1 rounded-xl text-gray-300">
+            <span class="material-icons-round text-[22px] mb-0.5">notifications</span>
+            <span class="text-[10px] font-medium leading-tight text-center">Уведом.</span>
           </div>
         </li>
       <?php endif; ?>
-
-      <!-- Профиль -->
+ 
+      <!-- Профиль / Войти -->
       <?php if (in_array($role, ['client','partner','manager','admin','seller'])): ?>
         <li class="flex-1">
-          <a href="/profile" class="nav-item flex flex-col items-center py-3 px-2 rounded-2xl transition-all <?= isActive('/profile') ?>">
-            <span class="material-icons-round text-xl mb-1">person</span>
-            <span class="text-xs font-medium">Профиль</span>
+          <a href="/profile" class="nav-item flex flex-col items-center py-2 px-1 rounded-xl transition-all <?= isActive('/profile') ?>">
+            <span class="material-icons-round text-[22px] mb-0.5">person</span>
+            <span class="text-[10px] font-medium leading-tight">Профиль</span>
           </a>
         </li>
       <?php else: ?>
         <li class="flex-1">
-          <a href="/login" class="nav-item flex flex-col items-center py-3 px-2 rounded-2xl transition-all text-gray-500 hover:text-emerald-500 hover:bg-emerald-50">
-            <span class="material-icons-round text-xl mb-1">person</span>
-            <span class="text-xs font-medium">Войти</span>
+          <a href="/login" class="nav-item flex flex-col items-center py-2 px-1 rounded-xl transition-all text-gray-500 hover:text-emerald-500 hover:bg-emerald-50">
+            <span class="material-icons-round text-[22px] mb-0.5">person</span>
+            <span class="text-[10px] font-medium leading-tight">Войти</span>
           </a>
         </li>
       <?php endif; ?>
+ 
     </ul>
   </nav>
 
