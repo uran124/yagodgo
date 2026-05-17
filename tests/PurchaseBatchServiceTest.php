@@ -87,6 +87,7 @@ class PurchaseBatchServiceTest extends TestCase
         $this->assertSame(1300.0, (float)$batch['preorder_price_per_box']);
         $this->assertSame(1500.0, (float)$batch['instant_price_per_box']);
         $this->assertSame(1100.0, (float)$batch['discount_price_per_box']);
+        $this->assertSame('planned', (string)$batch['status']);
 
         $product = $this->pdo->query('SELECT * FROM products WHERE id = 1')->fetch(PDO::FETCH_ASSOC);
         $this->assertSame((float)$batchId, (float)$product['current_purchase_batch_id']);
@@ -105,6 +106,21 @@ class PurchaseBatchServiceTest extends TestCase
             'boxes_reserved' => 4,
             'boxes_free' => 3,
             'purchase_price_per_box' => 1000,
+        ]);
+    }
+
+    public function testCreateBatchRejectsLegacyStatus(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Unsupported purchase batch status.');
+
+        $this->service->createBatch([
+            'product_id' => 1,
+            'boxes_total' => 30,
+            'boxes_reserved' => 10,
+            'boxes_free' => 10,
+            'purchase_price_per_box' => 1000,
+            'status' => 'active',
         ]);
     }
 
@@ -139,4 +155,3 @@ class PurchaseBatchServiceTest extends TestCase
     }
 
 }
-
