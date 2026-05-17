@@ -68,7 +68,7 @@
 
   <?php if (!empty($saleProducts)): ?>
     <section class="px-4 mb-8 mt-6">
-      <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-4">💥 Наши спецпредложения</h2>
+      <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-4">💥 Акции</h2>
       <div class="embla drag-free has-arrows relative">
         <button data-dir="left" class="hidden md:flex items-center justify-center w-8 h-8 absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
           <span class="material-icons-round text-gray-600">chevron_left</span>
@@ -96,7 +96,7 @@
 
   <?php if (!empty($regularProducts)): ?>
     <section class="px-4 mb-8">
-      <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-4">🚚 Регулярные поставки</h2>
+      <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-4">🚚 В наличии</h2>
       <div class="embla drag-free has-arrows relative">
         <button data-dir="left" class="hidden md:flex items-center justify-center w-8 h-8 absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
           <span class="material-icons-round text-gray-600">chevron_left</span>
@@ -147,7 +147,7 @@
 
   <?php if (!empty($preorderProducts)): ?>
     <section class="px-4 mb-8">
-      <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-4">🛒 Товары под заказ</h2>
+      <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-4">🛒 Предварительный заказ -10%</h2>
       <div class="embla drag-free has-arrows relative">
         <button data-dir="left" class="hidden md:flex items-center justify-center w-8 h-8 absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
           <span class="material-icons-round text-gray-600">chevron_left</span>
