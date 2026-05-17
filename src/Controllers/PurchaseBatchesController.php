@@ -245,6 +245,18 @@ ORDER BY pb.id DESC';
         exit;
     }
 
+    public function markPurchased(): void
+    {
+        $this->ensureCsrfOrRedirect();
+        $batchId = (int)($_POST['batch_id'] ?? 0);
+        if ($batchId > 0) {
+            $this->purchaseBatchService->markPurchased($batchId);
+            $this->setFlash('success', 'Партия отмечена как выкупленная.');
+        }
+        header('Location: ' . $this->basePath() . '/purchases');
+        exit;
+    }
+
     public function moveToDiscount(): void
     {
         $this->ensureCsrfOrRedirect();

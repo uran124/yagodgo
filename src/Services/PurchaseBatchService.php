@@ -217,6 +217,11 @@ class PurchaseBatchService
         $this->updateBatchStatus($batchId, 'arrived');
     }
 
+    public function markPurchased(int $batchId): void
+    {
+        $this->updateBatchStatus($batchId, 'purchased');
+    }
+
     public function moveToDiscountStock(int $batchId, float $boxes): void
     {
         if ($boxes <= 0) {

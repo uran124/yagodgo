@@ -84,11 +84,19 @@
         <td class="p-3">
           <div class="flex flex-wrap gap-2">
             <a class="text-xs bg-green-100 px-2 py-1 rounded" href="<?= $basePath ?>/purchases/<?= (int)$batch['id'] ?>">Открыть</a>
-            <form method="post" action="<?= $basePath ?>/purchases/arrived">
-              <?= csrf_field() ?>
-              <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
-              <button class="text-xs bg-blue-100 px-2 py-1 rounded" type="submit">Готова к выдаче</button>
-            </form>
+            <?php if (($batch['status'] ?? '') === 'planned'): ?>
+              <form method="post" action="<?= $basePath ?>/purchases/purchased">
+                <?= csrf_field() ?>
+                <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
+                <button class="text-xs bg-indigo-100 px-2 py-1 rounded" type="submit">Выкуплена</button>
+              </form>
+            <?php elseif (($batch['status'] ?? '') === 'purchased'): ?>
+              <form method="post" action="<?= $basePath ?>/purchases/arrived">
+                <?= csrf_field() ?>
+                <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
+                <button class="text-xs bg-blue-100 px-2 py-1 rounded" type="submit">Готова к выдаче</button>
+              </form>
+            <?php endif; ?>
             <form method="post" action="<?= $basePath ?>/purchases/move-to-discount" class="flex items-center gap-1">
               <?= csrf_field() ?>
               <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
