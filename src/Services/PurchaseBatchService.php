@@ -7,6 +7,8 @@ use Throwable;
 
 class PurchaseBatchService
 {
+    private const ALLOWED_BATCH_STATUSES = ['planned', 'purchased', 'arrived'];
+
     private PDO $pdo;
     private PricingService $pricingService;
 
@@ -30,6 +32,7 @@ class PurchaseBatchService
         $buyerUserId = isset($data['buyer_user_id']) ? (int)$data['buyer_user_id'] : null;
         $comment = isset($data['comment']) ? (string)$data['comment'] : null;
         $purchasedAt = trim((string)($data['purchased_at'] ?? ''));
+        $status = (string)($data['status'] ?? 'planned');
 
         if ($productId <= 0) {
             throw new RuntimeException('Invalid product_id for purchase batch.');
@@ -42,6 +45,9 @@ class PurchaseBatchService
         }
         if (($boxesFree + $boxesReserved) > $boxesTotal) {
             throw new RuntimeException('Allocated boxes exceed boxes_total.');
+        }
+        if (!in_array($status, self::ALLOWED_BATCH_STATUSES, true)) {
+            throw new RuntimeException('Unsupported purchase batch status.');
         }
 
         $product = $this->loadProduct($productId);
@@ -129,7 +135,7 @@ class PurchaseBatchService
                 'preorder_unit_price' => $prices['preorder_unit_price'],
                 'instant_unit_price' => $prices['instant_unit_price'],
                 'discount_unit_price' => $prices['discount_unit_price'],
-                'status' => (string)($data['status'] ?? 'purchased'),
+                'status' => $status,
                 'purchased_at' => $purchasedAt !== '' ? $purchasedAt : date('Y-m-d'),
                 'comment' => $comment,
             ]);
