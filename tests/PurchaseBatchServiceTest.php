@@ -87,6 +87,7 @@ class PurchaseBatchServiceTest extends TestCase
         $this->assertSame(1300.0, (float)$batch['preorder_price_per_box']);
         $this->assertSame(1500.0, (float)$batch['instant_price_per_box']);
         $this->assertSame(1100.0, (float)$batch['discount_price_per_box']);
+        $this->assertSame('planned', (string)$batch['status']);
 
         $product = $this->pdo->query('SELECT * FROM products WHERE id = 1')->fetch(PDO::FETCH_ASSOC);
         $this->assertSame((float)$batchId, (float)$product['current_purchase_batch_id']);
@@ -105,6 +106,21 @@ class PurchaseBatchServiceTest extends TestCase
             'boxes_reserved' => 4,
             'boxes_free' => 3,
             'purchase_price_per_box' => 1000,
+        ]);
+    }
+
+    public function testCreateBatchRejectsLegacyStatus(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Unsupported purchase batch status.');
+
+        $this->service->createBatch([
+            'product_id' => 1,
+            'boxes_total' => 30,
+            'boxes_reserved' => 10,
+            'boxes_free' => 10,
+            'purchase_price_per_box' => 1000,
+            'status' => 'active',
         ]);
     }
 
@@ -138,5 +154,23 @@ class PurchaseBatchServiceTest extends TestCase
         $this->assertSame(20400.0, $pnl['inventory_value_remaining']);
     }
 
-}
+    public function testMarkArrivedRequiresPurchasedStatus(): void
+    {
+        $this->pdo->exec("INSERT INTO purchase_batches (
+            id, product_id, box_size_snapshot, box_unit_snapshot, boxes_total, boxes_reserved, boxes_free, boxes_remaining,
+            purchase_price_per_box, extra_cost_per_box, cost_price_per_box, preorder_margin_percent, instant_margin_percent,
+            discount_markup_fixed, preorder_price_per_box, instant_price_per_box, discount_price_per_box,
+            preorder_unit_price, instant_unit_price, discount_unit_price, status
+        ) VALUES (
+            200, 1, 2.0, 'кг', 10, 0, 10, 10,
+            1000, 0, 1000, 30, 50,
+            100, 1300, 1500, 1100,
+            650, 750, 550, 'planned'
+        )");
 
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Invalid purchase batch status transition.');
+        $this->service->markArrived(200);
+    }
+
+}
