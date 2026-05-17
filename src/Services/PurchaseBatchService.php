@@ -8,6 +8,11 @@ use Throwable;
 class PurchaseBatchService
 {
     private const ALLOWED_BATCH_STATUSES = ['planned', 'purchased', 'arrived'];
+    private const ALLOWED_STATUS_TRANSITIONS = [
+        'planned' => ['purchased'],
+        'purchased' => ['arrived'],
+        'arrived' => [],
+    ];
 
     private PDO $pdo;
     private PricingService $pricingService;
@@ -318,6 +323,24 @@ class PurchaseBatchService
 
     private function updateBatchStatus(int $batchId, string $status): void
     {
+        if (!in_array($status, self::ALLOWED_BATCH_STATUSES, true)) {
+            throw new RuntimeException('Unsupported purchase batch status.');
+        }
+
+        $batch = $this->loadBatch($batchId);
+        $currentStatus = (string)($batch['status'] ?? '');
+        if (!isset(self::ALLOWED_STATUS_TRANSITIONS[$currentStatus])) {
+            throw new RuntimeException('Current purchase batch status is unsupported.');
+        }
+
+        if ($currentStatus === $status) {
+            return;
+        }
+
+        if (!in_array($status, self::ALLOWED_STATUS_TRANSITIONS[$currentStatus], true)) {
+            throw new RuntimeException('Invalid purchase batch status transition.');
+        }
+
         $stmt = $this->pdo->prepare('UPDATE purchase_batches SET status = ? WHERE id = ?');
         $stmt->execute([$status, $batchId]);
     }

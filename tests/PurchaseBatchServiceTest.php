@@ -154,4 +154,23 @@ class PurchaseBatchServiceTest extends TestCase
         $this->assertSame(20400.0, $pnl['inventory_value_remaining']);
     }
 
+    public function testMarkArrivedRequiresPurchasedStatus(): void
+    {
+        $this->pdo->exec("INSERT INTO purchase_batches (
+            id, product_id, box_size_snapshot, box_unit_snapshot, boxes_total, boxes_reserved, boxes_free, boxes_remaining,
+            purchase_price_per_box, extra_cost_per_box, cost_price_per_box, preorder_margin_percent, instant_margin_percent,
+            discount_markup_fixed, preorder_price_per_box, instant_price_per_box, discount_price_per_box,
+            preorder_unit_price, instant_unit_price, discount_unit_price, status
+        ) VALUES (
+            200, 1, 2.0, 'кг', 10, 0, 10, 10,
+            1000, 0, 1000, 30, 50,
+            100, 1300, 1500, 1100,
+            650, 750, 550, 'planned'
+        )");
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Invalid purchase batch status transition.');
+        $this->service->markArrived(200);
+    }
+
 }
