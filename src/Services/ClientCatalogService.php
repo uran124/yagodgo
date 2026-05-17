@@ -19,13 +19,13 @@ class ClientCatalogService
     {
         return [
             'saleProducts' => $this->fetchProducts(
-                'p.is_active = 1 AND p.sale_price > 0',
+                'p.is_active = 1 AND p.current_purchase_batch_id IS NOT NULL AND p.discount_stock_boxes > 0',
                 'p.id DESC',
                 [],
                 10
             ),
             'regularProducts' => $this->fetchProducts(
-                'p.is_active = 1 AND p.delivery_date IS NOT NULL AND p.seller_id IS NULL',
+                "p.is_active = 1 AND p.current_purchase_batch_id IS NOT NULL AND p.seller_id IS NULL AND (p.stock_status = 'in_stock' OR p.free_stock_boxes > 0)",
                 'p.id DESC',
                 [],
                 10
@@ -37,7 +37,7 @@ class ClientCatalogService
                 10
             ),
             'preorderProducts' => $this->fetchProducts(
-                'p.is_active = 1 AND p.delivery_date IS NULL AND p.seller_id IS NULL',
+                "p.is_active = 1 AND p.current_purchase_batch_id IS NOT NULL AND p.seller_id IS NULL AND p.stock_status = 'preorder'",
                 'p.id DESC',
                 [],
                 10
