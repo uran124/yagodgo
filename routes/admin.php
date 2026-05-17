@@ -78,6 +78,10 @@ return [
         requireAdmin(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->markArrived(); return true;
     },
     static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('POST', '/admin/purchases/purchased', $method, $uri)) return false;
+        requireAdmin(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->markPurchased(); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
         if (!routeExact('POST', '/admin/purchases/move-to-discount', $method, $uri)) return false;
         requireAdmin(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->moveToDiscount(); return true;
     },

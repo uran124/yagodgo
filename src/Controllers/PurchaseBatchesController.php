@@ -214,7 +214,7 @@ ORDER BY pb.id DESC';
             'boxes_free' => (float)($_POST['boxes_free'] ?? 0),
             'purchase_price_per_box' => (float)($_POST['purchase_price_per_box'] ?? 0),
             'extra_cost_per_box' => (float)($_POST['extra_cost_per_box'] ?? 0),
-            'status' => (string)($_POST['status'] ?? 'purchased'),
+            'status' => (string)($_POST['status'] ?? 'planned'),
             'purchased_at' => (string)($_POST['purchased_at'] ?? ''),
             'comment' => trim((string)($_POST['comment'] ?? '')),
         ];
@@ -240,6 +240,18 @@ ORDER BY pb.id DESC';
         if ($batchId > 0) {
             $this->purchaseBatchService->markArrived($batchId);
             $this->setFlash('success', 'Партия отмечена как поступившая.');
+        }
+        header('Location: ' . $this->basePath() . '/purchases');
+        exit;
+    }
+
+    public function markPurchased(): void
+    {
+        $this->ensureCsrfOrRedirect();
+        $batchId = (int)($_POST['batch_id'] ?? 0);
+        if ($batchId > 0) {
+            $this->purchaseBatchService->markPurchased($batchId);
+            $this->setFlash('success', 'Партия отмечена как выкупленная.');
         }
         header('Location: ' . $this->basePath() . '/purchases');
         exit;
