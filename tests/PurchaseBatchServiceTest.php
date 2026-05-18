@@ -224,4 +224,45 @@ class PurchaseBatchServiceTest extends TestCase
         $this->assertSame(4.0, (float)$batch['boxes_free']);
     }
 
+    public function testMarkPurchasedRequiresPlannedStatus(): void
+    {
+        $this->pdo->exec("INSERT INTO purchase_batches (
+            id, product_id, box_size_snapshot, box_unit_snapshot, boxes_total, boxes_reserved, boxes_free, boxes_remaining,
+            purchase_price_per_box, extra_cost_per_box, cost_price_per_box, preorder_margin_percent, instant_margin_percent,
+            discount_markup_fixed, preorder_price_per_box, instant_price_per_box, discount_price_per_box,
+            preorder_unit_price, instant_unit_price, discount_unit_price, status
+        ) VALUES (
+            400, 1, 2.0, 'кг', 10, 0, 10, 10,
+            1000, 0, 1000, 30, 50,
+            100, 1300, 1500, 1100,
+            650, 750, 550, 'arrived'
+        )");
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Invalid purchase batch status transition.');
+        $this->service->markPurchased(400);
+    }
+
+    public function testMoveAllFreeToDiscountStockMovesEntireFreeBalance(): void
+    {
+        $this->pdo->exec("INSERT INTO purchase_batches (
+            id, product_id, box_size_snapshot, box_unit_snapshot, boxes_total, boxes_reserved, boxes_free, boxes_remaining,
+            purchase_price_per_box, extra_cost_per_box, cost_price_per_box, preorder_margin_percent, instant_margin_percent,
+            discount_markup_fixed, preorder_price_per_box, instant_price_per_box, discount_price_per_box,
+            preorder_unit_price, instant_unit_price, discount_unit_price, boxes_discount, status
+        ) VALUES (
+            401, 1, 2.0, 'кг', 10, 0, 3, 10,
+            1000, 0, 1000, 30, 50,
+            100, 1300, 1500, 1100,
+            650, 750, 550, 1, 'purchased'
+        )");
+
+        $moved = $this->service->moveAllFreeToDiscountStock(401);
+        $this->assertSame(3.0, $moved);
+
+        $batch = $this->pdo->query("SELECT boxes_free, boxes_discount FROM purchase_batches WHERE id = 401")->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame(0.0, (float)$batch['boxes_free']);
+        $this->assertSame(4.0, (float)$batch['boxes_discount']);
+    }
+
 }
