@@ -78,6 +78,10 @@ return [
         requireAdmin(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->markArrived(); return true;
     },
     static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('POST', '/admin/purchases/purchased', $method, $uri)) return false;
+        requireAdmin(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->markPurchased(); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
         if (!routeExact('POST', '/admin/purchases/move-to-discount', $method, $uri)) return false;
         requireAdmin(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->moveToDiscount(); return true;
     },
@@ -86,8 +90,8 @@ return [
         requireAdmin(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->writeOff(); return true;
     },
     static function (string $method, string $uri, array $c): bool {
-        if (!routeExact('POST', '/admin/purchases/close', $method, $uri)) return false;
-        requireAdmin(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->close(); return true;
+        if (!routeExact('POST', '/admin/purchases/cancel-reservations', $method, $uri)) return false;
+        requireAdmin(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->cancelReservations(); return true;
     },
     static function (string $method, string $uri, array $c): bool {
         if (!routeExact('POST', '/admin/purchases/photos/delete', $method, $uri)) return false;
