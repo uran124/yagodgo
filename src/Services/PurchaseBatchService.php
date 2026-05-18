@@ -228,12 +228,6 @@ class PurchaseBatchService
         $this->promoteIntentsToOfferSent($batchId);
     }
 
-    public function markPurchased(int $batchId): void
-    {
-        $this->updateBatchStatus($batchId, 'purchased');
-        $this->promoteIntentsToOfferSent($batchId);
-    }
-
     public function moveToDiscountStock(int $batchId, float $boxes): void
     {
         if ($boxes <= 0) {

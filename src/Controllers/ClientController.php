@@ -1431,6 +1431,7 @@ public function cancelReservedOrder(int $orderId): void
             'ok' => true,
             'intent_id' => $intentId,
             'status' => 'intent_created',
+            'status_label' => $this->preorderIntentStatusLabel('intent_created'),
             'message' => 'Предзаказ сохранён. Мы уведомим вас после поступления партии.',
         ], JSON_UNESCAPED_UNICODE);
     }
@@ -1478,6 +1479,7 @@ public function cancelReservedOrder(int $orderId): void
         echo json_encode([
             'ok' => true,
             'status' => 'confirmed',
+            'status_label' => $this->preorderIntentStatusLabel('confirmed'),
             'continue_url' => '/preorder/continue/' . $token,
         ], JSON_UNESCAPED_UNICODE);
     }
@@ -1509,7 +1511,11 @@ public function cancelReservedOrder(int $orderId): void
         $this->logPreorderEvent($intentId, 'offer_declined', 'offer_sent', 'declined');
 
         header('Content-Type: application/json; charset=utf-8');
-        echo json_encode(['ok' => true, 'status' => 'declined'], JSON_UNESCAPED_UNICODE);
+        echo json_encode([
+            'ok' => true,
+            'status' => 'declined',
+            'status_label' => $this->preorderIntentStatusLabel('declined'),
+        ], JSON_UNESCAPED_UNICODE);
     }
 
     public function continuePreorderCheckout(string $token): void
@@ -1556,7 +1562,21 @@ public function cancelReservedOrder(int $orderId): void
             echo 'Оффер не найден';
             return;
         }
+        $offer['status_label'] = $this->preorderIntentStatusLabel((string)($offer['status'] ?? ''));
         view('client/preorder_offer', ['offer' => $offer]);
+    }
+
+    private function preorderIntentStatusLabel(string $status): string
+    {
+        return match ($status) {
+            'intent_created' => 'Новый',
+            'offer_sent' => 'Ожидает подтверждения',
+            'confirmed' => 'Подтвержден',
+            'checkout_completed' => 'Готов к выдаче',
+            'declined' => 'Отменен',
+            'expired' => 'Просрочен',
+            default => $status,
+        };
     }
 
     private function logPreorderEvent(int $intentId, string $eventType, ?string $fromStatus, ?string $toStatus, ?array $meta = null): void
