@@ -270,6 +270,18 @@ ORDER BY pb.id DESC';
         exit;
     }
 
+    public function cancelReservations(): void
+    {
+        $this->ensureCsrfOrRedirect();
+        $batchId = (int)($_POST['batch_id'] ?? 0);
+        if ($batchId > 0) {
+            $count = $this->purchaseBatchService->cancelPendingReservations($batchId);
+            $this->setFlash('success', 'Отменено броней: ' . $count);
+        }
+        header('Location: ' . $this->basePath() . '/purchases');
+        exit;
+    }
+
     public function writeOff(): void
     {
         $this->ensureCsrfOrRedirect();

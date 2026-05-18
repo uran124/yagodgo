@@ -103,6 +103,11 @@
               <input name="boxes" type="number" step="0.01" min="0.01" placeholder="ящ." class="w-16 border rounded px-1 py-1 text-xs">
               <button class="text-xs bg-yellow-100 px-2 py-1 rounded" type="submit">Уценить</button>
             </form>
+            <form method="post" action="<?= $basePath ?>/purchases/cancel-reservations">
+              <?= csrf_field() ?>
+              <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
+              <button class="text-xs bg-orange-100 px-2 py-1 rounded" type="submit">Отменить бронь</button>
+            </form>
             <form method="post" action="<?= $basePath ?>/purchases/write-off" class="flex items-center gap-1">
               <?= csrf_field() ?>
               <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
