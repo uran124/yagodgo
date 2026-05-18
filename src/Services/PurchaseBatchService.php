@@ -510,7 +510,7 @@ class PurchaseBatchService
         if ($readyIds !== []) {
             $this->pdo->prepare(
                 "UPDATE preorder_intents
-                 SET status = 'checkout_completed',
+                 SET status = 'completed',
                      updated_at = NOW()
                  WHERE product_id = ?
                    AND status = 'confirmed'"
@@ -518,7 +518,7 @@ class PurchaseBatchService
 
             $eventStmt = $this->pdo->prepare(
                 "INSERT INTO preorder_intent_events (preorder_intent_id, event_type, from_status, to_status, meta_json, created_at)
-                 VALUES (?, 'ready_for_pickup', 'confirmed', 'checkout_completed', NULL, NOW())"
+                 VALUES (?, 'ready_for_pickup', 'confirmed', 'completed', NULL, NOW())"
             );
             foreach ($readyIds as $intentId) {
                 $eventStmt->execute([(int)$intentId]);

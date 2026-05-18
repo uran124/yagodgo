@@ -314,7 +314,7 @@ class PurchaseBatchServiceTest extends TestCase
 
         $this->service->markArrived($batchId);
         $afterArrived = $this->pdo->query("SELECT status FROM preorder_intents WHERE product_id = 1 ORDER BY id")->fetchAll(PDO::FETCH_COLUMN);
-        $this->assertSame(['offer_sent', 'offer_sent', 'checkout_completed'], $afterArrived);
+        $this->assertSame(['offer_sent', 'offer_sent', 'completed'], $afterArrived);
 
         $batchStatus = $this->pdo->query("SELECT status FROM purchase_batches WHERE id = " . (int)$batchId)->fetchColumn();
         $this->assertSame('arrived', $batchStatus);

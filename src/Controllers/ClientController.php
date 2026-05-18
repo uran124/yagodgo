@@ -816,12 +816,12 @@ public function cart(): void
     $_SESSION['delivery_date'] = [];
     $this->refreshCartTotal();
 
-    $preorderIntentId = (int)($_SESSION['preorder_checkout_intent_id'] ?? 0);
+        $preorderIntentId = (int)($_SESSION['preorder_checkout_intent_id'] ?? 0);
     if ($preorderIntentId > 0) {
         $this->pdo->prepare(
-            "UPDATE preorder_intents SET status = 'checkout_completed', updated_at = NOW() WHERE id = ? AND user_id = ? AND status = 'confirmed'"
+            "UPDATE preorder_intents SET status = 'completed', updated_at = NOW() WHERE id = ? AND user_id = ? AND status = 'confirmed'"
         )->execute([$preorderIntentId, $userId]);
-        $this->logPreorderEvent($preorderIntentId, 'checkout_completed', 'confirmed', 'checkout_completed');
+        $this->logPreorderEvent($preorderIntentId, 'checkout_completed', 'confirmed', 'completed');
     }
 
     if ($referralUsed && $referrerId !== null) {
@@ -1601,6 +1601,7 @@ public function cancelReservedOrder(int $orderId): void
             'intent_created' => 'Новый',
             'offer_sent' => 'Ожидает подтверждения',
             'confirmed' => 'Подтвержден',
+            'completed' => 'Выполнен',
             'checkout_completed' => 'Выполнен',
             'declined' => 'Отменен',
             'expired' => 'Просрочен',
