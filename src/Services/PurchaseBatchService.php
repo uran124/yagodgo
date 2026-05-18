@@ -455,13 +455,25 @@ class PurchaseBatchService
             return;
         }
 
+        $offerHours = max(1, (int)($this->pricingService->getSettings()['preorder_offer_expiration_hours'] ?? 48));
+
         $stmt = $this->pdo->prepare(
             "UPDATE preorder_intents
              SET status = 'offer_sent',
+                 offer_expires_at = DATE_ADD(NOW(), INTERVAL {$offerHours} HOUR),
                  updated_at = NOW()
              WHERE product_id = ?
                AND status = 'intent_created'"
         );
         $stmt->execute([$productId]);
+
+        $this->pdo->prepare(
+            "INSERT INTO preorder_intent_events (preorder_intent_id, event_type, from_status, to_status, meta_json, created_at)
+             SELECT id, 'batch_purchased_offer_sent', 'intent_created', 'offer_sent', NULL, NOW()
+             FROM preorder_intents
+             WHERE product_id = ?
+               AND status = 'offer_sent'
+               AND updated_at >= DATE_SUB(NOW(), INTERVAL 1 MINUTE)"
+        )->execute([$productId]);
     }
 }
