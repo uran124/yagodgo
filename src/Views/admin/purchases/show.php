@@ -5,12 +5,8 @@
 <?php $flash = $flash ?? null; ?>
 <?php $statusLabels = [
   'planned' => 'Запланирована',
-  'purchased' => 'Закуплена',
-  'arrived' => 'Поступила',
-  'active' => 'В продаже',
-  'sold_out' => 'Распродана',
-  'closed' => 'Закрыта',
-  'cancelled' => 'Отменена',
+  'purchased' => 'Выкуплена',
+  'arrived' => 'Готова к выдаче',
 ]; ?>
 
 <div class="mb-4">

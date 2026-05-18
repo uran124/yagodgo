@@ -25,6 +25,15 @@ class SettingsController
     // Сохранение
     public function save(): void
     {
+        $discount = isset($_POST['ui_preorder_discount_percent']) ? (float)$_POST['ui_preorder_discount_percent'] : 10.0;
+        $_POST['ui_preorder_discount_percent'] = (string)max(0.0, min(99.0, $discount));
+
+        $hint = trim((string)($_POST['ui_preorder_price_hint'] ?? ''));
+        if ($hint === '') {
+            $hint = 'Цена ориентировочная, точная цена будет после поступления';
+        }
+        $_POST['ui_preorder_price_hint'] = $hint;
+
         foreach ($_POST as $key => $value) {
             $stmt = $this->pdo->prepare(
               "REPLACE INTO settings (setting_key, setting_value) VALUES (?, ?)"

@@ -5,6 +5,14 @@ use PDO;
 
 class ClientCatalogService
 {
+    private const HOME_SALE_WHERE = "p.is_active = 1 AND p.current_purchase_batch_id IS NOT NULL
+                 AND pb.status = 'arrived' AND p.discount_stock_boxes > 0";
+    private const HOME_IN_STOCK_WHERE = "p.is_active = 1 AND p.current_purchase_batch_id IS NOT NULL
+                 AND p.seller_id IS NULL AND pb.status = 'purchased'
+                 AND p.free_stock_boxes > 0";
+    private const HOME_PREORDER_WHERE = "p.is_active = 1 AND p.current_purchase_batch_id IS NOT NULL
+                 AND p.seller_id IS NULL AND pb.status = 'planned'";
+
     private PDO $pdo;
 
     public function __construct(PDO $pdo)
@@ -19,13 +27,13 @@ class ClientCatalogService
     {
         return [
             'saleProducts' => $this->fetchProducts(
-                'p.is_active = 1 AND p.sale_price > 0',
+                self::HOME_SALE_WHERE,
                 'p.id DESC',
                 [],
                 10
             ),
             'regularProducts' => $this->fetchProducts(
-                'p.is_active = 1 AND p.delivery_date IS NOT NULL AND p.seller_id IS NULL',
+                self::HOME_IN_STOCK_WHERE,
                 'p.id DESC',
                 [],
                 10
@@ -37,7 +45,7 @@ class ClientCatalogService
                 10
             ),
             'preorderProducts' => $this->fetchProducts(
-                'p.is_active = 1 AND p.delivery_date IS NULL AND p.seller_id IS NULL',
+                self::HOME_PREORDER_WHERE,
                 'p.id DESC',
                 [],
                 10
@@ -61,16 +69,37 @@ class ClientCatalogService
 
         $products = $this->fetchProducts(
             'p.is_active = 1',
-            "CASE WHEN p.sale_price > 0 THEN 0 ELSE 1 END,\n" .
             "CASE\n" .
-            "  WHEN p.delivery_date IS NULL THEN 3\n" .
-            "  WHEN p.delivery_date > ? THEN 2\n" .
-            "  ELSE 1\n" .
+            "  WHEN p.seller_id IS NULL AND pb.status = 'arrived' AND p.discount_stock_boxes > 0 THEN 0\n" .
+            "  WHEN p.seller_id IS NULL AND pb.status = 'purchased' AND p.free_stock_boxes > 0 THEN 1\n" .
+            "  WHEN p.seller_id IS NOT NULL THEN 2\n" .
+            "  WHEN p.seller_id IS NULL AND pb.status = 'planned' THEN 3\n" .
+            "  ELSE 4\n" .
             "END,\n" .
-            "COALESCE(p.delivery_date, '9999-12-31'),\n" .
+            "COALESCE(p.delivery_date, '9999-12-31') ASC,\n" .
             "p.id DESC",
-            [$today]
+            []
         );
+
+        foreach ($products as &$product) {
+            $batchStatus = (string)($product['purchase_batch_status'] ?? '');
+            $isSeller = !empty($product['seller_id']);
+            $freeStock = (float)($product['free_stock_boxes'] ?? 0);
+            $discountStock = (float)($product['discount_stock_boxes'] ?? 0);
+
+            if (!$isSeller && $batchStatus === 'arrived' && $discountStock > 0) {
+                $product['catalog_section'] = 'sale';
+            } elseif (!$isSeller && $batchStatus === 'purchased' && $freeStock > 0) {
+                $product['catalog_section'] = 'in_stock';
+            } elseif ($isSeller) {
+                $product['catalog_section'] = 'seller';
+            } elseif (!$isSeller && $batchStatus === 'planned') {
+                $product['catalog_section'] = 'preorder';
+            } else {
+                $product['catalog_section'] = 'other';
+            }
+        }
+        unset($product);
 
         return [
             'products' => $products,
@@ -102,10 +131,15 @@ class ClientCatalogService
             "       p.is_active,\n" .
             "       p.image_path,\n" .
             "       p.delivery_date,\n" .
+            "       p.seller_id,\n" .
+            "       p.free_stock_boxes,\n" .
+            "       p.discount_stock_boxes,\n" .
+            "       pb.status AS purchase_batch_status,\n" .
             "       COALESCE(u.company_name, u.name, 'berryGo') AS seller_name\n" .
             "FROM products p\n" .
             "JOIN product_types t ON t.id = p.product_type_id\n" .
             "LEFT JOIN users u ON u.id = p.seller_id\n" .
+            "LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id\n" .
             "WHERE {$where}\n" .
             "ORDER BY {$orderBy}";
 
