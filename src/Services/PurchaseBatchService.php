@@ -17,12 +17,14 @@ class PurchaseBatchService
     private PDO $pdo;
     private PricingService $pricingService;
     private StockService $stockService;
+    private PreorderIntentService $preorderIntentService;
 
     public function __construct(PDO $pdo, ?PricingService $pricingService = null)
     {
         $this->pdo = $pdo;
         $this->pricingService = $pricingService ?? new PricingService($pdo);
         $this->stockService = new StockService($pdo);
+        $this->preorderIntentService = new PreorderIntentService($pdo);
     }
 
     /**
@@ -456,24 +458,27 @@ class PurchaseBatchService
         }
 
         $offerHours = max(1, (int)($this->pricingService->getSettings()['preorder_offer_expiration_hours'] ?? 48));
+        $availableBoxes = max(0.0, (float)($batch['boxes_free'] ?? 0));
+        $pricePerBox = max(0.0, (float)($batch['preorder_price_per_box'] ?? 0));
+        if ($availableBoxes <= 0 || $pricePerBox <= 0) {
+            return;
+        }
 
-        $stmt = $this->pdo->prepare(
-            "UPDATE preorder_intents
-             SET status = 'offer_sent',
-                 offer_expires_at = DATE_ADD(NOW(), INTERVAL {$offerHours} HOUR),
-                 updated_at = NOW()
-             WHERE product_id = ?
-               AND status = 'intent_created'"
+        $wave = $this->preorderIntentService->allocateOfferWave(
+            $productId,
+            $availableBoxes,
+            $pricePerBox,
+            $offerHours
         );
-        $stmt->execute([$productId]);
 
-        $this->pdo->prepare(
-            "INSERT INTO preorder_intent_events (preorder_intent_id, event_type, from_status, to_status, meta_json, created_at)
-             SELECT id, 'batch_purchased_offer_sent', 'intent_created', 'offer_sent', NULL, NOW()
-             FROM preorder_intents
-             WHERE product_id = ?
-               AND status = 'offer_sent'
-               AND updated_at >= DATE_SUB(NOW(), INTERVAL 1 MINUTE)"
-        )->execute([$productId]);
+        if (($wave['offered_count'] ?? 0) > 0) {
+            $this->pdo->prepare(
+                "INSERT INTO notifications (code, description)
+                 VALUES (?, ?)"
+            )->execute([
+                'preorder_offer_sent',
+                'По товару #' . $productId . ' отправлены офферы предзаказа: ' . (int)$wave['offered_count'],
+            ]);
+        }
     }
 }
