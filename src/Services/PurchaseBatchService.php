@@ -7,13 +7,24 @@ use Throwable;
 
 class PurchaseBatchService
 {
+    private const ALLOWED_BATCH_STATUSES = ['planned', 'purchased', 'arrived'];
+    private const ALLOWED_STATUS_TRANSITIONS = [
+        'planned' => ['purchased'],
+        'purchased' => ['arrived'],
+        'arrived' => [],
+    ];
+
     private PDO $pdo;
     private PricingService $pricingService;
+    private StockService $stockService;
+    private PreorderIntentService $preorderIntentService;
 
     public function __construct(PDO $pdo, ?PricingService $pricingService = null)
     {
         $this->pdo = $pdo;
         $this->pricingService = $pricingService ?? new PricingService($pdo);
+        $this->stockService = new StockService($pdo);
+        $this->preorderIntentService = new PreorderIntentService($pdo);
     }
 
     /**
@@ -30,6 +41,7 @@ class PurchaseBatchService
         $buyerUserId = isset($data['buyer_user_id']) ? (int)$data['buyer_user_id'] : null;
         $comment = isset($data['comment']) ? (string)$data['comment'] : null;
         $purchasedAt = trim((string)($data['purchased_at'] ?? ''));
+        $status = (string)($data['status'] ?? 'planned');
 
         if ($productId <= 0) {
             throw new RuntimeException('Invalid product_id for purchase batch.');
@@ -42,6 +54,9 @@ class PurchaseBatchService
         }
         if (($boxesFree + $boxesReserved) > $boxesTotal) {
             throw new RuntimeException('Allocated boxes exceed boxes_total.');
+        }
+        if (!in_array($status, self::ALLOWED_BATCH_STATUSES, true)) {
+            throw new RuntimeException('Unsupported purchase batch status.');
         }
 
         $product = $this->loadProduct($productId);
@@ -129,7 +144,7 @@ class PurchaseBatchService
                 'preorder_unit_price' => $prices['preorder_unit_price'],
                 'instant_unit_price' => $prices['instant_unit_price'],
                 'discount_unit_price' => $prices['discount_unit_price'],
-                'status' => (string)($data['status'] ?? 'purchased'),
+                'status' => $status,
                 'purchased_at' => $purchasedAt !== '' ? $purchasedAt : date('Y-m-d'),
                 'comment' => $comment,
             ]);
@@ -204,6 +219,13 @@ class PurchaseBatchService
     public function markArrived(int $batchId): void
     {
         $this->updateBatchStatus($batchId, 'arrived');
+        $this->processIntentsForArrivedBatch($batchId);
+    }
+
+    public function markPurchased(int $batchId): void
+    {
+        $this->updateBatchStatus($batchId, 'purchased');
+        $this->promoteIntentsToOfferSent($batchId);
     }
 
     public function moveToDiscountStock(int $batchId, float $boxes): void
@@ -224,6 +246,18 @@ class PurchaseBatchService
              WHERE id = :id'
         );
         $stmt->execute(['boxes' => $boxes, 'id' => $batchId]);
+    }
+
+    public function moveAllFreeToDiscountStock(int $batchId): float
+    {
+        $batch = $this->loadBatch($batchId);
+        $boxes = (float)($batch['boxes_free'] ?? 0);
+        if ($boxes <= 0) {
+            return 0.0;
+        }
+
+        $this->moveToDiscountStock($batchId, $boxes);
+        return $boxes;
     }
 
     public function writeOff(int $batchId, float $boxes, string $comment): void
@@ -250,6 +284,49 @@ class PurchaseBatchService
     public function closeBatch(int $batchId): void
     {
         $this->updateBatchStatus($batchId, 'closed');
+    }
+
+    public function cancelPendingReservations(int $batchId): int
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT oi.order_id, oi.product_id, oi.purchase_batch_id, oi.boxes, oi.stock_mode
+             FROM order_items oi
+             JOIN orders o ON o.id = oi.order_id
+             WHERE oi.purchase_batch_id = ?
+               AND oi.stock_mode = 'preorder'
+               AND o.status = 'reserved'"
+        );
+        $stmt->execute([$batchId]);
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        if ($items === []) {
+            return 0;
+        }
+
+        $affectedOrderIds = [];
+        foreach ($items as $item) {
+            $orderId = (int)$item['order_id'];
+            $productId = (int)$item['product_id'];
+            $itemBatchId = (int)$item['purchase_batch_id'];
+            $boxes = (float)$item['boxes'];
+            if ($boxes <= 0 || $itemBatchId <= 0 || $productId <= 0 || $orderId <= 0) {
+                continue;
+            }
+
+            $this->stockService->unreserve($productId, $itemBatchId, $boxes, $orderId, 'preorder');
+            $affectedOrderIds[$orderId] = true;
+        }
+
+        if ($affectedOrderIds === []) {
+            return 0;
+        }
+
+        $ids = array_keys($affectedOrderIds);
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $params = array_merge(['cancelled'], $ids);
+        $upd = $this->pdo->prepare("UPDATE orders SET status = ?, updated_at = NOW() WHERE id IN ({$placeholders}) AND status = 'reserved'");
+        $upd->execute($params);
+
+        return count($ids);
     }
 
     /**
@@ -312,6 +389,24 @@ class PurchaseBatchService
 
     private function updateBatchStatus(int $batchId, string $status): void
     {
+        if (!in_array($status, self::ALLOWED_BATCH_STATUSES, true)) {
+            throw new RuntimeException('Unsupported purchase batch status.');
+        }
+
+        $batch = $this->loadBatch($batchId);
+        $currentStatus = (string)($batch['status'] ?? '');
+        if (!isset(self::ALLOWED_STATUS_TRANSITIONS[$currentStatus])) {
+            throw new RuntimeException('Current purchase batch status is unsupported.');
+        }
+
+        if ($currentStatus === $status) {
+            return;
+        }
+
+        if (!in_array($status, self::ALLOWED_STATUS_TRANSITIONS[$currentStatus], true)) {
+            throw new RuntimeException('Invalid purchase batch status transition.');
+        }
+
         $stmt = $this->pdo->prepare('UPDATE purchase_batches SET status = ? WHERE id = ?');
         $stmt->execute([$status, $batchId]);
     }
@@ -353,5 +448,89 @@ class PurchaseBatchService
             'stock_status' => $stockStatus,
             'product_id' => $productId,
         ]);
+    }
+
+    private function promoteIntentsToOfferSent(int $batchId): void
+    {
+        $batch = $this->loadBatch($batchId);
+        $productId = (int)($batch['product_id'] ?? 0);
+        if ($productId <= 0) {
+            return;
+        }
+
+        $offerHours = max(1, (int)($this->pricingService->getSettings()['preorder_offer_expiration_hours'] ?? 48));
+        $availableBoxes = max(0.0, (float)($batch['boxes_free'] ?? 0));
+        $pricePerBox = max(0.0, (float)($batch['preorder_price_per_box'] ?? 0));
+        if ($availableBoxes <= 0 || $pricePerBox <= 0) {
+            return;
+        }
+
+        $wave = $this->preorderIntentService->allocateOfferWave(
+            $productId,
+            $availableBoxes,
+            $pricePerBox,
+            $offerHours
+        );
+
+        if (($wave['offered_count'] ?? 0) > 0) {
+            $this->pdo->prepare(
+                "INSERT INTO notifications (code, description)
+                 VALUES (?, ?)"
+            )->execute([
+                'preorder_offer_sent',
+                'По товару #' . $productId . ' отправлены офферы предзаказа: ' . (int)$wave['offered_count'],
+            ]);
+        }
+    }
+
+    private function processIntentsForArrivedBatch(int $batchId): void
+    {
+        $batch = $this->loadBatch($batchId);
+        $productId = (int)($batch['product_id'] ?? 0);
+        if ($productId <= 0) {
+            return;
+        }
+
+        $this->pdo->prepare(
+            "UPDATE preorder_intents
+             SET status = 'expired', updated_at = NOW()
+             WHERE product_id = ?
+               AND status = 'offer_sent'
+               AND offer_expires_at IS NOT NULL
+               AND offer_expires_at < NOW()"
+        )->execute([$productId]);
+
+        $readyIdsStmt = $this->pdo->prepare(
+            "SELECT id FROM preorder_intents
+             WHERE product_id = ?
+               AND status = 'confirmed'"
+        );
+        $readyIdsStmt->execute([$productId]);
+        $readyIds = $readyIdsStmt->fetchAll(PDO::FETCH_COLUMN);
+        if ($readyIds !== []) {
+            $this->pdo->prepare(
+                "UPDATE preorder_intents
+                 SET status = 'completed',
+                     updated_at = NOW()
+                 WHERE product_id = ?
+                   AND status = 'confirmed'"
+            )->execute([$productId]);
+
+            $eventStmt = $this->pdo->prepare(
+                "INSERT INTO preorder_intent_events (preorder_intent_id, event_type, from_status, to_status, meta_json, created_at)
+                 VALUES (?, 'ready_for_pickup', 'confirmed', 'completed', NULL, NOW())"
+            );
+            foreach ($readyIds as $intentId) {
+                $eventStmt->execute([(int)$intentId]);
+            }
+
+            $this->pdo->prepare(
+                "INSERT INTO notifications (code, description)
+                 VALUES (?, ?)"
+            )->execute([
+                'preorder_ready_for_pickup',
+                'По товару #' . $productId . ' предзаказов готово к выдаче: ' . count($readyIds),
+            ]);
+        }
     }
 }

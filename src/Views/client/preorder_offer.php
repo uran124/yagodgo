@@ -31,7 +31,7 @@
           document.getElementById('offerDeclineBtn')?.addEventListener('click', () => postOffer('decline'));
         </script>
       <?php else: ?>
-        <div class="p-3 rounded-xl bg-gray-100 text-gray-700 text-sm">Статус оффера: <?= htmlspecialchars((string)$offer['status']) ?></div>
+        <div class="p-3 rounded-xl bg-gray-100 text-gray-700 text-sm">Статус оффера: <?= htmlspecialchars((string)($offer['status_label'] ?? $offer['status'])) ?></div>
       <?php endif; ?>
 
       <a href="/catalog/<?= urlencode((string)$offer['type_alias']) ?>/<?= urlencode((string)$offer['product_alias']) ?>" class="inline-block text-red-600">Вернуться к товару</a>
