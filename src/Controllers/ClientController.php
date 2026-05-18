@@ -157,6 +157,17 @@ public function cart(): void
         }
 
         if ($productId && $quantity > 0) {
+            if ($stockMode !== 'preorder') {
+                $stockService = new StockService($this->pdo);
+                $available = $stockService->getAvailableBoxes($productId, $stockMode);
+                if ($quantity > $available) {
+                    $_SESSION['cart_error'] = 'Недостаточно товара в наличии.';
+                    $referer = $_SERVER['HTTP_REFERER'] ?? '/';
+                    header('Location: ' . $referer);
+                    exit;
+                }
+            }
+
             $priceStmt = $this->pdo->prepare(
                 "SELECT price, sale_price, box_size, preorder_unit_price, instant_unit_price, discount_unit_price, current_purchase_batch_id
                  FROM products WHERE id = ?"
@@ -1225,9 +1236,13 @@ public function cancelReservedOrder(int $orderId): void
         $stmt->execute([$userId]);
         $phone = $stmt->fetchColumn();
         $tgStart = $phone ? $phone : null;
+        $notificationRows = $this->pdo->query(
+            "SELECT id, code, description FROM notifications ORDER BY id DESC"
+        )->fetchAll(PDO::FETCH_ASSOC);
         view('client/notifications', [
             'userName' => $_SESSION['name'] ?? null,
             'tgStart'  => $tgStart,
+            'notifications' => $notificationRows,
         ]);
     }
 
@@ -1416,6 +1431,7 @@ public function cancelReservedOrder(int $orderId): void
             'ok' => true,
             'intent_id' => $intentId,
             'status' => 'intent_created',
+            'status_label' => $this->preorderIntentStatusLabel('intent_created'),
             'message' => 'Предзаказ сохранён. Мы уведомим вас после поступления партии.',
         ], JSON_UNESCAPED_UNICODE);
     }
@@ -1463,6 +1479,7 @@ public function cancelReservedOrder(int $orderId): void
         echo json_encode([
             'ok' => true,
             'status' => 'confirmed',
+            'status_label' => $this->preorderIntentStatusLabel('confirmed'),
             'continue_url' => '/preorder/continue/' . $token,
         ], JSON_UNESCAPED_UNICODE);
     }
@@ -1494,7 +1511,11 @@ public function cancelReservedOrder(int $orderId): void
         $this->logPreorderEvent($intentId, 'offer_declined', 'offer_sent', 'declined');
 
         header('Content-Type: application/json; charset=utf-8');
-        echo json_encode(['ok' => true, 'status' => 'declined'], JSON_UNESCAPED_UNICODE);
+        echo json_encode([
+            'ok' => true,
+            'status' => 'declined',
+            'status_label' => $this->preorderIntentStatusLabel('declined'),
+        ], JSON_UNESCAPED_UNICODE);
     }
 
     public function continuePreorderCheckout(string $token): void
@@ -1541,7 +1562,21 @@ public function cancelReservedOrder(int $orderId): void
             echo 'Оффер не найден';
             return;
         }
+        $offer['status_label'] = $this->preorderIntentStatusLabel((string)($offer['status'] ?? ''));
         view('client/preorder_offer', ['offer' => $offer]);
+    }
+
+    private function preorderIntentStatusLabel(string $status): string
+    {
+        return match ($status) {
+            'intent_created' => 'Новый',
+            'offer_sent' => 'Ожидает подтверждения',
+            'confirmed' => 'Подтвержден',
+            'checkout_completed' => 'Готов к выдаче',
+            'declined' => 'Отменен',
+            'expired' => 'Просрочен',
+            default => $status,
+        };
     }
 
     private function logPreorderEvent(int $intentId, string $eventType, ?string $fromStatus, ?string $toStatus, ?array $meta = null): void
