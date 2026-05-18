@@ -16,6 +16,21 @@ $themeColors = $themeColors ?? [];
            value="<?= htmlspecialchars($settings['contact_phone'] ?? '') ?>"
            class="w-full border px-2 py-1 rounded">
   </div>
+  <fieldset class="border border-gray-200 rounded-lg p-4 space-y-3">
+    <legend class="px-2 text-sm font-semibold text-gray-600">Предзаказ (витрина)</legend>
+    <div>
+      <label class="block mb-1">Скидка предзаказа, %</label>
+      <input name="ui_preorder_discount_percent" type="number" min="0" max="99" step="0.1"
+             value="<?= htmlspecialchars($settings['ui_preorder_discount_percent'] ?? '10') ?>"
+             class="w-full border px-2 py-1 rounded">
+    </div>
+    <div>
+      <label class="block mb-1">Подсказка о цене</label>
+      <input name="ui_preorder_price_hint" type="text"
+             value="<?= htmlspecialchars($settings['ui_preorder_price_hint'] ?? 'Цена ориентировочная, точная цена будет после поступления') ?>"
+             class="w-full border px-2 py-1 rounded">
+    </div>
+  </fieldset>
   <?php if (!empty($themeColors)): ?>
     <fieldset class="border border-gray-200 rounded-lg p-4 space-y-3">
       <legend class="px-2 text-sm font-semibold text-gray-600">Цветовая тема</legend>
