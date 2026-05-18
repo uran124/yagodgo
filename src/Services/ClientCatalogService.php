@@ -5,6 +5,14 @@ use PDO;
 
 class ClientCatalogService
 {
+    private const HOME_SALE_WHERE = "p.is_active = 1 AND p.current_purchase_batch_id IS NOT NULL
+                 AND pb.status = 'arrived' AND p.discount_stock_boxes > 0";
+    private const HOME_IN_STOCK_WHERE = "p.is_active = 1 AND p.current_purchase_batch_id IS NOT NULL
+                 AND p.seller_id IS NULL AND pb.status = 'purchased'
+                 AND p.free_stock_boxes > 0";
+    private const HOME_PREORDER_WHERE = "p.is_active = 1 AND p.current_purchase_batch_id IS NOT NULL
+                 AND p.seller_id IS NULL AND pb.status = 'planned'";
+
     private PDO $pdo;
 
     public function __construct(PDO $pdo)
@@ -19,13 +27,13 @@ class ClientCatalogService
     {
         return [
             'saleProducts' => $this->fetchProducts(
-                'p.is_active = 1 AND p.sale_price > 0',
+                self::HOME_SALE_WHERE,
                 'p.id DESC',
                 [],
                 10
             ),
             'regularProducts' => $this->fetchProducts(
-                'p.is_active = 1 AND p.delivery_date IS NOT NULL AND p.seller_id IS NULL',
+                self::HOME_IN_STOCK_WHERE,
                 'p.id DESC',
                 [],
                 10
@@ -37,7 +45,7 @@ class ClientCatalogService
                 10
             ),
             'preorderProducts' => $this->fetchProducts(
-                'p.is_active = 1 AND p.delivery_date IS NULL AND p.seller_id IS NULL',
+                self::HOME_PREORDER_WHERE,
                 'p.id DESC',
                 [],
                 10
@@ -106,6 +114,7 @@ class ClientCatalogService
             "FROM products p\n" .
             "JOIN product_types t ON t.id = p.product_type_id\n" .
             "LEFT JOIN users u ON u.id = p.seller_id\n" .
+            "LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id\n" .
             "WHERE {$where}\n" .
             "ORDER BY {$orderBy}";
 
