@@ -239,7 +239,24 @@ ORDER BY pb.id DESC';
         $batchId = (int)($_POST['batch_id'] ?? 0);
         if ($batchId > 0) {
             $this->purchaseBatchService->markArrived($batchId);
-            $this->setFlash('success', 'Партия отмечена как поступившая.');
+            $movedBoxes = 0.0;
+            if (isset($_POST['move_leftovers_to_discount'])) {
+                $movedBoxes = $this->purchaseBatchService->moveAllFreeToDiscountStock($batchId);
+            }
+            $suffix = $movedBoxes > 0 ? ' Остаток в уценку: ' . number_format($movedBoxes, 2, '.', ' ') . ' ящ.' : '';
+            $this->setFlash('success', 'Партия отмечена как готовая к выдаче.' . $suffix);
+        }
+        header('Location: ' . $this->basePath() . '/purchases');
+        exit;
+    }
+
+    public function markPurchased(): void
+    {
+        $this->ensureCsrfOrRedirect();
+        $batchId = (int)($_POST['batch_id'] ?? 0);
+        if ($batchId > 0) {
+            $this->purchaseBatchService->markPurchased($batchId);
+            $this->setFlash('success', 'Партия отмечена как выкупленная.');
         }
         header('Location: ' . $this->basePath() . '/purchases');
         exit;

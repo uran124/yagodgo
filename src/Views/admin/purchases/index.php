@@ -94,6 +94,10 @@
               <form method="post" action="<?= $basePath ?>/purchases/arrived">
                 <?= csrf_field() ?>
                 <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
+                <label class="inline-flex items-center gap-1 text-[11px] text-gray-600 mr-1">
+                  <input type="checkbox" name="move_leftovers_to_discount" value="1">
+                  В уценку
+                </label>
                 <button class="text-xs bg-blue-100 px-2 py-1 rounded" type="submit">Готова к выдаче</button>
               </form>
             <?php endif; ?>
