@@ -1414,18 +1414,36 @@ public function cancelReservedOrder(int $orderId): void
         $existingStmt->execute([$userId, $productId]);
         $existingId = $existingStmt->fetchColumn();
 
+        $etaDateValue = null;
+        if ($sourceSection === 'in_stock' && $sourceDeliveryDate !== '') {
+            $ts = strtotime($sourceDeliveryDate);
+            if ($ts !== false) {
+                $etaDateValue = date('Y-m-d', strtotime('+2 day', $ts));
+            }
+        }
+
         if ($existingId) {
             $this->pdo->prepare(
                 "UPDATE preorder_intents SET requested_boxes = ?, status = 'intent_created', offered_price_per_box = NULL, offer_expires_at = NULL, checkout_token = NULL WHERE id = ?"
             )->execute([$requestedBoxes, (int)$existingId]);
             $intentId = (int)$existingId;
-            $this->logPreorderEvent($intentId, 'intent_updated', null, 'intent_created', ['requested_boxes' => $requestedBoxes]);
+            $this->logPreorderEvent($intentId, 'intent_updated', null, 'intent_created', [
+                'requested_boxes' => $requestedBoxes,
+                'source_section' => $sourceSection,
+                'source_delivery_date' => $sourceDeliveryDate,
+                'eta_delivery_date' => $etaDateValue,
+            ]);
         } else {
             $this->pdo->prepare(
                 "INSERT INTO preorder_intents (user_id, product_id, requested_boxes, status, created_at, updated_at) VALUES (?, ?, ?, 'intent_created', NOW(), NOW())"
             )->execute([$userId, $productId, $requestedBoxes]);
             $intentId = (int)$this->pdo->lastInsertId();
-            $this->logPreorderEvent($intentId, 'intent_created', null, 'intent_created', ['requested_boxes' => $requestedBoxes]);
+            $this->logPreorderEvent($intentId, 'intent_created', null, 'intent_created', [
+                'requested_boxes' => $requestedBoxes,
+                'source_section' => $sourceSection,
+                'source_delivery_date' => $sourceDeliveryDate,
+                'eta_delivery_date' => $etaDateValue,
+            ]);
         }
 
         $etaText = 'на ближайшую возможную дату';
@@ -1442,6 +1460,7 @@ public function cancelReservedOrder(int $orderId): void
             'intent_id' => $intentId,
             'status' => 'intent_created',
             'status_label' => $this->preorderIntentStatusLabel('intent_created'),
+            'eta_delivery_date' => $etaDateValue,
             'message' => 'Предзаказ сохранён: ' . $etaText . '. Мы уведомим вас после поступления партии.',
         ], JSON_UNESCAPED_UNICODE);
     }
