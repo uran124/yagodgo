@@ -59,6 +59,30 @@ class PurchaseBatchServiceTest extends TestCase
             status TEXT,
             comment TEXT
         )');
+        $this->pdo->exec('CREATE TABLE orders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            status TEXT,
+            updated_at TEXT
+        )');
+        $this->pdo->exec('CREATE TABLE order_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            order_id INTEGER,
+            product_id INTEGER,
+            purchase_batch_id INTEGER,
+            boxes REAL DEFAULT 0,
+            stock_mode TEXT DEFAULT "instant"
+        )');
+        $this->pdo->exec('CREATE TABLE stock_movements (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            purchase_batch_id INTEGER,
+            product_id INTEGER,
+            order_id INTEGER NULL,
+            user_id INTEGER NULL,
+            movement_type TEXT,
+            stock_mode TEXT,
+            boxes_delta REAL,
+            comment TEXT NULL
+        )');
 
         $this->pdo->exec("INSERT INTO products (id, box_size, box_unit, price) VALUES (1, 2.0, 'кг', 0)");
 
@@ -87,6 +111,7 @@ class PurchaseBatchServiceTest extends TestCase
         $this->assertSame(1300.0, (float)$batch['preorder_price_per_box']);
         $this->assertSame(1500.0, (float)$batch['instant_price_per_box']);
         $this->assertSame(1100.0, (float)$batch['discount_price_per_box']);
+        $this->assertSame('planned', (string)$batch['status']);
 
         $product = $this->pdo->query('SELECT * FROM products WHERE id = 1')->fetch(PDO::FETCH_ASSOC);
         $this->assertSame((float)$batchId, (float)$product['current_purchase_batch_id']);
@@ -105,6 +130,21 @@ class PurchaseBatchServiceTest extends TestCase
             'boxes_reserved' => 4,
             'boxes_free' => 3,
             'purchase_price_per_box' => 1000,
+        ]);
+    }
+
+    public function testCreateBatchRejectsLegacyStatus(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Unsupported purchase batch status.');
+
+        $this->service->createBatch([
+            'product_id' => 1,
+            'boxes_total' => 30,
+            'boxes_reserved' => 10,
+            'boxes_free' => 10,
+            'purchase_price_per_box' => 1000,
+            'status' => 'active',
         ]);
     }
 
@@ -138,5 +178,91 @@ class PurchaseBatchServiceTest extends TestCase
         $this->assertSame(20400.0, $pnl['inventory_value_remaining']);
     }
 
-}
+    public function testMarkArrivedRequiresPurchasedStatus(): void
+    {
+        $this->pdo->exec("INSERT INTO purchase_batches (
+            id, product_id, box_size_snapshot, box_unit_snapshot, boxes_total, boxes_reserved, boxes_free, boxes_remaining,
+            purchase_price_per_box, extra_cost_per_box, cost_price_per_box, preorder_margin_percent, instant_margin_percent,
+            discount_markup_fixed, preorder_price_per_box, instant_price_per_box, discount_price_per_box,
+            preorder_unit_price, instant_unit_price, discount_unit_price, status
+        ) VALUES (
+            200, 1, 2.0, 'кг', 10, 0, 10, 10,
+            1000, 0, 1000, 30, 50,
+            100, 1300, 1500, 1100,
+            650, 750, 550, 'planned'
+        )");
 
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Invalid purchase batch status transition.');
+        $this->service->markArrived(200);
+    }
+
+    public function testCancelPendingReservationsCancelsOrdersAndReturnsStock(): void
+    {
+        $this->pdo->exec("INSERT INTO purchase_batches (
+            id, product_id, box_size_snapshot, box_unit_snapshot, boxes_total, boxes_reserved, boxes_free, boxes_remaining,
+            purchase_price_per_box, extra_cost_per_box, cost_price_per_box, preorder_margin_percent, instant_margin_percent,
+            discount_markup_fixed, preorder_price_per_box, instant_price_per_box, discount_price_per_box,
+            preorder_unit_price, instant_unit_price, discount_unit_price, status
+        ) VALUES (
+            300, 1, 2.0, 'кг', 20, 5, 2, 20,
+            1000, 0, 1000, 30, 50,
+            100, 1300, 1500, 1100,
+            650, 750, 550, 'purchased'
+        )");
+        $this->pdo->exec("INSERT INTO orders (id, status) VALUES (10, 'reserved')");
+        $this->pdo->exec("INSERT INTO order_items (order_id, product_id, purchase_batch_id, boxes, stock_mode) VALUES (10, 1, 300, 2, 'preorder')");
+
+        $affected = $this->service->cancelPendingReservations(300);
+        $this->assertSame(1, $affected);
+
+        $orderStatus = $this->pdo->query("SELECT status FROM orders WHERE id = 10")->fetchColumn();
+        $this->assertSame('cancelled', $orderStatus);
+
+        $batch = $this->pdo->query("SELECT boxes_reserved, boxes_free FROM purchase_batches WHERE id = 300")->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame(3.0, (float)$batch['boxes_reserved']);
+        $this->assertSame(4.0, (float)$batch['boxes_free']);
+    }
+
+    public function testMarkPurchasedRequiresPlannedStatus(): void
+    {
+        $this->pdo->exec("INSERT INTO purchase_batches (
+            id, product_id, box_size_snapshot, box_unit_snapshot, boxes_total, boxes_reserved, boxes_free, boxes_remaining,
+            purchase_price_per_box, extra_cost_per_box, cost_price_per_box, preorder_margin_percent, instant_margin_percent,
+            discount_markup_fixed, preorder_price_per_box, instant_price_per_box, discount_price_per_box,
+            preorder_unit_price, instant_unit_price, discount_unit_price, status
+        ) VALUES (
+            400, 1, 2.0, 'кг', 10, 0, 10, 10,
+            1000, 0, 1000, 30, 50,
+            100, 1300, 1500, 1100,
+            650, 750, 550, 'arrived'
+        )");
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Invalid purchase batch status transition.');
+        $this->service->markPurchased(400);
+    }
+
+    public function testMoveAllFreeToDiscountStockMovesEntireFreeBalance(): void
+    {
+        $this->pdo->exec("INSERT INTO purchase_batches (
+            id, product_id, box_size_snapshot, box_unit_snapshot, boxes_total, boxes_reserved, boxes_free, boxes_remaining,
+            purchase_price_per_box, extra_cost_per_box, cost_price_per_box, preorder_margin_percent, instant_margin_percent,
+            discount_markup_fixed, preorder_price_per_box, instant_price_per_box, discount_price_per_box,
+            preorder_unit_price, instant_unit_price, discount_unit_price, boxes_discount, status
+        ) VALUES (
+            401, 1, 2.0, 'кг', 10, 0, 3, 10,
+            1000, 0, 1000, 30, 50,
+            100, 1300, 1500, 1100,
+            650, 750, 550, 1, 'purchased'
+        )");
+
+        $moved = $this->service->moveAllFreeToDiscountStock(401);
+        $this->assertSame(3.0, $moved);
+
+        $batch = $this->pdo->query("SELECT boxes_free, boxes_discount FROM purchase_batches WHERE id = 401")->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame(0.0, (float)$batch['boxes_free']);
+        $this->assertSame(4.0, (float)$batch['boxes_discount']);
+    }
+
+}

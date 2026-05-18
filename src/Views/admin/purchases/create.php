@@ -2,9 +2,9 @@
 <?php $basePath = $basePath ?? '/admin'; ?>
 <?php $flash = $flash ?? null; ?>
 <?php $statusLabels = [
-  'purchased' => 'Закуплена',
-  'arrived' => 'Поступила',
-  'active' => 'В продаже',
+  'planned' => 'Запланирована',
+  'purchased' => 'Выкуплена',
+  'arrived' => 'Готова к выдаче',
 ]; ?>
 <form action="<?= $basePath ?>/purchases/store" method="post" enctype="multipart/form-data" class="bg-white p-6 rounded shadow max-w-2xl mx-auto space-y-4">
   <?= csrf_field() ?>
@@ -27,8 +27,8 @@
 
   <div class="grid grid-cols-2 gap-4">
     <div>
-      <label class="block mb-1">Дата закупки</label>
-      <input name="purchased_at" type="date" class="w-full border px-2 py-1 rounded" value="<?= date('Y-m-d') ?>" required>
+      <label class="block mb-1">Плановая дата поставки</label>
+      <input name="planned_supply_date" type="date" class="w-full border px-2 py-1 rounded" value="<?= date('Y-m-d') ?>">
     </div>
     <div>
       <label class="block mb-1">Количество ящиков</label>
@@ -53,9 +53,9 @@
     <div>
       <label class="block mb-1">Статус</label>
       <select name="status" class="w-full border px-2 py-1 rounded">
+        <option value="planned"><?= $statusLabels['planned'] ?></option>
         <option value="purchased"><?= $statusLabels['purchased'] ?></option>
         <option value="arrived"><?= $statusLabels['arrived'] ?></option>
-        <option value="active"><?= $statusLabels['active'] ?></option>
       </select>
     </div>
   </div>

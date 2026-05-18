@@ -2,6 +2,7 @@
 namespace App\Controllers;
 
 use App\Services\PurchaseBatchService;
+use App\Services\PreorderIntentService;
 use PDO;
 use RuntimeException;
 
@@ -9,11 +10,13 @@ class PurchaseBatchesController
 {
     private PDO $pdo;
     private PurchaseBatchService $purchaseBatchService;
+    private PreorderIntentService $preorderIntentService;
 
     public function __construct(PDO $pdo)
     {
         $this->pdo = $pdo;
         $this->purchaseBatchService = new PurchaseBatchService($pdo);
+        $this->preorderIntentService = new PreorderIntentService($pdo);
     }
 
     public function index(): void
@@ -214,8 +217,8 @@ ORDER BY pb.id DESC';
             'boxes_free' => (float)($_POST['boxes_free'] ?? 0),
             'purchase_price_per_box' => (float)($_POST['purchase_price_per_box'] ?? 0),
             'extra_cost_per_box' => (float)($_POST['extra_cost_per_box'] ?? 0),
-            'status' => (string)($_POST['status'] ?? 'purchased'),
-            'purchased_at' => (string)($_POST['purchased_at'] ?? ''),
+            'status' => (string)($_POST['status'] ?? 'planned'),
+            'purchased_at' => (string)($_POST['planned_supply_date'] ?? ''),
             'comment' => trim((string)($_POST['comment'] ?? '')),
         ];
 
@@ -238,8 +241,33 @@ ORDER BY pb.id DESC';
         $this->ensureCsrfOrRedirect();
         $batchId = (int)($_POST['batch_id'] ?? 0);
         if ($batchId > 0) {
-            $this->purchaseBatchService->markArrived($batchId);
-            $this->setFlash('success', 'Партия отмечена как поступившая.');
+            try {
+                $this->purchaseBatchService->markArrived($batchId);
+                $movedBoxes = 0.0;
+                if (isset($_POST['move_leftovers_to_discount'])) {
+                    $movedBoxes = $this->purchaseBatchService->moveAllFreeToDiscountStock($batchId);
+                }
+                $suffix = $movedBoxes > 0 ? ' Остаток в уценку: ' . number_format($movedBoxes, 2, '.', ' ') . ' ящ.' : '';
+                $this->setFlash('success', 'Партия отмечена как готовая к выдаче.' . $suffix);
+            } catch (RuntimeException $e) {
+                $this->setFlash('error', $e->getMessage());
+            }
+        }
+        header('Location: ' . $this->basePath() . '/purchases');
+        exit;
+    }
+
+    public function markPurchased(): void
+    {
+        $this->ensureCsrfOrRedirect();
+        $batchId = (int)($_POST['batch_id'] ?? 0);
+        if ($batchId > 0) {
+            try {
+                $this->purchaseBatchService->markPurchased($batchId);
+                $this->setFlash('success', 'Партия отмечена как выкупленная.');
+            } catch (RuntimeException $e) {
+                $this->setFlash('error', $e->getMessage());
+            }
         }
         header('Location: ' . $this->basePath() . '/purchases');
         exit;
@@ -248,9 +276,20 @@ ORDER BY pb.id DESC';
     public function moveToDiscount(): void
     {
         $this->ensureCsrfOrRedirect();
+        if (($_SESSION['role'] ?? '') !== 'admin') {
+            $this->setFlash('error', 'Операция доступна только администратору.');
+            header('Location: ' . $this->basePath() . '/purchases');
+            exit;
+        }
         $batchId = (int)($_POST['batch_id'] ?? 0);
         $boxes = (float)($_POST['boxes'] ?? 0);
+        $reason = trim((string)($_POST['reason'] ?? ''));
         if ($batchId > 0 && $boxes > 0) {
+            if ($reason === '') {
+                $this->setFlash('error', 'Укажите причину перевода в уценку.');
+                header('Location: ' . $this->basePath() . '/purchases');
+                exit;
+            }
             $this->purchaseBatchService->moveToDiscountStock($batchId, $boxes);
             $this->setFlash('success', 'Часть партии переведена в выгодный остаток.');
         }
@@ -258,27 +297,47 @@ ORDER BY pb.id DESC';
         exit;
     }
 
+    public function cancelReservations(): void
+    {
+        $this->ensureCsrfOrRedirect();
+        $batchId = (int)($_POST['batch_id'] ?? 0);
+        if ($batchId > 0) {
+            try {
+                $count = $this->purchaseBatchService->cancelPendingReservations($batchId);
+                $this->setFlash('success', 'Отменено броней: ' . $count);
+            } catch (RuntimeException $e) {
+                $this->setFlash('error', $e->getMessage());
+            }
+        }
+        header('Location: ' . $this->basePath() . '/purchases');
+        exit;
+    }
+
+    public function maintenancePreorders(): void
+    {
+        $this->ensureCsrfOrRedirect();
+        $ttlHours = max(1, (int)(get_setting('preorder_unconfirmed_cancel_hours', '48') ?? '48'));
+        $expired = $this->preorderIntentService->expireOffers();
+        $cancelled = $this->preorderIntentService->cancelUnconfirmedByDeadline($ttlHours);
+        $this->setFlash('success', 'Обновлено предзаказов: истекло ' . $expired . ', отменено неподтвержденных ' . $cancelled . '.');
+        header('Location: ' . $this->basePath() . '/purchases');
+        exit;
+    }
+
     public function writeOff(): void
     {
         $this->ensureCsrfOrRedirect();
+        if (($_SESSION['role'] ?? '') !== 'admin') {
+            $this->setFlash('error', 'Операция доступна только администратору.');
+            header('Location: ' . $this->basePath() . '/purchases');
+            exit;
+        }
         $batchId = (int)($_POST['batch_id'] ?? 0);
         $boxes = (float)($_POST['boxes'] ?? 0);
         $comment = trim((string)($_POST['comment'] ?? 'Write-off'));
         if ($batchId > 0 && $boxes > 0) {
             $this->purchaseBatchService->writeOff($batchId, $boxes, $comment);
             $this->setFlash('success', 'Списание выполнено.');
-        }
-        header('Location: ' . $this->basePath() . '/purchases');
-        exit;
-    }
-
-    public function close(): void
-    {
-        $this->ensureCsrfOrRedirect();
-        $batchId = (int)($_POST['batch_id'] ?? 0);
-        if ($batchId > 0) {
-            $this->purchaseBatchService->closeBatch($batchId);
-            $this->setFlash('success', 'Партия закрыта.');
         }
         header('Location: ' . $this->basePath() . '/purchases');
         exit;
