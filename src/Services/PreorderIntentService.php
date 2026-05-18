@@ -97,6 +97,32 @@ class PreorderIntentService
         return $affected;
     }
 
+    public function cancelUnconfirmedByDeadline(int $ttlHours = 48): int
+    {
+        $ttlHours = max(1, $ttlHours);
+        $idsStmt = $this->pdo->prepare(
+            "SELECT id
+             FROM preorder_intents
+             WHERE status = 'intent_created'
+               AND created_at < DATE_SUB(CURRENT_TIMESTAMP, INTERVAL ? HOUR)"
+        );
+        $idsStmt->execute([$ttlHours]);
+        $ids = $idsStmt->fetchAll(PDO::FETCH_COLUMN);
+
+        $stmt = $this->pdo->prepare(
+            "UPDATE preorder_intents
+             SET status = 'declined', updated_at = CURRENT_TIMESTAMP
+             WHERE status = 'intent_created'
+               AND created_at < DATE_SUB(CURRENT_TIMESTAMP, INTERVAL ? HOUR)"
+        );
+        $stmt->execute([$ttlHours]);
+        $affected = $stmt->rowCount();
+        foreach ($ids as $id) {
+            $this->logEvent((int)$id, 'auto_cancel_unconfirmed', 'intent_created', 'declined');
+        }
+        return $affected;
+    }
+
     /** @return array{offered_count:int,allocated_boxes:float} */
     public function reallocateForProduct(int $productId, float $freedBoxes, float $pricePerBox, int $ttlHours = 4): array
     {

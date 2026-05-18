@@ -83,6 +83,32 @@ class PurchaseBatchServiceTest extends TestCase
             boxes_delta REAL,
             comment TEXT NULL
         )');
+        $this->pdo->exec('CREATE TABLE preorder_intents (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            product_id INTEGER,
+            requested_boxes REAL,
+            status TEXT,
+            offered_price_per_box REAL NULL,
+            offer_expires_at TEXT NULL,
+            checkout_token TEXT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )');
+        $this->pdo->exec('CREATE TABLE preorder_intent_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            preorder_intent_id INTEGER,
+            event_type TEXT,
+            from_status TEXT NULL,
+            to_status TEXT NULL,
+            meta_json TEXT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )');
+        $this->pdo->exec('CREATE TABLE notifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code TEXT,
+            description TEXT
+        )');
 
         $this->pdo->exec("INSERT INTO products (id, box_size, box_unit, price) VALUES (1, 2.0, 'кг', 0)");
 
@@ -263,6 +289,35 @@ class PurchaseBatchServiceTest extends TestCase
         $batch = $this->pdo->query("SELECT boxes_free, boxes_discount FROM purchase_batches WHERE id = 401")->fetch(PDO::FETCH_ASSOC);
         $this->assertSame(0.0, (float)$batch['boxes_free']);
         $this->assertSame(4.0, (float)$batch['boxes_discount']);
+    }
+
+    public function testHappyPathTransitionsFromPlannedToArrivedAndUpdatesIntents(): void
+    {
+        $batchId = $this->service->createBatch([
+            'product_id' => 1,
+            'boxes_total' => 20,
+            'boxes_reserved' => 0,
+            'boxes_free' => 6,
+            'purchase_price_per_box' => 1000,
+            'status' => 'planned',
+        ]);
+
+        $this->pdo->exec("INSERT INTO preorder_intents (user_id, product_id, requested_boxes, status) VALUES
+            (101, 1, 2, 'intent_created'),
+            (102, 1, 2, 'intent_created'),
+            (103, 1, 1, 'confirmed')
+        ");
+
+        $this->service->markPurchased($batchId);
+        $afterPurchased = $this->pdo->query("SELECT status FROM preorder_intents WHERE product_id = 1 ORDER BY id")->fetchAll(PDO::FETCH_COLUMN);
+        $this->assertSame(['offer_sent', 'offer_sent', 'confirmed'], $afterPurchased);
+
+        $this->service->markArrived($batchId);
+        $afterArrived = $this->pdo->query("SELECT status FROM preorder_intents WHERE product_id = 1 ORDER BY id")->fetchAll(PDO::FETCH_COLUMN);
+        $this->assertSame(['offer_sent', 'offer_sent', 'checkout_completed'], $afterArrived);
+
+        $batchStatus = $this->pdo->query("SELECT status FROM purchase_batches WHERE id = " . (int)$batchId)->fetchColumn();
+        $this->assertSame('arrived', $batchStatus);
     }
 
 }

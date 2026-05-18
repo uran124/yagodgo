@@ -246,7 +246,9 @@ $preorderPriceHint = (string)(get_setting('ui_preorder_price_hint', 'Цена о
         <button type="button"
                 <?= $isSaleSection ? 'disabled' : '' ?>
                 class="w-full h-9 flex items-center justify-center gap-1.5 border font-medium text-xs sm:text-sm rounded-xl transition-colors preorder-intent-btn <?= $isSaleSection ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed' : 'border-emerald-500 text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100' ?>"
-                data-product-id="<?= (int)$p['id'] ?>">
+                data-product-id="<?= (int)$p['id'] ?>"
+                data-source-section="<?= htmlspecialchars($cardSection) ?>"
+                data-delivery-date="<?= htmlspecialchars((string)($d ?? '')) ?>">
           <span class="material-icons-round text-base leading-none">schedule</span>
           <?= $isInStockSection ? 'Предзаказ' : 'Предзаказ −10%' ?>
         </button>
@@ -293,6 +295,8 @@ $preorderPriceHint = (string)(get_setting('ui_preorder_price_hint', 'Цена о
       const payload = new URLSearchParams();
       payload.set('product_id', btn.dataset.productId || '0');
       payload.set('requested_boxes', String(qty > 0 ? qty : 1));
+      payload.set('source_section', btn.dataset.sourceSection || '');
+      payload.set('source_delivery_date', btn.dataset.deliveryDate || '');
       const res = await fetch('/preorder-intents', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},

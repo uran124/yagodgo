@@ -2,6 +2,7 @@
 namespace App\Controllers;
 
 use App\Services\PurchaseBatchService;
+use App\Services\PreorderIntentService;
 use PDO;
 use RuntimeException;
 
@@ -9,11 +10,13 @@ class PurchaseBatchesController
 {
     private PDO $pdo;
     private PurchaseBatchService $purchaseBatchService;
+    private PreorderIntentService $preorderIntentService;
 
     public function __construct(PDO $pdo)
     {
         $this->pdo = $pdo;
         $this->purchaseBatchService = new PurchaseBatchService($pdo);
+        $this->preorderIntentService = new PreorderIntentService($pdo);
     }
 
     public function index(): void
@@ -306,6 +309,17 @@ ORDER BY pb.id DESC';
                 $this->setFlash('error', $e->getMessage());
             }
         }
+        header('Location: ' . $this->basePath() . '/purchases');
+        exit;
+    }
+
+    public function maintenancePreorders(): void
+    {
+        $this->ensureCsrfOrRedirect();
+        $ttlHours = max(1, (int)(get_setting('preorder_unconfirmed_cancel_hours', '48') ?? '48'));
+        $expired = $this->preorderIntentService->expireOffers();
+        $cancelled = $this->preorderIntentService->cancelUnconfirmedByDeadline($ttlHours);
+        $this->setFlash('success', 'Обновлено предзаказов: истекло ' . $expired . ', отменено неподтвержденных ' . $cancelled . '.');
         header('Location: ' . $this->basePath() . '/purchases');
         exit;
     }

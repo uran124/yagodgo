@@ -50,6 +50,10 @@
   <a href="<?= $basePath ?>/purchases/create" class="bg-[#C86052] text-white px-4 py-2 rounded inline-flex items-center">
     <span class="material-icons-round text-base mr-1">add</span> Добавить закупку
   </a>
+  <form method="post" action="<?= $basePath ?>/purchases/preorders/maintenance" class="ml-2">
+    <?= csrf_field() ?>
+    <button class="bg-gray-100 text-gray-700 px-3 py-2 rounded text-sm" type="submit">Обновить статусы предзаказов</button>
+  </form>
 </div>
 
 <table class="min-w-full bg-white rounded shadow overflow-hidden">
