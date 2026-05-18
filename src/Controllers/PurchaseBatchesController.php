@@ -313,18 +313,6 @@ ORDER BY pb.id DESC';
         exit;
     }
 
-    public function close(): void
-    {
-        $this->ensureCsrfOrRedirect();
-        $batchId = (int)($_POST['batch_id'] ?? 0);
-        if ($batchId > 0) {
-            $this->purchaseBatchService->closeBatch($batchId);
-            $this->setFlash('success', 'Партия закрыта.');
-        }
-        header('Location: ' . $this->basePath() . '/purchases');
-        exit;
-    }
-
     public function deletePhoto(): void
     {
         $this->ensureCsrfOrRedirect();
