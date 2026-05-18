@@ -219,6 +219,13 @@ class PurchaseBatchService
     public function markArrived(int $batchId): void
     {
         $this->updateBatchStatus($batchId, 'arrived');
+        $this->processIntentsForArrivedBatch($batchId);
+    }
+
+    public function markPurchased(int $batchId): void
+    {
+        $this->updateBatchStatus($batchId, 'purchased');
+        $this->promoteIntentsToOfferSent($batchId);
     }
 
     public function markPurchased(int $batchId): void
@@ -478,6 +485,41 @@ class PurchaseBatchService
             )->execute([
                 'preorder_offer_sent',
                 'По товару #' . $productId . ' отправлены офферы предзаказа: ' . (int)$wave['offered_count'],
+            ]);
+        }
+    }
+
+    private function processIntentsForArrivedBatch(int $batchId): void
+    {
+        $batch = $this->loadBatch($batchId);
+        $productId = (int)($batch['product_id'] ?? 0);
+        if ($productId <= 0) {
+            return;
+        }
+
+        $this->pdo->prepare(
+            "UPDATE preorder_intents
+             SET status = 'expired', updated_at = NOW()
+             WHERE product_id = ?
+               AND status = 'offer_sent'
+               AND offer_expires_at IS NOT NULL
+               AND offer_expires_at < NOW()"
+        )->execute([$productId]);
+
+        $confirmedCountStmt = $this->pdo->prepare(
+            "SELECT COUNT(*) FROM preorder_intents
+             WHERE product_id = ?
+               AND status = 'confirmed'"
+        );
+        $confirmedCountStmt->execute([$productId]);
+        $confirmedCount = (int)$confirmedCountStmt->fetchColumn();
+        if ($confirmedCount > 0) {
+            $this->pdo->prepare(
+                "INSERT INTO notifications (code, description)
+                 VALUES (?, ?)"
+            )->execute([
+                'preorder_ready_for_pickup',
+                'По товару #' . $productId . ' предзаказов готово к выдаче: ' . $confirmedCount,
             ]);
         }
     }
