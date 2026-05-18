@@ -92,9 +92,15 @@
         <span class="ml-2 text-sm">Скидка 10% на первый заказ</span>
       </label>
     </div>
-    <div id="pointsRow" class="hidden">
-      <label>Списано баллов: <span id="pointsAmount">0</span></label>
-      <input type="hidden" name="points" id="pointsInput" value="0">
+    <div id="pointsRow" class="hidden space-y-2">
+      <label class="inline-flex items-center gap-2">
+        <input type="checkbox" id="usePointsToggle" name="use_points" value="1" class="h-4 w-4">
+        <span class="text-sm">Списать баллы клиента</span>
+      </label>
+      <div>
+        <label>Списано баллов: <span id="pointsAmount">0</span></label>
+        <input type="hidden" name="points" id="pointsInput" value="0">
+      </div>
     </div>
     <button type="submit" class="bg-[#C86052] text-white px-4 py-2 rounded">Создать заказ</button>
   </div>
@@ -135,6 +141,7 @@
   const pointsInput = document.getElementById('pointsInput');
   const pointsRow = document.getElementById('pointsRow');
   const pointsAmount = document.getElementById('pointsAmount');
+  const usePointsToggle = document.getElementById('usePointsToggle');
   const itemsList = document.getElementById('itemsList');
   const newPhoneInput = document.querySelector('input[name="new_phone"]');
   const referralToggleWrap = document.getElementById('referralToggleWrap');
@@ -187,6 +194,7 @@
               pointsInput.value = u.points_balance || 0;
               pointsAmount.textContent = u.points_balance || 0;
               pointsRow.classList.remove('hidden');
+              usePointsToggle.checked = false;
               newBlock.classList.add('hidden');
               userInfo.textContent = u.referrer_name ? 'Пригласил: '+u.referrer_name : 'Без пригласившего';
               userInfo.classList.remove('hidden');
@@ -201,6 +209,7 @@
           newBlock.classList.remove('hidden');
           document.getElementById('userId').value='';
           pointsRow.classList.add('hidden');
+          if (usePointsToggle) usePointsToggle.checked = false;
           userInfo.classList.add('hidden');
           referralToggleWrap.classList.remove('hidden');
           referralToggle.checked = false;
@@ -232,6 +241,7 @@
   });
   qtyInputs.forEach(i=>i.addEventListener('input', updateSummary));
   if (pointsInput) pointsInput.addEventListener('input', updateSummary);
+  if (usePointsToggle) usePointsToggle.addEventListener('change', updateSummary);
   if (referralToggle) referralToggle.addEventListener('change', updateSummary);
 
   function updateSummary() {
@@ -259,9 +269,10 @@
     } else {
       refRow.classList.add('hidden');
     }
+    const canUsePoints = usePointsToggle && !usePointsToggle.disabled && usePointsToggle.checked;
     let points = parseFloat(pointsInput ? pointsInput.value : 0) || 0;
-    const maxUse = Math.min(points, total);
-    if (pointsInput) pointsInput.value = maxUse;
+    const maxUse = canUsePoints ? Math.min(points, total) : 0;
+    if (pointsInput) pointsInput.value = points;
     pointsAmount.textContent = maxUse;
     total -= maxUse;
 

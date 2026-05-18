@@ -244,7 +244,8 @@ class OrdersController
         }
 
         $pointsUsed = 0;
-        if (!$isNew) {
+        $usePoints = (int)($_POST['use_points'] ?? 0) === 1;
+        if (!$isNew && $usePoints) {
             $stmtPoints = $this->pdo->prepare("SELECT points_balance FROM users WHERE id = ?");
             $stmtPoints->execute([$userId]);
             $balance = (int)$stmtPoints->fetchColumn();
