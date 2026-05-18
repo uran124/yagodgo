@@ -157,6 +157,17 @@ public function cart(): void
         }
 
         if ($productId && $quantity > 0) {
+            if ($stockMode !== 'preorder') {
+                $stockService = new StockService($this->pdo);
+                $available = $stockService->getAvailableBoxes($productId, $stockMode);
+                if ($quantity > $available) {
+                    $_SESSION['cart_error'] = 'Недостаточно товара в наличии.';
+                    $referer = $_SERVER['HTTP_REFERER'] ?? '/';
+                    header('Location: ' . $referer);
+                    exit;
+                }
+            }
+
             $priceStmt = $this->pdo->prepare(
                 "SELECT price, sale_price, box_size, preorder_unit_price, instant_unit_price, discount_unit_price, current_purchase_batch_id
                  FROM products WHERE id = ?"
@@ -1225,9 +1236,13 @@ public function cancelReservedOrder(int $orderId): void
         $stmt->execute([$userId]);
         $phone = $stmt->fetchColumn();
         $tgStart = $phone ? $phone : null;
+        $notificationRows = $this->pdo->query(
+            "SELECT id, code, description FROM notifications ORDER BY id DESC"
+        )->fetchAll(PDO::FETCH_ASSOC);
         view('client/notifications', [
             'userName' => $_SESSION['name'] ?? null,
             'tgStart'  => $tgStart,
+            'notifications' => $notificationRows,
         ]);
     }
 
