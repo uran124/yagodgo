@@ -500,20 +500,36 @@ class PurchaseBatchService
                AND offer_expires_at < NOW()"
         )->execute([$productId]);
 
-        $confirmedCountStmt = $this->pdo->prepare(
-            "SELECT COUNT(*) FROM preorder_intents
+        $readyIdsStmt = $this->pdo->prepare(
+            "SELECT id FROM preorder_intents
              WHERE product_id = ?
                AND status = 'confirmed'"
         );
-        $confirmedCountStmt->execute([$productId]);
-        $confirmedCount = (int)$confirmedCountStmt->fetchColumn();
-        if ($confirmedCount > 0) {
+        $readyIdsStmt->execute([$productId]);
+        $readyIds = $readyIdsStmt->fetchAll(PDO::FETCH_COLUMN);
+        if ($readyIds !== []) {
+            $this->pdo->prepare(
+                "UPDATE preorder_intents
+                 SET status = 'checkout_completed',
+                     updated_at = NOW()
+                 WHERE product_id = ?
+                   AND status = 'confirmed'"
+            )->execute([$productId]);
+
+            $eventStmt = $this->pdo->prepare(
+                "INSERT INTO preorder_intent_events (preorder_intent_id, event_type, from_status, to_status, meta_json, created_at)
+                 VALUES (?, 'ready_for_pickup', 'confirmed', 'checkout_completed', NULL, NOW())"
+            );
+            foreach ($readyIds as $intentId) {
+                $eventStmt->execute([(int)$intentId]);
+            }
+
             $this->pdo->prepare(
                 "INSERT INTO notifications (code, description)
                  VALUES (?, ?)"
             )->execute([
                 'preorder_ready_for_pickup',
-                'По товару #' . $productId . ' предзаказов готово к выдаче: ' . $confirmedCount,
+                'По товару #' . $productId . ' предзаказов готово к выдаче: ' . count($readyIds),
             ]);
         }
     }
