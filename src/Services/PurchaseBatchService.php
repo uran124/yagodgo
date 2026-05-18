@@ -260,18 +260,6 @@ class PurchaseBatchService
         return $boxes;
     }
 
-    public function moveAllFreeToDiscountStock(int $batchId): float
-    {
-        $batch = $this->loadBatch($batchId);
-        $boxes = (float)($batch['boxes_free'] ?? 0);
-        if ($boxes <= 0) {
-            return 0.0;
-        }
-
-        $this->moveToDiscountStock($batchId, $boxes);
-        return $boxes;
-    }
-
     public function writeOff(int $batchId, float $boxes, string $comment): void
     {
         if ($boxes <= 0) {
