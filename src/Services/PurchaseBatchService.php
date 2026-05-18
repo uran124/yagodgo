@@ -222,6 +222,7 @@ class PurchaseBatchService
     public function markPurchased(int $batchId): void
     {
         $this->updateBatchStatus($batchId, 'purchased');
+        $this->promoteIntentsToOfferSent($batchId);
     }
 
     public function moveToDiscountStock(int $batchId, float $boxes): void
@@ -444,5 +445,23 @@ class PurchaseBatchService
             'stock_status' => $stockStatus,
             'product_id' => $productId,
         ]);
+    }
+
+    private function promoteIntentsToOfferSent(int $batchId): void
+    {
+        $batch = $this->loadBatch($batchId);
+        $productId = (int)($batch['product_id'] ?? 0);
+        if ($productId <= 0) {
+            return;
+        }
+
+        $stmt = $this->pdo->prepare(
+            "UPDATE preorder_intents
+             SET status = 'offer_sent',
+                 updated_at = NOW()
+             WHERE product_id = ?
+               AND status = 'intent_created'"
+        );
+        $stmt->execute([$productId]);
     }
 }

@@ -43,7 +43,11 @@ $preorderPurchaseDate = !empty($p['latest_purchase_date']) ? date('d.m.Y', strto
 $cardSection = (string)($cardSection ?? '');
 $isPreorderSection = $cardSection === 'preorder';
 $isSaleSection = $cardSection === 'sale';
-$preorderDiscountBox = round($regularBox * 0.9, 0);
+$preorderDiscountPercent = (float)(get_setting('ui_preorder_discount_percent', '10') ?? '10');
+$preorderDiscountPercent = max(0.0, min(99.0, $preorderDiscountPercent));
+$discountFactor = (100 - $preorderDiscountPercent) / 100;
+$preorderDiscountBox = round($regularBox * $discountFactor, 0);
+$preorderPriceHint = (string)(get_setting('ui_preorder_price_hint', 'Цена ориентировочная, точная цена будет после поступления') ?? '');
 ?>
 <div class="product-card bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col hover:shadow-2xl transition-shadow duration-200 sm:h-full max-w-[350px]"
      data-search="<?= htmlspecialchars($search) ?>"
@@ -149,7 +153,7 @@ $preorderDiscountBox = round($regularBox * 0.9, 0);
             <?= number_format($preorderDiscountBox, 0, '.', ' ') ?> ₽
           </span>
         </div>
-        <p class="text-[10px] leading-tight text-red-500 mb-3">Цена ориентировочная, точная цена будет после поступления</p>
+        <p class="text-[10px] leading-tight text-red-500 mb-3"><?= htmlspecialchars($preorderPriceHint) ?></p>
 
       <?php elseif ($sale > 0): ?>
         <!-- Акционная цена -->

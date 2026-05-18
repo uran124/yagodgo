@@ -19,13 +19,16 @@ class ClientCatalogService
     {
         return [
             'saleProducts' => $this->fetchProducts(
-                'p.is_active = 1 AND p.current_purchase_batch_id IS NOT NULL AND p.discount_stock_boxes > 0',
+                "p.is_active = 1 AND p.current_purchase_batch_id IS NOT NULL
+                 AND pb.status = 'arrived' AND p.discount_stock_boxes > 0",
                 'p.id DESC',
                 [],
                 10
             ),
             'regularProducts' => $this->fetchProducts(
-                "p.is_active = 1 AND p.current_purchase_batch_id IS NOT NULL AND p.seller_id IS NULL AND (p.stock_status = 'in_stock' OR p.free_stock_boxes > 0)",
+                "p.is_active = 1 AND p.current_purchase_batch_id IS NOT NULL
+                 AND p.seller_id IS NULL AND pb.status = 'purchased'
+                 AND p.free_stock_boxes > 0",
                 'p.id DESC',
                 [],
                 10
@@ -37,7 +40,8 @@ class ClientCatalogService
                 10
             ),
             'preorderProducts' => $this->fetchProducts(
-                "p.is_active = 1 AND p.current_purchase_batch_id IS NOT NULL AND p.seller_id IS NULL AND p.stock_status = 'preorder'",
+                "p.is_active = 1 AND p.current_purchase_batch_id IS NOT NULL
+                 AND p.seller_id IS NULL AND pb.status = 'planned'",
                 'p.id DESC',
                 [],
                 10
@@ -106,6 +110,7 @@ class ClientCatalogService
             "FROM products p\n" .
             "JOIN product_types t ON t.id = p.product_type_id\n" .
             "LEFT JOIN users u ON u.id = p.seller_id\n" .
+            "LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id\n" .
             "WHERE {$where}\n" .
             "ORDER BY {$orderBy}";
 
