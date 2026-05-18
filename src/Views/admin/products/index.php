@@ -31,7 +31,7 @@
       <?php endif; ?>
       <th class="p-3 text-left font-semibold">Сорт</th>
       <th class="p-3 text-left font-semibold">Вес ящика</th>
-      <th class="p-3 text-left font-semibold">Цена за кг/л</th>
+      <th class="p-3 text-left font-semibold">Закуп. цена за ящик</th>
       <?php if (!$isManager): ?>
       <th class="p-3 text-left font-semibold">Остаток (ящиков)</th>
       <?php endif; ?>
@@ -59,7 +59,7 @@
           <?= $p['box_size'] ?> <?= htmlspecialchars($p['box_unit']) ?>
         </td>
         <td class="p-3 text-gray-600">
-          <?= number_format($p['price'], 2, '.', ' ') ?> ₽/<?= htmlspecialchars($p['unit']) ?>
+          <?= number_format((float)($p['price'] ?? 0), 2, '.', ' ') ?> ₽
         </td>
         <?php if (!$isManager): ?>
         <td class="p-3 text-gray-600"><?= $p['stock_boxes'] ?></td>
