@@ -6,12 +6,8 @@
 <?php $summary = $summary ?? []; ?>
 <?php $statusLabels = [
   'planned' => 'Запланирована',
-  'purchased' => 'Закуплена',
-  'arrived' => 'Поступила',
-  'active' => 'В продаже',
-  'sold_out' => 'Распродана',
-  'closed' => 'Закрыта',
-  'cancelled' => 'Отменена',
+  'purchased' => 'Выкуплена',
+  'arrived' => 'Готова к выдаче',
 ]; ?>
 <?php if (is_array($flash) && !empty($flash['message'])): ?>
   <div class="<?= ($flash['type'] ?? '') === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-700' ?> border p-3 rounded mb-4">
@@ -30,7 +26,7 @@
     <label class="text-xs text-gray-600">Статус</label>
     <select name="status" class="w-full border rounded px-2 py-2 text-sm">
       <option value="">Все</option>
-      <?php foreach (['planned','purchased','arrived','active','sold_out','closed','cancelled'] as $st): ?>
+      <?php foreach (['planned','purchased','arrived'] as $st): ?>
         <option value="<?= $st ?>" <?= (($filters['status'] ?? '') === $st) ? 'selected' : '' ?>><?= htmlspecialchars((string)($statusLabels[$st] ?? $st)) ?></option>
       <?php endforeach; ?>
     </select>
@@ -88,16 +84,33 @@
         <td class="p-3">
           <div class="flex flex-wrap gap-2">
             <a class="text-xs bg-green-100 px-2 py-1 rounded" href="<?= $basePath ?>/purchases/<?= (int)$batch['id'] ?>">Открыть</a>
-            <form method="post" action="<?= $basePath ?>/purchases/arrived">
-              <?= csrf_field() ?>
-              <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
-              <button class="text-xs bg-blue-100 px-2 py-1 rounded" type="submit">Поступила</button>
-            </form>
+            <?php if (($batch['status'] ?? '') === 'planned'): ?>
+              <form method="post" action="<?= $basePath ?>/purchases/purchased">
+                <?= csrf_field() ?>
+                <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
+                <button class="text-xs bg-indigo-100 px-2 py-1 rounded" type="submit">Выкуплена</button>
+              </form>
+            <?php elseif (($batch['status'] ?? '') === 'purchased'): ?>
+              <form method="post" action="<?= $basePath ?>/purchases/arrived">
+                <?= csrf_field() ?>
+                <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
+                <label class="inline-flex items-center gap-1 text-[11px] text-gray-600 mr-1">
+                  <input type="checkbox" name="move_leftovers_to_discount" value="1">
+                  В уценку
+                </label>
+                <button class="text-xs bg-blue-100 px-2 py-1 rounded" type="submit">Готова к выдаче</button>
+              </form>
+            <?php endif; ?>
             <form method="post" action="<?= $basePath ?>/purchases/move-to-discount" class="flex items-center gap-1">
               <?= csrf_field() ?>
               <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
               <input name="boxes" type="number" step="0.01" min="0.01" placeholder="ящ." class="w-16 border rounded px-1 py-1 text-xs">
               <button class="text-xs bg-yellow-100 px-2 py-1 rounded" type="submit">Уценить</button>
+            </form>
+            <form method="post" action="<?= $basePath ?>/purchases/cancel-reservations">
+              <?= csrf_field() ?>
+              <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
+              <button class="text-xs bg-orange-100 px-2 py-1 rounded" type="submit">Отменить бронь</button>
             </form>
             <form method="post" action="<?= $basePath ?>/purchases/write-off" class="flex items-center gap-1">
               <?= csrf_field() ?>
@@ -105,11 +118,6 @@
               <input name="boxes" type="number" step="0.01" min="0.01" placeholder="ящ." class="w-16 border rounded px-1 py-1 text-xs">
               <input name="comment" type="text" placeholder="комм." class="w-24 border rounded px-1 py-1 text-xs">
               <button class="text-xs bg-red-100 px-2 py-1 rounded" type="submit">Списать</button>
-            </form>
-            <form method="post" action="<?= $basePath ?>/purchases/close">
-              <?= csrf_field() ?>
-              <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
-              <button class="text-xs bg-gray-100 px-2 py-1 rounded" type="submit">Закрыть</button>
             </form>
           </div>
         </td>

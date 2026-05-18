@@ -214,7 +214,7 @@ ORDER BY pb.id DESC';
             'boxes_free' => (float)($_POST['boxes_free'] ?? 0),
             'purchase_price_per_box' => (float)($_POST['purchase_price_per_box'] ?? 0),
             'extra_cost_per_box' => (float)($_POST['extra_cost_per_box'] ?? 0),
-            'status' => (string)($_POST['status'] ?? 'purchased'),
+            'status' => (string)($_POST['status'] ?? 'planned'),
             'purchased_at' => (string)($_POST['purchased_at'] ?? ''),
             'comment' => trim((string)($_POST['comment'] ?? '')),
         ];
@@ -239,7 +239,24 @@ ORDER BY pb.id DESC';
         $batchId = (int)($_POST['batch_id'] ?? 0);
         if ($batchId > 0) {
             $this->purchaseBatchService->markArrived($batchId);
-            $this->setFlash('success', 'Партия отмечена как поступившая.');
+            $movedBoxes = 0.0;
+            if (isset($_POST['move_leftovers_to_discount'])) {
+                $movedBoxes = $this->purchaseBatchService->moveAllFreeToDiscountStock($batchId);
+            }
+            $suffix = $movedBoxes > 0 ? ' Остаток в уценку: ' . number_format($movedBoxes, 2, '.', ' ') . ' ящ.' : '';
+            $this->setFlash('success', 'Партия отмечена как готовая к выдаче.' . $suffix);
+        }
+        header('Location: ' . $this->basePath() . '/purchases');
+        exit;
+    }
+
+    public function markPurchased(): void
+    {
+        $this->ensureCsrfOrRedirect();
+        $batchId = (int)($_POST['batch_id'] ?? 0);
+        if ($batchId > 0) {
+            $this->purchaseBatchService->markPurchased($batchId);
+            $this->setFlash('success', 'Партия отмечена как выкупленная.');
         }
         header('Location: ' . $this->basePath() . '/purchases');
         exit;
@@ -253,6 +270,18 @@ ORDER BY pb.id DESC';
         if ($batchId > 0 && $boxes > 0) {
             $this->purchaseBatchService->moveToDiscountStock($batchId, $boxes);
             $this->setFlash('success', 'Часть партии переведена в выгодный остаток.');
+        }
+        header('Location: ' . $this->basePath() . '/purchases');
+        exit;
+    }
+
+    public function cancelReservations(): void
+    {
+        $this->ensureCsrfOrRedirect();
+        $batchId = (int)($_POST['batch_id'] ?? 0);
+        if ($batchId > 0) {
+            $count = $this->purchaseBatchService->cancelPendingReservations($batchId);
+            $this->setFlash('success', 'Отменено броней: ' . $count);
         }
         header('Location: ' . $this->basePath() . '/purchases');
         exit;
