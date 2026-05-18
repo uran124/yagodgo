@@ -214,7 +214,7 @@ ORDER BY pb.id DESC';
             'boxes_free' => (float)($_POST['boxes_free'] ?? 0),
             'purchase_price_per_box' => (float)($_POST['purchase_price_per_box'] ?? 0),
             'extra_cost_per_box' => (float)($_POST['extra_cost_per_box'] ?? 0),
-            'status' => (string)($_POST['status'] ?? 'purchased'),
+            'status' => (string)($_POST['status'] ?? 'planned'),
             'purchased_at' => (string)($_POST['purchased_at'] ?? ''),
             'comment' => trim((string)($_POST['comment'] ?? '')),
         ];
@@ -238,8 +238,33 @@ ORDER BY pb.id DESC';
         $this->ensureCsrfOrRedirect();
         $batchId = (int)($_POST['batch_id'] ?? 0);
         if ($batchId > 0) {
-            $this->purchaseBatchService->markArrived($batchId);
-            $this->setFlash('success', 'Партия отмечена как поступившая.');
+            try {
+                $this->purchaseBatchService->markArrived($batchId);
+                $movedBoxes = 0.0;
+                if (isset($_POST['move_leftovers_to_discount'])) {
+                    $movedBoxes = $this->purchaseBatchService->moveAllFreeToDiscountStock($batchId);
+                }
+                $suffix = $movedBoxes > 0 ? ' Остаток в уценку: ' . number_format($movedBoxes, 2, '.', ' ') . ' ящ.' : '';
+                $this->setFlash('success', 'Партия отмечена как готовая к выдаче.' . $suffix);
+            } catch (RuntimeException $e) {
+                $this->setFlash('error', $e->getMessage());
+            }
+        }
+        header('Location: ' . $this->basePath() . '/purchases');
+        exit;
+    }
+
+    public function markPurchased(): void
+    {
+        $this->ensureCsrfOrRedirect();
+        $batchId = (int)($_POST['batch_id'] ?? 0);
+        if ($batchId > 0) {
+            try {
+                $this->purchaseBatchService->markPurchased($batchId);
+                $this->setFlash('success', 'Партия отмечена как выкупленная.');
+            } catch (RuntimeException $e) {
+                $this->setFlash('error', $e->getMessage());
+            }
         }
         header('Location: ' . $this->basePath() . '/purchases');
         exit;
@@ -258,6 +283,22 @@ ORDER BY pb.id DESC';
         exit;
     }
 
+    public function cancelReservations(): void
+    {
+        $this->ensureCsrfOrRedirect();
+        $batchId = (int)($_POST['batch_id'] ?? 0);
+        if ($batchId > 0) {
+            try {
+                $count = $this->purchaseBatchService->cancelPendingReservations($batchId);
+                $this->setFlash('success', 'Отменено броней: ' . $count);
+            } catch (RuntimeException $e) {
+                $this->setFlash('error', $e->getMessage());
+            }
+        }
+        header('Location: ' . $this->basePath() . '/purchases');
+        exit;
+    }
+
     public function writeOff(): void
     {
         $this->ensureCsrfOrRedirect();
@@ -267,18 +308,6 @@ ORDER BY pb.id DESC';
         if ($batchId > 0 && $boxes > 0) {
             $this->purchaseBatchService->writeOff($batchId, $boxes, $comment);
             $this->setFlash('success', 'Списание выполнено.');
-        }
-        header('Location: ' . $this->basePath() . '/purchases');
-        exit;
-    }
-
-    public function close(): void
-    {
-        $this->ensureCsrfOrRedirect();
-        $batchId = (int)($_POST['batch_id'] ?? 0);
-        if ($batchId > 0) {
-            $this->purchaseBatchService->closeBatch($batchId);
-            $this->setFlash('success', 'Партия закрыта.');
         }
         header('Location: ' . $this->basePath() . '/purchases');
         exit;

@@ -1225,9 +1225,13 @@ public function cancelReservedOrder(int $orderId): void
         $stmt->execute([$userId]);
         $phone = $stmt->fetchColumn();
         $tgStart = $phone ? $phone : null;
+        $notificationRows = $this->pdo->query(
+            "SELECT id, code, description FROM notifications ORDER BY id DESC"
+        )->fetchAll(PDO::FETCH_ASSOC);
         view('client/notifications', [
             'userName' => $_SESSION['name'] ?? null,
             'tgStart'  => $tgStart,
+            'notifications' => $notificationRows,
         ]);
     }
 
