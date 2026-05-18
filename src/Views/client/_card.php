@@ -43,6 +43,7 @@ $preorderPurchaseDate = !empty($p['latest_purchase_date']) ? date('d.m.Y', strto
 $cardSection = (string)($cardSection ?? '');
 $isPreorderSection = $cardSection === 'preorder';
 $isSaleSection = $cardSection === 'sale';
+$isInStockSection = $cardSection === 'in_stock';
 $preorderDiscountPercent = (float)(get_setting('ui_preorder_discount_percent', '10') ?? '10');
 $preorderDiscountPercent = max(0.0, min(99.0, $preorderDiscountPercent));
 $discountFactor = (100 - $preorderDiscountPercent) / 100;
@@ -247,11 +248,13 @@ $preorderPriceHint = (string)(get_setting('ui_preorder_price_hint', 'Цена о
                 class="w-full h-9 flex items-center justify-center gap-1.5 border font-medium text-xs sm:text-sm rounded-xl transition-colors preorder-intent-btn <?= $isSaleSection ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed' : 'border-emerald-500 text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100' ?>"
                 data-product-id="<?= (int)$p['id'] ?>">
           <span class="material-icons-round text-base leading-none">schedule</span>
-          Предзаказ −10%
+          <?= $isInStockSection ? 'Предзаказ' : 'Предзаказ −10%' ?>
         </button>
 
         <?php if ($preorderPurchaseDate !== ''): ?>
           <p class="mt-1.5 text-[11px] text-gray-400 text-center">Дата закупки: <?= htmlspecialchars($preorderPurchaseDate) ?></p>
+        <?php elseif ($isInStockSection): ?>
+          <p class="mt-1.5 text-[11px] text-gray-400 text-center">Предзаказ оформляется на ближайшую возможную дату</p>
         <?php endif; ?>
 
         <p class="mt-1.5 text-[11px] text-gray-400 hidden preorder-intent-hint"></p>
