@@ -101,24 +101,29 @@
                 <button class="text-xs bg-blue-100 px-2 py-1 rounded" type="submit">Готова к выдаче</button>
               </form>
             <?php endif; ?>
-            <form method="post" action="<?= $basePath ?>/purchases/move-to-discount" class="flex items-center gap-1">
-              <?= csrf_field() ?>
-              <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
-              <input name="boxes" type="number" step="0.01" min="0.01" placeholder="ящ." class="w-16 border rounded px-1 py-1 text-xs">
-              <button class="text-xs bg-yellow-100 px-2 py-1 rounded" type="submit">Уценить</button>
-            </form>
+            <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
+              <form method="post" action="<?= $basePath ?>/purchases/move-to-discount" class="flex items-center gap-1">
+                <?= csrf_field() ?>
+                <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
+                <input name="boxes" type="number" step="0.01" min="0.01" placeholder="ящ." class="w-16 border rounded px-1 py-1 text-xs">
+                <input name="reason" type="text" required placeholder="причина" class="w-24 border rounded px-1 py-1 text-xs">
+                <button class="text-xs bg-yellow-100 px-2 py-1 rounded" type="submit">Уценить</button>
+              </form>
+            <?php endif; ?>
             <form method="post" action="<?= $basePath ?>/purchases/cancel-reservations">
               <?= csrf_field() ?>
               <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
               <button class="text-xs bg-orange-100 px-2 py-1 rounded" type="submit">Отменить бронь</button>
             </form>
-            <form method="post" action="<?= $basePath ?>/purchases/write-off" class="flex items-center gap-1">
-              <?= csrf_field() ?>
-              <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
-              <input name="boxes" type="number" step="0.01" min="0.01" placeholder="ящ." class="w-16 border rounded px-1 py-1 text-xs">
-              <input name="comment" type="text" placeholder="комм." class="w-24 border rounded px-1 py-1 text-xs">
-              <button class="text-xs bg-red-100 px-2 py-1 rounded" type="submit">Списать</button>
-            </form>
+            <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
+              <form method="post" action="<?= $basePath ?>/purchases/write-off" class="flex items-center gap-1">
+                <?= csrf_field() ?>
+                <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
+                <input name="boxes" type="number" step="0.01" min="0.01" placeholder="ящ." class="w-16 border rounded px-1 py-1 text-xs">
+                <input name="comment" type="text" required placeholder="причина" class="w-24 border rounded px-1 py-1 text-xs">
+                <button class="text-xs bg-red-100 px-2 py-1 rounded" type="submit">Списать</button>
+              </form>
+            <?php endif; ?>
           </div>
         </td>
       </tr>

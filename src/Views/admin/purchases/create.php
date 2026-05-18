@@ -28,7 +28,7 @@
   <div class="grid grid-cols-2 gap-4">
     <div>
       <label class="block mb-1">Плановая дата поставки</label>
-      <input name="purchased_at" type="date" class="w-full border px-2 py-1 rounded" value="<?= date('Y-m-d') ?>">
+      <input name="planned_supply_date" type="date" class="w-full border px-2 py-1 rounded" value="<?= date('Y-m-d') ?>">
     </div>
     <div>
       <label class="block mb-1">Количество ящиков</label>

@@ -215,7 +215,7 @@ ORDER BY pb.id DESC';
             'purchase_price_per_box' => (float)($_POST['purchase_price_per_box'] ?? 0),
             'extra_cost_per_box' => (float)($_POST['extra_cost_per_box'] ?? 0),
             'status' => (string)($_POST['status'] ?? 'planned'),
-            'purchased_at' => (string)($_POST['purchased_at'] ?? ''),
+            'purchased_at' => (string)($_POST['planned_supply_date'] ?? ''),
             'comment' => trim((string)($_POST['comment'] ?? '')),
         ];
 
@@ -273,9 +273,20 @@ ORDER BY pb.id DESC';
     public function moveToDiscount(): void
     {
         $this->ensureCsrfOrRedirect();
+        if (($_SESSION['role'] ?? '') !== 'admin') {
+            $this->setFlash('error', 'Операция доступна только администратору.');
+            header('Location: ' . $this->basePath() . '/purchases');
+            exit;
+        }
         $batchId = (int)($_POST['batch_id'] ?? 0);
         $boxes = (float)($_POST['boxes'] ?? 0);
+        $reason = trim((string)($_POST['reason'] ?? ''));
         if ($batchId > 0 && $boxes > 0) {
+            if ($reason === '') {
+                $this->setFlash('error', 'Укажите причину перевода в уценку.');
+                header('Location: ' . $this->basePath() . '/purchases');
+                exit;
+            }
             $this->purchaseBatchService->moveToDiscountStock($batchId, $boxes);
             $this->setFlash('success', 'Часть партии переведена в выгодный остаток.');
         }
@@ -302,6 +313,11 @@ ORDER BY pb.id DESC';
     public function writeOff(): void
     {
         $this->ensureCsrfOrRedirect();
+        if (($_SESSION['role'] ?? '') !== 'admin') {
+            $this->setFlash('error', 'Операция доступна только администратору.');
+            header('Location: ' . $this->basePath() . '/purchases');
+            exit;
+        }
         $batchId = (int)($_POST['batch_id'] ?? 0);
         $boxes = (float)($_POST['boxes'] ?? 0);
         $comment = trim((string)($_POST['comment'] ?? 'Write-off'));
