@@ -70,13 +70,11 @@ class ClientCatalogService
         $products = $this->fetchProducts(
             'p.is_active = 1',
             "CASE\n" .
-            "  WHEN p.seller_id IS NULL AND pb.status = 'arrived' AND p.discount_stock_boxes > 0 THEN 0\n" .
-            "  WHEN p.seller_id IS NULL AND pb.status = 'purchased' AND p.free_stock_boxes > 0 THEN 1\n" .
-            "  WHEN p.seller_id IS NOT NULL THEN 2\n" .
-            "  WHEN p.seller_id IS NULL AND pb.status = 'planned' THEN 3\n" .
-            "  ELSE 4\n" .
+            "  WHEN pb.purchased_at IS NULL THEN 3\n" .
+            "  WHEN DATE(pb.purchased_at) > ? THEN 2\n" .
+            "  ELSE 1\n" .
             "END,\n" .
-            "COALESCE(p.delivery_date, '9999-12-31') ASC,\n" .
+            "COALESCE(DATE(pb.purchased_at), '9999-12-31'),\n" .
             "p.id DESC",
             []
         );
@@ -126,15 +124,11 @@ class ClientCatalogService
             "       p.origin_country,\n" .
             "       p.box_size,\n" .
             "       p.box_unit,\n" .
-            "       p.price,\n" .
+            "       COALESCE(pb.instant_unit_price, p.price) AS price,\n" .
             "       p.sale_price,\n" .
             "       p.is_active,\n" .
             "       p.image_path,\n" .
-            "       p.delivery_date,\n" .
-            "       p.seller_id,\n" .
-            "       p.free_stock_boxes,\n" .
-            "       p.discount_stock_boxes,\n" .
-            "       pb.status AS purchase_batch_status,\n" .
+            "       DATE(pb.purchased_at) AS delivery_date,\n" .
             "       COALESCE(u.company_name, u.name, 'berryGo') AS seller_name\n" .
             "FROM products p\n" .
             "JOIN product_types t ON t.id = p.product_type_id\n" .
