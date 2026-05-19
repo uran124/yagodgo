@@ -17,6 +17,7 @@ class ClientCatalogServiceTest extends TestCase
 
         $this->pdo->exec('CREATE TABLE product_types (id INTEGER PRIMARY KEY, name TEXT, alias TEXT)');
         $this->pdo->exec('CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, company_name TEXT)');
+        $this->pdo->exec('CREATE TABLE purchase_batches (id INTEGER PRIMARY KEY, status TEXT)');
         $this->pdo->exec('CREATE TABLE products (
             id INTEGER PRIMARY KEY,
             alias TEXT,
@@ -51,6 +52,7 @@ class ClientCatalogServiceTest extends TestCase
         $this->pdo->exec("INSERT INTO product_types (id, name, alias) VALUES (1, 'Клубника', 'klubnika')");
         $this->pdo->exec("INSERT INTO users (id, name, company_name) VALUES (1, 'Seller One', 'Berry Seller')");
         $this->pdo->exec("INSERT INTO content_categories (id, alias) VALUES (1, 'news')");
+        $this->pdo->exec("INSERT INTO purchase_batches (id, status) VALUES (11, 'arrived'), (12, 'purchased'), (13, 'planned')");
 
         $this->pdo->exec(
             "INSERT INTO products (id, alias, product_type_id, seller_id, variety, description, origin_country, box_size, box_unit, price, sale_price, is_active, image_path, delivery_date, current_purchase_batch_id, free_stock_boxes, discount_stock_boxes, stock_status) VALUES
@@ -87,5 +89,9 @@ class ClientCatalogServiceTest extends TestCase
         $this->assertSame('2025-03-23', $data['debugData']['today']);
         $this->assertSame('Клубника', $data['types'][0]['name']);
         $this->assertSame('sale-product', $data['products'][0]['alias']);
+        $this->assertSame('sale', $data['products'][0]['catalog_section']);
+        $this->assertSame('in_stock', $data['products'][1]['catalog_section']);
+        $this->assertSame('seller', $data['products'][2]['catalog_section']);
+        $this->assertSame('preorder', $data['products'][3]['catalog_section']);
     }
 }
