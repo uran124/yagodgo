@@ -19,7 +19,7 @@ return [
             'POST /manager/orders/comment' => ['App\\Controllers\\OrdersController', 'updateComment'],
             'POST /manager/orders/referral' => ['App\\Controllers\\OrdersController', 'updateReferral'],
             'POST /manager/orders/update-delivery' => ['App\\Controllers\\OrdersController', 'updateDelivery'],
-            'POST /manager/orders/delete' => ['App\\Controllers\\OrdersController', 'delete'],
+            'POST /manager/orders/delete' => ['App\\Controllers\\OrdersController', 'close'],
             'GET /manager/products' => ['App\\Controllers\\ProductsController', 'index'],
             'GET /manager/products/edit' => ['App\\Controllers\\ProductsController', 'edit'],
             'POST /manager/products/save' => ['App\\Controllers\\ProductsController', 'save'],
@@ -27,7 +27,7 @@ return [
             'POST /manager/products/update-price' => ['App\\Controllers\\ProductsController', 'updatePrice'],
             'GET /manager/products/update-price' => ['App\\Controllers\\ProductsController', 'updatePrice'],
             'POST /manager/products/update-date' => ['App\\Controllers\\ProductsController', 'updateDeliveryDate'],
-            'POST /manager/products/delete' => ['App\\Controllers\\ProductsController', 'delete'],
+            'POST /manager/products/delete' => ['App\\Controllers\\ProductsController', 'close'],
             'GET /manager/users' => ['App\\Controllers\\UsersController', 'index'],
             'GET /manager/users/search' => ['App\\Controllers\\UsersController', 'searchPhone'],
             'GET /manager/users/addresses' => ['App\\Controllers\\UsersController', 'addresses'],
@@ -46,6 +46,8 @@ return [
             'POST /manager/purchases/preorders/maintenance' => ['App\\Controllers\\PurchaseBatchesController', 'maintenancePreorders'],
             'POST /manager/purchases/write-off' => ['App\\Controllers\\PurchaseBatchesController', 'writeOff'],
             'POST /manager/purchases/photos/delete' => ['App\\Controllers\\PurchaseBatchesController', 'deletePhoto'],
+            'POST /manager/purchases/update' => ['App\\Controllers\\PurchaseBatchesController', 'update'],
+            'POST /manager/purchases/close' => ['App\\Controllers\\PurchaseBatchesController', 'close'],
         ];
 
         $key = $method . ' ' . $uri;
