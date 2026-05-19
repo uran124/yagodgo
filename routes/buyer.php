@@ -16,6 +16,14 @@ return [
         requireBuyer(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->store(); return true;
     },
     static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('POST', '/buyer/purchases/update', $method, $uri)) return false;
+        requireBuyer(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->update(); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('POST', '/buyer/purchases/close', $method, $uri)) return false;
+        requireBuyer(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->close(); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
         if (!routeRegex('GET', '#^/buyer/purchases/(\d+)$#', $method, $uri, $m)) return false;
         requireBuyer(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->show((int)$m[1]); return true;
     },

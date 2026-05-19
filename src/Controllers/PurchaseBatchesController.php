@@ -27,8 +27,9 @@ class PurchaseBatchesController
         $sql =
             'SELECT pb.*, p.variety, t.name AS product_name, u.name AS buyer_name,
 '
-          . '       TIMESTAMPDIFF(DAY, pb.purchased_at, NOW()) AS age_days
+          . '       TIMESTAMPDIFF(DAY, pb.purchased_at, NOW()) AS age_days,
 '
+          . "       CASE WHEN pb.boxes_free <= 0 OR pb.comment LIKE '[CLOSED]%' THEN 1 ELSE 0 END AS is_closed\n"
           . 'FROM purchase_batches pb
 '
           . 'JOIN products p ON p.id = pb.product_id
@@ -53,7 +54,7 @@ WHERE ' . implode(' AND ', $conditions);
         }
 
         $sql .= '
-ORDER BY pb.id DESC';
+ORDER BY is_closed ASC, pb.id DESC';
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
         $batches = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -143,6 +144,13 @@ ORDER BY pb.id DESC';
         $photosStmt->execute([$id]);
 
         $pnl = $this->purchaseBatchService->calculateBatchPnl($id);
+        $products = $this->pdo->query(
+            'SELECT p.id, p.variety, p.box_size, p.box_unit, t.name AS product_name
+             FROM products p
+             JOIN product_types t ON t.id = p.product_type_id
+             WHERE p.is_active = 1
+             ORDER BY t.name, p.variety'
+        )->fetchAll(PDO::FETCH_ASSOC);
 
         viewAdmin('purchases/show', [
             'pageTitle' => 'Партия #' . $id,
@@ -151,6 +159,7 @@ ORDER BY pb.id DESC';
             'movements' => $movementsStmt->fetchAll(PDO::FETCH_ASSOC),
             'photos' => $photosStmt->fetchAll(PDO::FETCH_ASSOC),
             'pnl' => $pnl,
+            'products' => $products,
             'flash' => $this->pullFlash(),
         ]);
     }
@@ -371,6 +380,71 @@ ORDER BY pb.id DESC';
 
         $this->setFlash('success', 'Фото удалено.');
         header('Location: ' . $this->basePath() . '/purchases/' . (int)$photo['purchase_batch_id']);
+        exit;
+    }
+
+    public function update(): void
+    {
+        $this->ensureCsrfOrRedirect();
+        $batchId = (int)($_POST['batch_id'] ?? 0);
+        if ($batchId <= 0) {
+            $this->setFlash('error', 'Некорректная закупка.');
+            header('Location: ' . $this->basePath() . '/purchases');
+            exit;
+        }
+        $stmt = $this->pdo->prepare(
+            'UPDATE purchase_batches
+             SET product_id = :product_id, boxes_total = :boxes_total, boxes_reserved = :boxes_reserved, boxes_free = :boxes_free,
+                 purchase_price_per_box = :purchase_price_per_box, extra_cost_per_box = :extra_cost_per_box,
+                 status = :status, purchased_at = :purchased_at, comment = :comment
+             WHERE id = :id
+             LIMIT 1'
+        );
+        $stmt->execute([
+            'id' => $batchId,
+            'product_id' => (int)($_POST['product_id'] ?? 0),
+            'boxes_total' => (float)($_POST['boxes_total'] ?? 0),
+            'boxes_reserved' => (float)($_POST['boxes_reserved'] ?? 0),
+            'boxes_free' => (float)($_POST['boxes_free'] ?? 0),
+            'purchase_price_per_box' => (float)($_POST['purchase_price_per_box'] ?? 0),
+            'extra_cost_per_box' => (float)($_POST['extra_cost_per_box'] ?? 0),
+            'status' => (string)($_POST['status'] ?? 'planned'),
+            'purchased_at' => (string)($_POST['planned_supply_date'] ?? ''),
+            'comment' => trim((string)($_POST['comment'] ?? '')),
+        ]);
+        $this->storeBatchPhotos($batchId);
+        $this->setFlash('success', 'Закупка обновлена.');
+        header('Location: ' . $this->basePath() . '/purchases/' . $batchId);
+        exit;
+    }
+
+    public function close(): void
+    {
+        $this->ensureCsrfOrRedirect();
+        $batchId = (int)($_POST['batch_id'] ?? 0);
+        if ($batchId <= 0) {
+            $this->setFlash('error', 'Некорректная закупка.');
+            header('Location: ' . $this->basePath() . '/purchases');
+            exit;
+        }
+        $stmt = $this->pdo->prepare('SELECT comment FROM purchase_batches WHERE id = ? LIMIT 1');
+        $stmt->execute([$batchId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            $this->setFlash('error', 'Закупка не найдена.');
+            header('Location: ' . $this->basePath() . '/purchases');
+            exit;
+        }
+
+        $comment = trim((string)($row['comment'] ?? ''));
+        if (!str_starts_with($comment, '[CLOSED]')) {
+            $comment = trim('[CLOSED] ' . $comment);
+        }
+
+        $upd = $this->pdo->prepare('UPDATE purchase_batches SET boxes_free = 0, comment = :comment WHERE id = :id LIMIT 1');
+        $upd->execute(['id' => $batchId, 'comment' => $comment]);
+        $this->setFlash('success', 'Закупка закрыта (без удаления данных).');
+        header('Location: ' . $this->basePath() . '/purchases');
         exit;
     }
 

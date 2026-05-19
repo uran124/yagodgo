@@ -74,20 +74,28 @@
   </thead>
   <tbody>
     <?php foreach ($batches as $batch): ?>
-      <tr class="border-b hover:bg-gray-50 transition-all duration-200">
+      <tr class="border-b transition-all duration-200 <?= ((int)($batch['is_closed'] ?? 0) === 1) ? 'bg-gray-50 text-gray-400' : 'hover:bg-orange-50 bg-white' ?>">
         <td class="p-3"><?= (int)$batch['id'] ?></td>
-        <td class="p-3"><?= htmlspecialchars(trim(($batch['product_name'] ?? '') . ' ' . ($batch['variety'] ?? ''))) ?></td>
+        <td class="p-3">
+          <a class="text-[#C86052] hover:underline font-medium" href="<?= $basePath ?>/purchases/<?= (int)$batch['id'] ?>">
+            <?= htmlspecialchars(trim(($batch['product_name'] ?? '') . ' ' . ($batch['variety'] ?? ''))) ?>
+          </a>
+        </td>
         <td class="p-3"><?= htmlspecialchars((string)($batch['buyer_name'] ?? '—')) ?></td>
         <td class="p-3"><?= (float)$batch['boxes_total'] ?></td>
         <td class="p-3"><?= (float)$batch['boxes_free'] ?></td>
         <td class="p-3"><?= (float)$batch['boxes_reserved'] ?></td>
         <td class="p-3"><?= number_format((float)$batch['purchase_price_per_box'], 2, '.', ' ') ?> ₽</td>
         <td class="p-3"><?= number_format((float)$batch['instant_price_per_box'], 2, '.', ' ') ?> ₽</td>
-        <td class="p-3"><?= htmlspecialchars((string)($statusLabels[(string)$batch['status']] ?? (string)$batch['status'])) ?></td>
+        <td class="p-3">
+          <?= htmlspecialchars((string)($statusLabels[(string)$batch['status']] ?? (string)$batch['status'])) ?>
+          <?php if ((int)($batch['is_closed'] ?? 0) === 1): ?>
+            <span class="ml-1 text-[11px] px-1 py-0.5 rounded bg-gray-200 text-gray-600">закрыта</span>
+          <?php endif; ?>
+        </td>
         <td class="p-3"><?= (int)($batch['age_days'] ?? 0) ?> дн.</td>
         <td class="p-3">
           <div class="flex flex-wrap gap-2">
-            <a class="text-xs bg-green-100 px-2 py-1 rounded" href="<?= $basePath ?>/purchases/<?= (int)$batch['id'] ?>">Открыть</a>
             <?php if (($batch['status'] ?? '') === 'planned'): ?>
               <form method="post" action="<?= $basePath ?>/purchases/purchased">
                 <?= csrf_field() ?>

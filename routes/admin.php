@@ -33,7 +33,7 @@ return [
     },
     static function (string $method, string $uri, array $c): bool {
         if (!routeExact('POST', '/admin/products/delete', $method, $uri)) return false;
-        requireAdmin(); (new App\Controllers\ProductsController($c['pdo']))->delete(); return true;
+        requireAdmin(); (new App\Controllers\ProductsController($c['pdo']))->close(); return true;
     },
 
     static function (string $method, string $uri, array $c): bool {
@@ -102,6 +102,14 @@ return [
         requireAdmin(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->deletePhoto(); return true;
     },
     static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('POST', '/admin/purchases/update', $method, $uri)) return false;
+        requireAdmin(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->update(); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('POST', '/admin/purchases/close', $method, $uri)) return false;
+        requireAdmin(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->close(); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
         if (!routeExact('GET', '/admin/orders/create', $method, $uri)) return false;
         requireAdmin(); (new App\Controllers\OrdersController($c['pdo']))->create(); return true;
     },
@@ -134,7 +142,7 @@ return [
             'GET /admin/slots' => ['App\\Controllers\\SlotsController', 'index'],
             'GET /admin/slots/edit' => ['App\\Controllers\\SlotsController', 'edit'],
             'POST /admin/slots/save' => ['App\\Controllers\\SlotsController', 'save'],
-            'POST /admin/slots/delete' => ['App\\Controllers\\SlotsController', 'delete'],
+            'POST /admin/slots/delete' => ['App\\Controllers\\SlotsController', 'close'],
             'GET /admin/coupons' => ['App\\Controllers\\CouponsController', 'index'],
             'GET /admin/coupons/edit' => ['App\\Controllers\\CouponsController', 'edit'],
             'POST /admin/coupons/save' => ['App\\Controllers\\CouponsController', 'save'],
@@ -152,7 +160,7 @@ return [
             'GET /admin/users/addresses' => ['App\\Controllers\\UsersController', 'addresses'],
             'GET /admin/users/edit' => ['App\\Controllers\\UsersController', 'edit'],
             'POST /admin/users/save' => ['App\\Controllers\\UsersController', 'save'],
-            'POST /admin/users/delete' => ['App\\Controllers\\UsersController', 'delete'],
+            'POST /admin/users/delete' => ['App\\Controllers\\UsersController', 'close'],
             'POST /admin/users/toggle-block' => ['App\\Controllers\\UsersController', 'toggleBlock'],
             'POST /admin/users/reset-balance' => ['App\\Controllers\\UsersController', 'resetRubBalance'],
             'POST /admin/users/add-address' => ['App\\Controllers\\UsersController', 'addAddressAdmin'],
