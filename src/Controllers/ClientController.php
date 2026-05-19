@@ -1292,7 +1292,7 @@ public function cancelReservedOrder(int $orderId): void
             if ($pid) {
                 $pStmt = $this->pdo->prepare(
                     "SELECT p.id, p.alias, t.name AS product, t.alias AS type_alias, p.variety, p.description, p.origin_country,
-                            p.box_size, p.box_unit, COALESCE(pb.instant_unit_price, p.price) AS price, p.sale_price, p.is_active,
+                            p.box_size, p.box_unit, COALESCE(pb.instant_unit_price, p.price) AS price, COALESCE(pb.purchase_price_per_box, 0) AS purchase_price_per_box, p.sale_price, p.is_active,
                             p.image_path, DATE(pb.purchased_at) AS delivery_date,
                             COALESCE(u.company_name,u.name,'berryGo') AS seller_name
                        FROM products p
@@ -1378,7 +1378,7 @@ public function cancelReservedOrder(int $orderId): void
         }
 
         $pStmt = $this->pdo->prepare(
-            "SELECT p.id, p.alias, t.name AS product, t.alias AS type_alias, p.variety, p.description, p.origin_country, p.box_size, p.box_unit, COALESCE(pb_latest.instant_unit_price, p.price) AS price, p.sale_price, p.is_active, p.image_path, DATE(pb_latest.purchased_at) AS delivery_date,
+            "SELECT p.id, p.alias, t.name AS product, t.alias AS type_alias, p.variety, p.description, p.origin_country, p.box_size, p.box_unit, COALESCE(pb_latest.instant_unit_price, p.price) AS price, COALESCE(pb_latest.purchase_price_per_box, 0) AS purchase_price_per_box, p.sale_price, p.is_active, p.image_path, DATE(pb_latest.purchased_at) AS delivery_date,
                     COALESCE(u.company_name,u.name,'berryGo') AS seller_name,
                     pb_latest.purchased_at AS latest_purchase_date
              FROM products p
