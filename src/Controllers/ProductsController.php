@@ -70,7 +70,7 @@ class ProductsController
                 p.box_unit,
                 p.unit,
                 COALESCE(pb.purchase_price_per_box, p.price) AS price,
-                p.stock_boxes,
+                p.free_stock_boxes AS stock_boxes,
                 p.is_active,
                 p.image_path,
                 DATE(pb.purchased_at) AS delivery_date
