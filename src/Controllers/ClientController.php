@@ -68,12 +68,13 @@ public function cart(): void
             p.box_size,
             p.box_unit,
             p.image_path,
-            p.delivery_date,
+            DATE(pb.purchased_at) AS delivery_date,
             p.sale_price,
             p.is_active
          FROM cart_items ci
          JOIN products p ON p.id = ci.product_id
          JOIN product_types t ON t.id = p.product_type_id
+         LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id
          WHERE ci.user_id = ?"
     );
     $stmt->execute([$userId]);
@@ -1291,11 +1292,12 @@ public function cancelReservedOrder(int $orderId): void
             if ($pid) {
                 $pStmt = $this->pdo->prepare(
                     "SELECT p.id, p.alias, t.name AS product, t.alias AS type_alias, p.variety, p.description, p.origin_country,
-                            p.box_size, p.box_unit, p.price, p.sale_price, p.is_active,
-                            p.image_path, p.delivery_date,
+                            p.box_size, p.box_unit, COALESCE(pb.instant_unit_price, p.price) AS price, p.sale_price, p.is_active,
+                            p.image_path, DATE(pb.purchased_at) AS delivery_date,
                             COALESCE(u.company_name,u.name,'berryGo') AS seller_name
                        FROM products p
                        JOIN product_types t ON t.id = p.product_type_id
+                       LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id
                        LEFT JOIN users u ON u.id = p.seller_id
                        WHERE p.id = ?"
                 );
