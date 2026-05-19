@@ -195,7 +195,6 @@ class ProductsController
         $unit          = ($unitRaw === 'л' ? 'л' : 'кг');
         $price        = (float)$_POST['price']; // price per kg/l
         $salePrice     = (float)($_POST['sale_price'] ?? 0);
-        $stockBoxes    = (float)$_POST['stock_boxes'];
         $isActive      = isset($_POST['is_active']) ? 1 : 0;
 
         // дата поставки (NULL → под заказ)
@@ -274,14 +273,13 @@ class ProductsController
                         unit            = ?,
                         price           = ?,
                         sale_price      = ?,
-                        stock_boxes     = ?,
                         delivery_date   = ?,
                         is_active       = ?";
             $params = [
                 $typeId, $alias, $variety, $description, $fullDesc, $compositionJson,
                 $metaTitle, $metaDesc, $metaKeys,
                 $manufacturer, $originCountry, $boxSize, $boxUnit,
-                $unit, $price, $salePrice, $stockBoxes,
+                $unit, $price, $salePrice,
                 $deliveryDate, $isActive
             ];
 
@@ -308,14 +306,14 @@ class ProductsController
 
         } else {
             // INSERT
-            $columns      = "product_type_id,alias,variety,description,full_description,composition,meta_title,meta_description,meta_keywords,manufacturer,origin_country,box_size,box_unit,unit,price,sale_price,stock_boxes,delivery_date,is_active";
-            // 19 placeholders corresponding to the columns above
-            $placeholders = "?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?";
+            $columns      = "product_type_id,alias,variety,description,full_description,composition,meta_title,meta_description,meta_keywords,manufacturer,origin_country,box_size,box_unit,unit,price,sale_price,delivery_date,is_active";
+            // 18 placeholders corresponding to the columns above
+            $placeholders = "?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?";
             $params       = [
                 $typeId, $alias, $variety, $description, $fullDesc, $compositionJson,
                 $metaTitle, $metaDesc, $metaKeys,
                 $manufacturer, $originCountry, $boxSize, $boxUnit,
-                $unit, $price, $salePrice, $stockBoxes,
+                $unit, $price, $salePrice,
                 $deliveryDate, $isActive
             ];
             if ($sellerId) {
