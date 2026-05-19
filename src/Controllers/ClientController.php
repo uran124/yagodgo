@@ -68,12 +68,13 @@ public function cart(): void
             p.box_size,
             p.box_unit,
             p.image_path,
-            p.delivery_date,
+            DATE(pb.purchased_at) AS delivery_date,
             p.sale_price,
             p.is_active
          FROM cart_items ci
          JOIN products p ON p.id = ci.product_id
          JOIN product_types t ON t.id = p.product_type_id
+         LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id
          WHERE ci.user_id = ?"
     );
     $stmt->execute([$userId]);
@@ -169,8 +170,12 @@ public function cart(): void
             }
 
             $priceStmt = $this->pdo->prepare(
-                "SELECT price, sale_price, box_size, preorder_unit_price, instant_unit_price, discount_unit_price, current_purchase_batch_id
-                 FROM products WHERE id = ?"
+                "SELECT p.price, p.sale_price, p.box_size, p.preorder_unit_price, p.instant_unit_price, p.discount_unit_price,
+                        p.current_purchase_batch_id,
+                        pb.preorder_price_per_box, pb.instant_price_per_box, pb.discount_price_per_box
+                 FROM products p
+                 LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id
+                 WHERE p.id = ? LIMIT 1"
             );
             $priceStmt->execute([$productId]);
             $row = $priceStmt->fetch(PDO::FETCH_ASSOC);
@@ -178,21 +183,38 @@ public function cart(): void
             $purchaseBatchId = null;
             if ($row) {
                 $boxSize = (float)($row['box_size'] ?? 0);
-                $sale    = (float)($row['sale_price'] ?? 0); // per kg
-                $regular = (float)($row['price'] ?? 0);      // per kg
+                $sale = (float)($row['sale_price'] ?? 0);
+                $regular = (float)($row['price'] ?? 0);
                 $fallbackKgPrice = $sale > 0 ? $sale : $regular;
-                $kgPrice = match ($stockMode) {
-                    'preorder' => (float)($row['preorder_unit_price'] ?? 0),
-                    'discount_stock' => (float)($row['discount_unit_price'] ?? 0),
-                    default => (float)($row['instant_unit_price'] ?? 0),
+                $fallbackBoxPrice = $fallbackKgPrice * $boxSize;
+
+                $priceBox = match ($stockMode) {
+                    'preorder' => (float)($row['preorder_price_per_box'] ?? 0),
+                    'discount_stock' => (float)($row['discount_price_per_box'] ?? 0),
+                    default => (float)($row['instant_price_per_box'] ?? 0),
                 };
-                if ($kgPrice <= 0) {
-                    $kgPrice = $fallbackKgPrice;
+                if ($priceBox <= 0) {
+                    $kgPrice = match ($stockMode) {
+                        'preorder' => (float)($row['preorder_unit_price'] ?? 0),
+                        'discount_stock' => (float)($row['discount_unit_price'] ?? 0),
+                        default => (float)($row['instant_unit_price'] ?? 0),
+                    };
+                    if ($kgPrice > 0 && $boxSize > 0) {
+                        $priceBox = $kgPrice * $boxSize;
+                    } else {
+                        $priceBox = $fallbackBoxPrice;
+                    }
                 }
-                $priceBox = $kgPrice * $boxSize;
                 if ($stockMode !== 'preorder') {
                     $purchaseBatchId = isset($row['current_purchase_batch_id']) ? (int)$row['current_purchase_batch_id'] : null;
                 }
+            }
+
+            if ($stockMode !== 'preorder' && $purchaseBatchId === null) {
+                $_SESSION['cart_error'] = 'Для этого товара сейчас нет активной закупки.';
+                $referer = $_SERVER['HTTP_REFERER'] ?? '/';
+                header('Location: ' . $referer);
+                exit;
             }
 
             $modeCheckStmt = $this->pdo->prepare(
@@ -1270,11 +1292,12 @@ public function cancelReservedOrder(int $orderId): void
             if ($pid) {
                 $pStmt = $this->pdo->prepare(
                     "SELECT p.id, p.alias, t.name AS product, t.alias AS type_alias, p.variety, p.description, p.origin_country,
-                            p.box_size, p.box_unit, p.price, p.sale_price, p.is_active,
-                            p.image_path, p.delivery_date,
+                            p.box_size, p.box_unit, COALESCE(pb.instant_unit_price, p.price) AS price, COALESCE(pb.purchase_price_per_box, 0) AS purchase_price_per_box, p.sale_price, p.is_active,
+                            p.image_path, DATE(pb.purchased_at) AS delivery_date,
                             COALESCE(u.company_name,u.name,'berryGo') AS seller_name
                        FROM products p
                        JOIN product_types t ON t.id = p.product_type_id
+                       LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id
                        LEFT JOIN users u ON u.id = p.seller_id
                        WHERE p.id = ?"
                 );
@@ -1304,9 +1327,12 @@ public function cancelReservedOrder(int $orderId): void
 
     public function showProduct(string $alias, ?string $typeAlias = null): void
     {
-        $query = "SELECT p.*, t.name AS product, t.alias AS type_alias
+        $query = "SELECT p.*, t.name AS product, t.alias AS type_alias,
+                         COALESCE(pb.instant_unit_price, p.price) AS price,
+                         DATE(pb.purchased_at) AS delivery_date
                   FROM products p
                   JOIN product_types t ON t.id = p.product_type_id
+                  LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id
                   WHERE (p.alias = ? OR p.id = ?)";
         $params = [$alias, $alias];
         if ($typeAlias !== null) {
@@ -1352,7 +1378,7 @@ public function cancelReservedOrder(int $orderId): void
         }
 
         $pStmt = $this->pdo->prepare(
-            "SELECT p.id, p.alias, t.name AS product, t.alias AS type_alias, p.variety, p.description, p.origin_country, p.box_size, p.box_unit, p.price, p.sale_price, p.is_active, p.image_path, p.delivery_date,
+            "SELECT p.id, p.alias, t.name AS product, t.alias AS type_alias, p.variety, p.description, p.origin_country, p.box_size, p.box_unit, COALESCE(pb_latest.instant_unit_price, p.price) AS price, COALESCE(pb_latest.purchase_price_per_box, 0) AS purchase_price_per_box, p.sale_price, p.is_active, p.image_path, DATE(pb_latest.purchased_at) AS delivery_date,
                     COALESCE(u.company_name,u.name,'berryGo') AS seller_name,
                     pb_latest.purchased_at AS latest_purchase_date
              FROM products p

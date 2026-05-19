@@ -482,10 +482,11 @@ class OrdersController
         }
 
         $stmt = $this->pdo->prepare(
-            "SELECT ci.product_id, t.name AS product, p.variety, ci.quantity, ci.unit_price, p.delivery_date\n" .
+            "SELECT ci.product_id, t.name AS product, p.variety, ci.quantity, ci.unit_price, DATE(pb.purchased_at) AS delivery_date\n" .
             "FROM cart_items ci\n" .
             "JOIN products p ON p.id = ci.product_id\n" .
             "JOIN product_types t ON t.id = p.product_type_id\n" .
+            "LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id\n" .
             "WHERE ci.user_id = ?"
         );
         $stmt->execute([$user['id']]);

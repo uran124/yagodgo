@@ -71,11 +71,11 @@ class ClientCatalogService
             'p.is_active = 1',
             "CASE WHEN p.sale_price > 0 THEN 0 ELSE 1 END,\n" .
             "CASE\n" .
-            "  WHEN p.delivery_date IS NULL THEN 3\n" .
-            "  WHEN p.delivery_date > ? THEN 2\n" .
+            "  WHEN pb.purchased_at IS NULL THEN 3\n" .
+            "  WHEN DATE(pb.purchased_at) > ? THEN 2\n" .
             "  ELSE 1\n" .
             "END,\n" .
-            "COALESCE(p.delivery_date, '9999-12-31'),\n" .
+            "COALESCE(DATE(pb.purchased_at), '9999-12-31'),\n" .
             "p.id DESC",
             [$today]
         );
@@ -105,11 +105,12 @@ class ClientCatalogService
             "       p.origin_country,\n" .
             "       p.box_size,\n" .
             "       p.box_unit,\n" .
-            "       p.price,\n" .
+            "       COALESCE(pb.instant_unit_price, p.price) AS price,\n" .
+            "       COALESCE(pb.purchase_price_per_box, 0) AS purchase_price_per_box,\n" .
             "       p.sale_price,\n" .
             "       p.is_active,\n" .
             "       p.image_path,\n" .
-            "       p.delivery_date,\n" .
+            "       DATE(pb.purchased_at) AS delivery_date,\n" .
             "       COALESCE(u.company_name, u.name, 'berryGo') AS seller_name\n" .
             "FROM products p\n" .
             "JOIN product_types t ON t.id = p.product_type_id\n" .
