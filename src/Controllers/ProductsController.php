@@ -92,10 +92,10 @@ class ProductsController
 
         $placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
         if ($availabilityFilter === 'reserved') {
-            $sql .= (stripos($sql, ' WHERE ') !== false ? " AND " : " WHERE ") . "(p.delivery_date IS NULL OR p.delivery_date = ?)";
+            $sql .= (stripos($sql, ' WHERE ') !== false ? " AND " : " WHERE ") . "(pb.purchased_at IS NULL OR DATE(pb.purchased_at) = ?)";
             $params[] = $placeholder;
         } elseif ($availabilityFilter === 'available') {
-            $sql .= (stripos($sql, ' WHERE ') !== false ? " AND " : " WHERE ") . "(p.delivery_date IS NOT NULL AND p.delivery_date <> ?)";
+            $sql .= (stripos($sql, ' WHERE ') !== false ? " AND " : " WHERE ") . "(pb.purchased_at IS NOT NULL AND DATE(pb.purchased_at) <> ?)";
             $params[] = $placeholder;
         }
 
@@ -131,10 +131,20 @@ class ProductsController
         if ($id) {
             $role = $_SESSION['role'] ?? '';
             if ($role === 'seller') {
-                $stmt = $this->pdo->prepare("SELECT * FROM products WHERE id = ? AND seller_id = ?");
+                $stmt = $this->pdo->prepare(
+                    "SELECT p.*, DATE(pb.purchased_at) AS delivery_date, COALESCE(pb.purchase_price_per_box, p.price) AS price
+                     FROM products p
+                     LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id
+                     WHERE p.id = ? AND p.seller_id = ?"
+                );
                 $stmt->execute([(int)$id, $_SESSION['user_id'] ?? 0]);
             } else {
-                $stmt = $this->pdo->prepare("SELECT * FROM products WHERE id = ?");
+                $stmt = $this->pdo->prepare(
+                    "SELECT p.*, DATE(pb.purchased_at) AS delivery_date, COALESCE(pb.purchase_price_per_box, p.price) AS price
+                     FROM products p
+                     LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id
+                     WHERE p.id = ?"
+                );
                 $stmt->execute([(int)$id]);
             }
             $product = $stmt->fetch(PDO::FETCH_ASSOC);
