@@ -119,7 +119,7 @@
 
     <!-- Дата поставки -->
     <div>
-      <label class="block mb-1">Дата следующей поставки</label>
+      <label class="block mb-1">Дата закупки (активная закупка)</label>
       <input
         type="date"
         name="delivery_date"
@@ -127,7 +127,7 @@
         class="w-full border px-2 py-1 rounded focus:ring-2 focus:ring-[#C86052] outline-none"
       >
       <p class="text-sm text-gray-500 mt-1">
-        Оставьте пустым, если дата неизвестна (под заказ)
+        Изменение влияет на активную закупку, а не на справочник товара.
       </p>
     </div>
 
@@ -166,7 +166,7 @@
 
     <!-- Цена за кг/л -->
     <div>
-      <label class="block mb-1">Цена за кг или л (₽)</label>
+      <label class="block mb-1">Закупочная цена за ящик (₽)</label>
       <input name="price" type="number" step="0.01"
              value="<?= htmlspecialchars($price_kg ?? '') ?>"
              class="w-full border px-2 py-1 rounded" required>
