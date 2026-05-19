@@ -31,7 +31,7 @@ class ProductsController
     // Возвращает массив всех активных товаров
     public function getAllActive(): array
     {
-        $stmt = $this->pdo->query("SELECT id, variety, price, unit, image_path FROM products WHERE stock_boxes > 0");
+        $stmt = $this->pdo->query("SELECT id, variety, price, unit, image_path FROM products WHERE free_stock_boxes > 0");
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
@@ -70,7 +70,7 @@ class ProductsController
                 p.box_unit,
                 p.unit,
                 COALESCE(pb.purchase_price_per_box, p.price) AS price,
-                p.free_stock_boxes AS stock_boxes,
+                p.free_stock_boxes,
                 p.is_active,
                 p.image_path,
                 DATE(pb.purchased_at) AS delivery_date
