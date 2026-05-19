@@ -241,11 +241,11 @@ class PurchaseBatchService
 
         $stmt = $this->pdo->prepare(
             'UPDATE purchase_batches
-             SET boxes_free = boxes_free - :boxes,
-                 boxes_discount = boxes_discount + :boxes
+             SET boxes_free = boxes_free - :boxes_decrease,
+                 boxes_discount = boxes_discount + :boxes_increase
              WHERE id = :id'
         );
-        $stmt->execute(['boxes' => $boxes, 'id' => $batchId]);
+        $stmt->execute(['boxes_decrease' => $boxes, 'boxes_increase' => $boxes, 'id' => $batchId]);
     }
 
     public function moveAllFreeToDiscountStock(int $batchId): float
@@ -273,12 +273,17 @@ class PurchaseBatchService
 
         $stmt = $this->pdo->prepare(
             'UPDATE purchase_batches
-             SET boxes_written_off = boxes_written_off + :boxes,
-                 boxes_remaining = boxes_remaining - :boxes,
+             SET boxes_written_off = boxes_written_off + :boxes_written_off,
+                 boxes_remaining = boxes_remaining - :boxes_remaining,
                  comment = :comment
              WHERE id = :id'
         );
-        $stmt->execute(['boxes' => $boxes, 'comment' => $comment, 'id' => $batchId]);
+        $stmt->execute([
+            'boxes_written_off' => $boxes,
+            'boxes_remaining' => $boxes,
+            'comment' => $comment,
+            'id' => $batchId,
+        ]);
     }
 
     public function closeBatch(int $batchId): void
