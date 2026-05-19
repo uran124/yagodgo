@@ -375,7 +375,7 @@ class ProductsController
         exit;
     }
 
-    // Обновление закупочной цены активной закупки
+    // Обновление текущей цены продажи активной закупки (за позицию/ящик)
     public function updatePrice(): void
     {
         $id = (int)($_POST['id'] ?? 0);
@@ -384,7 +384,7 @@ class ProductsController
             $price = (float)$raw;
             $batchId = $this->resolveCurrentPurchaseBatchId($id);
             if ($batchId !== null) {
-                $stmt = $this->pdo->prepare("UPDATE purchase_batches SET purchase_price_per_box = ? WHERE id = ?");
+                $stmt = $this->pdo->prepare("UPDATE purchase_batches SET instant_price_per_box = ? WHERE id = ?");
                 $stmt->execute([$price, $batchId]);
             }
         }

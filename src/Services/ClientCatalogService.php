@@ -125,7 +125,7 @@ class ClientCatalogService
             "       p.box_size,\n" .
             "       p.box_unit,\n" .
             "       COALESCE(pb.instant_unit_price, p.price) AS price,\n" .
-            "       COALESCE(pb.purchase_price_per_box, 0) AS purchase_price_per_box,\n" .
+            "       COALESCE(pb.instant_price_per_box, 0) AS current_price_per_box,\n" .
             "       p.sale_price,\n" .
             "       p.is_active,\n" .
             "       p.image_path,\n" .

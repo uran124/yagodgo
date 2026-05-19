@@ -33,9 +33,9 @@ $effectiveKg = $sale > 0 ? $sale : $price;
 $priceBox   = $effectiveKg * $boxSize;
 $pricePerKg = round($effectiveKg, 2);
 $regularBox = $price * $boxSize;
-$purchaseBoxForEdit = (float)($p['purchase_price_per_box'] ?? 0);
-if ($purchaseBoxForEdit <= 0) {
-    $purchaseBoxForEdit = $regularBox;
+$currentPriceBoxForEdit = (float)($p['current_price_per_box'] ?? 0);
+if ($currentPriceBoxForEdit <= 0) {
+    $currentPriceBoxForEdit = $regularBox;
 }
 $role     = $_SESSION['role'] ?? '';
 $isStaff  = in_array($role, ['admin','manager'], true);
@@ -197,10 +197,10 @@ $preorderPriceHint = (string)(get_setting('ui_preorder_price_hint', 'Цена о
         <div class="mt-2 hidden" data-price-form="<?= $p['id'] ?>">
           <form action="<?= $basePath ?>/products/update-price" method="post" class="flex items-center space-x-2">
             <input type="hidden" name="id" value="<?= $p['id'] ?>">
-            <input type="number" step="0.01" name="price" value="<?= htmlspecialchars((string)$purchaseBoxForEdit) ?>" class="border px-1 py-1 rounded text-sm w-24" title="Закупочная цена за ящик">
-            <button type="submit" class="bg-blue-500 text-white rounded px-2 py-1 text-xs">Обновить закупку</button>
+            <input type="number" step="0.01" name="price" value="<?= htmlspecialchars((string)$currentPriceBoxForEdit) ?>" class="border px-1 py-1 rounded text-sm w-24" title="Цена сейчас за позицию">
+            <button type="submit" class="bg-blue-500 text-white rounded px-2 py-1 text-xs">Обновить цену сейчас</button>
           </form>
-          <p class="mt-1 text-[10px] text-gray-500">Изменяется цена активной закупки.</p>
+          <p class="mt-1 text-[10px] text-gray-500">Изменяется поле «цена сейчас» активной позиции (за позицию).</p>
         </div>
       <?php endif; ?>
 
