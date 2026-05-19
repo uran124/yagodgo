@@ -69,13 +69,14 @@ class ProductsController
                 p.box_size,
                 p.box_unit,
                 p.unit,
-                p.price,
+                COALESCE(pb.purchase_price_per_box, p.price) AS price,
                 p.stock_boxes,
                 p.is_active,
                 p.image_path,
-                p.delivery_date
+                DATE(pb.purchased_at) AS delivery_date
              FROM products p
-             JOIN product_types t ON t.id = p.product_type_id";
+             JOIN product_types t ON t.id = p.product_type_id
+             LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id";
 
         if ($role === 'seller') {
             $selectedSeller = $_SESSION['user_id'] ?? 0;
@@ -91,10 +92,10 @@ class ProductsController
 
         $placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
         if ($availabilityFilter === 'reserved') {
-            $sql .= (stripos($sql, ' WHERE ') !== false ? " AND " : " WHERE ") . "(p.delivery_date IS NULL OR p.delivery_date = ?)";
+            $sql .= (stripos($sql, ' WHERE ') !== false ? " AND " : " WHERE ") . "(pb.purchased_at IS NULL OR DATE(pb.purchased_at) = ?)";
             $params[] = $placeholder;
         } elseif ($availabilityFilter === 'available') {
-            $sql .= (stripos($sql, ' WHERE ') !== false ? " AND " : " WHERE ") . "(p.delivery_date IS NOT NULL AND p.delivery_date <> ?)";
+            $sql .= (stripos($sql, ' WHERE ') !== false ? " AND " : " WHERE ") . "(pb.purchased_at IS NOT NULL AND DATE(pb.purchased_at) <> ?)";
             $params[] = $placeholder;
         }
 
@@ -130,10 +131,20 @@ class ProductsController
         if ($id) {
             $role = $_SESSION['role'] ?? '';
             if ($role === 'seller') {
-                $stmt = $this->pdo->prepare("SELECT * FROM products WHERE id = ? AND seller_id = ?");
+                $stmt = $this->pdo->prepare(
+                    "SELECT p.*, DATE(pb.purchased_at) AS delivery_date, COALESCE(pb.purchase_price_per_box, p.price) AS price
+                     FROM products p
+                     LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id
+                     WHERE p.id = ? AND p.seller_id = ?"
+                );
                 $stmt->execute([(int)$id, $_SESSION['user_id'] ?? 0]);
             } else {
-                $stmt = $this->pdo->prepare("SELECT * FROM products WHERE id = ?");
+                $stmt = $this->pdo->prepare(
+                    "SELECT p.*, DATE(pb.purchased_at) AS delivery_date, COALESCE(pb.purchase_price_per_box, p.price) AS price
+                     FROM products p
+                     LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id
+                     WHERE p.id = ?"
+                );
                 $stmt->execute([(int)$id]);
             }
             $product = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -364,22 +375,18 @@ class ProductsController
         exit;
     }
 
-    // Обновление цены за кг
+    // Обновление текущей цены продажи активной закупки (за позицию/ящик)
     public function updatePrice(): void
     {
         $id = (int)($_POST['id'] ?? 0);
         $raw = trim($_POST['price'] ?? '');
         if ($id && $raw !== '') {
             $price = (float)$raw;
-            $role = $_SESSION['role'] ?? '';
-            $params = [$price, $id];
-            $sql = "UPDATE products SET price = ? WHERE id = ?";
-            if ($role === 'seller') {
-                $sql .= " AND seller_id = ?";
-                $params[] = $_SESSION['user_id'] ?? 0;
+            $batchId = $this->resolveCurrentPurchaseBatchId($id);
+            if ($batchId !== null) {
+                $stmt = $this->pdo->prepare("UPDATE purchase_batches SET instant_price_per_box = ? WHERE id = ?");
+                $stmt->execute([$price, $batchId]);
             }
-            $stmt = $this->pdo->prepare($sql);
-            $stmt->execute($params);
         }
         // Redirect back to the page where the price was updated.
         // If the "Referer" header is available, return to that page
@@ -397,25 +404,21 @@ class ProductsController
         exit;
     }
 
-    // Обновление даты поставки товара
+    // Обновление даты закупки активной закупки
     public function updateDeliveryDate(): void
     {
         $id = (int)($_POST['id'] ?? 0);
         $raw = trim($_POST['delivery_date'] ?? '');
         $date = $raw !== '' ? $raw : null;
-        if ($id) {
-            $role = $_SESSION['role'] ?? '';
-            $params = [$date, $id];
-            $sql = "UPDATE products SET delivery_date = ? WHERE id = ?";
-            if ($role === 'seller') {
-                $sql .= " AND seller_id = ?";
-                $params[] = $_SESSION['user_id'] ?? 0;
-            }
-            $stmt = $this->pdo->prepare($sql);
-            $stmt->execute($params);
-            $placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
-            if ($date !== null && $date !== '' && $date !== $placeholder) {
-                $this->activateReservedOrdersByProduct($id, $date);
+        if ($id && $date !== null) {
+            $batchId = $this->resolveCurrentPurchaseBatchId($id);
+            if ($batchId !== null) {
+                $stmt = $this->pdo->prepare("UPDATE purchase_batches SET purchased_at = ? WHERE id = ?");
+                $stmt->execute([$date . ' 00:00:00', $batchId]);
+                $placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
+                if ($date !== '' && $date !== $placeholder) {
+                    $this->activateReservedOrdersByProduct($id, $date);
+                }
             }
         }
         // Determine where to redirect after updating
@@ -434,6 +437,24 @@ class ProductsController
 
         header('Location: ' . $base);
         exit;
+    }
+
+
+    private function resolveCurrentPurchaseBatchId(int $productId): ?int
+    {
+        $role = $_SESSION['role'] ?? '';
+        $params = [$productId];
+        $sql = "SELECT current_purchase_batch_id FROM products WHERE id = ?";
+        if ($role === 'seller') {
+            $sql .= " AND seller_id = ?";
+            $params[] = (int)($_SESSION['user_id'] ?? 0);
+        }
+
+        $stmt = $this->pdo->prepare($sql . " LIMIT 1");
+        $stmt->execute($params);
+        $batchId = $stmt->fetchColumn();
+
+        return $batchId !== false && $batchId !== null ? (int)$batchId : null;
     }
 
     /**
