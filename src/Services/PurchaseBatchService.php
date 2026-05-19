@@ -267,23 +267,37 @@ class PurchaseBatchService
         }
 
         $batch = $this->loadBatch($batchId);
-        if ((float)$batch['boxes_remaining'] < $boxes) {
+        $remaining = (float)($batch['boxes_remaining'] ?? 0);
+        if ($remaining < $boxes) {
             throw new RuntimeException('Not enough boxes remaining for write-off.');
         }
+
+        $freeBoxes = max(0.0, (float)($batch['boxes_free'] ?? 0));
+        $discountBoxes = max(0.0, (float)($batch['boxes_discount'] ?? 0));
+
+        $writeOffFromFree = min($freeBoxes, $boxes);
+        $leftToWriteOff = max(0.0, $boxes - $writeOffFromFree);
+        $writeOffFromDiscount = min($discountBoxes, $leftToWriteOff);
 
         $stmt = $this->pdo->prepare(
             'UPDATE purchase_batches
              SET boxes_written_off = boxes_written_off + :boxes_written_off,
+                 boxes_free = boxes_free - :boxes_free,
+                 boxes_discount = boxes_discount - :boxes_discount,
                  boxes_remaining = boxes_remaining - :boxes_remaining,
                  comment = :comment
              WHERE id = :id'
         );
         $stmt->execute([
             'boxes_written_off' => $boxes,
+            'boxes_free' => $writeOffFromFree,
+            'boxes_discount' => $writeOffFromDiscount,
             'boxes_remaining' => $boxes,
             'comment' => $comment,
             'id' => $batchId,
         ]);
+
+        $this->stockService->syncProductStock((int)$batch['product_id']);
     }
 
     public function closeBatch(int $batchId): void
