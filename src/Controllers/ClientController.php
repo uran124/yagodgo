@@ -1304,9 +1304,12 @@ public function cancelReservedOrder(int $orderId): void
 
     public function showProduct(string $alias, ?string $typeAlias = null): void
     {
-        $query = "SELECT p.*, t.name AS product, t.alias AS type_alias
+        $query = "SELECT p.*, t.name AS product, t.alias AS type_alias,
+                         COALESCE(pb.instant_unit_price, p.price) AS price,
+                         DATE(pb.purchased_at) AS delivery_date
                   FROM products p
                   JOIN product_types t ON t.id = p.product_type_id
+                  LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id
                   WHERE (p.alias = ? OR p.id = ?)";
         $params = [$alias, $alias];
         if ($typeAlias !== null) {
@@ -1352,7 +1355,7 @@ public function cancelReservedOrder(int $orderId): void
         }
 
         $pStmt = $this->pdo->prepare(
-            "SELECT p.id, p.alias, t.name AS product, t.alias AS type_alias, p.variety, p.description, p.origin_country, p.box_size, p.box_unit, p.price, p.sale_price, p.is_active, p.image_path, p.delivery_date,
+            "SELECT p.id, p.alias, t.name AS product, t.alias AS type_alias, p.variety, p.description, p.origin_country, p.box_size, p.box_unit, COALESCE(pb_latest.instant_unit_price, p.price) AS price, p.sale_price, p.is_active, p.image_path, DATE(pb_latest.purchased_at) AS delivery_date,
                     COALESCE(u.company_name,u.name,'berryGo') AS seller_name,
                     pb_latest.purchased_at AS latest_purchase_date
              FROM products p
