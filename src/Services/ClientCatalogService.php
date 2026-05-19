@@ -69,7 +69,6 @@ class ClientCatalogService
 
         $products = $this->fetchProducts(
             'p.is_active = 1',
-            "CASE WHEN p.sale_price > 0 THEN 0 ELSE 1 END,\n" .
             "CASE\n" .
             "  WHEN pb.purchased_at IS NULL THEN 3\n" .
             "  WHEN DATE(pb.purchased_at) > ? THEN 2\n" .
@@ -77,8 +76,28 @@ class ClientCatalogService
             "END,\n" .
             "COALESCE(DATE(pb.purchased_at), '9999-12-31'),\n" .
             "p.id DESC",
-            [$today]
+            []
         );
+
+        foreach ($products as &$product) {
+            $batchStatus = (string)($product['purchase_batch_status'] ?? '');
+            $isSeller = !empty($product['seller_id']);
+            $freeStock = (float)($product['free_stock_boxes'] ?? 0);
+            $discountStock = (float)($product['discount_stock_boxes'] ?? 0);
+
+            if (!$isSeller && $batchStatus === 'arrived' && $discountStock > 0) {
+                $product['catalog_section'] = 'sale';
+            } elseif (!$isSeller && $batchStatus === 'purchased' && $freeStock > 0) {
+                $product['catalog_section'] = 'in_stock';
+            } elseif ($isSeller) {
+                $product['catalog_section'] = 'seller';
+            } elseif (!$isSeller && $batchStatus === 'planned') {
+                $product['catalog_section'] = 'preorder';
+            } else {
+                $product['catalog_section'] = 'other';
+            }
+        }
+        unset($product);
 
         return [
             'products' => $products,
