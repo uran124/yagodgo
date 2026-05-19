@@ -6,7 +6,7 @@
  *   - product
  *   - variety
  *   - description
- *   - price            (основная цена)
+ *   - price            (закупочная цена за позицию/ящик)
  *   - sale_price       (акционная цена, 0 = без акции)
  *   - is_active        (0 или 1)
  *   - image_path
@@ -24,15 +24,16 @@ $d         = $p['delivery_date']     ?? null;
 $placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
 $showDate = $d !== null && $d !== $placeholder;
 $active    = (int)($p['is_active']    ?? 0);
-$price     = floatval($p['price']     ?? 0); // base price per kg
+$price     = floatval($p['price']     ?? 0); // base purchase price per box
 $sale      = floatval($p['sale_price']?? 0); // sale price per kg
 $boxSize   = floatval($p['box_size']  ?? 0);
 $boxUnit   = $p['box_unit']           ?? '';
 
-$effectiveKg = $sale > 0 ? $sale : $price;
-$priceBox   = $effectiveKg * $boxSize;
+$regularBox = $price;
+$regularKg  = $boxSize > 0 ? round($regularBox / $boxSize, 2) : round($regularBox, 2);
+$effectiveKg = $sale > 0 ? $sale : $regularKg;
+$priceBox   = $sale > 0 ? ($sale * $boxSize) : $regularBox;
 $pricePerKg = round($effectiveKg, 2);
-$regularBox = $price * $boxSize;
 $currentPriceBoxForEdit = (float)($p['current_price_per_box'] ?? 0);
 if ($currentPriceBoxForEdit <= 0) {
     $currentPriceBoxForEdit = $regularBox;
@@ -42,7 +43,6 @@ $isStaff  = in_array($role, ['admin','manager'], true);
 $isRegularViewer = in_array($role, ['', 'client'], true);
 $hidePriceForPreorder = (!$showDate && $isRegularViewer);
 $basePath = $role === 'manager' ? '/manager' : '/admin';
-$regularKg  = round($price, 2);
 $preorderPurchaseDate = !empty($p['latest_purchase_date']) ? date('d.m.Y', strtotime((string)$p['latest_purchase_date'])) : '';
 $cardSection = (string)($cardSection ?? '');
 $isPreorderSection = $cardSection === 'preorder';
