@@ -6,7 +6,7 @@
  *   - product
  *   - variety
  *   - description
- *   - price            (закупочная цена за позицию/ящик)
+ *   - price            (цена сейчас за позицию/ящик)
  *   - sale_price       (акционная цена, 0 = без акции)
  *   - is_active        (0 или 1)
  *   - image_path
@@ -24,7 +24,7 @@ $d         = $p['delivery_date']     ?? null;
 $placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
 $showDate = $d !== null && $d !== $placeholder;
 $active    = (int)($p['is_active']    ?? 0);
-$price     = floatval($p['price']     ?? 0); // base purchase price per box
+$price     = floatval($p['price']     ?? 0); // current sale price per box
 $sale      = floatval($p['sale_price']?? 0); // sale price per kg
 $boxSize   = floatval($p['box_size']  ?? 0);
 $boxUnit   = $p['box_unit']           ?? '';
