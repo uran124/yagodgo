@@ -62,7 +62,7 @@
           <?= number_format((float)($p['price'] ?? 0), 2, '.', ' ') ?> ₽
         </td>
         <?php if (!$isManager): ?>
-        <td class="p-3 text-gray-600"><?= $p['stock_boxes'] ?></td>
+        <td class="p-3 text-gray-600"><?= $p['free_stock_boxes'] ?></td>
         <?php endif; ?>
         <td class="p-3 text-center">
           <form action="<?= $base ?>/products/toggle" method="post" class="inline-block">

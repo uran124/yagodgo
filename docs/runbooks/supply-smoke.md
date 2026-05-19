@@ -35,3 +35,20 @@ php bin/supply_release_check.php
 - `php bin/migrate.php status` (и проверяет, что `Pending: 0`),
 - `php bin/supply_smoke.php`,
 - `php bin/supply_digest.php --threshold=2`.
+
+
+## Дополнительная проверка агрегатов продуктов
+
+Скрипт также проверяет `product_aggregate_anomalies`: расхождения между агрегатами в `products` и суммами по `purchase_batches` (для статусов `active/arrived/purchased`).
+
+Если расхождения есть, можно сначала оценить объём:
+
+```bash
+php bin/supply_repair_product_aggregates.php --dry-run
+```
+
+Затем выполнить выравнивание:
+
+```bash
+php bin/supply_repair_product_aggregates.php
+```
