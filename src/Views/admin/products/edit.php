@@ -172,13 +172,6 @@
              class="w-full border px-2 py-1 rounded" required>
     </div>
 
-    <!-- Остаток (ящиков) -->
-    <div>
-      <label class="block mb-1">Остаток (ящиков)</label>
-      <input name="stock_boxes" type="number" step="0.01"
-             value="<?= htmlspecialchars($product['stock_boxes'] ?? '') ?>"
-             class="w-full border px-2 py-1 rounded" required>
-    </div>
   </div>
 
   <button type="submit"

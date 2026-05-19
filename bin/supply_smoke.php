@@ -70,6 +70,33 @@ if (!$anomalyOk) {
     $failed = true;
 }
 
+
+$productAggregateAnomalySql = 'SELECT COUNT(*)
+    FROM products p
+    LEFT JOIN (
+        SELECT
+            product_id,
+            COALESCE(SUM(boxes_free), 0) AS free_boxes,
+            COALESCE(SUM(boxes_reserved), 0) AS reserved_boxes,
+            COALESCE(SUM(boxes_discount), 0) AS discount_boxes,
+            COALESCE(SUM(boxes_sold), 0) AS sold_boxes,
+            COALESCE(SUM(boxes_written_off), 0) AS written_off_boxes
+        FROM purchase_batches
+        WHERE status IN ("active", "arrived", "purchased")
+        GROUP BY product_id
+    ) agg ON agg.product_id = p.id
+    WHERE ABS(COALESCE(p.free_stock_boxes, 0) - COALESCE(agg.free_boxes, 0)) > 0.01
+       OR ABS(COALESCE(p.reserved_stock_boxes, 0) - COALESCE(agg.reserved_boxes, 0)) > 0.01
+       OR ABS(COALESCE(p.discount_stock_boxes, 0) - COALESCE(agg.discount_boxes, 0)) > 0.01
+       OR ABS(COALESCE(p.sold_stock_boxes, 0) - COALESCE(agg.sold_boxes, 0)) > 0.01
+       OR ABS(COALESCE(p.written_off_stock_boxes, 0) - COALESCE(agg.written_off_boxes, 0)) > 0.01';
+$productAggregateAnomalyCount = (int)$pdo->query($productAggregateAnomalySql)->fetchColumn();
+$productAggregateOk = $productAggregateAnomalyCount === 0;
+$checks[] = ['check' => 'product_aggregate_anomalies', 'ok' => $productAggregateOk, 'value' => $productAggregateAnomalyCount];
+if (!$productAggregateOk) {
+    $failed = true;
+}
+
 $result = [
     'generated_at' => (new DateTimeImmutable('now'))->format(DATE_ATOM),
     'ok' => !$failed,
