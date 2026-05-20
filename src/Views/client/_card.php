@@ -23,6 +23,8 @@ $today     = date('Y-m-d');
 $d         = $p['delivery_date']     ?? null;
 $placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
 $showDate = $d !== null && $d !== $placeholder;
+$preorderDateKnown = $showDate;
+$preorderDateText = $preorderDateKnown ? date('d.m.Y', strtotime((string)$d)) : '';
 $active    = (int)($p['is_active']    ?? 0);
 $price     = floatval($p['price']     ?? 0); // current sale price per box
 $sale      = floatval($p['sale_price']?? 0); // sale price per kg
@@ -250,8 +252,8 @@ $preorderPriceHint = (string)(get_setting('ui_preorder_price_hint', 'Цена о
 
         <!-- Предзаказ — вторичное действие: outline-стиль, меньше веса -->
         <button type="button"
-                <?= $isSaleSection ? 'disabled' : '' ?>
-                class="w-full h-9 flex items-center justify-center gap-1.5 border font-medium text-xs sm:text-sm rounded-xl transition-colors preorder-intent-btn <?= $isSaleSection ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed' : 'border-emerald-500 text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100' ?>"
+                <?= ($isSaleSection || !$preorderDateKnown) ? 'disabled' : '' ?>
+                class="w-full h-9 flex items-center justify-center gap-1.5 border font-medium text-xs sm:text-sm rounded-xl transition-colors preorder-intent-btn <?= ($isSaleSection || !$preorderDateKnown) ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed' : 'border-emerald-500 text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100' ?>"
                 data-product-id="<?= (int)$p['id'] ?>"
                 data-source-section="<?= htmlspecialchars($cardSection) ?>"
                 data-delivery-date="<?= htmlspecialchars((string)($d ?? '')) ?>">
@@ -259,10 +261,12 @@ $preorderPriceHint = (string)(get_setting('ui_preorder_price_hint', 'Цена о
           <?= $isInStockSection ? 'Предзаказ' : 'Предзаказ −10%' ?>
         </button>
 
-        <?php if ($preorderPurchaseDate !== ''): ?>
+        <?php if ($preorderDateKnown): ?>
+          <p class="mt-1.5 text-[11px] text-gray-400 text-center">Следующая поставка: <?= htmlspecialchars($preorderDateText) ?></p>
+        <?php elseif (!$isSaleSection): ?>
+          <p class="mt-1.5 text-[11px] text-gray-400 text-center">Дата следующей поставки уточняется</p>
+        <?php elseif ($preorderPurchaseDate !== ''): ?>
           <p class="mt-1.5 text-[11px] text-gray-400 text-center">Дата закупки: <?= htmlspecialchars($preorderPurchaseDate) ?></p>
-        <?php elseif ($isInStockSection): ?>
-          <p class="mt-1.5 text-[11px] text-gray-400 text-center">Предзаказ оформляется на ближайшую возможную дату</p>
         <?php endif; ?>
 
         <p class="mt-1.5 text-[11px] text-gray-400 hidden preorder-intent-hint"></p>

@@ -9,7 +9,7 @@ class ClientCatalogService
                  AND pb.status = 'arrived' AND p.discount_stock_boxes > 0";
     private const HOME_IN_STOCK_WHERE = "p.is_active = 1 AND p.current_purchase_batch_id IS NOT NULL
                  AND p.seller_id IS NULL AND pb.status = 'purchased'
-                 AND p.free_stock_boxes > 0";
+                 AND pb.boxes_free > 0";
     private const HOME_PREORDER_WHERE = "p.is_active = 1 AND p.current_purchase_batch_id IS NOT NULL
                  AND p.seller_id IS NULL AND pb.status = 'planned'";
 
@@ -82,7 +82,7 @@ class ClientCatalogService
         foreach ($products as &$product) {
             $batchStatus = (string)($product['purchase_batch_status'] ?? '');
             $isSeller = !empty($product['seller_id']);
-            $freeStock = (float)($product['free_stock_boxes'] ?? 0);
+            $freeStock = (float)($product['batch_boxes_free'] ?? 0);
             $discountStock = (float)($product['discount_stock_boxes'] ?? 0);
 
             if (!$isSeller && $batchStatus === 'arrived' && $discountStock > 0) {
@@ -130,7 +130,8 @@ class ClientCatalogService
             "       p.is_active,\n" .
             "       p.image_path,\n" .
             "       DATE(pb.purchased_at) AS delivery_date,\n" .
-            "       COALESCE(u.company_name, u.name, 'berryGo') AS seller_name\n" .
+            "       COALESCE(u.company_name, u.name, 'berryGo') AS seller_name,\n" .
+            "       COALESCE(pb.boxes_free, 0) AS batch_boxes_free,\n" .
             "FROM products p\n" .
             "JOIN product_types t ON t.id = p.product_type_id\n" .
             "LEFT JOIN users u ON u.id = p.seller_id\n" .
