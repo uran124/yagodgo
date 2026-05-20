@@ -77,6 +77,46 @@ ORDER BY is_closed ASC, pb.id DESC';
         );
         $summary = $summaryStmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
+        $preorderDemandStmt = $this->pdo->query(
+            "SELECT
+"
+          . "  p.id AS product_id,
+"
+          . "  p.variety,
+"
+          . "  t.name AS product_name,
+"
+          . "  COALESCE(SUM(pi.requested_boxes), 0) AS requested_boxes,
+"
+          . "  COUNT(*) AS intents_count,
+"
+          . "  COALESCE(SUM(CASE WHEN pi.status = 'confirmed' THEN pi.requested_boxes ELSE 0 END), 0) AS confirmed_boxes
+"
+          . "FROM preorder_intents pi
+"
+          . "JOIN products p ON p.id = pi.product_id
+"
+          . "JOIN product_types t ON t.id = p.product_type_id
+"
+          . "WHERE pi.status IN ('intent_created', 'offer_sent', 'confirmed')
+"
+          . "GROUP BY p.id, p.variety, t.name
+"
+          . "ORDER BY requested_boxes DESC, t.name, p.variety"
+        );
+        $preorderDemand = $preorderDemandStmt->fetchAll(PDO::FETCH_ASSOC);
+        $preorderDemandTotals = [
+            'requested_boxes' => 0.0,
+            'confirmed_boxes' => 0.0,
+            'intents_count' => 0,
+            'products_count' => count($preorderDemand),
+        ];
+        foreach ($preorderDemand as $row) {
+            $preorderDemandTotals['requested_boxes'] += (float)($row['requested_boxes'] ?? 0);
+            $preorderDemandTotals['confirmed_boxes'] += (float)($row['confirmed_boxes'] ?? 0);
+            $preorderDemandTotals['intents_count'] += (int)($row['intents_count'] ?? 0);
+        }
+
         viewAdmin('purchases/index', [
             'pageTitle' => 'Закупки',
             'batches' => $batches,
@@ -86,6 +126,8 @@ ORDER BY is_closed ASC, pb.id DESC';
                 'buyer_id' => $buyerFilter,
             ],
             'summary' => $summary,
+            'preorderDemand' => $preorderDemand,
+            'preorderDemandTotals' => $preorderDemandTotals,
             'basePath' => $this->basePath(),
             'flash' => $this->pullFlash(),
         ]);

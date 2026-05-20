@@ -4,6 +4,8 @@
 <?php $buyers = $buyers ?? []; ?>
 <?php $filters = $filters ?? ['status' => '', 'buyer_id' => 0]; ?>
 <?php $summary = $summary ?? []; ?>
+<?php $preorderDemand = $preorderDemand ?? []; ?>
+<?php $preorderDemandTotals = $preorderDemandTotals ?? []; ?>
 <?php $statusLabels = [
   'planned' => 'Запланирована',
   'purchased' => 'Выкуплена',
@@ -45,6 +47,60 @@
     <a class="bg-gray-100 px-4 py-2 rounded" href="<?= $basePath ?>/purchases">Сбросить</a>
   </div>
 </form>
+
+<div class="bg-white rounded border p-4 mb-4">
+  <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+    <h2 class="text-lg font-semibold text-gray-900">Предварительные заказы на закупку</h2>
+    <div class="text-xs text-gray-500">Актуально для ролей: админ, менеджер, закупщик</div>
+  </div>
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
+    <div class="rounded bg-amber-50 border border-amber-100 p-3">
+      <div class="text-xs text-amber-700">Нужно купить (ящ.)</div>
+      <div class="text-xl font-semibold text-amber-900"><?= number_format((float)($preorderDemandTotals['requested_boxes'] ?? 0), 2, '.', ' ') ?></div>
+    </div>
+    <div class="rounded bg-emerald-50 border border-emerald-100 p-3">
+      <div class="text-xs text-emerald-700">Подтверждено (ящ.)</div>
+      <div class="text-xl font-semibold text-emerald-900"><?= number_format((float)($preorderDemandTotals['confirmed_boxes'] ?? 0), 2, '.', ' ') ?></div>
+    </div>
+    <div class="rounded bg-blue-50 border border-blue-100 p-3">
+      <div class="text-xs text-blue-700">Всего заявок</div>
+      <div class="text-xl font-semibold text-blue-900"><?= (int)($preorderDemandTotals['intents_count'] ?? 0) ?></div>
+    </div>
+    <div class="rounded bg-gray-50 border border-gray-200 p-3">
+      <div class="text-xs text-gray-600">Товаров в заявках</div>
+      <div class="text-xl font-semibold text-gray-900"><?= (int)($preorderDemandTotals['products_count'] ?? 0) ?></div>
+    </div>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead>
+        <tr class="text-left text-gray-600 border-b">
+          <th class="py-2 pr-3">Товар</th>
+          <th class="py-2 pr-3">Нужно купить (ящ.)</th>
+          <th class="py-2 pr-3">Подтверждено (ящ.)</th>
+          <th class="py-2 pr-3">Заявок</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php if (!$preorderDemand): ?>
+          <tr>
+            <td colspan="4" class="py-3 text-gray-500">Нет активных предзаказов в ожидании закупки.</td>
+          </tr>
+        <?php else: ?>
+          <?php foreach ($preorderDemand as $row): ?>
+            <tr class="border-b last:border-b-0">
+              <td class="py-2 pr-3 font-medium text-gray-900"><?= htmlspecialchars(trim((string)($row['product_name'] ?? '') . ' ' . (string)($row['variety'] ?? ''))) ?></td>
+              <td class="py-2 pr-3"><?= number_format((float)($row['requested_boxes'] ?? 0), 2, '.', ' ') ?></td>
+              <td class="py-2 pr-3"><?= number_format((float)($row['confirmed_boxes'] ?? 0), 2, '.', ' ') ?></td>
+              <td class="py-2 pr-3"><?= (int)($row['intents_count'] ?? 0) ?></td>
+            </tr>
+          <?php endforeach; ?>
+        <?php endif; ?>
+      </tbody>
+    </table>
+  </div>
+</div>
 
 <div class="flex items-center mb-4">
   <a href="<?= $basePath ?>/purchases/create" class="bg-[#C86052] text-white px-4 py-2 rounded inline-flex items-center">
