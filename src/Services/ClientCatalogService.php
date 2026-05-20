@@ -76,7 +76,7 @@ class ClientCatalogService
             "END,\n" .
             "COALESCE(DATE(pb.purchased_at), '9999-12-31'),\n" .
             "p.id DESC",
-            []
+            [$today]
         );
 
         foreach ($products as &$product) {
@@ -131,7 +131,10 @@ class ClientCatalogService
             "       p.image_path,\n" .
             "       DATE(pb.purchased_at) AS delivery_date,\n" .
             "       COALESCE(u.company_name, u.name, 'berryGo') AS seller_name,\n" .
-            "       COALESCE(pb.boxes_free, 0) AS batch_boxes_free,\n" .
+            "       p.seller_id,\n" .
+            "       p.discount_stock_boxes,\n" .
+            "       pb.status AS purchase_batch_status,\n" .
+            "       COALESCE(pb.boxes_free, 0) AS batch_boxes_free\n" .
             "FROM products p\n" .
             "JOIN product_types t ON t.id = p.product_type_id\n" .
             "LEFT JOIN users u ON u.id = p.seller_id\n" .
