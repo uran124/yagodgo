@@ -74,6 +74,10 @@
         $pricePerKg = round($effectiveKg, 2);
         $regularBox = $price * $boxSize;
         $regularKg  = round($price, 2);
+        $deliveryDate = (string)($product['delivery_date'] ?? '');
+        $placeholderDate = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
+        $preorderDateKnown = ($deliveryDate !== '' && $deliveryDate !== $placeholderDate);
+        $preorderDateText = $preorderDateKnown ? date('d.m.Y', strtotime($deliveryDate)) : '';
         ?>
 
         <!-- Блок цены + кнопок (floating над навбаром на мобиле, встроенный на md+) -->
@@ -152,10 +156,12 @@
 
             <!-- Предзаказ — вторичное действие -->
             <button id="preorderBtn" type="button"
-                    class="w-full h-10 flex items-center justify-center gap-1.5 border border-emerald-500 text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100 font-medium text-sm rounded-xl transition-colors mb-1">
+                    <?= $preorderDateKnown ? '' : 'disabled' ?>
+                    class="w-full h-10 flex items-center justify-center gap-1.5 border font-medium text-sm rounded-xl transition-colors mb-1 <?= $preorderDateKnown ? 'border-emerald-500 text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100' : 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed' ?>">
               <span class="material-icons-round text-base leading-none">schedule</span>
-              Предзаказ −10%
+              <?= $preorderDateKnown ? ('Предзаказ −10% · ' . $preorderDateText) : 'Предзаказ −10%' ?>
             </button>
+            <p class="text-xs text-gray-400 text-center mb-1"><?= $preorderDateKnown ? ('Следующая поставка: ' . htmlspecialchars($preorderDateText)) : 'Дата следующей поставки уточняется' ?></p>
             <p id="preorderHint" class="text-xs text-gray-400 text-center hidden"></p>
 
             <script>
