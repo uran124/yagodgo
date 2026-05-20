@@ -139,6 +139,14 @@
              class="w-full border px-2 py-1 rounded">
     </div>
 
+
+    <div>
+      <label class="block mb-1">Цена по брони за ящик (₽)</label>
+      <input name="preorder_price_per_box" type="number" step="0.01"
+             value="<?= htmlspecialchars($product['preorder_price_per_box'] ?? 0) ?>"
+             class="w-full border px-2 py-1 rounded">
+    </div>
+
     <!-- Активность товара -->
     <div class="flex items-center space-x-2">
       <label class="block mb-1">Активен?</label>
@@ -166,7 +174,7 @@
 
     <!-- Цена за кг/л -->
     <div>
-      <label class="block mb-1">Закупочная цена за ящик (₽)</label>
+      <label class="block mb-1">Свободная цена за ящик (₽)</label>
       <input name="price" type="number" step="0.01"
              value="<?= htmlspecialchars($price_kg ?? '') ?>"
              class="w-full border px-2 py-1 rounded" required>

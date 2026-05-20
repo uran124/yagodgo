@@ -50,6 +50,8 @@
       <select name="status" class="border px-2 py-1 rounded"><?php foreach (['planned','purchased','arrived'] as $st): ?><option value="<?= $st ?>" <?= (($batch['status'] ?? '') === $st) ? 'selected' : '' ?>><?= htmlspecialchars((string)$statusLabels[$st]) ?></option><?php endforeach; ?></select>
       <input name="boxes_total" type="number" step="0.01" value="<?= (float)$batch['boxes_total'] ?>" class="border px-2 py-1 rounded" required>
       <input name="purchase_price_per_box" type="number" step="0.01" value="<?= (float)$batch['purchase_price_per_box'] ?>" class="border px-2 py-1 rounded" required>
+      <input name="instant_price_per_box" type="number" step="0.01" value="<?= (float)($batch['instant_price_per_box'] ?? 0) ?>" class="border px-2 py-1 rounded" placeholder="Свободная цена">
+      <input name="preorder_price_per_box" type="number" step="0.01" value="<?= (float)($batch['preorder_price_per_box'] ?? 0) ?>" class="border px-2 py-1 rounded" placeholder="Цена по брони">
       <input name="boxes_free" type="number" step="0.01" value="<?= (float)$batch['boxes_free'] ?>" class="border px-2 py-1 rounded" required>
       <input name="boxes_reserved" type="number" step="0.01" value="<?= (float)$batch['boxes_reserved'] ?>" class="border px-2 py-1 rounded" required>
       <input name="extra_cost_per_box" type="number" step="0.01" value="<?= (float)$batch['extra_cost_per_box'] ?>" class="border px-2 py-1 rounded">
