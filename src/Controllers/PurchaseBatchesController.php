@@ -29,14 +29,54 @@ class PurchaseBatchesController
 '
           . '       TIMESTAMPDIFF(DAY, pb.purchased_at, NOW()) AS age_days,
 '
-          . "       CASE WHEN pb.boxes_free <= 0 OR pb.comment LIKE '[CLOSED]%' THEN 1 ELSE 0 END AS is_closed\n"
+          . "       CASE WHEN pb.boxes_free <= 0 OR pb.comment LIKE '[CLOSED]%' THEN 1 ELSE 0 END AS is_closed,\n"
+          . '       photo.image_path AS preview_photo,
+'
+          . "       COALESCE(sm_writeoff.comments_count, 0) AS writeoff_comments_count,\n"
+          . "       COALESCE(sm_unreserve.comments_count, 0) AS cancel_reserve_comments_count,\n"
+          . "       0 AS discount_comments_count\n"
           . 'FROM purchase_batches pb
 '
           . 'JOIN products p ON p.id = pb.product_id
 '
           . 'JOIN product_types t ON t.id = p.product_type_id
 '
-          . 'LEFT JOIN users u ON u.id = pb.buyer_user_id';
+          . 'LEFT JOIN users u ON u.id = pb.buyer_user_id
+'
+          . 'LEFT JOIN (
+'
+          . '  SELECT purchase_batch_id, MAX(id) AS latest_photo_id
+'
+          . '  FROM purchase_batch_photos
+'
+          . '  GROUP BY purchase_batch_id
+'
+          . ') latest_photo ON latest_photo.purchase_batch_id = pb.id
+'
+          . 'LEFT JOIN purchase_batch_photos photo ON photo.id = latest_photo.latest_photo_id
+'
+          . "LEFT JOIN (
+"
+          . "  SELECT purchase_batch_id, COUNT(*) AS comments_count
+"
+          . "  FROM stock_movements
+"
+          . "  WHERE movement_type = 'writeoff' AND COALESCE(comment, '') <> ''
+"
+          . "  GROUP BY purchase_batch_id
+"
+          . ") sm_writeoff ON sm_writeoff.purchase_batch_id = pb.id\n"
+          . "LEFT JOIN (
+"
+          . "  SELECT purchase_batch_id, COUNT(*) AS comments_count
+"
+          . "  FROM stock_movements
+"
+          . "  WHERE movement_type = 'unreserve'
+"
+          . "  GROUP BY purchase_batch_id
+"
+          . ") sm_unreserve ON sm_unreserve.purchase_batch_id = pb.id";
 
         $conditions = [];
         $params = [];
