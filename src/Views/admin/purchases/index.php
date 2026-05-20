@@ -115,60 +115,57 @@
 <table class="min-w-full bg-white rounded shadow overflow-hidden text-sm">
   <thead class="bg-gray-200 text-gray-700">
     <tr>
-      <th class="p-3 text-left font-semibold">Партия</th>
       <th class="p-3 text-left font-semibold">Фото</th>
-      <th class="p-3 text-left font-semibold">Товар / закупщик</th>
-      <th class="p-3 text-left font-semibold">Объемы</th>
-      <th class="p-3 text-left font-semibold">Цены</th>
-      <th class="p-3 text-left font-semibold">Действия</th>
+      <th class="p-3 text-left font-semibold">Закупка</th>
     </tr>
   </thead>
   <tbody>
     <?php foreach ($batches as $batch): ?>
       <tr class="border-b align-top transition-all duration-200 <?= ((int)($batch['is_closed'] ?? 0) === 1) ? 'bg-gray-50 text-gray-400' : 'hover:bg-orange-50 bg-white' ?>">
-        <td class="p-3 whitespace-nowrap">
-          <div class="flex flex-col gap-1">
-            <span class="font-semibold">#<?= (int)$batch['id'] ?></span>
-            <span class="text-xs text-gray-500"><?= htmlspecialchars(substr((string)($batch['purchased_at'] ?? ''), 0, 10)) ?></span>
-          </div>
-        </td>
-        <td class="p-3">
+        <td class="p-3 w-24">
           <?php if (!empty($batch['preview_photo'])): ?>
-            <img src="<?= htmlspecialchars((string)$batch['preview_photo']) ?>" class="h-16 w-16 rounded object-cover border border-gray-200" alt="Фото партии #<?= (int)$batch['id'] ?>">
+            <img src="<?= htmlspecialchars((string)$batch['preview_photo']) ?>" class="h-20 w-20 rounded object-cover border border-gray-200" alt="Фото партии #<?= (int)$batch['id'] ?>">
           <?php else: ?>
-            <div class="h-16 w-16 rounded border border-dashed border-gray-300 text-[10px] text-gray-400 flex items-center justify-center">нет фото</div>
+            <div class="h-20 w-20 rounded border border-dashed border-gray-300 text-[10px] text-gray-400 flex items-center justify-center">нет фото</div>
           <?php endif; ?>
         </td>
         <td class="p-3">
-          <div class="flex flex-col gap-1">
-            <a class="text-[#C86052] hover:underline font-medium" href="<?= $basePath ?>/purchases/<?= (int)$batch['id'] ?>"><?= htmlspecialchars(trim(($batch['product_name'] ?? '') . ' ' . ($batch['variety'] ?? ''))) ?></a>
-            <span class="text-xs text-gray-500"><?= htmlspecialchars((string)($batch['buyer_name'] ?? '—')) ?></span>
-          </div>
-        </td>
-        <td class="p-3 whitespace-nowrap">
-          <div class="flex flex-col gap-1">
-            <span>Куплено: <b><?= (float)$batch['boxes_total'] ?></b></span>
-            <span>Бронь: <b><?= (float)$batch['boxes_reserved'] ?></b></span>
-            <span>Свободно: <b><?= (float)$batch['boxes_free'] ?></b></span>
-          </div>
-        </td>
-        <td class="p-3 whitespace-nowrap">
-          <div class="flex flex-col gap-1">
-            <span>Стоимость: <b><?= number_format((float)$batch['purchase_price_per_box'], 2, '.', ' ') ?> ₽</b></span>
-            <span>Закупка: <b><?= number_format((float)$batch['instant_price_per_box'], 2, '.', ' ') ?> ₽</b></span>
-          </div>
-        </td>
-        <td class="p-3">
-          <div class="flex flex-col gap-2 min-w-[220px]">
-            <form method="post" action="<?= $basePath ?>/purchases/move-to-discount" class="flex items-center justify-between gap-2 bg-yellow-900/30 border border-yellow-700 rounded px-2 py-1">
-              <?= csrf_field() ?><input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>"><input name="boxes" type="number" step="0.01" min="0.01" placeholder="ящ." class="w-14 border rounded px-1 py-1 text-xs text-gray-900"><input name="reason" type="text" required placeholder="причина" class="w-20 border rounded px-1 py-1 text-xs text-gray-900"><button class="text-xs bg-yellow-500 hover:bg-yellow-400 text-gray-900 px-2 py-1 rounded" type="submit">Уценка (<?= (int)($batch['discount_comments_count'] ?? 0) ?>)</button>
-            </form>
-            <form method="post" action="<?= $basePath ?>/purchases/write-off" class="flex items-center justify-between gap-2 bg-red-900/30 border border-red-700 rounded px-2 py-1">
-              <?= csrf_field() ?><input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>"><input name="boxes" type="number" step="0.01" min="0.01" placeholder="ящ." class="w-14 border rounded px-1 py-1 text-xs text-gray-900"><input name="comment" type="text" required placeholder="причина" class="w-20 border rounded px-1 py-1 text-xs text-gray-900"><button class="text-xs bg-red-500 hover:bg-red-400 text-white px-2 py-1 rounded" type="submit">Списать (<?= (int)($batch['writeoff_comments_count'] ?? 0) ?>)</button>
-            </form>
-            <form method="post" action="<?= $basePath ?>/purchases/cancel-reservations" class="flex items-center justify-between gap-2 bg-slate-800 border border-slate-600 rounded px-2 py-1">
-              <?= csrf_field() ?><input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>"><button class="text-xs bg-slate-600 hover:bg-slate-500 text-white px-2 py-1 rounded w-full" type="submit">Отменить бронь (<?= (int)($batch['cancel_reserve_comments_count'] ?? 0) ?>)</button>
-            </form>
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center justify-between gap-3">
+              <div class="text-sm font-semibold text-gray-900">
+                #<?= (int)$batch['id'] ?> · <?= htmlspecialchars(substr((string)($batch['purchased_at'] ?? ''), 0, 10)) ?>
+              </div>
+              <div class="text-xs text-gray-500">
+                <?= htmlspecialchars((string)($batch['buyer_name'] ?? '—')) ?>
+              </div>
+            </div>
+            <div class="text-sm text-gray-800">
+              <a class="text-[#C86052] hover:underline font-medium" href="<?= $basePath ?>/purchases/<?= (int)$batch['id'] ?>"><?= htmlspecialchars(trim(($batch['product_name'] ?? '') . ' ' . ($batch['variety'] ?? ''))) ?></a>
+              · Стоимость закупки: <b><?= number_format((float)$batch['purchase_price_per_box'], 2, '.', ' ') ?> ₽</b>
+              · Куплено: <b><?= (float)$batch['boxes_total'] ?></b>
+              · Свободно: <b><?= (float)$batch['boxes_free'] ?></b>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <form method="post" action="<?= $basePath ?>/purchases/move-to-discount" class="flex items-center gap-1 bg-yellow-900/30 border border-yellow-700 rounded px-2 py-1">
+                <?= csrf_field() ?>
+                <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
+                <input name="boxes" type="number" step="0.01" min="0.01" placeholder="ящ." class="w-16 border rounded px-1 py-1 text-xs text-gray-900">
+                <input name="reason" type="text" required placeholder="причина" class="w-24 border rounded px-1 py-1 text-xs text-gray-900">
+                <button class="text-xs bg-yellow-500 hover:bg-yellow-400 text-gray-900 px-2 py-1 rounded" type="submit">Уценка</button>
+              </form>
+              <form method="post" action="<?= $basePath ?>/purchases/write-off" class="flex items-center gap-1 bg-red-900/30 border border-red-700 rounded px-2 py-1">
+                <?= csrf_field() ?>
+                <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
+                <input name="boxes" type="number" step="0.01" min="0.01" placeholder="ящ." class="w-16 border rounded px-1 py-1 text-xs text-gray-900">
+                <input name="comment" type="text" required placeholder="причина" class="w-24 border rounded px-1 py-1 text-xs text-gray-900">
+                <button class="text-xs bg-red-500 hover:bg-red-400 text-white px-2 py-1 rounded" type="submit">Списать</button>
+              </form>
+              <form method="post" action="<?= $basePath ?>/purchases/cancel-reservations" class="flex items-center gap-1 bg-slate-800 border border-slate-600 rounded px-2 py-1">
+                <?= csrf_field() ?>
+                <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
+                <button class="text-xs bg-slate-600 hover:bg-slate-500 text-white px-2 py-1 rounded" type="submit">Снять бронь</button>
+              </form>
+            </div>
           </div>
         </td>
       </tr>
