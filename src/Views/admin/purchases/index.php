@@ -11,6 +11,27 @@
   'purchased' => 'Выкуплена',
   'arrived' => 'Готова к выдаче',
 ]; ?>
+<style>
+  .purchase-row-meta { color: #1f2937; }
+  .purchase-row-subline { color: #374151; }
+  .purchase-card-form input { background: #fff; }
+  [data-theme='dark'] .purchase-photo-fallback { border-color: #475569; color: #94a3b8; background: #1e293b; }
+  [data-theme='dark'] .purchase-row-meta { color: #e2e8f0; }
+  [data-theme='dark'] .purchase-row-subline { color: #cbd5e1; }
+  [data-theme='dark'] .purchase-card-form { background: rgba(15, 23, 42, 0.65); border-color: #475569; }
+  [data-theme='dark'] .purchase-card-form input {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-color: #475569;
+  }
+  [data-theme='dark'] .purchase-card-form input::placeholder { color: #94a3b8; }
+  [data-theme='dark'] .purchase-btn-discount { background: #facc15; color: #111827; }
+  [data-theme='dark'] .purchase-btn-discount:hover { background: #fde047; }
+  [data-theme='dark'] .purchase-btn-writeoff { background: #ef4444; color: #fff; }
+  [data-theme='dark'] .purchase-btn-writeoff:hover { background: #f87171; }
+  [data-theme='dark'] .purchase-btn-cancel { background: #334155; color: #f8fafc; border-color: #64748b; }
+  [data-theme='dark'] .purchase-btn-cancel:hover { background: #475569; }
+</style>
 <?php if (is_array($flash) && !empty($flash['message'])): ?>
   <div class="<?= ($flash['type'] ?? '') === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-700' ?> border p-3 rounded mb-4">
     <?= htmlspecialchars((string)$flash['message']) ?>
@@ -112,86 +133,60 @@
   </form>
 </div>
 
-<table class="min-w-full bg-white rounded shadow overflow-hidden">
+<table class="min-w-full bg-white rounded shadow overflow-hidden text-sm">
   <thead class="bg-gray-200 text-gray-700">
     <tr>
-      <th class="p-3 text-left font-semibold">ID</th>
-      <th class="p-3 text-left font-semibold">Товар</th>
-      <th class="p-3 text-left font-semibold">Закупщик</th>
-      <th class="p-3 text-left font-semibold">Куплено</th>
-      <th class="p-3 text-left font-semibold">Свободно</th>
-      <th class="p-3 text-left font-semibold">Зарезервировано</th>
-      <th class="p-3 text-left font-semibold">Цена закупки</th>
-      <th class="p-3 text-left font-semibold">Цена сейчас</th>
-      <th class="p-3 text-left font-semibold">Статус</th>
-      <th class="p-3 text-left font-semibold">Возраст</th>
-      <th class="p-3 text-left font-semibold">Действия</th>
+      <th class="p-3 text-left font-semibold">Фото</th>
+      <th class="p-3 text-left font-semibold">Закупка</th>
     </tr>
   </thead>
   <tbody>
     <?php foreach ($batches as $batch): ?>
-      <tr class="border-b transition-all duration-200 <?= ((int)($batch['is_closed'] ?? 0) === 1) ? 'bg-gray-50 text-gray-400' : 'hover:bg-orange-50 bg-white' ?>">
-        <td class="p-3"><?= (int)$batch['id'] ?></td>
-        <td class="p-3">
-          <a class="text-[#C86052] hover:underline font-medium" href="<?= $basePath ?>/purchases/<?= (int)$batch['id'] ?>">
-            <?= htmlspecialchars(trim(($batch['product_name'] ?? '') . ' ' . ($batch['variety'] ?? ''))) ?>
-          </a>
-        </td>
-        <td class="p-3"><?= htmlspecialchars((string)($batch['buyer_name'] ?? '—')) ?></td>
-        <td class="p-3"><?= (float)$batch['boxes_total'] ?></td>
-        <td class="p-3"><?= (float)$batch['boxes_free'] ?></td>
-        <td class="p-3"><?= (float)$batch['boxes_reserved'] ?></td>
-        <td class="p-3"><?= number_format((float)$batch['purchase_price_per_box'], 2, '.', ' ') ?> ₽</td>
-        <td class="p-3"><?= number_format((float)$batch['instant_price_per_box'], 2, '.', ' ') ?> ₽</td>
-        <td class="p-3">
-          <?= htmlspecialchars((string)($statusLabels[(string)$batch['status']] ?? (string)$batch['status'])) ?>
-          <?php if ((int)($batch['is_closed'] ?? 0) === 1): ?>
-            <span class="ml-1 text-[11px] px-1 py-0.5 rounded bg-gray-200 text-gray-600">закрыта</span>
+      <tr class="border-b align-top transition-all duration-200 <?= ((int)($batch['is_closed'] ?? 0) === 1) ? 'bg-gray-50 text-gray-400' : 'hover:bg-orange-50 bg-white' ?>">
+        <td class="p-3 w-24">
+          <?php if (!empty($batch['preview_photo'])): ?>
+            <img src="<?= htmlspecialchars((string)$batch['preview_photo']) ?>" class="h-20 w-20 rounded object-cover border border-gray-200" alt="Фото партии #<?= (int)$batch['id'] ?>">
+          <?php else: ?>
+            <div class="purchase-photo-fallback h-20 w-20 rounded border border-dashed border-gray-300 text-[10px] text-gray-400 flex items-center justify-center">нет фото</div>
           <?php endif; ?>
         </td>
-        <td class="p-3"><?= (int)($batch['age_days'] ?? 0) ?> дн.</td>
         <td class="p-3">
-          <div class="flex flex-wrap gap-2">
-            <?php if (($batch['status'] ?? '') === 'planned'): ?>
-              <form method="post" action="<?= $basePath ?>/purchases/purchased">
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center justify-between gap-3">
+              <div class="purchase-row-meta text-sm font-semibold text-gray-900">
+                #<?= (int)$batch['id'] ?> · <?= htmlspecialchars(substr((string)($batch['purchased_at'] ?? ''), 0, 10)) ?>
+              </div>
+              <div class="text-xs text-gray-500">
+                <?= htmlspecialchars((string)($batch['buyer_name'] ?? '—')) ?>
+              </div>
+            </div>
+            <div class="purchase-row-subline text-sm text-gray-800">
+              <a class="text-[#C86052] hover:underline font-medium" href="<?= $basePath ?>/purchases/<?= (int)$batch['id'] ?>"><?= htmlspecialchars(trim(($batch['product_name'] ?? '') . ' ' . ($batch['variety'] ?? ''))) ?></a>
+              · Стоимость закупки: <b><?= number_format((float)$batch['purchase_price_per_box'], 2, '.', ' ') ?> ₽</b>
+              · Куплено: <b><?= (float)$batch['boxes_total'] ?></b>
+              · Свободно: <b><?= (float)$batch['boxes_free'] ?></b>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <form method="post" action="<?= $basePath ?>/purchases/move-to-discount" class="purchase-card-form flex items-center gap-1 bg-yellow-900/30 border border-yellow-700 rounded px-2 py-1">
                 <?= csrf_field() ?>
                 <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
-                <button class="text-xs bg-indigo-100 px-2 py-1 rounded" type="submit">Выкуплена</button>
+                <input name="boxes" type="number" step="0.01" min="0.01" placeholder="ящ." class="w-16 border rounded px-1 py-1 text-xs text-gray-900">
+                <input name="reason" type="text" required placeholder="причина" class="w-24 border rounded px-1 py-1 text-xs text-gray-900">
+                <button class="purchase-btn-discount text-xs bg-yellow-500 hover:bg-yellow-400 text-gray-900 px-2 py-1 rounded" type="submit">Уценка</button>
               </form>
-            <?php elseif (($batch['status'] ?? '') === 'purchased'): ?>
-              <form method="post" action="<?= $basePath ?>/purchases/arrived">
+              <form method="post" action="<?= $basePath ?>/purchases/write-off" class="purchase-card-form flex items-center gap-1 bg-red-900/30 border border-red-700 rounded px-2 py-1">
                 <?= csrf_field() ?>
                 <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
-                <label class="inline-flex items-center gap-1 text-[11px] text-gray-600 mr-1">
-                  <input type="checkbox" name="move_leftovers_to_discount" value="1">
-                  В уценку
-                </label>
-                <button class="text-xs bg-blue-100 px-2 py-1 rounded" type="submit">Готова к выдаче</button>
+                <input name="boxes" type="number" step="0.01" min="0.01" placeholder="ящ." class="w-16 border rounded px-1 py-1 text-xs text-gray-900">
+                <input name="comment" type="text" required placeholder="причина" class="w-24 border rounded px-1 py-1 text-xs text-gray-900">
+                <button class="purchase-btn-writeoff text-xs bg-red-500 hover:bg-red-400 text-white px-2 py-1 rounded" type="submit">Списать</button>
               </form>
-            <?php endif; ?>
-            <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
-              <form method="post" action="<?= $basePath ?>/purchases/move-to-discount" class="flex items-center gap-1">
+              <form method="post" action="<?= $basePath ?>/purchases/cancel-reservations" class="purchase-card-form flex items-center gap-1 bg-slate-800 border border-slate-600 rounded px-2 py-1">
                 <?= csrf_field() ?>
                 <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
-                <input name="boxes" type="number" step="0.01" min="0.01" placeholder="ящ." class="w-16 border rounded px-1 py-1 text-xs">
-                <input name="reason" type="text" required placeholder="причина" class="w-24 border rounded px-1 py-1 text-xs">
-                <button class="text-xs bg-yellow-100 px-2 py-1 rounded" type="submit">Уценить</button>
+                <button class="purchase-btn-cancel text-xs bg-slate-600 hover:bg-slate-500 text-white px-2 py-1 rounded border border-transparent" type="submit">Снять бронь</button>
               </form>
-            <?php endif; ?>
-            <form method="post" action="<?= $basePath ?>/purchases/cancel-reservations">
-              <?= csrf_field() ?>
-              <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
-              <button class="text-xs bg-orange-100 px-2 py-1 rounded" type="submit">Отменить бронь</button>
-            </form>
-            <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
-              <form method="post" action="<?= $basePath ?>/purchases/write-off" class="flex items-center gap-1">
-                <?= csrf_field() ?>
-                <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
-                <input name="boxes" type="number" step="0.01" min="0.01" placeholder="ящ." class="w-16 border rounded px-1 py-1 text-xs">
-                <input name="comment" type="text" required placeholder="причина" class="w-24 border rounded px-1 py-1 text-xs">
-                <button class="text-xs bg-red-100 px-2 py-1 rounded" type="submit">Списать</button>
-              </form>
-            <?php endif; ?>
+            </div>
           </div>
         </td>
       </tr>
