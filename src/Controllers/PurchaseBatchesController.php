@@ -308,14 +308,19 @@ ORDER BY is_closed ASC, pb.id DESC';
             'boxes_free' => (float)($_POST['boxes_free'] ?? 0),
             'purchase_price_per_box' => (float)($_POST['purchase_price_per_box'] ?? 0),
             'extra_cost_per_box' => (float)($_POST['extra_cost_per_box'] ?? 0),
-            'status' => (string)($_POST['status'] ?? 'planned'),
+            'status' => $status,
             'purchased_at' => (string)($_POST['planned_supply_date'] ?? ''),
+            'instant_price_per_box' => $instantPrice,
+            'preorder_price_per_box' => $preorderPrice,
             'comment' => trim((string)($_POST['comment'] ?? '')),
         ];
 
         try {
             $batchId = $this->purchaseBatchService->createBatch($payload);
-            $this->storeBatchPhotos($batchId);
+                    $batchSnapshot = $this->pdo->prepare('UPDATE products SET current_purchase_batch_id = ?, instant_price_per_box = ?, preorder_price_per_box = ?, price = ? WHERE id = ? LIMIT 1');
+        $batchSnapshot->execute([(int)($_POST['product_id'] ?? 0), $instantPrice, $preorderPrice, $instantPrice, (int)($_POST['product_id'] ?? 0)]);
+
+        $this->storeBatchPhotos($batchId);
             $this->setFlash('success', 'Закупка успешно создана.');
         } catch (RuntimeException $e) {
             $this->setFlash('error', $e->getMessage());
@@ -474,10 +479,23 @@ ORDER BY is_closed ASC, pb.id DESC';
             header('Location: ' . $this->basePath() . '/purchases');
             exit;
         }
+        $status = (string)($_POST['status'] ?? 'planned');
+        $instantPrice = (float)($_POST['instant_price_per_box'] ?? 0);
+        $preorderPrice = (float)($_POST['preorder_price_per_box'] ?? 0);
+        if ($status === 'purchased') {
+            if ($instantPrice <= 0) {
+                $instantPrice = (float)($_POST['purchase_price_per_box'] ?? 0);
+            }
+            if ($preorderPrice <= 0 && $instantPrice > 0) {
+                $preorderPrice = round($instantPrice * 0.9, 2);
+            }
+        }
+
         $stmt = $this->pdo->prepare(
             'UPDATE purchase_batches
              SET product_id = :product_id, boxes_total = :boxes_total, boxes_reserved = :boxes_reserved, boxes_free = :boxes_free,
                  purchase_price_per_box = :purchase_price_per_box, extra_cost_per_box = :extra_cost_per_box,
+                 instant_price_per_box = :instant_price_per_box, preorder_price_per_box = :preorder_price_per_box,
                  status = :status, purchased_at = :purchased_at, comment = :comment
              WHERE id = :id
              LIMIT 1'
@@ -490,10 +508,13 @@ ORDER BY is_closed ASC, pb.id DESC';
             'boxes_free' => (float)($_POST['boxes_free'] ?? 0),
             'purchase_price_per_box' => (float)($_POST['purchase_price_per_box'] ?? 0),
             'extra_cost_per_box' => (float)($_POST['extra_cost_per_box'] ?? 0),
-            'status' => (string)($_POST['status'] ?? 'planned'),
+            'status' => $status,
             'purchased_at' => (string)($_POST['planned_supply_date'] ?? ''),
             'comment' => trim((string)($_POST['comment'] ?? '')),
         ]);
+                $batchSnapshot = $this->pdo->prepare('UPDATE products SET current_purchase_batch_id = ?, instant_price_per_box = ?, preorder_price_per_box = ?, price = ? WHERE id = ? LIMIT 1');
+        $batchSnapshot->execute([(int)($_POST['product_id'] ?? 0), $instantPrice, $preorderPrice, $instantPrice, (int)($_POST['product_id'] ?? 0)]);
+
         $this->storeBatchPhotos($batchId);
         $this->setFlash('success', 'Закупка обновлена.');
         header('Location: ' . $this->basePath() . '/purchases/' . $batchId);

@@ -69,7 +69,7 @@ class ProductsController
                 p.box_size,
                 p.box_unit,
                 p.unit,
-                COALESCE(pb.purchase_price_per_box, p.price) AS price,
+                COALESCE(pb.instant_price_per_box, p.price) AS price,
                 p.free_stock_boxes,
                 p.is_active,
                 p.image_path,
@@ -132,7 +132,8 @@ class ProductsController
             $role = $_SESSION['role'] ?? '';
             if ($role === 'seller') {
                 $stmt = $this->pdo->prepare(
-                    "SELECT p.*, DATE(pb.purchased_at) AS delivery_date, COALESCE(pb.purchase_price_per_box, p.price) AS price
+                    "SELECT p.*, DATE(pb.purchased_at) AS delivery_date, COALESCE(pb.instant_price_per_box, p.price) AS price,
+                            COALESCE(pb.preorder_price_per_box, p.preorder_price_per_box) AS preorder_price_per_box
                      FROM products p
                      LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id
                      WHERE p.id = ? AND p.seller_id = ?"
@@ -140,7 +141,8 @@ class ProductsController
                 $stmt->execute([(int)$id, $_SESSION['user_id'] ?? 0]);
             } else {
                 $stmt = $this->pdo->prepare(
-                    "SELECT p.*, DATE(pb.purchased_at) AS delivery_date, COALESCE(pb.purchase_price_per_box, p.price) AS price
+                    "SELECT p.*, DATE(pb.purchased_at) AS delivery_date, COALESCE(pb.instant_price_per_box, p.price) AS price,
+                            COALESCE(pb.preorder_price_per_box, p.preorder_price_per_box) AS preorder_price_per_box
                      FROM products p
                      LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id
                      WHERE p.id = ?"
@@ -193,7 +195,8 @@ class ProductsController
         $boxUnit       = ($boxUnitRaw === 'л' ? 'л' : 'кг');
         $unitRaw       = $_POST['unit'] ?? 'кг';
         $unit          = ($unitRaw === 'л' ? 'л' : 'кг');
-        $price        = (float)$_POST['price']; // price per kg/l
+        $price        = (float)$_POST['price']; // свободная цена за ящик
+        $preorderPrice = (float)($_POST['preorder_price_per_box'] ?? 0);
         $salePrice     = (float)($_POST['sale_price'] ?? 0);
         $isActive      = isset($_POST['is_active']) ? 1 : 0;
 
@@ -302,6 +305,14 @@ class ProductsController
             $isNowKnown = ($deliveryDate !== null && $deliveryDate !== '' && $deliveryDate !== $placeholder);
             if ($stmt->rowCount() > 0 && $isNowKnown && $wasUnknown) {
                 $this->activateReservedOrdersByProduct((int)$id, $deliveryDate);
+            }
+
+            $batchId = $this->resolveCurrentPurchaseBatchId((int)$id);
+            if ($batchId !== null) {
+                $updBatch = $this->pdo->prepare("UPDATE purchase_batches SET instant_price_per_box = ?, preorder_price_per_box = ? WHERE id = ?");
+                $updBatch->execute([$price, $preorderPrice, $batchId]);
+                $updProduct = $this->pdo->prepare("UPDATE products SET instant_price_per_box = ?, preorder_price_per_box = ? WHERE id = ?");
+                $updProduct->execute([$price, $preorderPrice, (int)$id]);
             }
 
         } else {

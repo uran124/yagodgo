@@ -31,7 +31,7 @@
       <?php endif; ?>
       <th class="p-3 text-left font-semibold">Сорт</th>
       <th class="p-3 text-left font-semibold">Вес ящика</th>
-      <th class="p-3 text-left font-semibold">Закуп. цена за ящик</th>
+      <th class="p-3 text-left font-semibold">Свободная цена за ящик</th>
       <?php if (!$isManager): ?>
       <th class="p-3 text-left font-semibold">Остаток (ящиков)</th>
       <?php endif; ?>
