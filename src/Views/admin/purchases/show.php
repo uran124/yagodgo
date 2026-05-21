@@ -49,9 +49,9 @@
       <input name="planned_supply_date" type="date" value="<?= htmlspecialchars(substr((string)$batch['purchased_at'], 0, 10)) ?>" class="border px-2 py-1 rounded">
       <select name="status" class="border px-2 py-1 rounded"><?php foreach (['planned','purchased','arrived'] as $st): ?><option value="<?= $st ?>" <?= (($batch['status'] ?? '') === $st) ? 'selected' : '' ?>><?= htmlspecialchars((string)$statusLabels[$st]) ?></option><?php endforeach; ?></select>
       <input name="boxes_total" type="number" step="0.01" value="<?= (float)$batch['boxes_total'] ?>" class="border px-2 py-1 rounded" required>
-      <input name="purchase_price_per_box" type="number" step="0.01" value="<?= (float)$batch['purchase_price_per_box'] ?>" class="border px-2 py-1 rounded" required>
-      <input name="instant_price_per_box" type="number" step="0.01" value="<?= (float)($batch['instant_price_per_box'] ?? 0) ?>" class="border px-2 py-1 rounded" placeholder="Свободная цена">
-      <input name="preorder_price_per_box" type="number" step="0.01" value="<?= (float)($batch['preorder_price_per_box'] ?? 0) ?>" class="border px-2 py-1 rounded" placeholder="Цена по брони">
+      <input name="purchase_price_per_box" type="number" step="1" value="<?= (int)round((float)$batch['purchase_price_per_box']) ?>" class="border px-2 py-1 rounded" required>
+      <input name="instant_price_per_box" type="number" step="1" value="<?= (int)round((float)($batch['instant_price_per_box'] ?? 0)) ?>" class="border px-2 py-1 rounded" placeholder="Свободная цена">
+      <input name="preorder_price_per_box" type="number" step="1" value="<?= (int)round((float)($batch['preorder_price_per_box'] ?? 0)) ?>" class="border px-2 py-1 rounded" placeholder="Цена по брони">
       <input name="boxes_free" type="number" step="0.01" value="<?= (float)$batch['boxes_free'] ?>" class="border px-2 py-1 rounded" required>
       <input name="boxes_reserved" type="number" step="0.01" value="<?= (float)$batch['boxes_reserved'] ?>" class="border px-2 py-1 rounded" required>
       <input name="extra_cost_per_box" type="number" step="0.01" value="<?= (float)$batch['extra_cost_per_box'] ?>" class="border px-2 py-1 rounded">
@@ -79,15 +79,15 @@
 <div class="bg-white p-4 rounded shadow mb-4">
   <h3 class="font-semibold mb-2">P&L партии</h3>
   <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-    <p><b>Выручка (продано):</b> <?= number_format((float)($pnl['revenue_sold'] ?? 0), 2, '.', ' ') ?> ₽</p>
-    <p><b>Выручка (выгодный остаток):</b> <?= number_format((float)($pnl['revenue_discount'] ?? 0), 2, '.', ' ') ?> ₽</p>
-    <p><b>Выручка (итого):</b> <?= number_format((float)($pnl['revenue_total'] ?? 0), 2, '.', ' ') ?> ₽</p>
-    <p><b>Себестоимость (продано):</b> <?= number_format((float)($pnl['cost_sold'] ?? 0), 2, '.', ' ') ?> ₽</p>
-    <p><b>Себестоимость (выгодный остаток):</b> <?= number_format((float)($pnl['cost_discount'] ?? 0), 2, '.', ' ') ?> ₽</p>
-    <p><b>Себестоимость (списано):</b> <?= number_format((float)($pnl['cost_written_off'] ?? 0), 2, '.', ' ') ?> ₽</p>
-    <p><b>Себестоимость (признано):</b> <?= number_format((float)($pnl['cost_total_recognized'] ?? 0), 2, '.', ' ') ?> ₽</p>
-    <p><b>Валовая маржа:</b> <?= number_format((float)($pnl['gross_margin'] ?? 0), 2, '.', ' ') ?> ₽</p>
-    <p><b>Остаток в деньгах:</b> <?= number_format((float)($pnl['inventory_value_remaining'] ?? 0), 2, '.', ' ') ?> ₽</p>
+    <p><b>Выручка (продано):</b> <?= number_format((float)($pnl['revenue_sold'] ?? 0), 0, '.', ' ') ?> ₽</p>
+    <p><b>Выручка (выгодный остаток):</b> <?= number_format((float)($pnl['revenue_discount'] ?? 0), 0, '.', ' ') ?> ₽</p>
+    <p><b>Выручка (итого):</b> <?= number_format((float)($pnl['revenue_total'] ?? 0), 0, '.', ' ') ?> ₽</p>
+    <p><b>Себестоимость (продано):</b> <?= number_format((float)($pnl['cost_sold'] ?? 0), 0, '.', ' ') ?> ₽</p>
+    <p><b>Себестоимость (выгодный остаток):</b> <?= number_format((float)($pnl['cost_discount'] ?? 0), 0, '.', ' ') ?> ₽</p>
+    <p><b>Себестоимость (списано):</b> <?= number_format((float)($pnl['cost_written_off'] ?? 0), 0, '.', ' ') ?> ₽</p>
+    <p><b>Себестоимость (признано):</b> <?= number_format((float)($pnl['cost_total_recognized'] ?? 0), 0, '.', ' ') ?> ₽</p>
+    <p><b>Валовая маржа:</b> <?= number_format((float)($pnl['gross_margin'] ?? 0), 0, '.', ' ') ?> ₽</p>
+    <p><b>Остаток в деньгах:</b> <?= number_format((float)($pnl['inventory_value_remaining'] ?? 0), 0, '.', ' ') ?> ₽</p>
   </div>
 </div>
 

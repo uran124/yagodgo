@@ -253,17 +253,17 @@
       if (q > 0) {
         const row = document.createElement('div');
         row.className = 'flex justify-between';
-        row.innerHTML = '<span>'+i.dataset.name+' × '+q+'</span><span>'+(price*q).toFixed(2)+' ₽</span>';
+        row.innerHTML = '<span>'+i.dataset.name+' × '+q+'</span><span>'+(price*q).toFixed(0)+' ₽</span>';
         itemsList.appendChild(row);
       }
       subtotal += q * price;
     });
-    subtotalEl.textContent = subtotal.toFixed(2) + ' ₽';
+    subtotalEl.textContent = subtotal.toFixed(0) + ' ₽';
     let total = subtotal;
     const referral = referralToggle && !referralToggleWrap.classList.contains('hidden') && referralToggle.checked;
     if (referral) {
       const d = subtotal * 0.1;
-      refEl.textContent = '-' + d.toFixed(2);
+      refEl.textContent = '-' + d.toFixed(0);
       refRow.classList.remove('hidden');
       total -= d;
     } else {
@@ -284,14 +284,14 @@
       isPickup = addressSelect.value === 'pickup';
     }
     const shipping = isPickup ? 0 : 300;
-    shippingEl.textContent = shipping.toFixed(2) + ' ₽';
+    shippingEl.textContent = shipping.toFixed(0) + ' ₽';
     if (shipping > 0) {
       shippingRow.classList.remove('hidden');
     } else {
       shippingRow.classList.add('hidden');
     }
     total += shipping;
-    totalEl.textContent = total.toFixed(2) + ' ₽';
+    totalEl.textContent = total.toFixed(0) + ' ₽';
   }
 
   function loadAddresses(uid) {

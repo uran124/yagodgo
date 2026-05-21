@@ -369,9 +369,9 @@ class PurchaseBatchService
             'preorder_price_per_box' => $preorderPricePerBox,
             'instant_price_per_box' => $instantPricePerBox,
             'discount_price_per_box' => $discountPricePerBox,
-            'preorder_unit_price' => round($preorderPricePerBox / $safeBoxSize, 2),
-            'instant_unit_price' => round($instantPricePerBox / $safeBoxSize, 2),
-            'discount_unit_price' => round($discountPricePerBox / $safeBoxSize, 2),
+            'preorder_unit_price' => round($preorderPricePerBox / $safeBoxSize, 0),
+            'instant_unit_price' => round($instantPricePerBox / $safeBoxSize, 0),
+            'discount_unit_price' => round($discountPricePerBox / $safeBoxSize, 0),
         ];
     }
 

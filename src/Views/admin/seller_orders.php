@@ -41,14 +41,14 @@
         <li>
           <?= htmlspecialchars($it['product_name']) ?><?php if ($it['variety']): ?> «<?= htmlspecialchars($it['variety']) ?>»<?php endif; ?>,
           <?= rtrim(rtrim(number_format($it['boxes'],2,'.',''), '0'), '.') ?> ящ. (<?= rtrim(rtrim(number_format($it['quantity'],2,'.',''), '0'), '.') ?> <?= htmlspecialchars($it['box_unit']) ?>)
-          <span class="float-right"><?= number_format($itemTotal, 2, '.', ' ') ?> ₽</span>
+          <span class="float-right"><?= number_format($itemTotal, 0, '.', ' ') ?> ₽</span>
         </li>
       <?php endforeach; ?>
     </ul>
-    <div class="text-sm flex justify-between"><span>Стоимость позиций (итого)</span><span><?= number_format($o['seller_subtotal'], 2, '.', ' ') ?> ₽</span></div>
-    <div class="text-sm flex justify-between"><span>Оплачено клубничками</span><span><?= number_format($o['points_applied'], 2, '.', ' ') ?> ₽</span></div>
-    <div class="text-sm flex justify-between"><span>Комиссия BerryGo (<?= (float)$o['commission_rate'] ?>%)</span><span><?= number_format($o['commission'], 2, '.', ' ') ?> ₽</span></div>
-    <div class="text-sm flex justify-between font-semibold"><span>Выплата селлеру</span><span><?= number_format($o['payout'], 2, '.', ' ') ?> ₽</span></div>
+    <div class="text-sm flex justify-between"><span>Стоимость позиций (итого)</span><span><?= number_format($o['seller_subtotal'], 0, '.', ' ') ?> ₽</span></div>
+    <div class="text-sm flex justify-between"><span>Оплачено клубничками</span><span><?= number_format($o['points_applied'], 0, '.', ' ') ?> ₽</span></div>
+    <div class="text-sm flex justify-between"><span>Комиссия BerryGo (<?= (float)$o['commission_rate'] ?>%)</span><span><?= number_format($o['commission'], 0, '.', ' ') ?> ₽</span></div>
+    <div class="text-sm flex justify-between font-semibold"><span>Выплата селлеру</span><span><?= number_format($o['payout'], 0, '.', ' ') ?> ₽</span></div>
     <div class="mt-2 flex flex-wrap gap-2 text-sm">
       <?php if ($o['status'] === 'new'): ?>
         <form method="post" action="/seller/orders/status">
