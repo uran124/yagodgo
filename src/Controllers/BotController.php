@@ -407,7 +407,7 @@ class BotController
 
         // 5) Создаём запись в order_items
         // Для unit_price делим сумму на количество
-        $unitPrice = round($sum / $quantity, 2);
+        $unitPrice = round($sum / $quantity, 0);
         $stmtItem = $this->pdo->prepare("
             INSERT INTO order_items (order_id, product_id, quantity, unit_price)
             VALUES (?, ?, ?, ?)

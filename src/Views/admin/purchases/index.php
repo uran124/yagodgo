@@ -162,7 +162,7 @@
             </div>
             <div class="purchase-row-subline text-sm text-gray-800">
               <a class="text-[#C86052] hover:underline font-medium" href="<?= $basePath ?>/purchases/<?= (int)$batch['id'] ?>"><?= htmlspecialchars(trim(($batch['product_name'] ?? '') . ' ' . ($batch['variety'] ?? ''))) ?></a>
-              · Стоимость закупки: <b><?= number_format((float)$batch['purchase_price_per_box'], 2, '.', ' ') ?> ₽</b>
+              · Стоимость закупки: <b><?= number_format((float)$batch['purchase_price_per_box'], 0, '.', ' ') ?> ₽</b>
               · Куплено: <b><?= (float)$batch['boxes_total'] ?></b>
               · Свободно: <b><?= (float)$batch['boxes_free'] ?></b>
             </div>
