@@ -143,7 +143,7 @@
         </div>
         <div class="text-sm text-gray-600 mt-1">
           <?= htmlspecialchars($o['client_name']) ?>,
-          <a href="https://wa.me/<?= $wa ?>" class="<?php if($isStaff): ?>text-green-600 underline hover:text-green-700<?php else: ?>hover:underline<?php endif; ?>" target="_blank"><?= htmlspecialchars($o['phone']) ?></a>,
+          <a href="https://t.me/+<?= $wa ?>" class="<?php if($isStaff): ?>text-green-600 underline hover:text-green-700<?php else: ?>hover:underline<?php endif; ?>" target="_blank"><?= htmlspecialchars($o['phone']) ?></a>,
           <a href="#" class="copy-address hover:underline" data-address="<?= htmlspecialchars($o['address'], ENT_QUOTES) ?>"><?= htmlspecialchars($o['address']) ?></a>
         </div>
         <div class="font-semibold mt-2">Состав:</div>
