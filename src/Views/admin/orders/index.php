@@ -2,18 +2,91 @@
 <?php $role = $_SESSION['role'] ?? ''; $isManager = ($role === 'manager'); $isStaff = in_array($role, ['manager','partner'], true); $base = $role === 'manager' ? '/manager' : ($role === 'partner' ? '/partner' : '/admin'); ?>
 <?php $managers = $managers ?? []; $selectedManager = $selectedManager ?? 0; $slots = $slots ?? []; ?>
 <style>
-  @media (max-width: 640px) {
+  /* mobile-first compact layout */
+  .orders-filter {
+    margin-bottom: 0.5rem;
+    gap: 0.375rem;
+  }
+  .orders-filter a,
+  .orders-filter select,
+  .orders-filter button,
+  .orders-filter input,
+  .date-filter button {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    line-height: 1.1;
+  }
+  .date-filter {
+    margin-bottom: 0.5rem;
+    gap: 0.375rem;
+  }
+  #ordersCards {
+    gap: 0.375rem;
+  }
+  .order-card {
+    padding: 0.375rem 0.5rem !important;
+    border-radius: 0.5rem;
+  }
+  .order-card .font-bold {
+    font-size: 0.8rem;
+    line-height: 1.15;
+  }
+  .order-card .text-sm {
+    font-size: 0.75rem !important;
+    line-height: 1.2;
+  }
+  .order-card .font-semibold {
+    font-size: 0.8rem;
+    line-height: 1.2;
+  }
+  .order-card .mt-2 {
+    margin-top: 0.25rem;
+  }
+  .order-card .mt-1 {
+    margin-top: 0.2rem;
+  }
+  .order-card .pt-1 {
+    padding-top: 0.2rem;
+  }
+  .order-card .py-0\.5 {
+    padding-top: 0.05rem;
+    padding-bottom: 0.05rem;
+  }
+  .order-card .px-2 {
+    padding-left: 0.375rem;
+    padding-right: 0.375rem;
+  }
+
+  @media (min-width: 641px) {
+    .orders-filter {
+      margin-bottom: 1rem;
+      gap: 0.5rem;
+    }
+    .orders-filter a,
     .orders-filter select,
     .orders-filter button,
     .orders-filter input,
     .date-filter button {
-      padding: 0.25rem 0.5rem;
-      font-size: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+      line-height: 1.25;
     }
-    .orders-table th,
-    .orders-table td {
-      padding: 0.25rem;
-      font-size: 0.75rem;
+    .date-filter {
+      margin-bottom: 1rem;
+      gap: 0.5rem;
+    }
+    .order-card {
+      padding: 0.75rem 1rem !important;
+      border-radius: 0.75rem;
+    }
+    .order-card .font-bold {
+      font-size: 1rem;
+    }
+    .order-card .text-sm {
+      font-size: 0.875rem !important;
+    }
+    .order-card .font-semibold {
+      font-size: 0.95rem;
     }
   }
 </style>
