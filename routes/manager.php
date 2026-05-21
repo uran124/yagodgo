@@ -19,7 +19,7 @@ return [
             'POST /manager/orders/comment' => ['App\\Controllers\\OrdersController', 'updateComment'],
             'POST /manager/orders/referral' => ['App\\Controllers\\OrdersController', 'updateReferral'],
             'POST /manager/orders/update-delivery' => ['App\\Controllers\\OrdersController', 'updateDelivery'],
-            'POST /manager/orders/delete' => ['App\\Controllers\\OrdersController', 'close'],
+            'POST /manager/orders/delete' => ['App\\Controllers\\OrdersController', 'delete'],
             'GET /manager/products' => ['App\\Controllers\\ProductsController', 'index'],
             'GET /manager/products/edit' => ['App\\Controllers\\ProductsController', 'edit'],
             'POST /manager/products/save' => ['App\\Controllers\\ProductsController', 'save'],
