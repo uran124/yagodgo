@@ -135,7 +135,12 @@
       <div class="order-card block bg-white p-2 sm:p-4 rounded shadow hover:bg-gray-50 <?= $bg ?>" data-status="<?= $o['status'] ?>" data-date="<?= $dateAttr ?>" data-created="<?= $createdAttr ?>" data-id="<?= $o['id'] ?>" data-delivery="<?= $deliveryAttr ?>" data-slot="<?= $slotAttr ?>">
         <div class="flex justify-between items-center">
           <a href="<?= $base ?>/orders/<?= $o['id'] ?>" class="flex flex-col font-bold<?php if($isStaff): ?> text-white decoration-white<?php endif; ?>">
-            #<?= $o['id'] ?> <?php if ($o['delivery_date']): ?> | <?= date('d.m', strtotime($o['delivery_date'])) ?> <?= htmlspecialchars(format_time_range($o['slot_from'], $o['slot_to'])) ?><?php endif; ?><?php if (!empty($o['created_by_user_id']) && (int)$o['created_by_user_id'] !== (int)$o['user_id']): ?> | id добавившего: <?= (int)$o['created_by_user_id'] ?><?php endif; ?>
+            #<?= $o['id'] ?> <?php if ($o['delivery_date']): ?> | <?= date('d.m', strtotime($o['delivery_date'])) ?> <?= htmlspecialchars(format_time_range($o['slot_from'], $o['slot_to'])) ?><?php endif; ?><?php
+              $hasCreator = !empty($o['created_by_user_id']);
+              $buyerId = isset($o['user_id']) ? (int)$o['user_id'] : 0;
+              $creatorId = (int)($o['created_by_user_id'] ?? 0);
+              $isCreatorDifferent = !$buyerId || ($creatorId !== $buyerId);
+            ?><?php if ($hasCreator && $isCreatorDifferent && !empty($o['author_name'])): ?> | добавил: <?= htmlspecialchars($o['author_name']) ?><?php endif; ?>
           </a>
           <span class="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-medium <?= order_status_info($o['status'])['badge'] ?>">
             <?= order_status_info($o['status'])['label'] ?>
@@ -143,7 +148,7 @@
         </div>
         <div class="text-sm text-gray-600 mt-1">
           <?= htmlspecialchars($o['client_name']) ?>,
-          <a href="https://wa.me/<?= $wa ?>" class="<?php if($isStaff): ?>text-green-600 underline hover:text-green-700<?php else: ?>hover:underline<?php endif; ?>" target="_blank"><?= htmlspecialchars($o['phone']) ?></a>,
+          <a href="https://t.me/+<?= $wa ?>" class="<?php if($isStaff): ?>text-green-600 underline hover:text-green-700<?php else: ?>hover:underline<?php endif; ?>" target="_blank"><?= htmlspecialchars($o['phone']) ?></a>,
           <a href="#" class="copy-address hover:underline" data-address="<?= htmlspecialchars($o['address'], ENT_QUOTES) ?>"><?= htmlspecialchars($o['address']) ?></a>
         </div>
         <div class="font-semibold mt-2">Состав:</div>
