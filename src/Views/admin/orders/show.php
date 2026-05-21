@@ -1,91 +1,58 @@
 <?php /** @var array $order @var array $items @var array $addresses @var array $slots @var array $products */ ?>
 <?php $role = $_SESSION['role'] ?? ''; $isManager = in_array($role, ['manager','partner'], true); $base = $role === 'manager' ? '/manager' : ($role === 'partner' ? '/partner' : '/admin'); ?>
 <style>
-  .order-details { font-size: 0.84rem; gap: 0.75rem; padding-bottom: 5rem; }
-  .order-details .card { border-radius: 0.9rem; padding: 0.75rem; }
-  .order-details .row-gap { gap: 0.5rem; }
+  /* Mobile-first compact page */
+  .order-details { font-size: 0.78rem; gap: 0.5rem; }
+  .order-details .card { padding: 0.5rem; border-radius: 0.5rem; }
+  .order-details .row-gap { gap: 0.35rem; }
+  .order-details .compact { margin: 0.1rem 0; }
   .order-details button,
   .order-details .action-link,
   .order-details input,
   .order-details select,
-  .order-details textarea { font-size: 0.84rem; line-height: 1.2; }
-  .order-details .header-meta { gap: 0.35rem 0.5rem; }
-  .order-details .header-meta span:nth-child(1) { width: 100%; }
-  .order-item-card {
-    border: 1px solid rgba(255,255,255,.08);
-    border-radius: 0.85rem;
-    padding: 0.7rem;
-    background: rgba(10, 21, 44, 0.25);
-    transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+  .order-details textarea {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.75rem;
+    line-height: 1.15;
   }
-  .order-item-card:focus-within {
-    border-color: rgba(200, 96, 82, 0.8);
-    box-shadow: 0 0 0 3px rgba(200, 96, 82, 0.2);
-    transform: translateY(-1px);
+  .order-details input[type="number"] { width: 4.2rem; }
+  .order-details .header-meta { gap: 0.25rem 0.5rem; }
+  .order-details .items-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.3rem;
   }
-  .item-topline { display: flex; justify-content: space-between; gap: 0.5rem; align-items: flex-start; }
-  .item-name { font-weight: 600; line-height: 1.3; font-size: 0.9rem; }
-  .item-subline { opacity: 0.85; font-size: 0.74rem; }
-  .item-editor {
-    margin-top: 0.6rem;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.5rem;
-    align-items: end;
-  }
-  .item-editor label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.72rem; opacity: 0.9; }
-  .item-editor .line-total {
-    grid-column: span 2;
-    border-top: 1px dashed rgba(255,255,255,.2);
-    padding-top: 0.45rem;
-    font-weight: 700;
+  .order-details .items-row form {
     display: flex;
-    justify-content: space-between;
+    flex-wrap: wrap;
     align-items: center;
+    gap: 0.3rem;
   }
-  .item-actions {
-    grid-column: span 2;
-    display: flex;
-    gap: 0.5rem;
-    justify-content: flex-end;
-  }
-  .item-actions button { min-height: 2rem; min-width: 2rem; }
-  .order-details .sticky-summary {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 40;
-    padding: 0.6rem 0.75rem max(0.6rem, env(safe-area-inset-bottom));
-    background: linear-gradient(90deg, rgba(5,10,20,.95), rgba(20,36,69,.95));
-    backdrop-filter: blur(8px);
-    border-top: 1px solid rgba(255,255,255,.12);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 0.65rem;
-  }
-  .order-details .delivery-fields { display: grid; grid-template-columns: 1fr; gap: 0.5rem; }
-  .order-details .delivery-fields label { display: flex; flex-direction: column; gap: 0.2rem; }
-  .order-details .status-buttons { gap: 0.4rem; }
-  .order-details .status-buttons form { flex: 1 1 calc(50% - 0.3rem); }
-  .order-details .status-buttons button { width: 100%; min-height: 2rem; border-radius: 0.65rem; }
-  .order-details .status-buttons .delete-wrap { flex: 1 1 100%; }
-  .order-details .status-buttons .delete-wrap button { width: 100%; }
+  .order-details .status-buttons { gap: 0.35rem; }
+  .order-details .status-buttons button { padding: 0.25rem 0.5rem; }
+  .order-details .status-buttons .delete-wrap { margin-left: 0; }
 
-  @media (min-width: 768px) {
-    .order-details { font-size: 0.9rem; gap: 1rem; padding-bottom: 1rem; }
-    .order-details .card { border-radius: 1rem; padding: 1rem; }
-    .order-details .header-meta span:nth-child(1) { width: auto; }
-    .item-editor { grid-template-columns: 1.1fr 1.1fr 0.9fr; }
-    .item-editor .line-total { grid-column: span 3; }
-    .item-actions { grid-column: span 3; }
-    .order-details .delivery-fields { grid-template-columns: 1.5fr 1fr 1fr; }
-    .order-details .sticky-summary { position: static; border-radius: 0.9rem; border: 0; margin-top: 0.2rem; }
-    .order-details .status-buttons form,
-    .order-details .status-buttons .delete-wrap { flex: initial; }
-    .order-details .status-buttons button { width: auto; }
-    .order-details .status-buttons .delete-wrap button { width: auto; }
+  @media (min-width: 641px) {
+    .order-details { font-size: 0.875rem; gap: 1rem; }
+    .order-details .card { padding: 1rem; border-radius: 0.75rem; }
+    .order-details button,
+    .order-details .action-link,
+    .order-details input,
+    .order-details select,
+    .order-details textarea {
+      padding: 0.35rem 0.6rem;
+      font-size: 0.875rem;
+      line-height: 1.25;
+    }
+    .order-details input[type="number"] { width: 5rem; }
+    .order-details .items-row {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .order-details .items-row form { gap: 0.5rem; }
+    .order-details .status-buttons { gap: 0.5rem; }
+    .order-details .status-buttons .delete-wrap { margin-left: auto; }
   }
 </style>
 <div class="order-details space-y-4">
@@ -106,19 +73,15 @@
   <div class="bg-white p-4 rounded shadow card space-y-1">
     <?php foreach ($items as $it): ?>
       <?php $lineCost = $it['quantity'] * $it['unit_price']; ?>
-      <div class="order-item-card">
-        <div class="item-topline">
-          <div>
-            <div class="item-name">
-              <?= htmlspecialchars($it['product_name']) ?>
-              <?php if (!empty($it['variety'])): ?> <?= htmlspecialchars($it['variety']) ?><?php endif; ?>
-            </div>
-            <?php if (!empty($it['box_size']) && !empty($it['box_unit'])): ?>
-              <div class="item-subline"><?= $it['box_size'] . ' ' . htmlspecialchars($it['box_unit']) ?></div>
-            <?php endif; ?>
-          </div>
-        </div>
-        <form action="<?= $base ?>/orders/update-item" method="post" class="item-editor" data-autosave="true">
+      <div class="flex justify-between items-center py-1 compact items-row">
+        <span>
+          <?= htmlspecialchars($it['product_name']) ?>
+          <?php if (!empty($it['variety'])): ?> <?= htmlspecialchars($it['variety']) ?><?php endif; ?>
+          <?php if (!empty($it['box_size']) && !empty($it['box_unit'])): ?>
+            <?= ' ' . $it['box_size'] . ' ' . htmlspecialchars($it['box_unit']) ?>
+          <?php endif; ?>
+        </span>
+        <form action="<?= $base ?>/orders/update-item" method="post" class="flex items-center space-x-2 row-gap" data-autosave="true">
           <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
           <input type="hidden" name="product_id" value="<?= $it['product_id'] ?>">
           <label>Количество ящиков
@@ -231,7 +194,7 @@
     </div>
   </form>
 
-  <div class="flex flex-wrap gap-2 items-center status-buttons card bg-white shadow">
+  <div class="flex flex-wrap gap-2 items-center status-buttons">
     <?php $btnClasses = [
         'processing' => 'bg-yellow-700 hover:bg-yellow-800',
         'assigned'   => 'bg-green-700 hover:bg-green-800',
