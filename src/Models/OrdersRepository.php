@@ -23,6 +23,7 @@ class OrdersRepository
                "       o.points_used, o.coupon_code, o.discount_applied,\n" .
                "       o.slot_id, d.time_from AS slot_from, d.time_to AS slot_to,\n" .
                "       u.name AS client_name, u.phone, a.street AS address,\n" .
+               "       o.created_by_user_id, au.name AS author_name, au.role AS author_role,\n" .
                "       o.created_at, o.comment\n" .
                "FROM orders o\n" .
                "JOIN users u ON u.id = o.user_id\n" .
