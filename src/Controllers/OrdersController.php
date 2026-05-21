@@ -8,6 +8,8 @@ use App\Helpers\ReferralHelper;
 use App\Helpers\PhoneNormalizer;
 use App\Models\OrdersRepository;
 use App\Services\AdminOrdersPageService;
+use App\Services\OrderStockOrchestrator;
+use App\Services\StockService;
 
 class OrdersController
 {
@@ -443,6 +445,12 @@ class OrdersController
                 $stmt->execute([$status, $orderId]);
 
                 if ($status === 'cancelled') {
+                    if ($order['status'] !== 'cancelled') {
+                        $stockService = new StockService($this->pdo);
+                        $orderStock = new OrderStockOrchestrator($this->pdo, $stockService);
+                        $orderStock->rollbackReservationByOrderId($orderId);
+                    }
+
                     $cnt = $this->pdo->prepare(
                         "SELECT COUNT(*) FROM orders WHERE user_id = ? AND id <> ? AND status <> 'cancelled'"
                     );
@@ -756,6 +764,12 @@ class OrdersController
             $stmt->execute([$orderId]);
             $order = $stmt->fetch(PDO::FETCH_ASSOC);
             $userId = (int)($order['user_id'] ?? 0);
+
+            if (($order['status'] ?? '') !== 'cancelled') {
+                $stockService = new StockService($this->pdo);
+                $orderStock = new OrderStockOrchestrator($this->pdo, $stockService);
+                $orderStock->rollbackReservationByOrderId($orderId);
+            }
 
             $this->pdo->prepare("DELETE FROM order_items WHERE order_id = ?")->execute([$orderId]);
             $this->pdo->prepare("DELETE FROM points_transactions WHERE order_id = ?")->execute([$orderId]);
