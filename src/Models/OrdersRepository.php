@@ -19,15 +19,17 @@ class OrdersRepository
      */
     public function fetchOrdersForIndex(int $managerId, int $limit, int $offset): array
     {
-        $sql = "SELECT o.id, o.status, o.total_amount, o.delivery_date,\n" .
+        $sql = "SELECT o.id, o.user_id, o.status, o.total_amount, o.delivery_date,\n" .
                "       o.points_used, o.coupon_code, o.discount_applied,\n" .
                "       o.slot_id, d.time_from AS slot_from, d.time_to AS slot_to,\n" .
                "       u.name AS client_name, u.phone, a.street AS address,\n" .
+               "       o.created_by_user_id, au.name AS author_name, au.role AS author_role,\n" .
                "       o.created_at, o.comment\n" .
                "FROM orders o\n" .
                "JOIN users u ON u.id = o.user_id\n" .
                "LEFT JOIN addresses a ON a.id = o.address_id\n" .
-               "LEFT JOIN delivery_slots d ON d.id = o.slot_id";
+               "LEFT JOIN delivery_slots d ON d.id = o.slot_id
+LEFT JOIN users au ON au.id = o.created_by_user_id";
         $params = [];
         if ($managerId > 0) {
             $sql .= " WHERE u.referred_by = ?";
