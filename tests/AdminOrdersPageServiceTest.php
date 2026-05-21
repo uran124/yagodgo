@@ -44,6 +44,7 @@ class AdminOrdersPageServiceTest extends TestCase
             coupon_code TEXT NULL,
             discount_applied INTEGER DEFAULT 0,
             comment TEXT NULL,
+            created_by_user_id INTEGER NULL,
             created_at TEXT
         )');
         $this->pdo->exec('CREATE TABLE product_types (id INTEGER PRIMARY KEY, name TEXT)');
@@ -73,13 +74,14 @@ class AdminOrdersPageServiceTest extends TestCase
 
         $this->pdo->exec("INSERT INTO users (id, name, phone, role, referral_code, has_used_referral_coupon) VALUES
             (1, 'Client', '79000000001', 'client', 'REF01', 0),
-            (2, 'Manager', '79000000002', 'manager', NULL, 0)");
+            (2, 'Manager', '79000000002', 'manager', NULL, 0),
+            (3, 'Admin', '79000000003', 'admin', NULL, 0)");
         $this->pdo->exec("INSERT INTO addresses (id, user_id, street, is_primary, created_at) VALUES
             (1, 1, 'Main st', 1, '2025-03-20 10:00:00'),
             (2, 1, 'Second st', 0, '2025-03-21 10:00:00')");
         $this->pdo->exec("INSERT INTO delivery_slots (id, time_from, time_to) VALUES (1, '09:00', '12:00')");
-        $this->pdo->exec("INSERT INTO orders (id, user_id, address_id, slot_id, status, total_amount, delivery_date, points_used, coupon_code, discount_applied, comment, created_at)
-            VALUES (1, 1, 1, 1, 'new', 1200, '2025-03-25', 70, 'POINTS70', 70, 'comment', '2025-03-20 10:00:00')");
+        $this->pdo->exec("INSERT INTO orders (id, user_id, address_id, slot_id, status, total_amount, delivery_date, points_used, coupon_code, discount_applied, comment, created_by_user_id, created_at)
+            VALUES (1, 1, 1, 1, 'new', 1200, '2025-03-25', 70, 'POINTS70', 70, 'comment', 3, '2025-03-20 10:00:00')");
         $this->pdo->exec("INSERT INTO product_types (id, name) VALUES (1, 'Клубника')");
         $this->pdo->exec("INSERT INTO products (id, product_type_id, variety, unit, box_size, box_unit, is_active) VALUES
             (1, 1, 'Клери', 'кг', 2, 'кг', 1)");

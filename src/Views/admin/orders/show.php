@@ -1,24 +1,63 @@
 <?php /** @var array $order @var array $items @var array $addresses @var array $slots @var array $products */ ?>
 <?php $role = $_SESSION['role'] ?? ''; $isManager = in_array($role, ['manager','partner'], true); $base = $role === 'manager' ? '/manager' : ($role === 'partner' ? '/partner' : '/admin'); ?>
 <style>
-  @media (max-width: 640px) {
-    .order-details { font-size: 0.8125rem; }
-    .order-details .card { padding: 0.5rem; }
+  /* Mobile-first compact page */
+  .order-details { font-size: 0.78rem; gap: 0.5rem; }
+  .order-details .card { padding: 0.5rem; border-radius: 0.5rem; }
+  .order-details .row-gap { gap: 0.35rem; }
+  .order-details .compact { margin: 0.1rem 0; }
+  .order-details button,
+  .order-details .action-link,
+  .order-details input,
+  .order-details select,
+  .order-details textarea {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.75rem;
+    line-height: 1.15;
+  }
+  .order-details input[type="number"] { width: 4.2rem; }
+  .order-details .header-meta { gap: 0.25rem 0.5rem; }
+  .order-details .items-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.3rem;
+  }
+  .order-details .items-row form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .order-details .status-buttons { gap: 0.35rem; }
+  .order-details .status-buttons button { padding: 0.25rem 0.5rem; }
+  .order-details .status-buttons .delete-wrap { margin-left: 0; }
+
+  @media (min-width: 641px) {
+    .order-details { font-size: 0.875rem; gap: 1rem; }
+    .order-details .card { padding: 1rem; border-radius: 0.75rem; }
     .order-details button,
     .order-details .action-link,
     .order-details input,
     .order-details select,
     .order-details textarea {
-      padding: 0.2rem 0.4rem;
-      font-size: 0.75rem;
+      padding: 0.35rem 0.6rem;
+      font-size: 0.875rem;
+      line-height: 1.25;
     }
-    .order-details .row-gap { gap: 0.35rem; }
-    .order-details .compact { margin: 0.125rem 0; }
+    .order-details input[type="number"] { width: 5rem; }
+    .order-details .items-row {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .order-details .items-row form { gap: 0.5rem; }
+    .order-details .status-buttons { gap: 0.5rem; }
+    .order-details .status-buttons .delete-wrap { margin-left: auto; }
   }
 </style>
 <div class="order-details space-y-4">
   <div class="flex justify-between items-center bg-white p-4 rounded shadow card">
-    <div class="flex flex-wrap items-center gap-2">
+    <div class="flex flex-wrap items-center header-meta">
       <span class="font-semibold">Заказ #<?= $order['id'] ?></span>
       <span><?= htmlspecialchars($order['client_name']) ?></span>
       <span><?= htmlspecialchars($order['phone']) ?></span>
@@ -34,7 +73,7 @@
   <div class="bg-white p-4 rounded shadow card space-y-1">
     <?php foreach ($items as $it): ?>
       <?php $lineCost = $it['quantity'] * $it['unit_price']; ?>
-      <div class="flex justify-between items-center py-1 compact">
+      <div class="flex justify-between items-center py-1 compact items-row">
         <span>
           <?= htmlspecialchars($it['product_name']) ?>
           <?php if (!empty($it['variety'])): ?> <?= htmlspecialchars($it['variety']) ?><?php endif; ?>
@@ -138,7 +177,7 @@
     </div>
   </form>
 
-  <div class="flex flex-wrap gap-2 items-center">
+  <div class="flex flex-wrap gap-2 items-center status-buttons">
     <?php $btnClasses = [
         'processing' => 'bg-yellow-700 hover:bg-yellow-800',
         'assigned'   => 'bg-green-700 hover:bg-green-800',
@@ -157,7 +196,7 @@
         <button class="px-3 py-1 rounded text-white <?= $btnClasses[$st] ?>" type="submit"><?= $label ?></button>
       </form>
     <?php endforeach; ?>
-    <form class="ml-auto" action="<?= $base ?>/orders/delete" method="post" onsubmit="return confirm('Удалить этот заказ?');">
+    <form class="delete-wrap" action="<?= $base ?>/orders/delete" method="post" onsubmit="return confirm('Удалить этот заказ?');">
       <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
       <button class="px-3 py-1 rounded text-white bg-red-700 hover:bg-red-800" type="submit" title="Удалить">🗑️</button>
     </form>
