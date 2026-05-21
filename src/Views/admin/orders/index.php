@@ -134,7 +134,7 @@
       <?php $wa = normalize_phone($o['phone']); ?>
       <div class="order-card block bg-white p-2 sm:p-4 rounded shadow hover:bg-gray-50 <?= $bg ?>" data-status="<?= $o['status'] ?>" data-date="<?= $dateAttr ?>" data-created="<?= $createdAttr ?>" data-id="<?= $o['id'] ?>" data-delivery="<?= $deliveryAttr ?>" data-slot="<?= $slotAttr ?>">
         <div class="flex justify-between items-center">
-          <a href="<?= $base ?>/orders/<?= $o['id'] ?>" class="flex flex-col text-sm font-bold<?php if($isStaff): ?> text-white decoration-white<?php endif; ?>">
+          <a href="<?= $base ?>/orders/<?= $o['id'] ?>" class="block text-sm font-bold<?php if($isStaff): ?> text-white decoration-white<?php endif; ?>">
             #<?= $o['id'] ?> <?php if ($o['delivery_date']): ?> | <?= date('d.m', strtotime($o['delivery_date'])) ?> <?= htmlspecialchars(format_time_range($o['slot_from'], $o['slot_to'])) ?><?php endif; ?><?php
               $hasCreator = !empty($o['created_by_user_id']);
               $buyerId = isset($o['user_id']) ? (int)$o['user_id'] : 0;
