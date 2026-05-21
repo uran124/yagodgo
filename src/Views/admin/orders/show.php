@@ -150,17 +150,18 @@
       <select name="product_id" class="border px-2 py-1 rounded w-full">
         <?php foreach ($products as $p): ?>
           <?php $productBoxSize = (float)($p['box_size'] ?? 1); if ($productBoxSize <= 0) { $productBoxSize = 1.0; } ?>
-          <option value="<?= $p['id'] ?>" data-box-size="<?= htmlspecialchars((string)$productBoxSize) ?>"><?= htmlspecialchars($p['product']) ?><?php if(!empty($p['variety'])): ?> <?= htmlspecialchars($p['variety']) ?><?php endif; ?></option>
+          <?php $productPricePerKg = (float)($p['price'] ?? 0); ?>
+          <option value="<?= $p['id'] ?>" data-box-size="<?= htmlspecialchars((string)$productBoxSize) ?>" data-price-per-kg="<?= htmlspecialchars((string)$productPricePerKg) ?>"><?= htmlspecialchars($p['product']) ?><?php if(!empty($p['variety'])): ?> <?= htmlspecialchars($p['variety']) ?><?php endif; ?></option>
         <?php endforeach; ?>
       </select>
       </label>
       <input type="hidden" name="quantity" value="" data-base-field="quantity">
       <input type="hidden" name="unit_price" value="" data-base-field="unit_price">
       <label>Количество ящиков
-      <input type="number" step="1" min="1" placeholder="1" class="w-full border px-2 py-1 rounded" data-ui-field="boxes">
+      <input type="number" step="1" min="1" value="1" placeholder="1" class="w-full border px-2 py-1 rounded" data-ui-field="boxes">
       </label>
       <label>Цена за ящик (₽)
-      <input type="number" step="1" min="0" placeholder="0" class="w-full border px-2 py-1 rounded" data-ui-field="box_price">
+      <input type="number" step="1" min="0" value="" placeholder="0" class="w-full border px-2 py-1 rounded" data-ui-field="box_price">
       </label>
       <div class="item-actions">
         <button type="submit" class="bg-green-700 text-white px-3 py-1 rounded" title="Добавить">Добавить позицию</button>
@@ -300,9 +301,40 @@
       unitPriceBase.value = Number.isFinite(boxPrice) ? String(boxPrice / boxSize) : '0';
     };
 
+    const updateAddItemDefaults = (form, force = false) => {
+      const productSelect = form.querySelector('select[name="product_id"]');
+      const boxesField = form.querySelector('[data-ui-field="boxes"]');
+      const boxPriceField = form.querySelector('[data-ui-field="box_price"]');
+      if (!productSelect || !boxesField || !boxPriceField) return;
+
+      const selected = productSelect.selectedOptions[0];
+      if (!selected) return;
+      const boxSize = Number(selected.dataset.boxSize || 1);
+      const pricePerKg = Number(selected.dataset.pricePerKg || 0);
+      const pricePerBox = pricePerKg * (boxSize > 0 ? boxSize : 1);
+
+      if (force || !boxesField.value) {
+        boxesField.value = '1';
+      }
+      if (force || !boxPriceField.value || boxPriceField.dataset.autofilled === '1') {
+        boxPriceField.value = String(Math.round(pricePerBox));
+        boxPriceField.dataset.autofilled = '1';
+      }
+    };
+
     document.querySelectorAll('.item-editor').forEach((form) => {
+      const isAddItemForm = form.action.includes('/orders/add-item');
+      if (isAddItemForm) {
+        updateAddItemDefaults(form, true);
+      }
       syncBoxInputs(form);
       form.querySelectorAll('[data-ui-field="boxes"], [data-ui-field="box_price"], select[name="product_id"]').forEach((field) => {
+        if (isAddItemForm && field.matches('[data-ui-field="box_price"]')) {
+          field.addEventListener('input', () => { field.dataset.autofilled = '0'; });
+        }
+        if (isAddItemForm && field.matches('select[name="product_id"]')) {
+          field.addEventListener('change', () => updateAddItemDefaults(form, true));
+        }
         field.addEventListener('input', () => syncBoxInputs(form));
         field.addEventListener('change', () => syncBoxInputs(form));
       });
