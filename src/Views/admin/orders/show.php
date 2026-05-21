@@ -84,25 +84,42 @@
         <form action="<?= $base ?>/orders/update-item" method="post" class="flex items-center space-x-2 row-gap" data-autosave="true">
           <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
           <input type="hidden" name="product_id" value="<?= $it['product_id'] ?>">
-          <input type="number" name="quantity" value="<?= $it['quantity'] ?>" step="0.01" class="w-20 border px-1 py-0.5 rounded"> кг
-          <input type="number" name="unit_price" value="<?= $it['unit_price'] ?>" step="1" class="w-20 border px-1 py-0.5 rounded"> ₽
-          <button type="submit" class="bg-[#C86052] text-white px-2 py-1 rounded" title="Сохранить">💾</button>
-          <button type="submit" formaction="<?= $base ?>/orders/delete-item" class="text-red-600" onclick="return confirm('Удалить позицию?');" title="Удалить">✕</button>
-          <span class="ml-2"><?= number_format($lineCost, 0, '.', ' ') ?> ₽</span>
+          <label>Количество ящиков
+            <input type="number" name="quantity" value="<?= $it['quantity'] ?>" step="1" min="1" class="w-full border px-2 py-1 rounded">
+          </label>
+          <label>Цена за ящик (₽)
+            <input type="number" name="unit_price" value="<?= $it['unit_price'] ?>" step="1" class="w-full border px-2 py-1 rounded">
+          </label>
+          <div class="line-total">
+            <span>Сумма позиции</span>
+            <span><?= number_format($lineCost, 0, '.', ' ') ?> ₽</span>
+          </div>
+          <div class="item-actions">
+            <button type="submit" class="bg-[#C86052] text-white px-2 py-1 rounded" title="Сохранить">Сохранить</button>
+            <button type="submit" formaction="<?= $base ?>/orders/delete-item" class="text-red-600 border border-red-500 px-2 py-1 rounded" onclick="return confirm('Удалить позицию?');" title="Удалить">Удалить</button>
+          </div>
         </form>
       </div>
     <?php endforeach; ?>
 
-    <form action="<?= $base ?>/orders/add-item" method="post" class="flex items-center space-x-2 pt-2 border-t row-gap">
+    <form action="<?= $base ?>/orders/add-item" method="post" class="pt-2 border-t item-editor">
       <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
-      <select name="product_id" class="border px-1 py-0.5 rounded">
+      <label class="col-span-2">Товар
+      <select name="product_id" class="border px-2 py-1 rounded w-full">
         <?php foreach ($products as $p): ?>
           <option value="<?= $p['id'] ?>"><?= htmlspecialchars($p['product']) ?><?php if(!empty($p['variety'])): ?> <?= htmlspecialchars($p['variety']) ?><?php endif; ?></option>
         <?php endforeach; ?>
       </select>
-      <input type="number" name="quantity" step="0.01" placeholder="Кг" class="w-20 border px-1 py-0.5 rounded">
-      <input type="number" name="unit_price" step="1" placeholder="₽" class="w-20 border px-1 py-0.5 rounded">
-      <button type="submit" class="bg-green-700 text-white px-2 py-1 rounded" title="Добавить">➕</button>
+      </label>
+      <label>Количество ящиков
+      <input type="number" name="quantity" step="1" min="1" placeholder="1" class="w-full border px-2 py-1 rounded">
+      </label>
+      <label>Цена за ящик (₽)
+      <input type="number" name="unit_price" step="1" placeholder="0" class="w-full border px-2 py-1 rounded">
+      </label>
+      <div class="item-actions">
+        <button type="submit" class="bg-green-700 text-white px-3 py-1 rounded" title="Добавить">Добавить позицию</button>
+      </div>
     </form>
 
     <?php if (($pointsFromBalance ?? 0) > 0): ?>
@@ -152,7 +169,7 @@
 
   <form action="<?= $base ?>/orders/update-delivery" method="post" class="bg-white p-4 rounded shadow card space-y-2" data-autosave="true">
     <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
-    <div class="space-x-2 flex flex-wrap items-center row-gap">
+    <div class="delivery-fields">
       <label>
         <span class="mr-1">Адрес:</span>
         <select name="address_id" class="border px-2 py-1 rounded">
@@ -200,6 +217,11 @@
       <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
       <button class="px-3 py-1 rounded text-white bg-red-700 hover:bg-red-800" type="submit" title="Удалить">🗑️</button>
     </form>
+  </div>
+
+  <div class="sticky-summary">
+    <div class="font-semibold">Итого: <?= $order['total_amount'] ?> ₽</div>
+    <a href="<?= $base ?>/orders" class="inline-block px-4 py-2 rounded text-white bg-purple-700 hover:bg-purple-800 action-link" title="К заказам">К заказам</a>
   </div>
 
   <div>
