@@ -27,7 +27,8 @@ class OrdersRepository
                "FROM orders o\n" .
                "JOIN users u ON u.id = o.user_id\n" .
                "LEFT JOIN addresses a ON a.id = o.address_id\n" .
-               "LEFT JOIN delivery_slots d ON d.id = o.slot_id";
+               "LEFT JOIN delivery_slots d ON d.id = o.slot_id
+LEFT JOIN users au ON au.id = o.created_by_user_id";
         $params = [];
         if ($managerId > 0) {
             $sql .= " WHERE u.referred_by = ?";
