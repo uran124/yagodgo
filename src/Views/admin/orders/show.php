@@ -121,10 +121,10 @@
         <form action="<?= $base ?>/orders/update-item" method="post" class="item-editor" data-autosave="true">
           <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
           <input type="hidden" name="product_id" value="<?= $it['product_id'] ?>">
-          <label>Количество (кг)
-            <input type="number" name="quantity" value="<?= $it['quantity'] ?>" step="0.01" class="w-full border px-2 py-1 rounded">
+          <label>Количество ящиков
+            <input type="number" name="quantity" value="<?= $it['quantity'] ?>" step="1" min="1" class="w-full border px-2 py-1 rounded">
           </label>
-          <label>Цена за кг (₽)
+          <label>Цена за ящик (₽)
             <input type="number" name="unit_price" value="<?= $it['unit_price'] ?>" step="1" class="w-full border px-2 py-1 rounded">
           </label>
           <div class="line-total">
@@ -148,10 +148,10 @@
         <?php endforeach; ?>
       </select>
       </label>
-      <label>Количество (кг)
-      <input type="number" name="quantity" step="0.01" placeholder="0" class="w-full border px-2 py-1 rounded">
+      <label>Количество ящиков
+      <input type="number" name="quantity" step="1" min="1" placeholder="1" class="w-full border px-2 py-1 rounded">
       </label>
-      <label>Цена (₽)
+      <label>Цена за ящик (₽)
       <input type="number" name="unit_price" step="1" placeholder="0" class="w-full border px-2 py-1 rounded">
       </label>
       <div class="item-actions">
