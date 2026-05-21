@@ -195,7 +195,7 @@ class AdminOrdersPageService
     private function fetchActiveProducts(): array
     {
         $stmt = $this->pdo->query(
-            "SELECT p.id, t.name AS product, p.variety\n" .
+            "SELECT p.id, t.name AS product, p.variety, p.price, p.box_size\n" .
             "FROM products p\n" .
             "JOIN product_types t ON t.id = p.product_type_id\n" .
             "WHERE p.is_active = 1\n" .
