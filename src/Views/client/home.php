@@ -95,9 +95,10 @@
     </section>
   <?php endif; ?>
 
-  <?php if (!empty($regularProducts)): ?>
-    <section class="px-4 mb-8">
-      <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-4">🚚 В наличии</h2>
+  <section class="px-4 mb-8">
+    <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-4">🚚 В наличии</h2>
+    <?php $noStockMessage = (string)(get_setting('ui_home_no_stock_message', 'На данный момент ягод нет в наличии. Воспользуйтесь нашим предложением предварительного заказа со скидкой 10% — это дополнительная скидка за оформление предварительного бронирования.') ?? ''); ?>
+    <?php if (!empty($regularProducts)): ?>
       <div class="embla drag-free has-arrows relative">
         <button data-dir="left" class="hidden md:flex items-center justify-center w-8 h-8 absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
           <span class="material-icons-round text-gray-600">chevron_left</span>
@@ -121,8 +122,12 @@
           </div>
         </div>
       </div>
-    </section>
-  <?php endif; ?>
+    <?php else: ?>
+      <div class="bg-amber-50 border border-amber-200 rounded-2xl shadow-sm p-4 md:p-6 text-amber-900">
+        <p class="text-sm md:text-base font-medium"><?= htmlspecialchars($noStockMessage) ?></p>
+      </div>
+    <?php endif; ?>
+  </section>
 
   <?php if (!empty($sellerProducts)): ?>
     <section class="px-4 mb-8">

@@ -34,6 +34,12 @@ class SettingsController
         }
         $_POST['ui_preorder_price_hint'] = $hint;
 
+        $noStockMessage = trim((string)($_POST['ui_home_no_stock_message'] ?? ''));
+        if ($noStockMessage === '') {
+            $noStockMessage = 'На данный момент ягод нет в наличии. Воспользуйтесь нашим предложением предварительного заказа со скидкой 10% — это дополнительная скидка за оформление предварительного бронирования.';
+        }
+        $_POST['ui_home_no_stock_message'] = $noStockMessage;
+
         foreach ($_POST as $key => $value) {
             $stmt = $this->pdo->prepare(
               "REPLACE INTO settings (setting_key, setting_value) VALUES (?, ?)"
