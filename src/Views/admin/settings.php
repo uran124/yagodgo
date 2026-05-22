@@ -30,6 +30,11 @@ $themeColors = $themeColors ?? [];
              value="<?= htmlspecialchars($settings['ui_preorder_price_hint'] ?? 'Цена ориентировочная, точная цена будет после поступления') ?>"
              class="w-full border px-2 py-1 rounded">
     </div>
+    <div>
+      <label class="block mb-1">Сообщение при отсутствии товара в блоке «В наличии»</label>
+      <textarea name="ui_home_no_stock_message" rows="3"
+                class="w-full border px-2 py-1 rounded"><?= htmlspecialchars($settings['ui_home_no_stock_message'] ?? 'На данный момент ягод нет в наличии. Воспользуйтесь нашим предложением предварительного заказа со скидкой 10% — это дополнительная скидка за оформление предварительного бронирования.') ?></textarea>
+    </div>
   </fieldset>
   <?php if (!empty($themeColors)): ?>
     <fieldset class="border border-gray-200 rounded-lg p-4 space-y-3">
