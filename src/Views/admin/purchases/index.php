@@ -12,7 +12,10 @@
   'arrived' => 'Готова к выдаче',
 ]; ?>
 <style>
-  .purchase-filter-row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: end; }
+  .purchase-filter-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: end; margin-bottom: 0.5rem !important; padding: 0.5rem !important; }
+  .purchase-filter-field { min-width: 130px; }
+  .purchase-filter-select { padding: 0.4rem 0.5rem !important; font-size: 0.875rem; }
+  .purchase-filter-reset { padding: 0.4rem 0.65rem; font-size: 0.75rem; }
   .purchase-preorder-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
   .purchase-preorder-metrics { display: flex; gap: 0.75rem; min-width: max-content; }
   .purchase-preorder-metric { min-width: 180px; }
@@ -37,6 +40,10 @@
   [data-theme='dark'] .purchase-btn-cancel { background: #334155; color: #f8fafc; border-color: #64748b; }
   [data-theme='dark'] .purchase-btn-cancel:hover { background: #475569; }
   @media (max-width: 767px) {
+    .purchase-filter-row { gap: 0.4rem; margin-bottom: 0.4rem !important; padding: 0.45rem !important; }
+    .purchase-filter-field { min-width: 120px; flex: 1 1 120px; }
+    .purchase-filter-select { padding: 0.34rem 0.45rem !important; font-size: 0.8125rem; }
+    .purchase-filter-reset { padding: 0.34rem 0.55rem; font-size: 0.75rem; }
     .purchase-mobile-row { display: grid; grid-template-columns: 84px minmax(0,1fr); gap: 0.75rem; }
     .purchase-mobile-photo { width: 84px; }
     .purchase-mobile-card { gap: 0.5rem !important; }
@@ -52,28 +59,27 @@
     <?= htmlspecialchars((string)$flash['message']) ?>
   </div>
 <?php endif; ?>
-<form method="get" class="bg-white rounded border p-3 mb-4 purchase-filter-row">
-  <div class="flex-1 min-w-[150px]">
+<form method="get" class="bg-white rounded border p-3 mb-4 purchase-filter-row" id="purchase-auto-filter">
+  <div class="purchase-filter-field flex-1 min-w-[150px]">
     <label class="text-xs text-gray-600">Статус</label>
-    <select name="status" class="w-full border rounded px-2 py-2 text-sm">
+    <select name="status" class="purchase-filter-select w-full border rounded px-2 py-2 text-sm">
       <option value="">Все</option>
       <?php foreach (['planned','purchased','arrived'] as $st): ?>
         <option value="<?= $st ?>" <?= (($filters['status'] ?? '') === $st) ? 'selected' : '' ?>><?= htmlspecialchars((string)($statusLabels[$st] ?? $st)) ?></option>
       <?php endforeach; ?>
     </select>
   </div>
-  <div class="flex-1 min-w-[150px]">
+  <div class="purchase-filter-field flex-1 min-w-[150px]">
     <label class="text-xs text-gray-600">Закупщик</label>
-    <select name="buyer_id" class="w-full border rounded px-2 py-2 text-sm">
+    <select name="buyer_id" class="purchase-filter-select w-full border rounded px-2 py-2 text-sm">
       <option value="0">Все</option>
       <?php foreach ($buyers as $buyer): ?>
         <option value="<?= (int)$buyer['id'] ?>" <?= ((int)($filters['buyer_id'] ?? 0) === (int)$buyer['id']) ? 'selected' : '' ?>><?= htmlspecialchars((string)$buyer['name']) ?></option>
       <?php endforeach; ?>
     </select>
   </div>
-  <div class="flex gap-2 whitespace-nowrap">
-    <button class="bg-gray-900 text-white px-4 py-2 rounded" type="submit">Применить</button>
-    <a class="bg-gray-100 px-4 py-2 rounded" href="<?= $basePath ?>/purchases">Сбросить</a>
+  <div class="flex gap-1 whitespace-nowrap">
+    <a class="purchase-filter-reset bg-gray-100 rounded" href="<?= $basePath ?>/purchases">Сбросить</a>
   </div>
 </form>
 
@@ -201,6 +207,16 @@
 </table>
 <script>
   (function () {
+    var filterForm = document.getElementById('purchase-auto-filter');
+    if (filterForm) {
+      var selects = filterForm.querySelectorAll('select');
+      selects.forEach(function (el) {
+        el.addEventListener('change', function () {
+          filterForm.submit();
+        });
+      });
+    }
+
     var wrap = document.getElementById('preorder-metrics-scroll');
     if (!wrap) return;
     var startX = 0;
