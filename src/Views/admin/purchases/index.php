@@ -175,7 +175,7 @@
 
 <div class="purchase-actions-row flex items-center mb-4">
   <a href="<?= $basePath ?>/purchases/create" class="purchase-actions-btn bg-[#C86052] text-white px-4 py-2 rounded inline-flex items-center">
-    <span class="material-icons-round text-base mr-1">add</span> + Добавить
+    <span class="material-icons-round text-base mr-1">add</span> Добавить закупку
   </a>
   <form method="post" action="<?= $basePath ?>/purchases/preorders/maintenance" class="ml-2">
     <?= csrf_field() ?>
