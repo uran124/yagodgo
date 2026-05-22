@@ -67,11 +67,14 @@
   }
   .order-details .delivery-fields { display: grid; grid-template-columns: 1fr; gap: 0.5rem; }
   .order-details .delivery-fields label { display: flex; flex-direction: column; gap: 0.2rem; }
-  .order-details .status-buttons { gap: 0.4rem; }
-  .order-details .status-buttons form { flex: 1 1 calc(50% - 0.3rem); }
-  .order-details .status-buttons button { width: 100%; min-height: 2rem; border-radius: 0.65rem; }
-  .order-details .status-buttons .delete-wrap { flex: 1 1 100%; }
-  .order-details .status-buttons .delete-wrap button { width: 100%; }
+  .order-details .status-modal-buttons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; }
+  .order-details .status-modal-buttons button { width: 100%; min-height: 2.1rem; border-radius: 0.65rem; }
+  .order-details .status-open-btn { border: 0; cursor: pointer; }
+  .order-details .status-dialog { border: 0; border-radius: 0.9rem; padding: 0; max-width: 25rem; width: calc(100% - 2rem); }
+  .order-details .status-dialog::backdrop { background: rgba(3, 6, 14, 0.68); backdrop-filter: blur(2px);}
+  .order-details .status-dialog-content { padding: 0.9rem; }
+  .order-details .address-select { max-width: 100%; width: 100%; }
+  .order-details .address-select option { white-space: normal; word-break: break-word; }
 
   @media (min-width: 768px) {
     .order-details { font-size: 0.9rem; gap: 1rem; padding-bottom: 1rem; }
@@ -82,10 +85,7 @@
     .item-actions { grid-column: span 3; }
     .order-details .delivery-fields { grid-template-columns: 1.5fr 1fr 1fr; }
     .order-details .sticky-summary { position: static; border-radius: 0.9rem; border: 0; margin-top: 0.2rem; }
-    .order-details .status-buttons form,
-    .order-details .status-buttons .delete-wrap { flex: initial; }
-    .order-details .status-buttons button { width: auto; }
-    .order-details .status-buttons .delete-wrap button { width: auto; }
+    .order-details .status-modal-buttons { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   }
 </style>
 <div class="order-details space-y-4">
@@ -97,9 +97,9 @@
     </div>
     <div class="flex items-start">
       <?php $info = order_status_info($order['status']); ?>
-      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-medium <?= $info['badge'] ?>">
+      <button type="button" class="status-open-btn inline-flex items-center px-2 py-0.5 rounded-full text-sm font-medium <?= $info['badge'] ?>" data-open-status-modal="true" title="Изменить статус">
         <?= $info['label'] ?>
-      </span>
+      </button>
     </div>
   </div>
 
@@ -218,9 +218,9 @@
     <div class="delivery-fields">
       <label>
         <span class="mr-1">Адрес:</span>
-        <select name="address_id" class="border px-2 py-1 rounded">
+        <select name="address_id" class="border px-2 py-1 rounded address-select">
           <?php foreach ($addresses as $a): ?>
-            <option value="<?= $a['id'] ?>" <?= $a['id'] == $order['address_id'] ? 'selected' : '' ?>><?= htmlspecialchars($a['street']) ?></option>
+            <option value="<?= $a['id'] ?>" title="<?= htmlspecialchars($a['street']) ?>" <?= $a['id'] == $order['address_id'] ? 'selected' : '' ?>><?= htmlspecialchars($a['street']) ?></option>
           <?php endforeach; ?>
           <option value="pickup" <?= $order['address_id'] === null ? 'selected' : '' ?>>Самовывоз 9 мая 73</option>
         </select>
@@ -240,28 +240,39 @@
     </div>
   </form>
 
-  <div class="flex flex-wrap gap-2 items-center status-buttons card bg-white shadow">
-    <?php $btnClasses = [
-        'processing' => 'bg-yellow-700 hover:bg-yellow-800',
-        'assigned'   => 'bg-green-700 hover:bg-green-800',
-        'delivered'  => 'bg-gray-700 hover:bg-gray-800',
-        'cancelled'  => 'bg-gray-600 hover:bg-gray-700',
-    ]; ?>
-    <?php foreach ([
-        'processing' => 'Принят',
-        'assigned'   => 'В работе',
-        'delivered'  => 'Выполнен',
-        'cancelled'  => 'Отменен'
-      ] as $st => $label): ?>
-      <form action="<?= $base ?>/orders/status" method="post">
-        <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
-        <input type="hidden" name="status" value="<?= $st ?>">
-        <button class="px-3 py-1 rounded text-white <?= $btnClasses[$st] ?>" type="submit"><?= $label ?></button>
-      </form>
-    <?php endforeach; ?>
-    <form class="delete-wrap" action="<?= $base ?>/orders/delete" method="post" onsubmit="return confirm('Удалить этот заказ?');">
+  <?php $btnClasses = [
+      'processing' => 'bg-yellow-700 hover:bg-yellow-800',
+      'assigned'   => 'bg-green-700 hover:bg-green-800',
+      'delivered'  => 'bg-gray-700 hover:bg-gray-800',
+      'cancelled'  => 'bg-gray-600 hover:bg-gray-700',
+  ]; ?>
+  <dialog class="status-dialog" data-status-dialog>
+    <div class="status-dialog-content bg-white">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-semibold">Изменить статус заказа</h3>
+        <button type="button" class="px-2 py-1 rounded border" data-close-status-modal>✕</button>
+      </div>
+      <div class="status-modal-buttons">
+        <?php foreach ([
+            'processing' => 'Принят',
+            'assigned'   => 'В работе',
+            'delivered'  => 'Выполнен',
+            'cancelled'  => 'Отменен'
+          ] as $st => $label): ?>
+          <form action="<?= $base ?>/orders/status" method="post">
+            <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
+            <input type="hidden" name="status" value="<?= $st ?>">
+            <button class="px-3 py-1 rounded text-white <?= $btnClasses[$st] ?>" type="submit"><?= $label ?></button>
+          </form>
+        <?php endforeach; ?>
+      </div>
+    </div>
+  </dialog>
+
+  <div class="card bg-white shadow">
+    <form action="<?= $base ?>/orders/delete" method="post" onsubmit="return confirm('Удалить этот заказ?');">
       <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
-      <button class="px-3 py-1 rounded text-white bg-red-700 hover:bg-red-800" type="submit" title="Удалить">🗑️</button>
+      <button class="px-2 py-1 text-xs rounded text-red-700 border border-red-700 hover:bg-red-700 hover:text-white" type="submit" title="Удалить заказ">Удалить заказ</button>
     </form>
   </div>
 
@@ -270,9 +281,6 @@
     <a href="<?= $base ?>/orders" class="inline-block px-4 py-2 rounded text-white bg-purple-700 hover:bg-purple-800 action-link" title="К заказам">К заказам</a>
   </div>
 
-  <div>
-    <a href="<?= $base ?>/orders" class="inline-block px-4 py-2 rounded text-white bg-purple-700 hover:bg-purple-800 action-link" title="К заказам">←</a>
-  </div>
 </div>
 
 <script>
@@ -340,6 +348,22 @@
       });
       form.addEventListener('submit', () => syncBoxInputs(form));
     });
+
+
+    const statusDialog = document.querySelector('[data-status-dialog]');
+    const openStatusBtn = document.querySelector('[data-open-status-modal="true"]');
+    if (statusDialog && openStatusBtn) {
+      openStatusBtn.addEventListener('click', () => statusDialog.showModal());
+      statusDialog.querySelectorAll('[data-close-status-modal]').forEach((btn) => {
+        btn.addEventListener('click', () => statusDialog.close());
+      });
+      statusDialog.addEventListener('click', (event) => {
+        const rect = statusDialog.getBoundingClientRect();
+        const inside = rect.top <= event.clientY && event.clientY <= rect.bottom
+          && rect.left <= event.clientX && event.clientX <= rect.right;
+        if (!inside) statusDialog.close();
+      });
+    }
 
     document.querySelectorAll('form[data-autosave="true"]').forEach((form) => {
       let dirty = false;
