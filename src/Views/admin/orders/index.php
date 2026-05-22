@@ -198,7 +198,7 @@
 <div id="ordersLoadState" class="mt-1 text-center text-xs text-gray-500"></div>
 
 
-<button id="scrollTopBtn" type="button" aria-label="Наверх" class="fixed right-4 bottom-5 z-40 w-10 h-10 rounded-full bg-[#C86052] text-white shadow-lg opacity-0 pointer-events-none translate-y-3 transition-all duration-300">↑</button>
+<button id="scrollTopBtn" type="button" aria-label="Наверх" class="fixed right-4 bottom-5 z-40 w-10 h-10 rounded-full bg-[#C86052] text-white shadow-lg transition-all duration-300" style="opacity:0;pointer-events:none;transform:translateY(12px);">↑</button>
 
 <script>
   document.addEventListener('DOMContentLoaded', function () {
@@ -299,13 +299,11 @@
       }
     };
     const handleScrollTopVisibility = () => {
-      const visible = getScrollTop() > 220;
+      const visible = getScrollTop() > 120;
       if (!scrollTopBtn) return;
-      scrollTopBtn.classList.toggle('opacity-0', !visible);
-      scrollTopBtn.classList.toggle('pointer-events-none', !visible);
-      scrollTopBtn.classList.toggle('translate-y-3', !visible);
-      scrollTopBtn.classList.toggle('opacity-100', visible);
-      scrollTopBtn.classList.toggle('translate-y-0', visible);
+      scrollTopBtn.style.opacity = visible ? '1' : '0';
+      scrollTopBtn.style.pointerEvents = visible ? 'auto' : 'none';
+      scrollTopBtn.style.transform = visible ? 'translateY(0)' : 'translateY(12px)';
     };
     scrollContainer.addEventListener('scroll', handleScrollTopVisibility, { passive: true });
     handleScrollTopVisibility();
