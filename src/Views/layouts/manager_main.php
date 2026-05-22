@@ -275,7 +275,7 @@ $labelRole = $role === 'partner' ? 'Партнёр' : 'Менеджер';
     }
   </style>
 </head>
-<body class="flex flex-col min-h-screen bg-gray-100 font-sans">
+<body class="flex flex-col h-screen overflow-hidden bg-gray-100 font-sans">
 
   <!-- Header -->
   <header class="flex items-center justify-between bg-white p-2 md:p-4 shadow">
@@ -327,7 +327,7 @@ $labelRole = $role === 'partner' ? 'Партнёр' : 'Менеджер';
   </aside>
 
   <!-- Контент -->
-  <div class="flex-1 flex flex-col">
+  <div class="flex-1 flex flex-col overflow-hidden">
     <h1 class="text-xl md:text-2xl font-semibold text-gray-700 p-2 md:p-4"><?= htmlspecialchars($pageTitle) ?></h1>
     <!-- Main -->
     <main class="p-0 sm:p-3 md:p-6 overflow-auto bg-gray-50 flex-1">
@@ -335,9 +335,32 @@ $labelRole = $role === 'partner' ? 'Партнёр' : 'Менеджер';
     </main>
   </div>
 
+  <button id="globalScrollTopBtn" type="button" aria-label="Наверх" class="fixed right-4 bottom-5 z-50 w-10 h-10 rounded-full bg-[#C86052] text-white shadow-lg transition-all duration-300" style="opacity:0;pointer-events:none;transform:translateY(12px);">↑</button>
+
   <script>
     const sidebar = document.getElementById('sidebar');
     const burgerBtn = document.getElementById('burgerBtn');
+
+    const globalScrollTopBtn = document.getElementById('globalScrollTopBtn');
+    const mainScrollContainer = document.querySelector('main.overflow-auto') || document.querySelector('main') || window;
+    const getMainScrollTop = () => mainScrollContainer === window ? window.scrollY : mainScrollContainer.scrollTop;
+    const updateGlobalScrollBtn = () => {
+      const visible = getMainScrollTop() > 120;
+      if (!globalScrollTopBtn) return;
+      globalScrollTopBtn.style.opacity = visible ? '1' : '0';
+      globalScrollTopBtn.style.pointerEvents = visible ? 'auto' : 'none';
+      globalScrollTopBtn.style.transform = visible ? 'translateY(0)' : 'translateY(12px)';
+    };
+    mainScrollContainer.addEventListener('scroll', updateGlobalScrollBtn, { passive: true });
+    globalScrollTopBtn?.addEventListener('click', () => {
+      if (mainScrollContainer === window) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        mainScrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
+    updateGlobalScrollBtn();
+
 
     function closeSidebar() {
       sidebar.classList.add('-translate-x-full');

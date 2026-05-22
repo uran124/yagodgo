@@ -411,12 +411,14 @@
           <span class="material-icons-round text-[#C86052]">auto_awesome_mosaic</span>
           <?= htmlspecialchars($pageTitle) ?>
         </h1>
-        <main class="p-6 overflow-auto bg-gray-50 flex-1">
+        <main class="p-2 sm:p-3 md:p-4 overflow-auto bg-gray-50 flex-1">
           <?= $content ?>
         </main>
       </div>
     </div>
   </div>
+
+  <button id="globalScrollTopBtn" type="button" aria-label="Наверх" class="fixed right-4 bottom-5 z-50 w-10 h-10 rounded-full bg-[#C86052] text-white shadow-lg transition-all duration-300" style="opacity:0;pointer-events:none;transform:translateY(12px);">↑</button>
 
   <script>
     const sidebar = document.getElementById('sidebar');
@@ -425,6 +427,26 @@
     const sidebarCloseBtn = document.getElementById('sidebarCloseBtn');
     const sidebarBackdrop = document.getElementById('sidebarBackdrop');
     const SIDEBAR_COLLAPSED_KEY = 'berrygo-admin-sidebar-collapsed';
+    const globalScrollTopBtn = document.getElementById('globalScrollTopBtn');
+    const mainScrollContainer = document.querySelector('main.overflow-auto') || document.querySelector('main') || window;
+    const getMainScrollTop = () => mainScrollContainer === window ? window.scrollY : mainScrollContainer.scrollTop;
+    const updateGlobalScrollBtn = () => {
+      const visible = getMainScrollTop() > 120;
+      if (!globalScrollTopBtn) return;
+      globalScrollTopBtn.style.opacity = visible ? '1' : '0';
+      globalScrollTopBtn.style.pointerEvents = visible ? 'auto' : 'none';
+      globalScrollTopBtn.style.transform = visible ? 'translateY(0)' : 'translateY(12px)';
+    };
+    mainScrollContainer.addEventListener('scroll', updateGlobalScrollBtn, { passive: true });
+    globalScrollTopBtn?.addEventListener('click', () => {
+      if (mainScrollContainer === window) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        mainScrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
+    updateGlobalScrollBtn();
+
 
     if (sidebar) {
       const storage = (() => {

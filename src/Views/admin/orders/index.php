@@ -1,92 +1,99 @@
 <?php /** @var array $orders */ ?>
-<?php $role = $_SESSION['role'] ?? ''; $isManager = ($role === 'manager'); $isStaff = in_array($role, ['manager','partner'], true); $base = $role === 'manager' ? '/manager' : ($role === 'partner' ? '/partner' : '/admin'); ?>
+<?php $role = $_SESSION['role'] ?? ''; $isManager = ($role === 'manager'); $isStaff = in_array($role, ['admin','manager','partner'], true); $base = $role === 'manager' ? '/manager' : ($role === 'partner' ? '/partner' : '/admin'); ?>
 <?php $managers = $managers ?? []; $selectedManager = $selectedManager ?? 0; $slots = $slots ?? []; ?>
 <style>
   /* mobile-first compact layout */
   .orders-filter {
-    margin-bottom: 0.5rem;
-    gap: 0.375rem;
+    margin-bottom: 0.75rem;
+    gap: 0.35rem;
   }
   .orders-filter a,
   .orders-filter select,
   .orders-filter button,
   .orders-filter input,
   .date-filter button {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.75rem;
+    min-height: 2rem;
+    padding: 0.3rem 0.42rem;
+    font-size: 0.74rem;
     line-height: 1.1;
+    border-radius: 0.375rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
   }
   .date-filter {
-    margin-bottom: 0.5rem;
-    gap: 0.375rem;
+    margin-bottom: 0.75rem;
+    gap: 0.35rem;
   }
   #ordersCards {
-    gap: 0.375rem;
+    gap: 0.2rem;
   }
   .order-card {
-    padding: 0.375rem 0.5rem !important;
+    padding: 0.2rem 0.3rem !important;
     border-radius: 0.5rem;
   }
   .order-card .font-bold {
-    font-size: 0.8rem;
+    font-size: 0.74rem;
     line-height: 1.15;
   }
   .order-card .text-sm {
     font-size: 0.75rem !important;
-    line-height: 1.2;
+    line-height: 1.1;
   }
   .order-card .font-semibold {
-    font-size: 0.8rem;
-    line-height: 1.2;
+    font-size: 0.74rem;
+    line-height: 1.1;
   }
   .order-card .mt-2 {
-    margin-top: 0.25rem;
+    margin-top: 0.12rem;
   }
   .order-card .mt-1 {
-    margin-top: 0.2rem;
+    margin-top: 0.1rem;
   }
   .order-card .pt-1 {
-    padding-top: 0.2rem;
+    padding-top: 0.1rem;
   }
   .order-card .py-0\.5 {
     padding-top: 0.05rem;
     padding-bottom: 0.05rem;
   }
   .order-card .px-2 {
-    padding-left: 0.375rem;
-    padding-right: 0.375rem;
+    padding-left: 0.2rem;
+    padding-right: 0.2rem;
   }
 
   @media (min-width: 641px) {
     .orders-filter {
-      margin-bottom: 1rem;
-      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+      gap: 0.45rem;
     }
     .orders-filter a,
     .orders-filter select,
     .orders-filter button,
     .orders-filter input,
     .date-filter button {
-      padding: 0.5rem 0.75rem;
-      font-size: 0.875rem;
-      line-height: 1.25;
+      min-height: 2.15rem;
+      padding: 0.42rem 0.62rem;
+      font-size: 0.82rem;
+      line-height: 1.15;
     }
     .date-filter {
-      margin-bottom: 1rem;
-      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+      gap: 0.45rem;
     }
     .order-card {
-      padding: 0.75rem 1rem !important;
-      border-radius: 0.75rem;
+      padding: 0.35rem 0.5rem !important;
+      border-radius: 0.5rem;
     }
     .order-card .font-bold {
-      font-size: 1rem;
+      font-size: 0.82rem;
     }
     .order-card .text-sm {
       font-size: 0.875rem !important;
     }
     .order-card .font-semibold {
-      font-size: 0.95rem;
+      font-size: 0.8rem;
     }
   }
 </style>
@@ -95,9 +102,9 @@
     <?= htmlspecialchars($_GET['msg']) ?>
   </div>
 <?php endif; ?>
-<div class="orders-filter mb-4 flex flex-row flex-wrap items-end gap-2">
-  <a href="<?= $base ?>/orders/create" class="px-2 py-1 md:px-3 md:py-2 bg-[#C86052] text-white rounded text-xs md:text-sm whitespace-nowrap">Создать новый</a>
-  <select id="statusFilter" class="border rounded px-3 py-2 text-sm">
+<div class="orders-filter mb-3 flex flex-row flex-nowrap items-center gap-2 overflow-x-auto">
+  <a href="<?= $base ?>/orders/create" class="px-2 py-1 bg-[#C86052] text-white rounded text-xs md:text-sm whitespace-nowrap shrink-0">Создать новый</a>
+  <select id="statusFilter" class="border rounded px-2 py-1 text-sm shrink-0">
     <option value="">Все статусы</option>
     <option value="new">Новые</option>
     <option value="processing">Принятые</option>
@@ -107,7 +114,7 @@
     <option value="reserved">Бронь</option>
   </select>
   <?php if ($role === 'manager' || !empty($managers)): ?>
-    <select id="managerFilter" class="border rounded px-3 py-2 text-sm">
+    <select id="managerFilter" class="border rounded px-2 py-1 text-sm shrink-0">
       <option value="">Все менеджеры</option>
       <?php foreach ($managers as $m): ?>
         <option value="<?= $m['id'] ?>" <?= $selectedManager == $m['id'] ? 'selected' : '' ?>><?= htmlspecialchars($m['name']) ?></option>
@@ -115,11 +122,12 @@
     </select>
   <?php endif; ?>
 </div>
-<div class="date-filter mb-4 flex flex-row flex-wrap gap-2">
+<div class="date-filter mb-3 flex flex-row flex-wrap items-center gap-2">
+  <button data-filter="active" class="date-btn px-3 py-2 bg-[#C86052] text-white rounded text-sm">Активные</button>
   <button data-filter="today" class="date-btn px-3 py-2 bg-gray-200 rounded text-sm">Сегодня</button>
   <button data-filter="tomorrow" class="date-btn px-3 py-2 bg-gray-200 rounded text-sm">Завтра</button>
-  <button data-filter="upcoming" class="date-btn px-3 py-2 bg-gray-200 rounded text-sm">Ближайшие</button>
   <button data-filter="completed" class="date-btn px-3 py-2 bg-gray-200 rounded text-sm">Завершенные</button>
+  <button data-filter="all" class="date-btn ml-auto px-3 py-2 bg-[#C86052] text-white rounded text-sm">Все</button>
 </div>
 
 <div id="ordersCards" class="space-y-3">
@@ -148,7 +156,7 @@
         </div>
         <div class="text-sm text-gray-600 mt-1">
           <?= htmlspecialchars($o['client_name']) ?>,
-          <a href="https://t.me/+<?= $wa ?>" class="<?php if($isStaff): ?>text-green-600 underline hover:text-green-700<?php else: ?>hover:underline<?php endif; ?>" target="_blank"><?= htmlspecialchars($o['phone']) ?></a>,
+          <a href="tg://resolve?phone=<?= $wa ?>" class="<?php if($isStaff): ?>text-green-600 underline hover:text-green-700<?php else: ?>hover:underline<?php endif; ?>" target="_blank"><?= htmlspecialchars($o['phone']) ?></a>,
           <a href="#" class="copy-address hover:underline" data-address="<?= htmlspecialchars($o['address'], ENT_QUOTES) ?>"><?= htmlspecialchars($o['address']) ?></a>
         </div>
         <div class="font-semibold mt-2">Состав:</div>
@@ -187,34 +195,49 @@
     <?php endforeach; ?>
 </div>
 
-<?php if (($totalPages ?? 1) > 1): ?>
-  <?php
-    $page = $page ?? 1;
-    $totalPages = $totalPages ?? 1;
-    $managerParam = !empty($selectedManager) ? (int)$selectedManager : null;
-    $queryBase = $managerParam ? ['manager' => $managerParam] : [];
-  ?>
-  <div class="mt-4 flex flex-wrap items-center gap-2">
-    <?php
-      $prevPage = max(1, $page - 1);
-      $nextPage = min($totalPages, $page + 1);
-      $prevQuery = http_build_query(array_merge($queryBase, ['page' => $prevPage]));
-      $nextQuery = http_build_query(array_merge($queryBase, ['page' => $nextPage]));
-    ?>
-    <a class="px-3 py-1 rounded border text-sm <?= $page <= 1 ? 'opacity-50 pointer-events-none' : '' ?>" href="?<?= $prevQuery ?>">Назад</a>
-    <span class="text-sm text-gray-600">Стр. <?= $page ?> из <?= $totalPages ?></span>
-    <a class="px-3 py-1 rounded border text-sm <?= $page >= $totalPages ? 'opacity-50 pointer-events-none' : '' ?>" href="?<?= $nextQuery ?>">Вперёд</a>
-  </div>
-<?php endif; ?>
+<div id="ordersLoadState" class="mt-1 text-center text-xs text-gray-500"></div>
+
+
+<button id="scrollTopBtn" type="button" aria-label="Наверх" class="fixed right-4 bottom-5 z-40 w-10 h-10 rounded-full bg-[#C86052] text-white shadow-lg transition-all duration-300" style="opacity:0;pointer-events:none;transform:translateY(12px);">↑</button>
 
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     const statusFilter = document.getElementById('statusFilter');
     const dateButtons = document.querySelectorAll('.date-btn');
-    let dateFilter = '';
+    let dateFilter = 'active';
     const managerFilter = document.getElementById('managerFilter');
     const isManager = <?= $isStaff ? 'true' : 'false' ?>;
     let rows = document.querySelectorAll('#ordersCards .order-card');
+    const cardsWrap = document.getElementById('ordersCards');
+    const loadState = document.getElementById('ordersLoadState');
+    const totalPages = <?= (int)($totalPages ?? 1) ?>;
+    let currentPage = <?= (int)($page ?? 1) ?>;
+    let loading = false;
+
+    async function loadNextPage() {
+      if (loading || currentPage >= totalPages) return;
+      loading = true;
+      if (loadState) loadState.textContent = 'Загружаем заказы…';
+      const params = new URLSearchParams(window.location.search);
+      params.set('page', String(currentPage + 1));
+      const res = await fetch(`${window.location.pathname}?${params.toString()}`, {headers: {'X-Requested-With': 'XMLHttpRequest'}});
+      const html = await res.text();
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const nextCards = doc.querySelectorAll('#ordersCards .order-card');
+      nextCards.forEach(card => cardsWrap.appendChild(card));
+      currentPage += 1;
+      rows = document.querySelectorAll('#ordersCards .order-card');
+      applyFilters();
+      if (loadState) loadState.textContent = currentPage >= totalPages ? 'Все заказы загружены' : '';
+      loading = false;
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) loadNextPage();
+      });
+    }, {rootMargin: '300px'});
+    if (loadState) observer.observe(loadState);
 
     function applyFilters() {
       const s = statusFilter.value;
@@ -232,7 +255,7 @@
           t.setDate(t.getDate() + 1);
           const tomorrow = t.toISOString().slice(0,10);
           if (!d || d !== tomorrow) visible = false;
-        } else if (dateFilter === 'upcoming') {
+        } else if (dateFilter === 'active') {
           if (!['new','processing','assigned','reserved'].includes(st)) visible = false;
         } else if (dateFilter === 'completed') {
           if (st !== 'delivered') {
@@ -244,6 +267,8 @@
             const dt = d ? new Date(d) : null;
             if (!dt || dt < start || dt > end) visible = false;
           }
+        } else if (dateFilter === 'all') {
+          visible = true;
         }
         row.style.display = visible ? '' : 'none';
       });
@@ -253,10 +278,36 @@
     dateButtons.forEach(btn => {
       btn.addEventListener('click', () => {
         dateFilter = btn.dataset.filter;
-        dateButtons.forEach(b => b.classList.toggle('bg-[#C86052]', b === btn));
+        dateButtons.forEach(b => {
+          b.classList.toggle('bg-[#C86052]', b === btn);
+          b.classList.toggle('text-white', b === btn);
+          b.classList.toggle('bg-gray-200', b !== btn);
+        });
         applyFilters();
       });
     });
+
+
+    const scrollTopBtn = document.getElementById('scrollTopBtn');
+    const scrollContainer = document.querySelector('main.overflow-auto') || document.querySelector('main') || window;
+    const getScrollTop = () => scrollContainer === window ? window.scrollY : scrollContainer.scrollTop;
+    const scrollToTop = () => {
+      if (scrollContainer === window) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    };
+    const handleScrollTopVisibility = () => {
+      const visible = getScrollTop() > 120;
+      if (!scrollTopBtn) return;
+      scrollTopBtn.style.opacity = visible ? '1' : '0';
+      scrollTopBtn.style.pointerEvents = visible ? 'auto' : 'none';
+      scrollTopBtn.style.transform = visible ? 'translateY(0)' : 'translateY(12px)';
+    };
+    scrollContainer.addEventListener('scroll', handleScrollTopVisibility, { passive: true });
+    handleScrollTopVisibility();
+    scrollTopBtn?.addEventListener('click', scrollToTop);
 
     managerFilter?.addEventListener('change', () => {
       const val = managerFilter.value;
@@ -282,6 +333,8 @@
         sortRows(field, dir);
       });
     });
+
+    applyFilters();
 
     function sortRows(field, dir) {
       const tbody = document.getElementById('ordersTable');
