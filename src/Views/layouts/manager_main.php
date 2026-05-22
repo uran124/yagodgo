@@ -275,7 +275,7 @@ $labelRole = $role === 'partner' ? 'Партнёр' : 'Менеджер';
     }
   </style>
 </head>
-<body class="flex flex-col min-h-screen bg-gray-100 font-sans">
+<body class="flex flex-col h-screen overflow-hidden bg-gray-100 font-sans">
 
   <!-- Header -->
   <header class="flex items-center justify-between bg-white p-2 md:p-4 shadow">
@@ -327,7 +327,7 @@ $labelRole = $role === 'partner' ? 'Партнёр' : 'Менеджер';
   </aside>
 
   <!-- Контент -->
-  <div class="flex-1 flex flex-col">
+  <div class="flex-1 flex flex-col overflow-hidden">
     <h1 class="text-xl md:text-2xl font-semibold text-gray-700 p-2 md:p-4"><?= htmlspecialchars($pageTitle) ?></h1>
     <!-- Main -->
     <main class="p-0 sm:p-3 md:p-6 overflow-auto bg-gray-50 flex-1">
