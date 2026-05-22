@@ -67,12 +67,14 @@
   }
   .order-details .delivery-fields { display: grid; grid-template-columns: 1fr; gap: 0.3rem; }
   .order-details .delivery-fields label { display: flex; flex-direction: column; gap: 0.2rem; }
-  .order-details .status-modal-buttons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.35rem; }
+  .order-details .status-modal-buttons { display: grid; grid-template-columns: 1fr; gap: 0.35rem; max-width: 14rem; margin: 0 auto; }
   .order-details .status-modal-buttons button { width: 100%; min-height: 2.1rem; border-radius: 0.65rem; }
   .order-details .status-open-btn { border: 0; cursor: pointer; }
-  .order-details .status-dialog { border: 0; border-radius: 0.9rem; padding: 0; max-width: 25rem; width: calc(100% - 2rem); }
+  .order-details .status-dialog { border: 0; border-radius: 0.9rem; padding: 0; max-width: 18rem; width: calc(100% - 2rem); margin: auto; }
   .order-details .status-dialog::backdrop { background: rgba(3, 6, 14, 0.68); backdrop-filter: blur(2px);}
-  .order-details .status-dialog-content { padding: 0.55rem; }
+  .order-details .status-dialog-content { padding: 0.55rem; text-align: center; }
+  .order-details .status-dialog-header { justify-content: center; position: relative; }
+  .order-details .status-dialog-close { position: absolute; right: 0; top: 0; }
   .order-details .address-select { max-width: 100%; width: 100%; }
   .order-details .address-select option { white-space: normal; word-break: break-word; }
 
@@ -85,7 +87,7 @@
     .item-actions { grid-column: span 3; }
     .order-details .delivery-fields { grid-template-columns: 1.5fr 1fr 1fr; }
     .order-details .sticky-summary { position: static; border-radius: 0.9rem; border: 0; margin-top: 0.2rem; }
-    .order-details .status-modal-buttons { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .order-details .status-modal-buttons { grid-template-columns: 1fr; }
   }
 </style>
 <div class="order-details space-y-2 md:space-y-4">
@@ -248,9 +250,9 @@
   ]; ?>
   <dialog class="status-dialog" data-status-dialog>
     <div class="status-dialog-content bg-white">
-      <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center mb-3 status-dialog-header">
         <h3 class="font-semibold">Изменить статус заказа</h3>
-        <button type="button" class="px-2 py-1 rounded border" data-close-status-modal>✕</button>
+        <button type="button" class="px-2 py-1 rounded border status-dialog-close" data-close-status-modal>✕</button>
       </div>
       <div class="status-modal-buttons">
         <?php foreach ([
