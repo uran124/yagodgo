@@ -1,5 +1,5 @@
 <?php /** @var array $orders */ ?>
-<?php $role = $_SESSION['role'] ?? ''; $isManager = ($role === 'manager'); $isStaff = in_array($role, ['manager','partner'], true); $base = $role === 'manager' ? '/manager' : ($role === 'partner' ? '/partner' : '/admin'); ?>
+<?php $role = $_SESSION['role'] ?? ''; $isManager = ($role === 'manager'); $isStaff = in_array($role, ['admin','manager','partner'], true); $base = $role === 'manager' ? '/manager' : ($role === 'partner' ? '/partner' : '/admin'); ?>
 <?php $managers = $managers ?? []; $selectedManager = $selectedManager ?? 0; $slots = $slots ?? []; ?>
 <style>
   /* mobile-first compact layout */
@@ -116,9 +116,9 @@
   <?php endif; ?>
 </div>
 <div class="date-filter mb-4 flex flex-row flex-wrap gap-2">
+  <button data-filter="active" class="date-btn px-3 py-2 bg-[#C86052] text-white rounded text-sm">Активные</button>
   <button data-filter="today" class="date-btn px-3 py-2 bg-gray-200 rounded text-sm">Сегодня</button>
   <button data-filter="tomorrow" class="date-btn px-3 py-2 bg-gray-200 rounded text-sm">Завтра</button>
-  <button data-filter="upcoming" class="date-btn px-3 py-2 bg-gray-200 rounded text-sm">Ближайшие</button>
   <button data-filter="completed" class="date-btn px-3 py-2 bg-gray-200 rounded text-sm">Завершенные</button>
 </div>
 
@@ -148,7 +148,7 @@
         </div>
         <div class="text-sm text-gray-600 mt-1">
           <?= htmlspecialchars($o['client_name']) ?>,
-          <a href="https://t.me/+<?= $wa ?>" class="<?php if($isStaff): ?>text-green-600 underline hover:text-green-700<?php else: ?>hover:underline<?php endif; ?>" target="_blank"><?= htmlspecialchars($o['phone']) ?></a>,
+          <a href="tg://resolve?phone=<?= $wa ?>" class="<?php if($isStaff): ?>text-green-600 underline hover:text-green-700<?php else: ?>hover:underline<?php endif; ?>" target="_blank"><?= htmlspecialchars($o['phone']) ?></a>,
           <a href="#" class="copy-address hover:underline" data-address="<?= htmlspecialchars($o['address'], ENT_QUOTES) ?>"><?= htmlspecialchars($o['address']) ?></a>
         </div>
         <div class="font-semibold mt-2">Состав:</div>
@@ -187,34 +187,46 @@
     <?php endforeach; ?>
 </div>
 
-<?php if (($totalPages ?? 1) > 1): ?>
-  <?php
-    $page = $page ?? 1;
-    $totalPages = $totalPages ?? 1;
-    $managerParam = !empty($selectedManager) ? (int)$selectedManager : null;
-    $queryBase = $managerParam ? ['manager' => $managerParam] : [];
-  ?>
-  <div class="mt-4 flex flex-wrap items-center gap-2">
-    <?php
-      $prevPage = max(1, $page - 1);
-      $nextPage = min($totalPages, $page + 1);
-      $prevQuery = http_build_query(array_merge($queryBase, ['page' => $prevPage]));
-      $nextQuery = http_build_query(array_merge($queryBase, ['page' => $nextPage]));
-    ?>
-    <a class="px-3 py-1 rounded border text-sm <?= $page <= 1 ? 'opacity-50 pointer-events-none' : '' ?>" href="?<?= $prevQuery ?>">Назад</a>
-    <span class="text-sm text-gray-600">Стр. <?= $page ?> из <?= $totalPages ?></span>
-    <a class="px-3 py-1 rounded border text-sm <?= $page >= $totalPages ? 'opacity-50 pointer-events-none' : '' ?>" href="?<?= $nextQuery ?>">Вперёд</a>
-  </div>
-<?php endif; ?>
+<div id="ordersLoadState" class="mt-4 text-center text-sm text-gray-500"></div>
 
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     const statusFilter = document.getElementById('statusFilter');
     const dateButtons = document.querySelectorAll('.date-btn');
-    let dateFilter = '';
+    let dateFilter = 'active';
     const managerFilter = document.getElementById('managerFilter');
     const isManager = <?= $isStaff ? 'true' : 'false' ?>;
     let rows = document.querySelectorAll('#ordersCards .order-card');
+    const cardsWrap = document.getElementById('ordersCards');
+    const loadState = document.getElementById('ordersLoadState');
+    const totalPages = <?= (int)($totalPages ?? 1) ?>;
+    let currentPage = <?= (int)($page ?? 1) ?>;
+    let loading = false;
+
+    async function loadNextPage() {
+      if (loading || currentPage >= totalPages) return;
+      loading = true;
+      if (loadState) loadState.textContent = 'Загружаем заказы…';
+      const params = new URLSearchParams(window.location.search);
+      params.set('page', String(currentPage + 1));
+      const res = await fetch(`${window.location.pathname}?${params.toString()}`, {headers: {'X-Requested-With': 'XMLHttpRequest'}});
+      const html = await res.text();
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const nextCards = doc.querySelectorAll('#ordersCards .order-card');
+      nextCards.forEach(card => cardsWrap.appendChild(card));
+      currentPage += 1;
+      rows = document.querySelectorAll('#ordersCards .order-card');
+      applyFilters();
+      if (loadState) loadState.textContent = currentPage >= totalPages ? 'Все заказы загружены' : '';
+      loading = false;
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) loadNextPage();
+      });
+    }, {rootMargin: '300px'});
+    if (loadState) observer.observe(loadState);
 
     function applyFilters() {
       const s = statusFilter.value;
@@ -232,7 +244,7 @@
           t.setDate(t.getDate() + 1);
           const tomorrow = t.toISOString().slice(0,10);
           if (!d || d !== tomorrow) visible = false;
-        } else if (dateFilter === 'upcoming') {
+        } else if (dateFilter === 'active') {
           if (!['new','processing','assigned','reserved'].includes(st)) visible = false;
         } else if (dateFilter === 'completed') {
           if (st !== 'delivered') {
@@ -253,7 +265,11 @@
     dateButtons.forEach(btn => {
       btn.addEventListener('click', () => {
         dateFilter = btn.dataset.filter;
-        dateButtons.forEach(b => b.classList.toggle('bg-[#C86052]', b === btn));
+        dateButtons.forEach(b => {
+          b.classList.toggle('bg-[#C86052]', b === btn);
+          b.classList.toggle('text-white', b === btn);
+          b.classList.toggle('bg-gray-200', b !== btn);
+        });
         applyFilters();
       });
     });
@@ -282,6 +298,8 @@
         sortRows(field, dir);
       });
     });
+
+    applyFilters();
 
     function sortRows(field, dir) {
       const tbody = document.getElementById('ordersTable');
