@@ -30,8 +30,10 @@
   .purchase-list { display: grid; gap: 0.45rem; }
   .purchase-item { border: 1px solid rgba(148, 163, 184, 0.25); border-radius: 0.65rem; padding: 0.5rem; background: rgba(255,255,255,0.85); }
   .purchase-item-top { display: grid; grid-template-columns: 74px 1fr; gap: 0.55rem; }
+  .purchase-meta-line { display: flex; align-items: center; gap: 0.35rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .purchase-status-dot { width: 8px; height: 8px; border-radius: 9999px; background: #22c55e; display: inline-block; }
-  .purchase-item-actions { margin-top: 0.45rem; display: flex; flex-wrap: wrap; gap: 0.3rem; }
+  .purchase-item-actions { margin-top: 0.45rem; display: flex; flex-wrap: nowrap; gap: 0.3rem; overflow-x: auto; }
+  .purchase-action-form { display: inline-flex; align-items: center; gap: 0.2rem; flex: 0 0 auto; }
   .reserve-modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); display: none; align-items: center; justify-content: center; z-index: 60; padding: 0.75rem; }
   .reserve-modal-backdrop.is-open { display: flex; }
   .reserve-modal { width: 100%; max-width: 420px; background: #fff; border-radius: 0.75rem; border: 1px solid #cbd5e1; max-height: 78vh; display: flex; flex-direction: column; }
@@ -56,6 +58,18 @@
   [data-theme='dark'] .purchase-btn-writeoff:hover { background: #f87171; }
   [data-theme='dark'] .purchase-btn-cancel { background: #334155; color: #f8fafc; border-color: #64748b; }
   [data-theme='dark'] .purchase-btn-cancel:hover { background: #475569; }
+  [data-theme='dark'] .purchase-item { background: rgba(15, 23, 42, 0.78); border-color: #334155; color: #e2e8f0; }
+  [data-theme='dark'] .purchase-preorders-box,
+  [data-theme='dark'] #purchase-auto-filter { background: rgba(15, 23, 42, 0.74); border-color: #334155; }
+  [data-theme='dark'] .purchase-preorders-title,
+  [data-theme='dark'] .purchase-preorders-table td,
+  [data-theme='dark'] .purchase-preorders-table th,
+  [data-theme='dark'] .text-gray-900 { color: #e2e8f0 !important; }
+  [data-theme='dark'] .text-gray-700, [data-theme='dark'] .text-gray-600, [data-theme='dark'] .text-gray-500 { color: #94a3b8 !important; }
+  [data-theme='dark'] .purchase-filter-select, [data-theme='dark'] .purchase-filter-reset { background: #0f172a; color: #e2e8f0; border-color: #475569; }
+  [data-theme='dark'] .purchase-preorders-table { border-color: #475569; }
+  [data-theme='dark'] .reserve-modal { background: #0f172a; border-color: #334155; color: #e2e8f0; }
+  [data-theme='dark'] .reserve-modal-item { border-bottom-color: #334155; }
   @media (max-width: 767px) {
     .purchase-filter-row { gap: 0.3rem; margin-bottom: 0.3rem !important; padding: 0.3rem !important; }
     .purchase-filter-field { min-width: 120px; flex: 1 1 120px; }
@@ -75,7 +89,7 @@
     .purchase-mobile-meta { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 0.4rem; align-items: start; }
     .purchase-mobile-title { display: flex; flex-wrap: wrap; gap: 0.35rem; line-height: 1.35; }
     .purchase-mobile-ops { display: grid; grid-template-columns: 1fr; gap: 0.45rem; }
-    .purchase-mobile-form { display: grid !important; grid-template-columns: 1fr auto; gap: 0.4rem; width: 100%; }
+    .purchase-mobile-form { display: inline-flex !important; grid-template-columns: none; gap: 0.25rem; width: auto; }
     .purchase-mobile-form .purchase-reason { display: none; }
   }
 </style>
@@ -182,10 +196,10 @@
           </div>
           <div class="purchase-mobile-card flex flex-col gap-2">
             <div class="flex items-start justify-between gap-2">
-              <div class="text-xs text-gray-700">
-                <div><b>#<?= (int)$batch['id'] ?></b></div>
-                <div><?= htmlspecialchars(substr((string)($batch['purchased_at'] ?? ''), 0, 10)) ?></div>
-                <div><?= htmlspecialchars((string)($batch['buyer_name'] ?? '—')) ?></div>
+              <div class="purchase-meta-line text-xs text-gray-700">
+                <b>#<?= (int)$batch['id'] ?></b>
+                <span><?= htmlspecialchars(substr((string)($batch['purchased_at'] ?? ''), 0, 10)) ?></span>
+                <span><?= htmlspecialchars((string)($batch['buyer_name'] ?? '—')) ?></span>
               </div>
               <div>
                 <?php if ((int)($batch['is_closed'] ?? 0) === 0): ?>
@@ -201,14 +215,14 @@
           </div>
         </div>
             <div class="purchase-item-actions">
-              <form method="post" action="<?= $basePath ?>/purchases/move-to-discount" class="purchase-mobile-form purchase-card-form flex items-center gap-1 bg-yellow-900/30 border border-yellow-700 rounded px-2 py-1">
+              <form method="post" action="<?= $basePath ?>/purchases/move-to-discount" class="purchase-action-form purchase-mobile-form purchase-card-form flex items-center gap-1 bg-yellow-900/30 border border-yellow-700 rounded px-2 py-1">
                 <?= csrf_field() ?>
                 <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
                 <input name="boxes" type="number" step="0.01" min="0.01" placeholder="ящ." class="w-16 border rounded px-1 py-1 text-xs text-gray-900">
                 <input name="reason" type="text" placeholder="причина" class="purchase-reason w-24 border rounded px-1 py-1 text-xs text-gray-900">
                 <button class="purchase-btn-discount text-xs bg-yellow-500 hover:bg-yellow-400 text-gray-900 px-2 py-1 rounded" type="submit">Уценка</button>
               </form>
-              <form method="post" action="<?= $basePath ?>/purchases/write-off" class="purchase-mobile-form purchase-card-form flex items-center gap-1 bg-red-900/30 border border-red-700 rounded px-2 py-1">
+              <form method="post" action="<?= $basePath ?>/purchases/write-off" class="purchase-action-form purchase-mobile-form purchase-card-form flex items-center gap-1 bg-red-900/30 border border-red-700 rounded px-2 py-1">
                 <?= csrf_field() ?>
                 <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
                 <input name="boxes" type="number" step="0.01" min="0.01" placeholder="ящ." class="w-16 border rounded px-1 py-1 text-xs text-gray-900">
