@@ -374,8 +374,8 @@ ORDER BY is_closed ASC, pb.id DESC';
     public function moveToDiscount(): void
     {
         $this->ensureCsrfOrRedirect();
-        if (($_SESSION['role'] ?? '') !== 'admin') {
-            $this->setFlash('error', 'Операция доступна только администратору.');
+        if (!in_array((string)($_SESSION['role'] ?? ''), ['admin', 'manager'], true)) {
+            $this->setFlash('error', 'Операция доступна только администратору или менеджеру.');
             header('Location: ' . $this->basePath() . '/purchases');
             exit;
         }
@@ -449,8 +449,8 @@ ORDER BY is_closed ASC, pb.id DESC';
     public function writeOff(): void
     {
         $this->ensureCsrfOrRedirect();
-        if (($_SESSION['role'] ?? '') !== 'admin') {
-            $this->setFlash('error', 'Операция доступна только администратору.');
+        if (!in_array((string)($_SESSION['role'] ?? ''), ['admin', 'manager'], true)) {
+            $this->setFlash('error', 'Операция доступна только администратору или менеджеру.');
             header('Location: ' . $this->basePath() . '/purchases');
             exit;
         }
