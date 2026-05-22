@@ -52,12 +52,6 @@
     <?= htmlspecialchars((string)$flash['message']) ?>
   </div>
 <?php endif; ?>
-<div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-  <div class="bg-white rounded border p-3"><div class="text-xs text-gray-500">Остаток (ящ.)</div><div class="text-xl font-semibold"><?= number_format((float)($summary['remaining_boxes'] ?? 0), 2, '.', ' ') ?></div></div>
-  <div class="bg-white rounded border p-3"><div class="text-xs text-gray-500">Списано (ящ.)</div><div class="text-xl font-semibold text-red-600"><?= number_format((float)($summary['written_off_boxes'] ?? 0), 2, '.', ' ') ?></div></div>
-  <div class="bg-white rounded border p-3"><div class="text-xs text-gray-500">Средний возраст</div><div class="text-xl font-semibold"><?= number_format((float)($summary['avg_age_days'] ?? 0), 1, '.', ' ') ?> дн.</div></div>
-</div>
-
 <form method="get" class="bg-white rounded border p-3 mb-4 purchase-filter-row">
   <div class="flex-1 min-w-[150px]">
     <label class="text-xs text-gray-600">Статус</label>
