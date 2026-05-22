@@ -4,7 +4,7 @@
 <style>
   /* mobile-first compact layout */
   .orders-filter {
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.75rem;
     gap: 0.35rem;
   }
   .orders-filter a,
@@ -23,7 +23,7 @@
     box-sizing: border-box;
   }
   .date-filter {
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.75rem;
     gap: 0.35rem;
   }
   #ordersCards {
@@ -65,7 +65,7 @@
 
   @media (min-width: 641px) {
     .orders-filter {
-      margin-bottom: 0.45rem;
+      margin-bottom: 0.75rem;
       gap: 0.45rem;
     }
     .orders-filter a,
@@ -79,7 +79,7 @@
       line-height: 1.15;
     }
     .date-filter {
-      margin-bottom: 0.45rem;
+      margin-bottom: 0.75rem;
       gap: 0.45rem;
     }
     .order-card {
@@ -102,7 +102,7 @@
     <?= htmlspecialchars($_GET['msg']) ?>
   </div>
 <?php endif; ?>
-<div class="orders-filter mb-2 flex flex-row flex-nowrap items-center gap-2 overflow-x-auto">
+<div class="orders-filter mb-3 flex flex-row flex-nowrap items-center gap-2 overflow-x-auto">
   <a href="<?= $base ?>/orders/create" class="px-2 py-1 bg-[#C86052] text-white rounded text-xs md:text-sm whitespace-nowrap shrink-0">Создать новый</a>
   <select id="statusFilter" class="border rounded px-2 py-1 text-sm shrink-0">
     <option value="">Все статусы</option>
@@ -122,7 +122,7 @@
     </select>
   <?php endif; ?>
 </div>
-<div class="date-filter mb-2 flex flex-row flex-wrap items-center gap-2">
+<div class="date-filter mb-3 flex flex-row flex-wrap items-center gap-2">
   <button data-filter="active" class="date-btn px-3 py-2 bg-[#C86052] text-white rounded text-sm">Активные</button>
   <button data-filter="today" class="date-btn px-3 py-2 bg-gray-200 rounded text-sm">Сегодня</button>
   <button data-filter="tomorrow" class="date-btn px-3 py-2 bg-gray-200 rounded text-sm">Завтра</button>
