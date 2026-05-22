@@ -4,21 +4,27 @@
 <style>
   /* mobile-first compact layout */
   .orders-filter {
-    margin-bottom: 0.125rem;
-    gap: 0.2rem;
+    margin-bottom: 0.25rem;
+    gap: 0.35rem;
   }
   .orders-filter a,
   .orders-filter select,
   .orders-filter button,
   .orders-filter input,
   .date-filter button {
-    padding: 0.3rem 0.55rem;
-    font-size: 0.76rem;
+    min-height: 2rem;
+    padding: 0.3rem 0.42rem;
+    font-size: 0.74rem;
     line-height: 1.1;
+    border-radius: 0.375rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
   }
   .date-filter {
-    margin-bottom: 0.125rem;
-    gap: 0.2rem;
+    margin-bottom: 0.25rem;
+    gap: 0.35rem;
   }
   #ordersCards {
     gap: 0.2rem;
@@ -59,21 +65,22 @@
 
   @media (min-width: 641px) {
     .orders-filter {
-      margin-bottom: 0.35rem;
-      gap: 0.3rem;
+      margin-bottom: 0.45rem;
+      gap: 0.45rem;
     }
     .orders-filter a,
     .orders-filter select,
     .orders-filter button,
     .orders-filter input,
     .date-filter button {
-      padding: 0.4rem 0.65rem;
-      font-size: 0.84rem;
+      min-height: 2.15rem;
+      padding: 0.42rem 0.62rem;
+      font-size: 0.82rem;
       line-height: 1.15;
     }
     .date-filter {
-      margin-bottom: 0.35rem;
-      gap: 0.3rem;
+      margin-bottom: 0.45rem;
+      gap: 0.45rem;
     }
     .order-card {
       padding: 0.35rem 0.5rem !important;
@@ -95,9 +102,9 @@
     <?= htmlspecialchars($_GET['msg']) ?>
   </div>
 <?php endif; ?>
-<div class="orders-filter mb-2 flex flex-row flex-wrap items-end gap-2">
-  <a href="<?= $base ?>/orders/create" class="px-2 py-1 md:px-3 md:py-2 bg-[#C86052] text-white rounded text-xs md:text-sm whitespace-nowrap">Создать новый</a>
-  <select id="statusFilter" class="border rounded px-3 py-2 text-sm">
+<div class="orders-filter mb-2 flex flex-row flex-nowrap items-center gap-2 overflow-x-auto">
+  <a href="<?= $base ?>/orders/create" class="px-2 py-1 bg-[#C86052] text-white rounded text-xs md:text-sm whitespace-nowrap shrink-0">Создать новый</a>
+  <select id="statusFilter" class="border rounded px-2 py-1 text-sm shrink-0">
     <option value="">Все статусы</option>
     <option value="new">Новые</option>
     <option value="processing">Принятые</option>
@@ -107,7 +114,7 @@
     <option value="reserved">Бронь</option>
   </select>
   <?php if ($role === 'manager' || !empty($managers)): ?>
-    <select id="managerFilter" class="border rounded px-3 py-2 text-sm">
+    <select id="managerFilter" class="border rounded px-2 py-1 text-sm shrink-0">
       <option value="">Все менеджеры</option>
       <?php foreach ($managers as $m): ?>
         <option value="<?= $m['id'] ?>" <?= $selectedManager == $m['id'] ? 'selected' : '' ?>><?= htmlspecialchars($m['name']) ?></option>
@@ -189,6 +196,9 @@
 </div>
 
 <div id="ordersLoadState" class="mt-1 text-center text-xs text-gray-500"></div>
+
+
+<button id="scrollTopBtn" type="button" aria-label="Наверх" class="fixed right-4 bottom-5 z-40 w-10 h-10 rounded-full bg-[#C86052] text-white shadow-lg opacity-0 pointer-events-none translate-y-3 transition-all duration-300">↑</button>
 
 <script>
   document.addEventListener('DOMContentLoaded', function () {
@@ -275,6 +285,23 @@
         });
         applyFilters();
       });
+    });
+
+
+    const scrollTopBtn = document.getElementById('scrollTopBtn');
+    const handleScrollTopVisibility = () => {
+      const visible = window.scrollY > 320;
+      if (!scrollTopBtn) return;
+      scrollTopBtn.classList.toggle('opacity-0', !visible);
+      scrollTopBtn.classList.toggle('pointer-events-none', !visible);
+      scrollTopBtn.classList.toggle('translate-y-3', !visible);
+      scrollTopBtn.classList.toggle('opacity-100', visible);
+      scrollTopBtn.classList.toggle('translate-y-0', visible);
+    };
+    window.addEventListener('scroll', handleScrollTopVisibility, { passive: true });
+    handleScrollTopVisibility();
+    scrollTopBtn?.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
     managerFilter?.addEventListener('change', () => {
