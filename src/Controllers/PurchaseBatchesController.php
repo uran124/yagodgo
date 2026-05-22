@@ -383,11 +383,7 @@ ORDER BY is_closed ASC, pb.id DESC';
         $boxes = (float)($_POST['boxes'] ?? 0);
         $reason = trim((string)($_POST['reason'] ?? ''));
         if ($batchId > 0 && $boxes > 0) {
-            if ($reason === '') {
-                $this->setFlash('error', 'Укажите причину перевода в уценку.');
-                header('Location: ' . $this->basePath() . '/purchases');
-                exit;
-            }
+            if ($reason === '') { $reason = 'Без причины'; }
             $this->purchaseBatchService->moveToDiscountStock($batchId, $boxes);
             $this->setFlash('success', 'Часть партии переведена в выгодный остаток.');
         }
@@ -408,6 +404,34 @@ ORDER BY is_closed ASC, pb.id DESC';
             }
         }
         header('Location: ' . $this->basePath() . '/purchases');
+        exit;
+    }
+
+    public function reservationsList(): void
+    {
+        $batchId = (int)($_GET['batch_id'] ?? 0);
+        header('Content-Type: application/json; charset=utf-8');
+        if ($batchId <= 0) {
+            echo json_encode(['items' => []], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $stmt = $this->pdo->prepare(
+            "SELECT o.id AS order_id,
+                    COALESCE(u.name, 'Без имени') AS customer_name,
+                    COALESCE(u.phone, '') AS customer_phone,
+                    SUM(oi.qty) AS reserved_qty
+             FROM order_items oi
+             JOIN orders o ON o.id = oi.order_id
+             LEFT JOIN users u ON u.id = o.user_id
+             WHERE oi.batch_id = :batch_id
+               AND o.status = 'reserved'
+             GROUP BY o.id, u.name, u.phone
+             ORDER BY o.id DESC"
+        );
+        $stmt->execute(['batch_id' => $batchId]);
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        echo json_encode(['items' => $items], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -432,7 +456,8 @@ ORDER BY is_closed ASC, pb.id DESC';
         }
         $batchId = (int)($_POST['batch_id'] ?? 0);
         $boxes = (float)($_POST['boxes'] ?? 0);
-        $comment = trim((string)($_POST['comment'] ?? 'Write-off'));
+        $comment = trim((string)($_POST['comment'] ?? ''));
+        if ($comment === '') { $comment = 'Без причины'; }
         if ($batchId > 0 && $boxes > 0) {
             $this->purchaseBatchService->writeOff($batchId, $boxes, $comment);
             $this->setFlash('success', 'Списание выполнено.');
