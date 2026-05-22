@@ -4,89 +4,89 @@
 <style>
   /* mobile-first compact layout */
   .orders-filter {
-    margin-bottom: 0.5rem;
-    gap: 0.375rem;
+    margin-bottom: 0.125rem;
+    gap: 0.2rem;
   }
   .orders-filter a,
   .orders-filter select,
   .orders-filter button,
   .orders-filter input,
   .date-filter button {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.75rem;
+    padding: 0.15rem 0.35rem;
+    font-size: 0.7rem;
     line-height: 1.1;
   }
   .date-filter {
-    margin-bottom: 0.5rem;
-    gap: 0.375rem;
+    margin-bottom: 0.125rem;
+    gap: 0.2rem;
   }
   #ordersCards {
-    gap: 0.375rem;
+    gap: 0.2rem;
   }
   .order-card {
-    padding: 0.375rem 0.5rem !important;
+    padding: 0.2rem 0.3rem !important;
     border-radius: 0.5rem;
   }
   .order-card .font-bold {
-    font-size: 0.8rem;
+    font-size: 0.74rem;
     line-height: 1.15;
   }
   .order-card .text-sm {
     font-size: 0.75rem !important;
-    line-height: 1.2;
+    line-height: 1.1;
   }
   .order-card .font-semibold {
-    font-size: 0.8rem;
-    line-height: 1.2;
+    font-size: 0.74rem;
+    line-height: 1.1;
   }
   .order-card .mt-2 {
-    margin-top: 0.25rem;
+    margin-top: 0.12rem;
   }
   .order-card .mt-1 {
-    margin-top: 0.2rem;
+    margin-top: 0.1rem;
   }
   .order-card .pt-1 {
-    padding-top: 0.2rem;
+    padding-top: 0.1rem;
   }
   .order-card .py-0\.5 {
     padding-top: 0.05rem;
     padding-bottom: 0.05rem;
   }
   .order-card .px-2 {
-    padding-left: 0.375rem;
-    padding-right: 0.375rem;
+    padding-left: 0.2rem;
+    padding-right: 0.2rem;
   }
 
   @media (min-width: 641px) {
     .orders-filter {
-      margin-bottom: 1rem;
-      gap: 0.5rem;
+      margin-bottom: 0.35rem;
+      gap: 0.3rem;
     }
     .orders-filter a,
     .orders-filter select,
     .orders-filter button,
     .orders-filter input,
     .date-filter button {
-      padding: 0.5rem 0.75rem;
-      font-size: 0.875rem;
-      line-height: 1.25;
+      padding: 0.25rem 0.45rem;
+      font-size: 0.78rem;
+      line-height: 1.15;
     }
     .date-filter {
-      margin-bottom: 1rem;
-      gap: 0.5rem;
+      margin-bottom: 0.35rem;
+      gap: 0.3rem;
     }
     .order-card {
-      padding: 0.75rem 1rem !important;
-      border-radius: 0.75rem;
+      padding: 0.35rem 0.5rem !important;
+      border-radius: 0.5rem;
     }
     .order-card .font-bold {
-      font-size: 1rem;
+      font-size: 0.82rem;
     }
     .order-card .text-sm {
       font-size: 0.875rem !important;
     }
     .order-card .font-semibold {
-      font-size: 0.95rem;
+      font-size: 0.8rem;
     }
   }
 </style>
@@ -95,7 +95,7 @@
     <?= htmlspecialchars($_GET['msg']) ?>
   </div>
 <?php endif; ?>
-<div class="orders-filter mb-4 flex flex-row flex-wrap items-end gap-2">
+<div class="orders-filter mb-1 flex flex-row flex-wrap items-end gap-1">
   <a href="<?= $base ?>/orders/create" class="px-2 py-1 md:px-3 md:py-2 bg-[#C86052] text-white rounded text-xs md:text-sm whitespace-nowrap">Создать новый</a>
   <select id="statusFilter" class="border rounded px-3 py-2 text-sm">
     <option value="">Все статусы</option>
@@ -115,11 +115,12 @@
     </select>
   <?php endif; ?>
 </div>
-<div class="date-filter mb-4 flex flex-row flex-wrap gap-2">
+<div class="date-filter mb-1 flex flex-row flex-wrap items-center gap-1">
   <button data-filter="active" class="date-btn px-3 py-2 bg-[#C86052] text-white rounded text-sm">Активные</button>
   <button data-filter="today" class="date-btn px-3 py-2 bg-gray-200 rounded text-sm">Сегодня</button>
   <button data-filter="tomorrow" class="date-btn px-3 py-2 bg-gray-200 rounded text-sm">Завтра</button>
   <button data-filter="completed" class="date-btn px-3 py-2 bg-gray-200 rounded text-sm">Завершенные</button>
+  <button data-filter="all" class="date-btn ml-auto px-3 py-2 bg-[#C86052] text-white rounded text-sm">Все</button>
 </div>
 
 <div id="ordersCards" class="space-y-3">
@@ -187,7 +188,7 @@
     <?php endforeach; ?>
 </div>
 
-<div id="ordersLoadState" class="mt-4 text-center text-sm text-gray-500"></div>
+<div id="ordersLoadState" class="mt-1 text-center text-xs text-gray-500"></div>
 
 <script>
   document.addEventListener('DOMContentLoaded', function () {
@@ -256,6 +257,8 @@
             const dt = d ? new Date(d) : null;
             if (!dt || dt < start || dt > end) visible = false;
           }
+        } else if (dateFilter === 'all') {
+          visible = true;
         }
         row.style.display = visible ? '' : 'none';
       });
