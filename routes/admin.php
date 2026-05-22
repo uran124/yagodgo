@@ -94,6 +94,10 @@ return [
         requireAdmin(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->cancelReservations(); return true;
     },
     static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('GET', '/admin/purchases/reservations', $method, $uri)) return false;
+        requireAdmin(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->reservationsList(); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
         if (!routeExact('POST', '/admin/purchases/preorders/maintenance', $method, $uri)) return false;
         requireAdmin(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->maintenancePreorders(); return true;
     },
