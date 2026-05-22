@@ -539,6 +539,23 @@
 
   <!-- Админ-sidebar (off-canvas) -->
   <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
+  <?php
+    $currentPath = strtok($_SERVER['REQUEST_URI'] ?? '', '?') ?: '/';
+    $adminMenuItems = [
+      ['href' => '/admin/dashboard', 'icon' => 'dashboard', 'label' => 'Dashboard', 'hover' => 'hover:from-emerald-50 hover:to-teal-50'],
+      ['href' => '/admin/orders', 'icon' => 'receipt_long', 'label' => 'Заказы', 'hover' => 'hover:from-blue-50 hover:to-indigo-50'],
+      ['href' => '/admin/purchases', 'icon' => 'local_shipping', 'label' => 'Закупки', 'hover' => 'hover:from-sky-50 hover:to-blue-50'],
+      ['href' => '/admin/products', 'icon' => 'inventory_2', 'label' => 'Товары', 'hover' => 'hover:from-purple-50 hover:to-pink-50'],
+      ['href' => '/admin/product-types', 'icon' => 'category', 'label' => 'Категории', 'hover' => 'hover:from-fuchsia-50 hover:to-purple-50'],
+      ['href' => '/admin/slots', 'icon' => 'calendar_today', 'label' => 'Слоты', 'hover' => 'hover:from-orange-50 hover:to-red-50'],
+      ['href' => '/admin/coupons', 'icon' => 'local_offer', 'label' => 'Промокоды', 'hover' => 'hover:from-yellow-50 hover:to-orange-50'],
+      ['href' => '/admin/content', 'icon' => 'article', 'label' => 'Контент', 'hover' => 'hover:from-lime-50 hover:to-emerald-50'],
+      ['href' => '/admin/users', 'icon' => 'people', 'label' => 'Пользователи', 'hover' => 'hover:from-teal-50 hover:to-cyan-50'],
+      ['href' => '/admin/sellers', 'icon' => 'storefront', 'label' => 'Селлеры', 'hover' => 'hover:from-rose-50 hover:to-pink-50'],
+      ['href' => '/admin/apps', 'icon' => 'apps', 'label' => 'Приложения', 'hover' => 'hover:from-indigo-50 hover:to-violet-50'],
+      ['href' => '/admin/settings', 'icon' => 'settings', 'label' => 'Настройки', 'hover' => 'hover:from-gray-100 hover:to-slate-100'],
+    ];
+  ?>
   <aside
     id="adminSidebar"
     class="fixed top-0 right-0 h-full w-80 glass-effect shadow-2xl transform translate-x-full transition-transform duration-300 z-30 border-l border-white/20"
@@ -547,31 +564,18 @@
       <span class="material-icons-round mr-2">admin_panel_settings</span>
       Админ-панель
     </div>
-    <nav class="p-4 space-y-1">
-      <a href="/admin/dashboard" class="flex items-center p-4 hover:bg-gradient-to-r hover:from-emerald-50 hover:to-teal-50 rounded-2xl transition-all group">
-        <span class="material-icons-round mr-3 text-emerald-500 group-hover:scale-110 transition-transform">dashboard</span> 
-        <span class="font-medium">Dashboard</span>
+    <nav class="p-4 space-y-1 overflow-y-auto max-h-[calc(100vh-96px)]">
+      <?php foreach ($adminMenuItems as $item):
+        $isActive = strpos($currentPath, $item['href']) === 0;
+      ?>
+      <a href="<?= $item['href'] ?>"
+         class="flex items-center p-4 rounded-2xl transition-all group <?= $isActive ? 'bg-[#C86052]/10 text-[#C86052]' : 'hover:bg-gradient-to-r ' . $item['hover'] ?>">
+        <span class="material-icons-round mr-3 group-hover:scale-110 transition-transform <?= $isActive ? 'text-[#C86052]' : 'text-gray-600' ?>">
+          <?= $item['icon'] ?>
+        </span>
+        <span class="font-medium"><?= $item['label'] ?></span>
       </a>
-      <a href="/admin/orders" class="flex items-center p-4 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 rounded-2xl transition-all group">
-        <span class="material-icons-round mr-3 text-blue-500 group-hover:scale-110 transition-transform">receipt_long</span> 
-        <span class="font-medium">Заказы</span>
-      </a>
-      <a href="/admin/products" class="flex items-center p-4 hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 rounded-2xl transition-all group">
-        <span class="material-icons-round mr-3 text-purple-500 group-hover:scale-110 transition-transform">inventory_2</span> 
-        <span class="font-medium">Товары</span>
-      </a>
-      <a href="/admin/slots" class="flex items-center p-4 hover:bg-gradient-to-r hover:from-orange-50 hover:to-red-50 rounded-2xl transition-all group">
-        <span class="material-icons-round mr-3 text-orange-500 group-hover:scale-110 transition-transform">calendar_today</span> 
-        <span class="font-medium">Слоты</span>
-      </a>
-      <a href="/admin/coupons" class="flex items-center p-4 hover:bg-gradient-to-r hover:from-yellow-50 hover:to-orange-50 rounded-2xl transition-all group">
-        <span class="material-icons-round mr-3 text-yellow-500 group-hover:scale-110 transition-transform">local_offer</span> 
-        <span class="font-medium">Промокоды</span>
-      </a>
-      <a href="/admin/users" class="flex items-center p-4 hover:bg-gradient-to-r hover:from-teal-50 hover:to-cyan-50 rounded-2xl transition-all group">
-        <span class="material-icons-round mr-3 text-teal-500 group-hover:scale-110 transition-transform">people</span> 
-        <span class="font-medium">Пользователи</span>
-      </a>
+      <?php endforeach; ?>
     </nav>
   </aside>
   <?php endif; ?>
