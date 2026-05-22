@@ -12,8 +12,8 @@
   .orders-filter button,
   .orders-filter input,
   .date-filter button {
-    padding: 0.15rem 0.35rem;
-    font-size: 0.7rem;
+    padding: 0.3rem 0.55rem;
+    font-size: 0.76rem;
     line-height: 1.1;
   }
   .date-filter {
@@ -67,8 +67,8 @@
     .orders-filter button,
     .orders-filter input,
     .date-filter button {
-      padding: 0.25rem 0.45rem;
-      font-size: 0.78rem;
+      padding: 0.4rem 0.65rem;
+      font-size: 0.84rem;
       line-height: 1.15;
     }
     .date-filter {
@@ -95,7 +95,7 @@
     <?= htmlspecialchars($_GET['msg']) ?>
   </div>
 <?php endif; ?>
-<div class="orders-filter mb-1 flex flex-row flex-wrap items-end gap-1">
+<div class="orders-filter mb-2 flex flex-row flex-wrap items-end gap-2">
   <a href="<?= $base ?>/orders/create" class="px-2 py-1 md:px-3 md:py-2 bg-[#C86052] text-white rounded text-xs md:text-sm whitespace-nowrap">Создать новый</a>
   <select id="statusFilter" class="border rounded px-3 py-2 text-sm">
     <option value="">Все статусы</option>
@@ -115,7 +115,7 @@
     </select>
   <?php endif; ?>
 </div>
-<div class="date-filter mb-1 flex flex-row flex-wrap items-center gap-1">
+<div class="date-filter mb-2 flex flex-row flex-wrap items-center gap-2">
   <button data-filter="active" class="date-btn px-3 py-2 bg-[#C86052] text-white rounded text-sm">Активные</button>
   <button data-filter="today" class="date-btn px-3 py-2 bg-gray-200 rounded text-sm">Сегодня</button>
   <button data-filter="tomorrow" class="date-btn px-3 py-2 bg-gray-200 rounded text-sm">Завтра</button>
