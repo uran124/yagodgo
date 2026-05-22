@@ -27,6 +27,16 @@
   .purchase-preorders-table td { font-size: 0.84rem; padding-top: 0.45rem; padding-bottom: 0.45rem; }
   .purchase-actions-row { margin-bottom: 0.4rem !important; gap: 0.35rem; }
   .purchase-actions-btn { padding: 0.45rem 0.6rem !important; font-size: 0.82rem !important; }
+  .purchase-list { display: grid; gap: 0.45rem; }
+  .purchase-item { border: 1px solid rgba(148, 163, 184, 0.25); border-radius: 0.65rem; padding: 0.5rem; background: rgba(255,255,255,0.85); }
+  .purchase-item-top { display: grid; grid-template-columns: 74px 1fr; gap: 0.55rem; }
+  .purchase-status-dot { width: 8px; height: 8px; border-radius: 9999px; background: #22c55e; display: inline-block; }
+  .purchase-item-actions { margin-top: 0.45rem; display: flex; flex-wrap: wrap; gap: 0.3rem; }
+  .reserve-modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); display: none; align-items: center; justify-content: center; z-index: 60; padding: 0.75rem; }
+  .reserve-modal-backdrop.is-open { display: flex; }
+  .reserve-modal { width: 100%; max-width: 420px; background: #fff; border-radius: 0.75rem; border: 1px solid #cbd5e1; max-height: 78vh; display: flex; flex-direction: column; }
+  .reserve-modal-list { overflow-y: auto; max-height: 56vh; }
+  .reserve-modal-item { display:flex; justify-content: space-between; gap:0.5rem; padding:0.5rem; border-bottom:1px solid #e2e8f0; }
   .purchase-row-meta { color: #1f2937; }
   .purchase-row-subline { color: #374151; }
   .purchase-card-form input { background: #fff; }
@@ -159,40 +169,38 @@
   </form>
 </div>
 
-<table class="min-w-full bg-white rounded shadow overflow-hidden text-sm">
-  <thead class="bg-gray-200 text-gray-700">
-    <tr>
-      <th class="p-3 text-left font-semibold">Фото</th>
-      <th class="p-3 text-left font-semibold">Закупка</th>
-    </tr>
-  </thead>
-  <tbody>
+<div class="purchase-list">
     <?php foreach ($batches as $batch): ?>
-      <tr class="purchase-mobile-row border-b align-top transition-all duration-200 <?= ((int)($batch['is_closed'] ?? 0) === 1) ? 'bg-gray-50 text-gray-400' : 'hover:bg-orange-50 bg-white' ?>">
-        <td class="purchase-mobile-photo p-3 w-24">
+      <div class="purchase-item <?= ((int)($batch['is_closed'] ?? 0) === 1) ? 'bg-gray-50 text-gray-400' : '' ?>">
+        <div class="purchase-item-top">
+          <div class="purchase-mobile-photo">
           <?php if (!empty($batch['preview_photo'])): ?>
             <img src="<?= htmlspecialchars((string)$batch['preview_photo']) ?>" class="h-20 w-20 rounded object-cover border border-gray-200" alt="Фото партии #<?= (int)$batch['id'] ?>">
           <?php else: ?>
             <div class="purchase-photo-fallback h-20 w-20 rounded border border-dashed border-gray-300 text-[10px] text-gray-400 flex items-center justify-center">нет фото</div>
           <?php endif; ?>
-        </td>
-        <td class="p-3">
+          </div>
           <div class="purchase-mobile-card flex flex-col gap-2">
-            <div class="purchase-mobile-meta flex items-center justify-between gap-3">
-              <div class="purchase-row-meta text-sm font-semibold text-gray-900">
-                #<?= (int)$batch['id'] ?> · <?= htmlspecialchars(substr((string)($batch['purchased_at'] ?? ''), 0, 10)) ?>
+            <div class="flex items-start justify-between gap-2">
+              <div class="text-xs text-gray-700">
+                <div><b>#<?= (int)$batch['id'] ?></b></div>
+                <div><?= htmlspecialchars(substr((string)($batch['purchased_at'] ?? ''), 0, 10)) ?></div>
+                <div><?= htmlspecialchars((string)($batch['buyer_name'] ?? '—')) ?></div>
               </div>
-              <div class="text-xs text-gray-500">
-                <?= htmlspecialchars((string)($batch['buyer_name'] ?? '—')) ?>
+              <div>
+                <?php if ((int)($batch['is_closed'] ?? 0) === 0): ?>
+                  <span class="purchase-status-dot" title="Активная"></span>
+                <?php endif; ?>
               </div>
             </div>
-            <div class="purchase-row-subline purchase-mobile-title text-sm text-gray-800">
+            <div class="flex items-start justify-between gap-2 text-sm">
               <a class="text-[#C86052] hover:underline font-medium" href="<?= $basePath ?>/purchases/<?= (int)$batch['id'] ?>"><?= htmlspecialchars(trim(($batch['product_name'] ?? '') . ' ' . ($batch['variety'] ?? ''))) ?></a>
-              · <b><?= number_format((float)$batch['purchase_price_per_box'], 0, '.', ' ') ?> ₽</b>
-              · Куплено: <b class="purchase-qty-chip"><?= (int)round((float)$batch['boxes_total']) ?></b>
-              · Свободно: <b class="purchase-qty-chip"><?= (int)round((float)$batch['boxes_free']) ?></b>
+              <b><?= number_format((float)$batch['purchase_price_per_box'], 0, '.', ' ') ?> ₽</b>
             </div>
-            <div class="purchase-mobile-ops flex flex-wrap gap-2">
+            <div class="text-sm">Куплено: <b class="purchase-qty-chip"><?= (int)round((float)$batch['boxes_total']) ?></b> , Свободно: <b class="purchase-qty-chip"><?= (int)round((float)$batch['boxes_free']) ?></b></div>
+          </div>
+        </div>
+            <div class="purchase-item-actions">
               <form method="post" action="<?= $basePath ?>/purchases/move-to-discount" class="purchase-mobile-form purchase-card-form flex items-center gap-1 bg-yellow-900/30 border border-yellow-700 rounded px-2 py-1">
                 <?= csrf_field() ?>
                 <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
@@ -207,18 +215,17 @@
                 <input name="comment" type="text" placeholder="причина" class="purchase-reason w-24 border rounded px-1 py-1 text-xs text-gray-900">
                 <button class="purchase-btn-writeoff text-xs bg-red-500 hover:bg-red-400 text-white px-2 py-1 rounded" type="submit">Списать</button>
               </form>
-              <form method="post" action="<?= $basePath ?>/purchases/cancel-reservations" class="purchase-card-form flex items-center gap-1 bg-slate-800 border border-slate-600 rounded px-2 py-1">
-                <?= csrf_field() ?>
-                <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
-                <button class="purchase-btn-cancel text-xs bg-slate-600 hover:bg-slate-500 text-white px-2 py-1 rounded border border-transparent" type="submit">Снять бронь</button>
-              </form>
+              <button type="button" class="purchase-btn-cancel text-xs bg-slate-600 hover:bg-slate-500 text-white px-2 py-1 rounded border border-transparent js-open-reserve-modal" data-batch-id="<?= (int)$batch['id'] ?>">Снять бронь</button>
             </div>
-          </div>
-        </td>
-      </tr>
+      </div>
     <?php endforeach; ?>
-  </tbody>
-</table>
+</div>
+<div id="reserve-modal-backdrop" class="reserve-modal-backdrop">
+  <div class="reserve-modal">
+    <div class="p-3 border-b font-semibold flex justify-between"><span>Список брони</span><button type="button" id="reserve-modal-close">✕</button></div>
+    <div id="reserve-modal-list" class="reserve-modal-list"></div>
+  </div>
+</div>
 <script>
   (function () {
     var filterForm = document.getElementById('purchase-auto-filter');
@@ -247,6 +254,30 @@
     });
     ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) {
       wrap.addEventListener(ev, function () { dragging = false; });
+    });
+
+    var modal = document.getElementById('reserve-modal-backdrop');
+    var closeBtn = document.getElementById('reserve-modal-close');
+    var list = document.getElementById('reserve-modal-list');
+    function closeModal(){ modal.classList.remove('is-open'); list.innerHTML=''; }
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (modal) modal.addEventListener('click', function(e){ if (e.target === modal) closeModal(); });
+    document.querySelectorAll('.js-open-reserve-modal').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var batchId = btn.getAttribute('data-batch-id');
+        fetch('<?= $basePath ?>/purchases/reservations?batch_id=' + encodeURIComponent(batchId))
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            var items = (data && data.items) ? data.items : [];
+            if (!items.length) { list.innerHTML = '<div class="p-3 text-sm text-gray-500">Нет активных броней.</div>'; }
+            else {
+              list.innerHTML = items.map(function (it) {
+                return '<div class="reserve-modal-item"><div><div class="text-sm font-semibold">' + (it.customer_name || '—') + '</div><div class="text-xs text-gray-500">' + (it.customer_phone || '—') + '</div></div><div class="flex gap-1"><button class="text-green-600">✓</button><button class="text-red-500">✕</button></div></div>';
+              }).join('');
+            }
+            modal.classList.add('is-open');
+          });
+      });
     });
   })();
 </script>
