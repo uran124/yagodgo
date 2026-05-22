@@ -383,11 +383,7 @@ ORDER BY is_closed ASC, pb.id DESC';
         $boxes = (float)($_POST['boxes'] ?? 0);
         $reason = trim((string)($_POST['reason'] ?? ''));
         if ($batchId > 0 && $boxes > 0) {
-            if ($reason === '') {
-                $this->setFlash('error', 'Укажите причину перевода в уценку.');
-                header('Location: ' . $this->basePath() . '/purchases');
-                exit;
-            }
+            if ($reason === '') { $reason = 'Без причины'; }
             $this->purchaseBatchService->moveToDiscountStock($batchId, $boxes);
             $this->setFlash('success', 'Часть партии переведена в выгодный остаток.');
         }
@@ -432,7 +428,8 @@ ORDER BY is_closed ASC, pb.id DESC';
         }
         $batchId = (int)($_POST['batch_id'] ?? 0);
         $boxes = (float)($_POST['boxes'] ?? 0);
-        $comment = trim((string)($_POST['comment'] ?? 'Write-off'));
+        $comment = trim((string)($_POST['comment'] ?? ''));
+        if ($comment === '') { $comment = 'Без причины'; }
         if ($batchId > 0 && $boxes > 0) {
             $this->purchaseBatchService->writeOff($batchId, $boxes, $comment);
             $this->setFlash('success', 'Списание выполнено.');

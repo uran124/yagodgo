@@ -12,6 +12,21 @@
   'arrived' => 'Готова к выдаче',
 ]; ?>
 <style>
+  .purchase-filter-row { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: end; margin-bottom: 0.35rem !important; padding: 0.35rem !important; }
+  .purchase-filter-field { min-width: 130px; }
+  .purchase-filter-select { padding: 0.3rem 0.45rem !important; font-size: 0.8125rem; }
+  .purchase-filter-reset { padding: 0.3rem 0.55rem; font-size: 0.72rem; }
+  .purchase-preorder-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+  .purchase-preorder-metrics { display: flex; gap: 0.45rem; min-width: max-content; }
+  .purchase-preorder-metric { min-width: 145px; padding: 0.55rem !important; border-radius: 0.5rem; }
+  .purchase-qty-chip { display: inline-flex; align-items: center; padding: 0.15rem 0.5rem; border-radius: 9999px; background: rgba(148, 163, 184, 0.15); }
+  .purchase-preorders-box { padding: 0.55rem !important; margin-bottom: 0.4rem !important; }
+  .purchase-preorders-title { font-size: 1.1rem; line-height: 1.25; margin-bottom: 0.35rem !important; }
+  .purchase-preorders-table { border-radius: 0.55rem; overflow: hidden; border: 1px solid rgba(148, 163, 184, 0.25); }
+  .purchase-preorders-table thead th { font-size: 0.78rem; padding-top: 0.45rem; padding-bottom: 0.45rem; }
+  .purchase-preorders-table td { font-size: 0.84rem; padding-top: 0.45rem; padding-bottom: 0.45rem; }
+  .purchase-actions-row { margin-bottom: 0.4rem !important; gap: 0.35rem; }
+  .purchase-actions-btn { padding: 0.45rem 0.6rem !important; font-size: 0.82rem !important; }
   .purchase-row-meta { color: #1f2937; }
   .purchase-row-subline { color: #374151; }
   .purchase-card-form input { background: #fff; }
@@ -31,70 +46,81 @@
   [data-theme='dark'] .purchase-btn-writeoff:hover { background: #f87171; }
   [data-theme='dark'] .purchase-btn-cancel { background: #334155; color: #f8fafc; border-color: #64748b; }
   [data-theme='dark'] .purchase-btn-cancel:hover { background: #475569; }
+  @media (max-width: 767px) {
+    .purchase-filter-row { gap: 0.3rem; margin-bottom: 0.3rem !important; padding: 0.3rem !important; }
+    .purchase-filter-field { min-width: 120px; flex: 1 1 120px; }
+    .purchase-filter-select { padding: 0.28rem 0.4rem !important; font-size: 0.79rem; }
+    .purchase-filter-reset { padding: 0.28rem 0.45rem; font-size: 0.72rem; }
+    .purchase-preorders-box { padding: 0.45rem !important; margin-bottom: 0.3rem !important; }
+    .purchase-preorders-title { font-size: 1rem; margin-bottom: 0.25rem !important; }
+    .purchase-preorder-metrics { gap: 0.35rem; }
+    .purchase-preorder-metric { min-width: 132px; padding: 0.45rem !important; }
+    .purchase-preorders-table thead th { font-size: 0.75rem; padding-top: 0.36rem; padding-bottom: 0.36rem; }
+    .purchase-preorders-table td { font-size: 0.8rem; padding-top: 0.4rem; padding-bottom: 0.4rem; }
+    .purchase-actions-row { margin-bottom: 0.3rem !important; gap: 0.3rem; }
+    .purchase-actions-btn { padding: 0.38rem 0.52rem !important; font-size: 0.76rem !important; }
+    .purchase-mobile-row { display: grid; grid-template-columns: 84px minmax(0,1fr); gap: 0.75rem; }
+    .purchase-mobile-photo { width: 84px; }
+    .purchase-mobile-card { gap: 0.5rem !important; }
+    .purchase-mobile-meta { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 0.4rem; align-items: start; }
+    .purchase-mobile-title { display: flex; flex-wrap: wrap; gap: 0.35rem; line-height: 1.35; }
+    .purchase-mobile-ops { display: grid; grid-template-columns: 1fr; gap: 0.45rem; }
+    .purchase-mobile-form { display: grid !important; grid-template-columns: 1fr auto; gap: 0.4rem; width: 100%; }
+    .purchase-mobile-form .purchase-reason { display: none; }
+  }
 </style>
 <?php if (is_array($flash) && !empty($flash['message'])): ?>
   <div class="<?= ($flash['type'] ?? '') === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-700' ?> border p-3 rounded mb-4">
     <?= htmlspecialchars((string)$flash['message']) ?>
   </div>
 <?php endif; ?>
-<div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-  <div class="bg-white rounded border p-3"><div class="text-xs text-gray-500">Всего партий</div><div class="text-xl font-semibold"><?= (int)($summary['total_batches'] ?? 0) ?></div></div>
-  <div class="bg-white rounded border p-3"><div class="text-xs text-gray-500">Остаток (ящ.)</div><div class="text-xl font-semibold"><?= number_format((float)($summary['remaining_boxes'] ?? 0), 2, '.', ' ') ?></div></div>
-  <div class="bg-white rounded border p-3"><div class="text-xs text-gray-500">Списано (ящ.)</div><div class="text-xl font-semibold text-red-600"><?= number_format((float)($summary['written_off_boxes'] ?? 0), 2, '.', ' ') ?></div></div>
-  <div class="bg-white rounded border p-3"><div class="text-xs text-gray-500">Средний возраст</div><div class="text-xl font-semibold"><?= number_format((float)($summary['avg_age_days'] ?? 0), 1, '.', ' ') ?> дн.</div></div>
-</div>
-
-<form method="get" class="bg-white rounded border p-3 mb-4 grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-  <div>
+<form method="get" class="bg-white rounded border p-3 mb-4 purchase-filter-row" id="purchase-auto-filter">
+  <div class="purchase-filter-field flex-1 min-w-[150px]">
     <label class="text-xs text-gray-600">Статус</label>
-    <select name="status" class="w-full border rounded px-2 py-2 text-sm">
+    <select name="status" class="purchase-filter-select w-full border rounded px-2 py-2 text-sm">
       <option value="">Все</option>
       <?php foreach (['planned','purchased','arrived'] as $st): ?>
         <option value="<?= $st ?>" <?= (($filters['status'] ?? '') === $st) ? 'selected' : '' ?>><?= htmlspecialchars((string)($statusLabels[$st] ?? $st)) ?></option>
       <?php endforeach; ?>
     </select>
   </div>
-  <div>
+  <div class="purchase-filter-field flex-1 min-w-[150px]">
     <label class="text-xs text-gray-600">Закупщик</label>
-    <select name="buyer_id" class="w-full border rounded px-2 py-2 text-sm">
+    <select name="buyer_id" class="purchase-filter-select w-full border rounded px-2 py-2 text-sm">
       <option value="0">Все</option>
       <?php foreach ($buyers as $buyer): ?>
         <option value="<?= (int)$buyer['id'] ?>" <?= ((int)($filters['buyer_id'] ?? 0) === (int)$buyer['id']) ? 'selected' : '' ?>><?= htmlspecialchars((string)$buyer['name']) ?></option>
       <?php endforeach; ?>
     </select>
   </div>
-  <div class="md:col-span-2 flex gap-2">
-    <button class="bg-gray-900 text-white px-4 py-2 rounded" type="submit">Применить</button>
-    <a class="bg-gray-100 px-4 py-2 rounded" href="<?= $basePath ?>/purchases">Сбросить</a>
+  <div class="flex gap-1 whitespace-nowrap">
+    <a class="purchase-filter-reset bg-gray-100 rounded" href="<?= $basePath ?>/purchases">Сбросить</a>
   </div>
 </form>
 
-<div class="bg-white rounded border p-4 mb-4">
+<div class="purchase-preorders-box bg-white rounded border p-4 mb-4">
   <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
-    <h2 class="text-lg font-semibold text-gray-900">Предварительные заказы на закупку</h2>
-    <div class="text-xs text-gray-500">Актуально для ролей: админ, менеджер, закупщик</div>
+    <h2 class="purchase-preorders-title text-lg font-semibold text-gray-900">Предварительные заказы на закупку</h2>
   </div>
-  <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
-    <div class="rounded bg-amber-50 border border-amber-100 p-3">
+  <div class="purchase-preorder-scroll mb-3" id="preorder-metrics-scroll">
+  <div class="purchase-preorder-metrics">
+    <div class="purchase-preorder-metric rounded bg-amber-50 border border-amber-100 p-3">
       <div class="text-xs text-amber-700">Нужно купить (ящ.)</div>
       <div class="text-xl font-semibold text-amber-900"><?= number_format((float)($preorderDemandTotals['requested_boxes'] ?? 0), 2, '.', ' ') ?></div>
     </div>
-    <div class="rounded bg-emerald-50 border border-emerald-100 p-3">
+    <div class="purchase-preorder-metric rounded bg-emerald-50 border border-emerald-100 p-3">
       <div class="text-xs text-emerald-700">Подтверждено (ящ.)</div>
       <div class="text-xl font-semibold text-emerald-900"><?= number_format((float)($preorderDemandTotals['confirmed_boxes'] ?? 0), 2, '.', ' ') ?></div>
     </div>
-    <div class="rounded bg-blue-50 border border-blue-100 p-3">
+    <div class="purchase-preorder-metric rounded bg-blue-50 border border-blue-100 p-3">
       <div class="text-xs text-blue-700">Всего заявок</div>
       <div class="text-xl font-semibold text-blue-900"><?= (int)($preorderDemandTotals['intents_count'] ?? 0) ?></div>
     </div>
-    <div class="rounded bg-gray-50 border border-gray-200 p-3">
-      <div class="text-xs text-gray-600">Товаров в заявках</div>
-      <div class="text-xl font-semibold text-gray-900"><?= (int)($preorderDemandTotals['products_count'] ?? 0) ?></div>
-    </div>
+  </div>
   </div>
 
   <div class="overflow-x-auto">
-    <table class="min-w-full text-sm">
+    <table class="purchase-preorders-table min-w-full text-sm">
       <thead>
         <tr class="text-left text-gray-600 border-b">
           <th class="py-2 pr-3">Товар</th>
@@ -123,13 +149,13 @@
   </div>
 </div>
 
-<div class="flex items-center mb-4">
-  <a href="<?= $basePath ?>/purchases/create" class="bg-[#C86052] text-white px-4 py-2 rounded inline-flex items-center">
-    <span class="material-icons-round text-base mr-1">add</span> Добавить закупку
+<div class="purchase-actions-row flex items-center mb-4">
+  <a href="<?= $basePath ?>/purchases/create" class="purchase-actions-btn bg-[#C86052] text-white px-4 py-2 rounded inline-flex items-center">
+    <span class="material-icons-round text-base mr-1">add</span> + Добавить
   </a>
   <form method="post" action="<?= $basePath ?>/purchases/preorders/maintenance" class="ml-2">
     <?= csrf_field() ?>
-    <button class="bg-gray-100 text-gray-700 px-3 py-2 rounded text-sm" type="submit">Обновить статусы предзаказов</button>
+    <button class="purchase-actions-btn bg-gray-100 text-gray-700 px-3 py-2 rounded text-sm" type="submit">Обновить предзаказы</button>
   </form>
 </div>
 
@@ -142,8 +168,8 @@
   </thead>
   <tbody>
     <?php foreach ($batches as $batch): ?>
-      <tr class="border-b align-top transition-all duration-200 <?= ((int)($batch['is_closed'] ?? 0) === 1) ? 'bg-gray-50 text-gray-400' : 'hover:bg-orange-50 bg-white' ?>">
-        <td class="p-3 w-24">
+      <tr class="purchase-mobile-row border-b align-top transition-all duration-200 <?= ((int)($batch['is_closed'] ?? 0) === 1) ? 'bg-gray-50 text-gray-400' : 'hover:bg-orange-50 bg-white' ?>">
+        <td class="purchase-mobile-photo p-3 w-24">
           <?php if (!empty($batch['preview_photo'])): ?>
             <img src="<?= htmlspecialchars((string)$batch['preview_photo']) ?>" class="h-20 w-20 rounded object-cover border border-gray-200" alt="Фото партии #<?= (int)$batch['id'] ?>">
           <?php else: ?>
@@ -151,8 +177,8 @@
           <?php endif; ?>
         </td>
         <td class="p-3">
-          <div class="flex flex-col gap-2">
-            <div class="flex items-center justify-between gap-3">
+          <div class="purchase-mobile-card flex flex-col gap-2">
+            <div class="purchase-mobile-meta flex items-center justify-between gap-3">
               <div class="purchase-row-meta text-sm font-semibold text-gray-900">
                 #<?= (int)$batch['id'] ?> · <?= htmlspecialchars(substr((string)($batch['purchased_at'] ?? ''), 0, 10)) ?>
               </div>
@@ -160,25 +186,25 @@
                 <?= htmlspecialchars((string)($batch['buyer_name'] ?? '—')) ?>
               </div>
             </div>
-            <div class="purchase-row-subline text-sm text-gray-800">
+            <div class="purchase-row-subline purchase-mobile-title text-sm text-gray-800">
               <a class="text-[#C86052] hover:underline font-medium" href="<?= $basePath ?>/purchases/<?= (int)$batch['id'] ?>"><?= htmlspecialchars(trim(($batch['product_name'] ?? '') . ' ' . ($batch['variety'] ?? ''))) ?></a>
-              · Стоимость закупки: <b><?= number_format((float)$batch['purchase_price_per_box'], 0, '.', ' ') ?> ₽</b>
-              · Куплено: <b><?= (float)$batch['boxes_total'] ?></b>
-              · Свободно: <b><?= (float)$batch['boxes_free'] ?></b>
+              · <b><?= number_format((float)$batch['purchase_price_per_box'], 0, '.', ' ') ?> ₽</b>
+              · Куплено: <b class="purchase-qty-chip"><?= (int)round((float)$batch['boxes_total']) ?></b>
+              · Свободно: <b class="purchase-qty-chip"><?= (int)round((float)$batch['boxes_free']) ?></b>
             </div>
-            <div class="flex flex-wrap gap-2">
-              <form method="post" action="<?= $basePath ?>/purchases/move-to-discount" class="purchase-card-form flex items-center gap-1 bg-yellow-900/30 border border-yellow-700 rounded px-2 py-1">
+            <div class="purchase-mobile-ops flex flex-wrap gap-2">
+              <form method="post" action="<?= $basePath ?>/purchases/move-to-discount" class="purchase-mobile-form purchase-card-form flex items-center gap-1 bg-yellow-900/30 border border-yellow-700 rounded px-2 py-1">
                 <?= csrf_field() ?>
                 <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
                 <input name="boxes" type="number" step="0.01" min="0.01" placeholder="ящ." class="w-16 border rounded px-1 py-1 text-xs text-gray-900">
-                <input name="reason" type="text" required placeholder="причина" class="w-24 border rounded px-1 py-1 text-xs text-gray-900">
+                <input name="reason" type="text" placeholder="причина" class="purchase-reason w-24 border rounded px-1 py-1 text-xs text-gray-900">
                 <button class="purchase-btn-discount text-xs bg-yellow-500 hover:bg-yellow-400 text-gray-900 px-2 py-1 rounded" type="submit">Уценка</button>
               </form>
-              <form method="post" action="<?= $basePath ?>/purchases/write-off" class="purchase-card-form flex items-center gap-1 bg-red-900/30 border border-red-700 rounded px-2 py-1">
+              <form method="post" action="<?= $basePath ?>/purchases/write-off" class="purchase-mobile-form purchase-card-form flex items-center gap-1 bg-red-900/30 border border-red-700 rounded px-2 py-1">
                 <?= csrf_field() ?>
                 <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
                 <input name="boxes" type="number" step="0.01" min="0.01" placeholder="ящ." class="w-16 border rounded px-1 py-1 text-xs text-gray-900">
-                <input name="comment" type="text" required placeholder="причина" class="w-24 border rounded px-1 py-1 text-xs text-gray-900">
+                <input name="comment" type="text" placeholder="причина" class="purchase-reason w-24 border rounded px-1 py-1 text-xs text-gray-900">
                 <button class="purchase-btn-writeoff text-xs bg-red-500 hover:bg-red-400 text-white px-2 py-1 rounded" type="submit">Списать</button>
               </form>
               <form method="post" action="<?= $basePath ?>/purchases/cancel-reservations" class="purchase-card-form flex items-center gap-1 bg-slate-800 border border-slate-600 rounded px-2 py-1">
@@ -193,3 +219,34 @@
     <?php endforeach; ?>
   </tbody>
 </table>
+<script>
+  (function () {
+    var filterForm = document.getElementById('purchase-auto-filter');
+    if (filterForm) {
+      var selects = filterForm.querySelectorAll('select');
+      selects.forEach(function (el) {
+        el.addEventListener('change', function () {
+          filterForm.submit();
+        });
+      });
+    }
+
+    var wrap = document.getElementById('preorder-metrics-scroll');
+    if (!wrap) return;
+    var startX = 0;
+    var startScroll = 0;
+    var dragging = false;
+    wrap.addEventListener('pointerdown', function (e) {
+      dragging = true;
+      startX = e.clientX;
+      startScroll = wrap.scrollLeft;
+    });
+    wrap.addEventListener('pointermove', function (e) {
+      if (!dragging) return;
+      wrap.scrollLeft = startScroll - (e.clientX - startX);
+    });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) {
+      wrap.addEventListener(ev, function () { dragging = false; });
+    });
+  })();
+</script>
