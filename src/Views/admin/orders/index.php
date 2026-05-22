@@ -289,8 +289,17 @@
 
 
     const scrollTopBtn = document.getElementById('scrollTopBtn');
+    const scrollContainer = document.querySelector('main.overflow-auto') || document.querySelector('main') || window;
+    const getScrollTop = () => scrollContainer === window ? window.scrollY : scrollContainer.scrollTop;
+    const scrollToTop = () => {
+      if (scrollContainer === window) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    };
     const handleScrollTopVisibility = () => {
-      const visible = window.scrollY > 320;
+      const visible = getScrollTop() > 220;
       if (!scrollTopBtn) return;
       scrollTopBtn.classList.toggle('opacity-0', !visible);
       scrollTopBtn.classList.toggle('pointer-events-none', !visible);
@@ -298,11 +307,9 @@
       scrollTopBtn.classList.toggle('opacity-100', visible);
       scrollTopBtn.classList.toggle('translate-y-0', visible);
     };
-    window.addEventListener('scroll', handleScrollTopVisibility, { passive: true });
+    scrollContainer.addEventListener('scroll', handleScrollTopVisibility, { passive: true });
     handleScrollTopVisibility();
-    scrollTopBtn?.addEventListener('click', () => {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
+    scrollTopBtn?.addEventListener('click', scrollToTop);
 
     managerFilter?.addEventListener('change', () => {
       const val = managerFilter.value;
