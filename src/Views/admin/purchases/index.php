@@ -12,14 +12,21 @@
   'arrived' => 'Готова к выдаче',
 ]; ?>
 <style>
-  .purchase-filter-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: end; margin-bottom: 0.5rem !important; padding: 0.5rem !important; }
+  .purchase-filter-row { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: end; margin-bottom: 0.35rem !important; padding: 0.35rem !important; }
   .purchase-filter-field { min-width: 130px; }
-  .purchase-filter-select { padding: 0.4rem 0.5rem !important; font-size: 0.875rem; }
-  .purchase-filter-reset { padding: 0.4rem 0.65rem; font-size: 0.75rem; }
+  .purchase-filter-select { padding: 0.3rem 0.45rem !important; font-size: 0.8125rem; }
+  .purchase-filter-reset { padding: 0.3rem 0.55rem; font-size: 0.72rem; }
   .purchase-preorder-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
-  .purchase-preorder-metrics { display: flex; gap: 0.75rem; min-width: max-content; }
-  .purchase-preorder-metric { min-width: 180px; }
+  .purchase-preorder-metrics { display: flex; gap: 0.45rem; min-width: max-content; }
+  .purchase-preorder-metric { min-width: 145px; padding: 0.55rem !important; border-radius: 0.5rem; }
   .purchase-qty-chip { display: inline-flex; align-items: center; padding: 0.15rem 0.5rem; border-radius: 9999px; background: rgba(148, 163, 184, 0.15); }
+  .purchase-preorders-box { padding: 0.55rem !important; margin-bottom: 0.4rem !important; }
+  .purchase-preorders-title { font-size: 1.1rem; line-height: 1.25; margin-bottom: 0.35rem !important; }
+  .purchase-preorders-table { border-radius: 0.55rem; overflow: hidden; border: 1px solid rgba(148, 163, 184, 0.25); }
+  .purchase-preorders-table thead th { font-size: 0.78rem; padding-top: 0.45rem; padding-bottom: 0.45rem; }
+  .purchase-preorders-table td { font-size: 0.84rem; padding-top: 0.45rem; padding-bottom: 0.45rem; }
+  .purchase-actions-row { margin-bottom: 0.4rem !important; gap: 0.35rem; }
+  .purchase-actions-btn { padding: 0.45rem 0.6rem !important; font-size: 0.82rem !important; }
   .purchase-row-meta { color: #1f2937; }
   .purchase-row-subline { color: #374151; }
   .purchase-card-form input { background: #fff; }
@@ -40,10 +47,18 @@
   [data-theme='dark'] .purchase-btn-cancel { background: #334155; color: #f8fafc; border-color: #64748b; }
   [data-theme='dark'] .purchase-btn-cancel:hover { background: #475569; }
   @media (max-width: 767px) {
-    .purchase-filter-row { gap: 0.4rem; margin-bottom: 0.4rem !important; padding: 0.45rem !important; }
+    .purchase-filter-row { gap: 0.3rem; margin-bottom: 0.3rem !important; padding: 0.3rem !important; }
     .purchase-filter-field { min-width: 120px; flex: 1 1 120px; }
-    .purchase-filter-select { padding: 0.34rem 0.45rem !important; font-size: 0.8125rem; }
-    .purchase-filter-reset { padding: 0.34rem 0.55rem; font-size: 0.75rem; }
+    .purchase-filter-select { padding: 0.28rem 0.4rem !important; font-size: 0.79rem; }
+    .purchase-filter-reset { padding: 0.28rem 0.45rem; font-size: 0.72rem; }
+    .purchase-preorders-box { padding: 0.45rem !important; margin-bottom: 0.3rem !important; }
+    .purchase-preorders-title { font-size: 1rem; margin-bottom: 0.25rem !important; }
+    .purchase-preorder-metrics { gap: 0.35rem; }
+    .purchase-preorder-metric { min-width: 132px; padding: 0.45rem !important; }
+    .purchase-preorders-table thead th { font-size: 0.75rem; padding-top: 0.36rem; padding-bottom: 0.36rem; }
+    .purchase-preorders-table td { font-size: 0.8rem; padding-top: 0.4rem; padding-bottom: 0.4rem; }
+    .purchase-actions-row { margin-bottom: 0.3rem !important; gap: 0.3rem; }
+    .purchase-actions-btn { padding: 0.38rem 0.52rem !important; font-size: 0.76rem !important; }
     .purchase-mobile-row { display: grid; grid-template-columns: 84px minmax(0,1fr); gap: 0.75rem; }
     .purchase-mobile-photo { width: 84px; }
     .purchase-mobile-card { gap: 0.5rem !important; }
@@ -83,10 +98,9 @@
   </div>
 </form>
 
-<div class="bg-white rounded border p-4 mb-4">
+<div class="purchase-preorders-box bg-white rounded border p-4 mb-4">
   <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
-    <h2 class="text-lg font-semibold text-gray-900">Предварительные заказы на закупку</h2>
-    <div class="text-xs text-gray-500">Актуально для ролей: админ, менеджер, закупщик</div>
+    <h2 class="purchase-preorders-title text-lg font-semibold text-gray-900">Предварительные заказы на закупку</h2>
   </div>
   <div class="purchase-preorder-scroll mb-3" id="preorder-metrics-scroll">
   <div class="purchase-preorder-metrics">
@@ -106,7 +120,7 @@
   </div>
 
   <div class="overflow-x-auto">
-    <table class="min-w-full text-sm">
+    <table class="purchase-preorders-table min-w-full text-sm">
       <thead>
         <tr class="text-left text-gray-600 border-b">
           <th class="py-2 pr-3">Товар</th>
@@ -135,13 +149,13 @@
   </div>
 </div>
 
-<div class="flex items-center mb-4">
-  <a href="<?= $basePath ?>/purchases/create" class="bg-[#C86052] text-white px-4 py-2 rounded inline-flex items-center">
-    <span class="material-icons-round text-base mr-1">add</span> Добавить закупку
+<div class="purchase-actions-row flex items-center mb-4">
+  <a href="<?= $basePath ?>/purchases/create" class="purchase-actions-btn bg-[#C86052] text-white px-4 py-2 rounded inline-flex items-center">
+    <span class="material-icons-round text-base mr-1">add</span> + Добавить
   </a>
   <form method="post" action="<?= $basePath ?>/purchases/preorders/maintenance" class="ml-2">
     <?= csrf_field() ?>
-    <button class="bg-gray-100 text-gray-700 px-3 py-2 rounded text-sm" type="submit">Обновить статусы предзаказов</button>
+    <button class="purchase-actions-btn bg-gray-100 text-gray-700 px-3 py-2 rounded text-sm" type="submit">Обновить предзаказы</button>
   </form>
 </div>
 
