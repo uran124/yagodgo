@@ -27,7 +27,7 @@
   .purchase-preorders-table td { font-size: 0.84rem; padding-top: 0.45rem; padding-bottom: 0.45rem; }
   .purchase-preorders-table .purchase-col-product { width: auto; max-width: 0; }
   .purchase-preorders-table .purchase-col-product-name { display:block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .purchase-preorders-table .purchase-col-qty, .purchase-preorders-table .purchase-col-confirm { width: 96px; white-space: nowrap; text-align: right; }
+  .purchase-preorders-table .purchase-col-qty, .purchase-preorders-table .purchase-col-confirm { width: 72px; white-space: nowrap; text-align: right; }
   .purchase-preorders-table .purchase-col-intents { width: 78px; white-space: nowrap; text-align: right; }
   .purchase-preorders-table .purchase-mobile-icon { display: none; }
   .purchase-actions-row { margin-bottom: 0.4rem !important; gap: 0.35rem; }
@@ -87,6 +87,7 @@
     .purchase-preorders-table thead th { font-size: 0.75rem; padding-top: 0.36rem; padding-bottom: 0.36rem; }
     .purchase-preorders-table td { font-size: 0.8rem; padding-top: 0.4rem; padding-bottom: 0.4rem; }
     .purchase-preorders-table { table-layout: fixed; width: 100%; }
+    .purchase-preorders-table .purchase-col-product { width: calc(100% - 108px); }
     .purchase-preorders-table .purchase-col-qty,
     .purchase-preorders-table .purchase-col-confirm { width: 54px; }
     .purchase-preorders-table .purchase-col-intents { display: none; }
@@ -140,22 +141,22 @@
   <div class="purchase-preorder-scroll mb-3" id="preorder-metrics-scroll">
   <div class="purchase-preorder-metrics">
     <div class="purchase-preorder-metric rounded bg-amber-50 border border-amber-100 p-3">
-      <div class="text-xs text-amber-700">Нужно купить (ящ.)</div>
-      <div class="text-xl font-semibold text-amber-900"><?= number_format((float)($preorderDemandTotals['requested_boxes'] ?? 0), 2, '.', ' ') ?></div>
+      <div class="text-xs text-amber-700">Купить</div>
+      <div class="text-xl font-semibold text-amber-900"><?= (int)round((float)($preorderDemandTotals['requested_boxes'] ?? 0)) ?></div>
     </div>
     <div class="purchase-preorder-metric rounded bg-emerald-50 border border-emerald-100 p-3">
-      <div class="text-xs text-emerald-700">Подтверждено (ящ.)</div>
-      <div class="text-xl font-semibold text-emerald-900"><?= number_format((float)($preorderDemandTotals['confirmed_boxes'] ?? 0), 2, '.', ' ') ?></div>
+      <div class="text-xs text-emerald-700">Подтверждено</div>
+      <div class="text-xl font-semibold text-emerald-900"><?= (int)round((float)($preorderDemandTotals['confirmed_boxes'] ?? 0)) ?></div>
     </div>
     <div class="purchase-preorder-metric rounded bg-blue-50 border border-blue-100 p-3">
-      <div class="text-xs text-blue-700">Всего заявок</div>
+      <div class="text-xs text-blue-700">Заявок</div>
       <div class="text-xl font-semibold text-blue-900"><?= (int)($preorderDemandTotals['intents_count'] ?? 0) ?></div>
     </div>
   </div>
   </div>
 
   <div class="overflow-x-auto">
-    <table class="purchase-preorders-table min-w-full text-sm">
+    <table class="purchase-preorders-table w-full text-sm">
       <thead>
         <tr class="text-left text-gray-600 border-b">
           <th class="py-2 pr-3 purchase-col-product">Товар</th>
@@ -173,8 +174,8 @@
           <?php foreach ($preorderDemand as $row): ?>
             <tr class="border-b last:border-b-0">
               <td class="py-2 pr-3 font-medium text-gray-900 purchase-col-product"><span class="purchase-col-product-name"><?= htmlspecialchars(trim((string)($row['product_name'] ?? '') . ' ' . (string)($row['variety'] ?? ''))) ?></span></td>
-              <td class="py-2 pr-3 purchase-col-qty"><?= number_format((float)($row['requested_boxes'] ?? 0), 2, '.', ' ') ?></td>
-              <td class="py-2 pr-3 purchase-col-confirm"><?= number_format((float)($row['confirmed_boxes'] ?? 0), 2, '.', ' ') ?></td>
+              <td class="py-2 pr-3 purchase-col-qty"><?= (int)round((float)($row['requested_boxes'] ?? 0)) ?></td>
+              <td class="py-2 pr-3 purchase-col-confirm"><?= (int)round((float)($row['confirmed_boxes'] ?? 0)) ?></td>
               <td class="py-2 pr-3 purchase-col-intents"><?= (int)($row['intents_count'] ?? 0) ?></td>
             </tr>
           <?php endforeach; ?>
