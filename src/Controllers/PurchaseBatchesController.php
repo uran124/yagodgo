@@ -421,11 +421,11 @@ ORDER BY is_closed ASC, pb.id DESC';
                 "SELECT o.id AS order_id,
                         COALESCE(u.name, 'Без имени') AS customer_name,
                         COALESCE(u.phone, '') AS customer_phone,
-                        SUM(oi.qty) AS reserved_qty
+                        SUM(oi.boxes) AS reserved_qty
                  FROM order_items oi
                  JOIN orders o ON o.id = oi.order_id
                  LEFT JOIN users u ON u.id = o.user_id
-                 WHERE oi.batch_id = :batch_id
+                 WHERE oi.purchase_batch_id = :batch_id
                    AND o.status = 'reserved'
                  GROUP BY o.id, u.name, u.phone
                  ORDER BY o.id DESC"
