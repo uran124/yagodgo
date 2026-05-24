@@ -39,6 +39,11 @@
   .purchase-status-dot { width: 8px; height: 8px; border-radius: 9999px; background: #22c55e; display: inline-block; }
   .purchase-item-actions { margin-top: 0.45rem; display: flex; flex-wrap: nowrap; gap: 0.3rem; overflow-x: auto; }
   .purchase-action-form { display: inline-flex; align-items: center; gap: 0.2rem; flex: 0 0 auto; }
+  .purchase-action-qty {
+    width: 3rem;
+    padding: 0 !important;
+    border: 0 !important;
+  }
   .reserve-modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); display: none; align-items: center; justify-content: center; z-index: 60; padding: 0.75rem; }
   .reserve-modal-backdrop.is-open { display: flex; }
   .reserve-modal { width: 100%; max-width: 420px; background: #fff; border-radius: 0.75rem; border: 1px solid #cbd5e1; max-height: 78vh; display: flex; flex-direction: column; }
@@ -233,14 +238,14 @@
               <form method="post" action="<?= $basePath ?>/purchases/move-to-discount" class="purchase-action-form purchase-mobile-form purchase-card-form flex items-center gap-1 bg-yellow-900/30 border border-yellow-700 rounded px-2 py-1">
                 <?= csrf_field() ?>
                 <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
-                <input name="boxes" type="number" step="0.01" min="0.01" placeholder="ящ." class="w-16 border rounded px-1 py-1 text-xs text-gray-900">
+                <input name="boxes" type="number" step="0.01" min="0.01" placeholder="ящ." class="purchase-action-qty w-12 rounded text-xs text-gray-900">
                 <input name="reason" type="text" placeholder="причина" class="purchase-reason w-24 border rounded px-1 py-1 text-xs text-gray-900">
                 <button class="purchase-btn-discount text-xs bg-yellow-500 hover:bg-yellow-400 text-gray-900 px-2 py-1 rounded" type="submit">Уценка</button>
               </form>
               <form method="post" action="<?= $basePath ?>/purchases/write-off" class="purchase-action-form purchase-mobile-form purchase-card-form flex items-center gap-1 bg-red-900/30 border border-red-700 rounded px-2 py-1">
                 <?= csrf_field() ?>
                 <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
-                <input name="boxes" type="number" step="0.01" min="0.01" placeholder="ящ." class="w-16 border rounded px-1 py-1 text-xs text-gray-900">
+                <input name="boxes" type="number" step="0.01" min="0.01" placeholder="ящ." class="purchase-action-qty w-12 rounded text-xs text-gray-900">
                 <input name="comment" type="text" placeholder="причина" class="purchase-reason w-24 border rounded px-1 py-1 text-xs text-gray-900">
                 <button class="purchase-btn-writeoff text-xs bg-red-500 hover:bg-red-400 text-white px-2 py-1 rounded" type="submit">Списать</button>
               </form>
