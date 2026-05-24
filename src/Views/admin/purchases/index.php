@@ -17,14 +17,19 @@
   .purchase-filter-select { padding: 0.3rem 0.45rem !important; font-size: 0.8125rem; }
   .purchase-filter-reset { padding: 0.3rem 0.55rem; font-size: 0.72rem; }
   .purchase-preorder-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
-  .purchase-preorder-metrics { display: flex; gap: 0.45rem; min-width: max-content; }
-  .purchase-preorder-metric { min-width: 145px; padding: 0.55rem !important; border-radius: 0.5rem; }
+  .purchase-preorder-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.45rem; width: 100%; }
+  .purchase-preorder-metric { min-width: 0; padding: 0.5rem !important; border-radius: 0.5rem; }
   .purchase-qty-chip { display: inline-flex; align-items: center; padding: 0.15rem 0.5rem; border-radius: 9999px; background: rgba(148, 163, 184, 0.15); }
   .purchase-preorders-box { padding: 0.55rem !important; margin-bottom: 0.4rem !important; }
   .purchase-preorders-title { font-size: 1.1rem; line-height: 1.25; margin-bottom: 0.35rem !important; }
   .purchase-preorders-table { border-radius: 0.55rem; overflow: hidden; border: 1px solid rgba(148, 163, 184, 0.25); }
   .purchase-preorders-table thead th { font-size: 0.78rem; padding-top: 0.45rem; padding-bottom: 0.45rem; }
   .purchase-preorders-table td { font-size: 0.84rem; padding-top: 0.45rem; padding-bottom: 0.45rem; }
+  .purchase-preorders-table .purchase-col-product { width: auto; max-width: 0; }
+  .purchase-preorders-table .purchase-col-product-name { display:block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .purchase-preorders-table .purchase-col-qty, .purchase-preorders-table .purchase-col-confirm { width: 72px; white-space: nowrap; text-align: right; }
+  .purchase-preorders-table .purchase-col-intents { width: 78px; white-space: nowrap; text-align: right; }
+  .purchase-preorders-table .purchase-mobile-icon { display: none; }
   .purchase-actions-row { margin-bottom: 0.4rem !important; gap: 0.35rem; }
   .purchase-actions-btn { padding: 0.45rem 0.6rem !important; font-size: 0.82rem !important; }
   .purchase-list { display: grid; gap: 0.45rem; }
@@ -34,6 +39,12 @@
   .purchase-status-dot { width: 8px; height: 8px; border-radius: 9999px; background: #22c55e; display: inline-block; }
   .purchase-item-actions { margin-top: 0.45rem; display: flex; flex-wrap: nowrap; gap: 0.3rem; overflow-x: auto; }
   .purchase-action-form { display: inline-flex; align-items: center; gap: 0.2rem; flex: 0 0 auto; }
+  .purchase-action-qty {
+    width: 3rem;
+    padding: 0 !important;
+    border: 0 !important;
+    background: rgba(148, 163, 184, 0.2) !important;
+  }
   .reserve-modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); display: none; align-items: center; justify-content: center; z-index: 60; padding: 0.75rem; }
   .reserve-modal-backdrop.is-open { display: flex; }
   .reserve-modal { width: 100%; max-width: 420px; background: #fff; border-radius: 0.75rem; border: 1px solid #cbd5e1; max-height: 78vh; display: flex; flex-direction: column; }
@@ -46,6 +57,7 @@
   [data-theme='dark'] .purchase-row-meta { color: #e2e8f0; }
   [data-theme='dark'] .purchase-row-subline { color: #cbd5e1; }
   [data-theme='dark'] .purchase-card-form { background: rgba(15, 23, 42, 0.65); border-color: #475569; }
+  [data-theme='dark'] .purchase-action-qty { background: rgba(71, 85, 105, 0.45) !important; color: #e2e8f0; }
   [data-theme='dark'] .purchase-card-form input {
     background: #0f172a;
     color: #e2e8f0;
@@ -77,10 +89,20 @@
     .purchase-filter-reset { padding: 0.28rem 0.45rem; font-size: 0.72rem; }
     .purchase-preorders-box { padding: 0.45rem !important; margin-bottom: 0.3rem !important; }
     .purchase-preorders-title { font-size: 1rem; margin-bottom: 0.25rem !important; }
-    .purchase-preorder-metrics { gap: 0.35rem; }
-    .purchase-preorder-metric { min-width: 132px; padding: 0.45rem !important; }
+    .purchase-preorder-scroll { overflow-x: hidden; }
+    .purchase-preorder-metrics { gap: 0.3rem; width: 100%; }
+    .purchase-preorder-metric { min-width: 0; padding: 0.38rem !important; }
+    .purchase-preorder-metric .text-xs { font-size: 0.68rem; line-height: 1.05; }
+    .purchase-preorder-metric .text-xl { font-size: 1.45rem; line-height: 1.1; }
     .purchase-preorders-table thead th { font-size: 0.75rem; padding-top: 0.36rem; padding-bottom: 0.36rem; }
     .purchase-preorders-table td { font-size: 0.8rem; padding-top: 0.4rem; padding-bottom: 0.4rem; }
+    .purchase-preorders-table { table-layout: fixed; width: 100%; }
+    .purchase-preorders-table .purchase-col-product { width: auto; }
+    .purchase-preorders-table .purchase-col-qty,
+    .purchase-preorders-table .purchase-col-confirm { width: 54px; }
+    .purchase-preorders-table .purchase-col-intents { display: none; }
+    .purchase-preorders-table .purchase-mobile-icon { display: inline-flex; vertical-align: middle; font-size: 0.95rem; line-height: 1; }
+    .purchase-preorders-table .purchase-desktop-label { display: none; }
     .purchase-actions-row { margin-bottom: 0.3rem !important; gap: 0.3rem; }
     .purchase-actions-btn { padding: 0.38rem 0.52rem !important; font-size: 0.76rem !important; }
     .purchase-mobile-row { display: grid; grid-template-columns: 84px minmax(0,1fr); gap: 0.75rem; }
@@ -129,28 +151,28 @@
   <div class="purchase-preorder-scroll mb-3" id="preorder-metrics-scroll">
   <div class="purchase-preorder-metrics">
     <div class="purchase-preorder-metric rounded bg-amber-50 border border-amber-100 p-3">
-      <div class="text-xs text-amber-700">Нужно купить (ящ.)</div>
-      <div class="text-xl font-semibold text-amber-900"><?= number_format((float)($preorderDemandTotals['requested_boxes'] ?? 0), 2, '.', ' ') ?></div>
+      <div class="text-xs text-amber-700">Купить</div>
+      <div class="text-xl font-semibold text-amber-900"><?= (int)round((float)($preorderDemandTotals['requested_boxes'] ?? 0)) ?></div>
     </div>
     <div class="purchase-preorder-metric rounded bg-emerald-50 border border-emerald-100 p-3">
-      <div class="text-xs text-emerald-700">Подтверждено (ящ.)</div>
-      <div class="text-xl font-semibold text-emerald-900"><?= number_format((float)($preorderDemandTotals['confirmed_boxes'] ?? 0), 2, '.', ' ') ?></div>
+      <div class="text-xs text-emerald-700">Подтверждено</div>
+      <div class="text-xl font-semibold text-emerald-900"><?= (int)round((float)($preorderDemandTotals['confirmed_boxes'] ?? 0)) ?></div>
     </div>
     <div class="purchase-preorder-metric rounded bg-blue-50 border border-blue-100 p-3">
-      <div class="text-xs text-blue-700">Всего заявок</div>
+      <div class="text-xs text-blue-700">Заявок</div>
       <div class="text-xl font-semibold text-blue-900"><?= (int)($preorderDemandTotals['intents_count'] ?? 0) ?></div>
     </div>
   </div>
   </div>
 
   <div class="overflow-x-auto">
-    <table class="purchase-preorders-table min-w-full text-sm">
+    <table class="purchase-preorders-table w-full text-sm">
       <thead>
         <tr class="text-left text-gray-600 border-b">
-          <th class="py-2 pr-3">Товар</th>
-          <th class="py-2 pr-3">Нужно купить (ящ.)</th>
-          <th class="py-2 pr-3">Подтверждено (ящ.)</th>
-          <th class="py-2 pr-3">Заявок</th>
+          <th class="py-2 pr-3 purchase-col-product">Товар</th>
+          <th class="py-2 pr-3 purchase-col-qty"><span class="purchase-desktop-label">Нужно купить (ящ.)</span><span class="material-icons-round purchase-mobile-icon" title="Нужно купить">inventory_2</span></th>
+          <th class="py-2 pr-3 purchase-col-confirm"><span class="purchase-desktop-label">Подтверждено (ящ.)</span><span class="material-icons-round purchase-mobile-icon" title="Подтверждено">task_alt</span></th>
+          <th class="py-2 pr-3 purchase-col-intents">Заявок</th>
         </tr>
       </thead>
       <tbody>
@@ -161,10 +183,10 @@
         <?php else: ?>
           <?php foreach ($preorderDemand as $row): ?>
             <tr class="border-b last:border-b-0">
-              <td class="py-2 pr-3 font-medium text-gray-900"><?= htmlspecialchars(trim((string)($row['product_name'] ?? '') . ' ' . (string)($row['variety'] ?? ''))) ?></td>
-              <td class="py-2 pr-3"><?= number_format((float)($row['requested_boxes'] ?? 0), 2, '.', ' ') ?></td>
-              <td class="py-2 pr-3"><?= number_format((float)($row['confirmed_boxes'] ?? 0), 2, '.', ' ') ?></td>
-              <td class="py-2 pr-3"><?= (int)($row['intents_count'] ?? 0) ?></td>
+              <td class="py-2 pr-3 font-medium text-gray-900 purchase-col-product"><span class="purchase-col-product-name"><?= htmlspecialchars(trim((string)($row['product_name'] ?? '') . ' ' . (string)($row['variety'] ?? ''))) ?></span></td>
+              <td class="py-2 pr-3 purchase-col-qty"><?= (int)round((float)($row['requested_boxes'] ?? 0)) ?></td>
+              <td class="py-2 pr-3 purchase-col-confirm"><?= (int)round((float)($row['confirmed_boxes'] ?? 0)) ?></td>
+              <td class="py-2 pr-3 purchase-col-intents"><?= (int)($row['intents_count'] ?? 0) ?></td>
             </tr>
           <?php endforeach; ?>
         <?php endif; ?>
@@ -215,17 +237,17 @@
           </div>
         </div>
             <div class="purchase-item-actions">
-              <form method="post" action="<?= $basePath ?>/purchases/move-to-discount" class="purchase-action-form purchase-mobile-form purchase-card-form flex items-center gap-1 bg-yellow-900/30 border border-yellow-700 rounded px-2 py-1">
+              <form method="post" action="<?= $basePath ?>/purchases/move-to-discount" class="purchase-action-form purchase-mobile-form purchase-card-form flex items-center gap-1 bg-yellow-900/30 rounded p-0 border-0">
                 <?= csrf_field() ?>
                 <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
-                <input name="boxes" type="number" step="0.01" min="0.01" placeholder="ящ." class="w-16 border rounded px-1 py-1 text-xs text-gray-900">
+                <input name="boxes" type="number" step="0.01" min="0.01" placeholder="ящ." class="purchase-action-qty w-12 rounded text-xs text-gray-900">
                 <input name="reason" type="text" placeholder="причина" class="purchase-reason w-24 border rounded px-1 py-1 text-xs text-gray-900">
                 <button class="purchase-btn-discount text-xs bg-yellow-500 hover:bg-yellow-400 text-gray-900 px-2 py-1 rounded" type="submit">Уценка</button>
               </form>
-              <form method="post" action="<?= $basePath ?>/purchases/write-off" class="purchase-action-form purchase-mobile-form purchase-card-form flex items-center gap-1 bg-red-900/30 border border-red-700 rounded px-2 py-1">
+              <form method="post" action="<?= $basePath ?>/purchases/write-off" class="purchase-action-form purchase-mobile-form purchase-card-form flex items-center gap-1 bg-red-900/30 rounded p-0 border-0">
                 <?= csrf_field() ?>
                 <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
-                <input name="boxes" type="number" step="0.01" min="0.01" placeholder="ящ." class="w-16 border rounded px-1 py-1 text-xs text-gray-900">
+                <input name="boxes" type="number" step="0.01" min="0.01" placeholder="ящ." class="purchase-action-qty w-12 rounded text-xs text-gray-900">
                 <input name="comment" type="text" placeholder="причина" class="purchase-reason w-24 border rounded px-1 py-1 text-xs text-gray-900">
                 <button class="purchase-btn-writeoff text-xs bg-red-500 hover:bg-red-400 text-white px-2 py-1 rounded" type="submit">Списать</button>
               </form>
