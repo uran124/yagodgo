@@ -416,22 +416,31 @@ ORDER BY is_closed ASC, pb.id DESC';
             exit;
         }
 
-        $stmt = $this->pdo->prepare(
-            "SELECT o.id AS order_id,
-                    COALESCE(u.name, 'Без имени') AS customer_name,
-                    COALESCE(u.phone, '') AS customer_phone,
-                    SUM(oi.qty) AS reserved_qty
-             FROM order_items oi
-             JOIN orders o ON o.id = oi.order_id
-             LEFT JOIN users u ON u.id = o.user_id
-             WHERE oi.batch_id = :batch_id
-               AND o.status = 'reserved'
-             GROUP BY o.id, u.name, u.phone
-             ORDER BY o.id DESC"
-        );
-        $stmt->execute(['batch_id' => $batchId]);
-        $items = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-        echo json_encode(['items' => $items], JSON_UNESCAPED_UNICODE);
+        try {
+            $stmt = $this->pdo->prepare(
+                "SELECT o.id AS order_id,
+                        COALESCE(u.name, 'Без имени') AS customer_name,
+                        COALESCE(u.phone, '') AS customer_phone,
+                        SUM(oi.qty) AS reserved_qty
+                 FROM order_items oi
+                 JOIN orders o ON o.id = oi.order_id
+                 LEFT JOIN users u ON u.id = o.user_id
+                 WHERE oi.batch_id = :batch_id
+                   AND o.status = 'reserved'
+                 GROUP BY o.id, u.name, u.phone
+                 ORDER BY o.id DESC"
+            );
+            $stmt->execute(['batch_id' => $batchId]);
+            $items = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            echo json_encode(['items' => $items], JSON_UNESCAPED_UNICODE);
+        } catch (\Throwable $e) {
+            error_log('reservationsList failed: ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode([
+                'items' => [],
+                'error' => 'Не удалось получить список броней.'
+            ], JSON_UNESCAPED_UNICODE);
+        }
         exit;
     }
 
