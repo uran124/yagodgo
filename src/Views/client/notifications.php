@@ -1,6 +1,7 @@
 <?php /** @var string|null $userName */ ?>
 <?php /** @var string|null $tgStart */ ?>
 <?php /** @var array<int,array<string,mixed>> $notifications */ ?>
+<?php /** @var array<int,array<string,mixed>> $preorderOffers */ ?>
 <main class="bg-gradient-to-br from-orange-50 via-white to-pink-50 min-h-screen pb-24">
   <div class="px-4 pt-6 space-y-6">
     <a href="https://t.me/YagodgoBot<?= $tgStart ? '?start=' . $tgStart : '' ?>" class="flex items-center justify-center space-x-2 bg-blue-500 text-white rounded-2xl py-3 shadow-lg hover:bg-blue-600 transition">
@@ -32,6 +33,53 @@
         <?php endforeach; ?>
       <?php else: ?>
         <div class="p-4 text-sm text-gray-500">Пока нет новых уведомлений.</div>
+      <?php endif; ?>
+    </section>
+
+    <section class="bg-white rounded-3xl shadow divide-y divide-gray-100 overflow-hidden">
+      <div class="px-4 py-3 bg-gray-50">
+        <h2 class="text-sm font-semibold text-gray-700">Предварительные заказы</h2>
+      </div>
+      <?php if (!empty($preorderOffers)): ?>
+        <?php foreach ($preorderOffers as $offer): ?>
+          <?php
+            $status = (string)($offer['status'] ?? '');
+            $isActiveOffer = $status === 'offer_sent';
+            $expires = !empty($offer['offer_expires_at']) ? date('d.m H:i', strtotime((string)$offer['offer_expires_at'])) : null;
+            $desired = !empty($offer['desired_delivery_date']) ? date('d.m.Y', strtotime((string)$offer['desired_delivery_date'])) : 'Не имеет значения';
+          ?>
+          <div class="p-4 space-y-2">
+            <p class="text-sm font-semibold text-gray-800">
+              Пришла поставка: <?= htmlspecialchars((string)$offer['product_name']) ?> <?= htmlspecialchars((string)$offer['variety']) ?>
+            </p>
+            <p class="text-xs text-gray-600">
+              Бронь: <?= (float)($offer['requested_boxes'] ?? 0) ?> ящ.,
+              цена: <?= number_format((float)($offer['offered_price_per_box'] ?? 0), 0, '.', ' ') ?> ₽,
+              дата: <?= htmlspecialchars($desired) ?>
+            </p>
+            <?php if ($expires): ?>
+              <p class="text-xs text-amber-700">Подтвердите до <?= htmlspecialchars($expires) ?></p>
+            <?php endif; ?>
+            <div class="flex gap-2">
+              <button type="button"
+                      class="px-3 py-2 rounded-lg text-sm text-white <?= $isActiveOffer ? 'bg-emerald-600' : 'bg-gray-300 cursor-not-allowed' ?>"
+                      data-preorder-action="confirm"
+                      data-intent-id="<?= (int)$offer['id'] ?>"
+                      <?= $isActiveOffer ? '' : 'disabled' ?>>
+                Подтверждаю
+              </button>
+              <button type="button"
+                      class="px-3 py-2 rounded-lg text-sm text-white <?= $isActiveOffer ? 'bg-rose-600' : 'bg-gray-300 cursor-not-allowed' ?>"
+                      data-preorder-action="decline"
+                      data-intent-id="<?= (int)$offer['id'] ?>"
+                      <?= $isActiveOffer ? '' : 'disabled' ?>>
+                Отказаться
+              </button>
+            </div>
+          </div>
+        <?php endforeach; ?>
+      <?php else: ?>
+        <div class="p-4 text-sm text-gray-500">Нет активных предложений по предзаказам.</div>
       <?php endif; ?>
     </section>
   </div>
@@ -90,6 +138,21 @@
     closeBtn.addEventListener('click', close);
     modal.addEventListener('click', (e) => {
       if (e.target === modal) close();
+    });
+
+    document.querySelectorAll('[data-preorder-action]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const action = btn.getAttribute('data-preorder-action');
+        const intentId = btn.getAttribute('data-intent-id');
+        if (!action || !intentId) return;
+        const res = await fetch(`/preorder-intents/${intentId}/${action}`, { method: 'POST' });
+        const data = await res.json();
+        if (action === 'confirm' && data?.continue_url) {
+          window.location.href = data.continue_url;
+          return;
+        }
+        window.location.reload();
+      });
     });
   })();
 </script>
