@@ -1253,7 +1253,7 @@ public function cancelReservedOrder(int $orderId): void
     public function notifications(): void
     {
         requireClient();
-        $userId = $_SESSION['user_id'];
+        $userId = (int)$_SESSION['user_id'];
         $stmt = $this->pdo->prepare("SELECT phone FROM users WHERE id = ?");
         $stmt->execute([$userId]);
         $phone = $stmt->fetchColumn();
@@ -1261,10 +1261,26 @@ public function cancelReservedOrder(int $orderId): void
         $notificationRows = $this->pdo->query(
             "SELECT id, code, description FROM notifications ORDER BY id DESC"
         )->fetchAll(PDO::FETCH_ASSOC);
+
+        $offersStmt = $this->pdo->prepare(
+            "SELECT pi.id, pi.status, pi.requested_boxes, pi.offered_price_per_box, pi.offer_expires_at,
+                    pi.desired_delivery_date,
+                    p.alias AS product_alias, p.variety, pt.alias AS type_alias, pt.name AS product_name
+             FROM preorder_intents pi
+             JOIN products p ON p.id = pi.product_id
+             JOIN product_types pt ON pt.id = p.product_type_id
+             WHERE pi.user_id = ?
+               AND pi.status IN ('offer_sent', 'confirmed', 'declined', 'expired')
+             ORDER BY pi.updated_at DESC, pi.id DESC"
+        );
+        $offersStmt->execute([$userId]);
+        $preorderOffers = $offersStmt->fetchAll(PDO::FETCH_ASSOC);
+
         view('client/notifications', [
             'userName' => $_SESSION['name'] ?? null,
             'tgStart'  => $tgStart,
             'notifications' => $notificationRows,
+            'preorderOffers' => $preorderOffers,
         ]);
     }
 
