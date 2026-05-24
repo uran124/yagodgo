@@ -59,8 +59,7 @@
     <textarea name="comment" rows="2" class="w-full border px-2 py-1 rounded"><?= htmlspecialchars((string)($batch['comment'] ?? '')) ?></textarea>
     <div>
       <label class="block mb-1 text-sm">Добавить фото</label>
-      <input type="file" name="photos[]" multiple accept="image/*" capture="environment" class="w-full border px-2 py-1 rounded js-batch-photo-input">
-      <p class="text-xs text-gray-500 mt-1">Можно снять фото с камеры. Фото автоматически обрезаются до квадрата.</p>
+      <input type="file" name="photos[]" multiple accept="image/*" class="w-full border px-2 py-1 rounded">
     </div>
     <button type="submit" class="bg-[#C86052] text-white px-4 py-2 rounded">Сохранить изменения</button>
   </form>
@@ -176,59 +175,3 @@
   </div>
 </div>
 <?php endif; ?>
-
-<script>
-  (function () {
-    const inputs = document.querySelectorAll('.js-batch-photo-input');
-    if (!inputs.length) return;
-
-    const cropToSquareBlob = (file) => new Promise((resolve) => {
-      const img = new Image();
-      const url = URL.createObjectURL(file);
-      img.onload = () => {
-        const size = Math.min(img.naturalWidth, img.naturalHeight);
-        const sx = Math.floor((img.naturalWidth - size) / 2);
-        const sy = Math.floor((img.naturalHeight - size) / 2);
-        const canvas = document.createElement('canvas');
-        canvas.width = size;
-        canvas.height = size;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          URL.revokeObjectURL(url);
-          resolve(file);
-          return;
-        }
-        ctx.drawImage(img, sx, sy, size, size, 0, 0, size, size);
-        canvas.toBlob((blob) => {
-          URL.revokeObjectURL(url);
-          if (!blob) {
-            resolve(file);
-            return;
-          }
-          resolve(new File([blob], file.name.replace(/\.[^.]+$/, '') + '.webp', { type: 'image/webp' }));
-        }, 'image/webp', 0.9);
-      };
-      img.onerror = () => {
-        URL.revokeObjectURL(url);
-        resolve(file);
-      };
-      img.src = url;
-    });
-
-    inputs.forEach((input) => {
-      input.addEventListener('change', async () => {
-        if (!input.files || !input.files.length) return;
-        const dt = new DataTransfer();
-        for (const file of input.files) {
-          if (!file.type.startsWith('image/')) {
-            dt.items.add(file);
-            continue;
-          }
-          const cropped = await cropToSquareBlob(file);
-          dt.items.add(cropped);
-        }
-        input.files = dt.files;
-      });
-    });
-  })();
-</script>
