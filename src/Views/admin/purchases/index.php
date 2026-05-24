@@ -301,8 +301,21 @@
     document.querySelectorAll('.js-open-reserve-modal').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var batchId = btn.getAttribute('data-batch-id');
-        fetch('<?= $basePath ?>/purchases/reservations?batch_id=' + encodeURIComponent(batchId))
-          .then(function (r) { return r.json(); })
+        fetch('<?= $basePath ?>/purchases/reservations?batch_id=' + encodeURIComponent(batchId), {
+          headers: { 'Accept': 'application/json' }
+        })
+          .then(function (r) {
+            return r.text().then(function (text) {
+              if (!r.ok) {
+                throw new Error('Сервер вернул ошибку: ' + r.status);
+              }
+              try {
+                return JSON.parse(text || '{}');
+              } catch (e) {
+                throw new Error('Ответ сервера не JSON');
+              }
+            });
+          })
           .then(function (data) {
             var items = (data && data.items) ? data.items : [];
             if (!items.length) { list.innerHTML = '<div class="p-3 text-sm text-gray-500">Нет активных броней.</div>'; }
@@ -312,6 +325,11 @@
               }).join('');
             }
             modal.classList.add('is-open');
+          })
+          .catch(function (err) {
+            list.innerHTML = '<div class="p-3 text-sm text-red-500">Не удалось загрузить список броней. Обновите страницу или попробуйте позже.</div>';
+            modal.classList.add('is-open');
+            console.error(err);
           });
       });
     });
