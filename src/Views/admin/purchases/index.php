@@ -17,8 +17,8 @@
   .purchase-filter-select { padding: 0.3rem 0.45rem !important; font-size: 0.8125rem; }
   .purchase-filter-reset { padding: 0.3rem 0.55rem; font-size: 0.72rem; }
   .purchase-preorder-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
-  .purchase-preorder-metrics { display: flex; gap: 0.45rem; min-width: max-content; }
-  .purchase-preorder-metric { min-width: 145px; padding: 0.55rem !important; border-radius: 0.5rem; }
+  .purchase-preorder-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.45rem; width: 100%; }
+  .purchase-preorder-metric { min-width: 0; padding: 0.5rem !important; border-radius: 0.5rem; }
   .purchase-qty-chip { display: inline-flex; align-items: center; padding: 0.15rem 0.5rem; border-radius: 9999px; background: rgba(148, 163, 184, 0.15); }
   .purchase-preorders-box { padding: 0.55rem !important; margin-bottom: 0.4rem !important; }
   .purchase-preorders-title { font-size: 1.1rem; line-height: 1.25; margin-bottom: 0.35rem !important; }
@@ -82,12 +82,15 @@
     .purchase-filter-reset { padding: 0.28rem 0.45rem; font-size: 0.72rem; }
     .purchase-preorders-box { padding: 0.45rem !important; margin-bottom: 0.3rem !important; }
     .purchase-preorders-title { font-size: 1rem; margin-bottom: 0.25rem !important; }
-    .purchase-preorder-metrics { gap: 0.35rem; }
-    .purchase-preorder-metric { min-width: 132px; padding: 0.45rem !important; }
+    .purchase-preorder-scroll { overflow-x: hidden; }
+    .purchase-preorder-metrics { gap: 0.3rem; width: 100%; }
+    .purchase-preorder-metric { min-width: 0; padding: 0.38rem !important; }
+    .purchase-preorder-metric .text-xs { font-size: 0.68rem; line-height: 1.05; }
+    .purchase-preorder-metric .text-xl { font-size: 1.45rem; line-height: 1.1; }
     .purchase-preorders-table thead th { font-size: 0.75rem; padding-top: 0.36rem; padding-bottom: 0.36rem; }
     .purchase-preorders-table td { font-size: 0.8rem; padding-top: 0.4rem; padding-bottom: 0.4rem; }
     .purchase-preorders-table { table-layout: fixed; width: 100%; }
-    .purchase-preorders-table .purchase-col-product { width: calc(100% - 108px); }
+    .purchase-preorders-table .purchase-col-product { width: auto; }
     .purchase-preorders-table .purchase-col-qty,
     .purchase-preorders-table .purchase-col-confirm { width: 54px; }
     .purchase-preorders-table .purchase-col-intents { display: none; }
