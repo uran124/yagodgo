@@ -1417,6 +1417,9 @@ public function cancelReservedOrder(int $orderId): void
         $requestedBoxes = round((float)($_POST['requested_boxes'] ?? 0), 2);
         $sourceSection = trim((string)($_POST['source_section'] ?? ''));
         $sourceDeliveryDate = trim((string)($_POST['source_delivery_date'] ?? ''));
+        $desiredDeliveryDateRaw = trim((string)($_POST['desired_delivery_date'] ?? ''));
+        $expectedPricePerBox = round((float)($_POST['expected_price_per_box'] ?? 0), 2);
+        $discountPercentSnapshot = round((float)($_POST['discount_percent_snapshot'] ?? 0), 2);
 
         if ($userId <= 0 || $productId <= 0 || $requestedBoxes <= 0) {
             http_response_code(422);
@@ -1448,27 +1451,48 @@ public function cancelReservedOrder(int $orderId): void
             }
         }
 
+        $desiredDeliveryDate = null;
+        if ($desiredDeliveryDateRaw !== '' && $desiredDeliveryDateRaw !== 'any') {
+            $tsDesired = strtotime($desiredDeliveryDateRaw);
+            if ($tsDesired !== false) {
+                $desiredDeliveryDate = date('Y-m-d', $tsDesired);
+            }
+        }
+        $expectedPriceStored = $expectedPricePerBox > 0 ? $expectedPricePerBox : null;
+        $discountSnapshotStored = $discountPercentSnapshot >= 0 ? $discountPercentSnapshot : null;
+
         if ($existingId) {
             $this->pdo->prepare(
-                "UPDATE preorder_intents SET requested_boxes = ?, status = 'intent_created', offered_price_per_box = NULL, offer_expires_at = NULL, checkout_token = NULL WHERE id = ?"
-            )->execute([$requestedBoxes, (int)$existingId]);
+                "UPDATE preorder_intents
+                 SET requested_boxes = ?, desired_delivery_date = ?, expected_price_per_box = ?, discount_percent_snapshot = ?,
+                     status = 'intent_created', offered_price_per_box = NULL, offer_expires_at = NULL, checkout_token = NULL
+                 WHERE id = ?"
+            )->execute([$requestedBoxes, $desiredDeliveryDate, $expectedPriceStored, $discountSnapshotStored, (int)$existingId]);
             $intentId = (int)$existingId;
             $this->logPreorderEvent($intentId, 'intent_updated', null, 'intent_created', [
                 'requested_boxes' => $requestedBoxes,
                 'source_section' => $sourceSection,
                 'source_delivery_date' => $sourceDeliveryDate,
                 'eta_delivery_date' => $etaDateValue,
+                'desired_delivery_date' => $desiredDeliveryDate ?? 'any',
+                'expected_price_per_box' => $expectedPriceStored,
+                'discount_percent_snapshot' => $discountSnapshotStored,
             ]);
         } else {
             $this->pdo->prepare(
-                "INSERT INTO preorder_intents (user_id, product_id, requested_boxes, status, created_at, updated_at) VALUES (?, ?, ?, 'intent_created', NOW(), NOW())"
-            )->execute([$userId, $productId, $requestedBoxes]);
+                "INSERT INTO preorder_intents (
+                    user_id, product_id, requested_boxes, desired_delivery_date, expected_price_per_box, discount_percent_snapshot, status, created_at, updated_at
+                 ) VALUES (?, ?, ?, ?, ?, ?, 'intent_created', NOW(), NOW())"
+            )->execute([$userId, $productId, $requestedBoxes, $desiredDeliveryDate, $expectedPriceStored, $discountSnapshotStored]);
             $intentId = (int)$this->pdo->lastInsertId();
             $this->logPreorderEvent($intentId, 'intent_created', null, 'intent_created', [
                 'requested_boxes' => $requestedBoxes,
                 'source_section' => $sourceSection,
                 'source_delivery_date' => $sourceDeliveryDate,
                 'eta_delivery_date' => $etaDateValue,
+                'desired_delivery_date' => $desiredDeliveryDate ?? 'any',
+                'expected_price_per_box' => $expectedPriceStored,
+                'discount_percent_snapshot' => $discountSnapshotStored,
             ]);
         }
 
