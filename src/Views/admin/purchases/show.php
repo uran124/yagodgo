@@ -65,6 +65,27 @@
   </form>
 </div>
 
+<div class="bg-white p-4 rounded shadow mb-4 border border-slate-200">
+  <h3 class="font-semibold mb-3">Этап закупки</h3>
+  <div class="flex flex-wrap gap-2">
+    <?php if (($batch['status'] ?? '') === 'planned'): ?>
+      <form method="post" action="<?= $basePath ?>/purchases/purchased">
+        <?= csrf_field() ?>
+        <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
+        <button type="submit" class="bg-emerald-600 text-white px-4 py-2 rounded">Выкуплено</button>
+      </form>
+    <?php elseif (($batch['status'] ?? '') === 'purchased'): ?>
+      <form method="post" action="<?= $basePath ?>/purchases/arrived">
+        <?= csrf_field() ?>
+        <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">В магазине</button>
+      </form>
+    <?php else: ?>
+      <span class="inline-flex items-center px-3 py-2 rounded bg-gray-100 text-gray-700 text-sm">Этап завершён: готова к выдаче</span>
+    <?php endif; ?>
+  </div>
+</div>
+
 <div class="bg-white p-4 rounded shadow mb-4 border border-amber-200">
   <h3 class="font-semibold text-amber-700 mb-2">Закрытие закупки</h3>
   <form method="post" action="<?= $basePath ?>/purchases/close" onsubmit="return confirm('Закрыть закупку? Данные сохранятся, свободный остаток станет 0.');">
@@ -138,3 +159,19 @@
     </tbody>
   </table>
 </div>
+
+<?php if ($basePath !== '/buyer'): ?>
+<div class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 p-3">
+  <div class="grid grid-cols-3 gap-2">
+    <a href="<?= $basePath ?>/purchases" class="h-10 rounded-lg border border-gray-300 text-gray-700 text-sm flex items-center justify-center">Вернуться</a>
+    <button type="submit" form="" onclick="document.querySelector('form[action$=\"/purchases/update\"]')?.requestSubmit();" class="h-10 rounded-lg border border-gray-300 text-gray-700 text-sm">Сохранить</button>
+    <?php if (($batch['status'] ?? '') === 'planned'): ?>
+      <button type="submit" onclick="document.querySelector('form[action$=\"/purchases/purchased\"]')?.requestSubmit();" class="h-10 rounded-lg bg-emerald-600 text-white text-sm">Выкуплено</button>
+    <?php elseif (($batch['status'] ?? '') === 'purchased'): ?>
+      <button type="submit" onclick="document.querySelector('form[action$=\"/purchases/arrived\"]')?.requestSubmit();" class="h-10 rounded-lg bg-blue-600 text-white text-sm">В магазине</button>
+    <?php else: ?>
+      <button type="button" disabled class="h-10 rounded-lg bg-gray-200 text-gray-500 text-sm">Готово</button>
+    <?php endif; ?>
+  </div>
+</div>
+<?php endif; ?>
