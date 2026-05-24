@@ -43,6 +43,7 @@
     width: 3rem;
     padding: 0 !important;
     border: 0 !important;
+    background: rgba(148, 163, 184, 0.2) !important;
   }
   .reserve-modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); display: none; align-items: center; justify-content: center; z-index: 60; padding: 0.75rem; }
   .reserve-modal-backdrop.is-open { display: flex; }
@@ -56,6 +57,7 @@
   [data-theme='dark'] .purchase-row-meta { color: #e2e8f0; }
   [data-theme='dark'] .purchase-row-subline { color: #cbd5e1; }
   [data-theme='dark'] .purchase-card-form { background: rgba(15, 23, 42, 0.65); border-color: #475569; }
+  [data-theme='dark'] .purchase-action-qty { background: rgba(71, 85, 105, 0.45) !important; color: #e2e8f0; }
   [data-theme='dark'] .purchase-card-form input {
     background: #0f172a;
     color: #e2e8f0;
@@ -235,14 +237,14 @@
           </div>
         </div>
             <div class="purchase-item-actions">
-              <form method="post" action="<?= $basePath ?>/purchases/move-to-discount" class="purchase-action-form purchase-mobile-form purchase-card-form flex items-center gap-1 bg-yellow-900/30 border border-yellow-700 rounded px-2 py-1">
+              <form method="post" action="<?= $basePath ?>/purchases/move-to-discount" class="purchase-action-form purchase-mobile-form purchase-card-form flex items-center gap-1 bg-yellow-900/30 rounded p-0 border-0">
                 <?= csrf_field() ?>
                 <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
                 <input name="boxes" type="number" step="0.01" min="0.01" placeholder="ящ." class="purchase-action-qty w-12 rounded text-xs text-gray-900">
                 <input name="reason" type="text" placeholder="причина" class="purchase-reason w-24 border rounded px-1 py-1 text-xs text-gray-900">
                 <button class="purchase-btn-discount text-xs bg-yellow-500 hover:bg-yellow-400 text-gray-900 px-2 py-1 rounded" type="submit">Уценка</button>
               </form>
-              <form method="post" action="<?= $basePath ?>/purchases/write-off" class="purchase-action-form purchase-mobile-form purchase-card-form flex items-center gap-1 bg-red-900/30 border border-red-700 rounded px-2 py-1">
+              <form method="post" action="<?= $basePath ?>/purchases/write-off" class="purchase-action-form purchase-mobile-form purchase-card-form flex items-center gap-1 bg-red-900/30 rounded p-0 border-0">
                 <?= csrf_field() ?>
                 <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
                 <input name="boxes" type="number" step="0.01" min="0.01" placeholder="ящ." class="purchase-action-qty w-12 rounded text-xs text-gray-900">
