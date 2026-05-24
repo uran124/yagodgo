@@ -17,7 +17,13 @@ class ClientCatalogServiceTest extends TestCase
 
         $this->pdo->exec('CREATE TABLE product_types (id INTEGER PRIMARY KEY, name TEXT, alias TEXT)');
         $this->pdo->exec('CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, company_name TEXT)');
-        $this->pdo->exec('CREATE TABLE purchase_batches (id INTEGER PRIMARY KEY, status TEXT)');
+        $this->pdo->exec('CREATE TABLE purchase_batches (
+            id INTEGER PRIMARY KEY,
+            product_id INTEGER,
+            status TEXT,
+            boxes_free REAL DEFAULT 0,
+            purchased_at TEXT
+        )');
         $this->pdo->exec('CREATE TABLE products (
             id INTEGER PRIMARY KEY,
             alias TEXT,
@@ -52,7 +58,12 @@ class ClientCatalogServiceTest extends TestCase
         $this->pdo->exec("INSERT INTO product_types (id, name, alias) VALUES (1, 'Клубника', 'klubnika')");
         $this->pdo->exec("INSERT INTO users (id, name, company_name) VALUES (1, 'Seller One', 'Berry Seller')");
         $this->pdo->exec("INSERT INTO content_categories (id, alias) VALUES (1, 'news')");
-        $this->pdo->exec("INSERT INTO purchase_batches (id, status) VALUES (11, 'arrived'), (12, 'purchased'), (13, 'planned')");
+        $this->pdo->exec("INSERT INTO purchase_batches (id, product_id, status, boxes_free, purchased_at) VALUES
+            (11, 1, 'arrived', 0, '2025-03-25 08:00:00'),
+            (12, 2, 'purchased', 5, '2025-03-24 08:00:00'),
+            (13, 4, 'planned', 0, '2025-03-27 08:00:00'),
+            (14, 2, 'planned', 0, '2025-03-29 08:00:00')
+        ");
 
         $this->pdo->exec(
             "INSERT INTO products (id, alias, product_type_id, seller_id, variety, description, origin_country, box_size, box_unit, price, sale_price, is_active, image_path, delivery_date, current_purchase_batch_id, free_stock_boxes, discount_stock_boxes, stock_status) VALUES
@@ -78,6 +89,7 @@ class ClientCatalogServiceTest extends TestCase
         $this->assertSame('seller-product', $data['sellerProducts'][0]['alias']);
         $this->assertSame('preorder-product', $data['preorderProducts'][0]['alias']);
         $this->assertSame('material-1', $data['materials'][0]['mat_alias']);
+        $this->assertSame(1, (int)$data['regularProducts'][0]['has_planned_batch']);
     }
 
     public function testCatalogDataReturnsProductsTypesAndDebugInfo(): void
@@ -91,6 +103,7 @@ class ClientCatalogServiceTest extends TestCase
         $this->assertSame('sale-product', $data['products'][0]['alias']);
         $this->assertSame('sale', $data['products'][0]['catalog_section']);
         $this->assertSame('in_stock', $data['products'][1]['catalog_section']);
+        $this->assertSame(1, (int)$data['products'][1]['has_planned_batch']);
         $this->assertSame('seller', $data['products'][2]['catalog_section']);
         $this->assertSame('preorder', $data['products'][3]['catalog_section']);
     }
