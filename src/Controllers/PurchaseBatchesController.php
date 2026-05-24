@@ -350,6 +350,7 @@ ORDER BY is_closed ASC, pb.id DESC';
         $batchId = (int)($_POST['batch_id'] ?? 0);
         if ($batchId > 0) {
             try {
+                $this->ensureBatchPhotosBeforeArrived($batchId);
                 $this->purchaseBatchService->markArrived($batchId);
                 $movedBoxes = 0.0;
                 if (isset($_POST['move_leftovers_to_discount'])) {
@@ -363,6 +364,38 @@ ORDER BY is_closed ASC, pb.id DESC';
         }
         header('Location: ' . $this->basePath() . '/purchases');
         exit;
+    }
+
+    private function ensureBatchPhotosBeforeArrived(int $batchId): void
+    {
+        $countStmt = $this->pdo->prepare('SELECT COUNT(*) FROM purchase_batch_photos WHERE purchase_batch_id = ?');
+        $countStmt->execute([$batchId]);
+        $count = (int)$countStmt->fetchColumn();
+        if ($count >= 2) {
+            return;
+        }
+
+        $batchStmt = $this->pdo->prepare(
+            'SELECT pb.product_id, p.image_path
+             FROM purchase_batches pb
+             JOIN products p ON p.id = pb.product_id
+             WHERE pb.id = ?
+             LIMIT 1'
+        );
+        $batchStmt->execute([$batchId]);
+        $row = $batchStmt->fetch(PDO::FETCH_ASSOC);
+        $fallbackImage = trim((string)($row['image_path'] ?? ''));
+        if ($fallbackImage === '') {
+            return;
+        }
+
+        $insertStmt = $this->pdo->prepare(
+            'INSERT INTO purchase_batch_photos (purchase_batch_id, image_path) VALUES (?, ?)'
+        );
+        while ($count < 2) {
+            $insertStmt->execute([$batchId, $fallbackImage]);
+            $count++;
+        }
     }
 
     public function markPurchased(): void

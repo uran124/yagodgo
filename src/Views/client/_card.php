@@ -50,6 +50,7 @@ $cardSection = (string)($cardSection ?? '');
 $isPreorderSection = $cardSection === 'preorder';
 $isSaleSection = $cardSection === 'sale';
 $isInStockSection = $cardSection === 'in_stock';
+$hasPlannedBatch = (int)($p['has_planned_batch'] ?? 0) === 1;
 $preorderDiscountPercent = (float)(get_setting('ui_preorder_discount_percent', '10') ?? '10');
 $preorderDiscountPercent = max(0.0, min(99.0, $preorderDiscountPercent));
 $discountFactor = (100 - $preorderDiscountPercent) / 100;
@@ -256,8 +257,8 @@ if ($plannedDateRaw === '' && $preorderDateKnown) {
 
         <!-- Предзаказ — вторичное действие: outline-стиль, меньше веса -->
         <button type="button"
-                <?= ($isSaleSection || !$preorderDateKnown) ? 'disabled' : '' ?>
-                class="w-full h-9 flex items-center justify-center gap-1.5 border font-medium text-xs sm:text-sm rounded-xl transition-colors preorder-intent-btn <?= ($isSaleSection || !$preorderDateKnown) ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed' : 'border-emerald-500 text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100' ?>"
+                <?= (($isSaleSection || !$hasPlannedBatch)) ? 'disabled' : '' ?>
+                class="w-full h-9 flex items-center justify-center gap-1.5 border font-medium text-xs sm:text-sm rounded-xl transition-colors preorder-intent-btn <?= (($isSaleSection || !$hasPlannedBatch)) ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed' : 'border-emerald-500 text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100' ?>"
                 data-product-id="<?= (int)$p['id'] ?>"
                 data-product-title="<?= htmlspecialchars(trim(($p['product'] ?? '') . ' ' . ($p['variety'] ?? ''))) ?>"
                 data-preorder-price="<?= (float)$preorderDiscountBox ?>"
