@@ -300,29 +300,39 @@ ORDER BY is_closed ASC, pb.id DESC';
     {
         $this->ensureCsrfOrRedirect();
 
+        $status = 'planned';
+        $purchasePrice = (float)($_POST['purchase_price_per_box'] ?? 0);
+        $instantPrice = $purchasePrice > 0 ? $purchasePrice : 0.0;
+        $preorderPrice = $instantPrice > 0 ? round($instantPrice * 0.9, 2) : 0.0;
+        $preorderCountStmt = $this->pdo->prepare(
+            "SELECT COALESCE(SUM(requested_boxes), 0)
+             FROM preorder_intents
+             WHERE product_id = ? AND status IN ('intent_created','offer_sent','confirmed')"
+        );
+        $preorderCountStmt->execute([(int)($_POST['product_id'] ?? 0)]);
+        $preorderBoxes = (float)$preorderCountStmt->fetchColumn();
+
         $payload = [
             'product_id' => (int)($_POST['product_id'] ?? 0),
             'buyer_user_id' => (int)($_SESSION['user_id'] ?? 0),
-            'boxes_total' => (float)($_POST['boxes_total'] ?? 0),
-            'boxes_reserved' => (float)($_POST['boxes_reserved'] ?? 0),
+            'boxes_total' => (float)($_POST['boxes_total'] ?? $preorderBoxes),
+            'boxes_reserved' => (float)($_POST['boxes_reserved'] ?? $preorderBoxes),
             'boxes_free' => (float)($_POST['boxes_free'] ?? 0),
-            'purchase_price_per_box' => (float)($_POST['purchase_price_per_box'] ?? 0),
+            'purchase_price_per_box' => $purchasePrice,
             'extra_cost_per_box' => (float)($_POST['extra_cost_per_box'] ?? 0),
             'instant_price_per_box' => $instantPrice,
             'preorder_price_per_box' => $preorderPrice,
             'status' => $status,
             'purchased_at' => (string)($_POST['planned_supply_date'] ?? ''),
-            'instant_price_per_box' => $instantPrice,
-            'preorder_price_per_box' => $preorderPrice,
             'comment' => trim((string)($_POST['comment'] ?? '')),
         ];
 
         try {
             $batchId = $this->purchaseBatchService->createBatch($payload);
-                    $batchSnapshot = $this->pdo->prepare('UPDATE products SET current_purchase_batch_id = ?, instant_price_per_box = ?, preorder_price_per_box = ?, price = ? WHERE id = ? LIMIT 1');
-        $batchSnapshot->execute([(int)($_POST['product_id'] ?? 0), $instantPrice, $preorderPrice, $instantPrice, (int)($_POST['product_id'] ?? 0)]);
+            $batchSnapshot = $this->pdo->prepare('UPDATE products SET current_purchase_batch_id = ?, instant_price_per_box = ?, preorder_price_per_box = ?, price = ? WHERE id = ? LIMIT 1');
+            $batchSnapshot->execute([(int)($_POST['product_id'] ?? 0), $instantPrice, $preorderPrice, $instantPrice, (int)($_POST['product_id'] ?? 0)]);
 
-        $this->storeBatchPhotos($batchId);
+            $this->storeBatchPhotos($batchId);
             $this->setFlash('success', 'Закупка успешно создана.');
         } catch (RuntimeException $e) {
             $this->setFlash('error', $e->getMessage());
