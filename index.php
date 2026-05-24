@@ -7,6 +7,15 @@ require __DIR__ . '/bootstrap/auth.php';
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $method = $_SERVER['REQUEST_METHOD'];
 
+if ($uri === '/favicon.ico') {
+    $faviconPath = __DIR__ . '/assets/images/favicon.svg';
+    if (is_file($faviconPath)) {
+        header('Content-Type: image/svg+xml');
+        readfile($faviconPath);
+        return;
+    }
+}
+
 $context = [
     'pdo' => $pdo,
     'telegramConfig' => $telegramConfig,
