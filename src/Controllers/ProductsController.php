@@ -413,14 +413,14 @@ class ProductsController
         exit;
     }
 
-    // Обновление даты закупки активной закупки
+    // Обновление даты запланированной закупки (planned) для товара
     public function updateDeliveryDate(): void
     {
         $id = (int)($_POST['id'] ?? 0);
         $raw = trim($_POST['delivery_date'] ?? '');
         $date = $raw !== '' ? $raw : null;
         if ($id && $date !== null) {
-            $batchId = $this->resolveCurrentPurchaseBatchId($id);
+            $batchId = $this->resolvePlannedPurchaseBatchId($id);
             if ($batchId !== null) {
                 $stmt = $this->pdo->prepare("UPDATE purchase_batches SET purchased_at = ? WHERE id = ?");
                 $stmt->execute([$date . ' 00:00:00', $batchId]);
@@ -449,17 +449,23 @@ class ProductsController
     }
 
 
-    private function resolveCurrentPurchaseBatchId(int $productId): ?int
+    private function resolvePlannedPurchaseBatchId(int $productId): ?int
     {
-        $role = $_SESSION['role'] ?? '';
         $params = [$productId];
-        $sql = "SELECT current_purchase_batch_id FROM products WHERE id = ?";
+        $sql = "SELECT pb.id
+                FROM purchase_batches pb
+                JOIN products p ON p.id = pb.product_id
+                WHERE pb.product_id = ?
+                  AND pb.status = 'planned'";
+
+        $role = $_SESSION['role'] ?? '';
         if ($role === 'seller') {
-            $sql .= " AND seller_id = ?";
+            $sql .= " AND p.seller_id = ?";
             $params[] = (int)($_SESSION['user_id'] ?? 0);
         }
 
-        $stmt = $this->pdo->prepare($sql . " LIMIT 1");
+        $sql .= " ORDER BY pb.purchased_at ASC, pb.id ASC LIMIT 1";
+        $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
         $batchId = $stmt->fetchColumn();
 
