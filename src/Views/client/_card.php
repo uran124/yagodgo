@@ -60,6 +60,9 @@ $plannedDateRaw = (string)($p['next_planned_date'] ?? '');
 if ($plannedDateRaw === '' && $preorderDateKnown) {
     $plannedDateRaw = (string)$d;
 }
+$showInStockBadge = $showDate && $d <= $today && !$isPreorderSection;
+$showNextSupplyBadge = $plannedDateRaw !== '' && !$isPreorderSection;
+$nextSupplyDateText = $showNextSupplyBadge ? date('d.m.Y', strtotime($plannedDateRaw)) : '';
 ?>
 <div class="product-card bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col hover:shadow-2xl transition-shadow duration-200 sm:h-full max-w-[350px]"
      data-search="<?= htmlspecialchars($search) ?>"
@@ -88,9 +91,10 @@ if ($plannedDateRaw === '' && $preorderDateKnown) {
       </span>
     <?php else: ?>
       <!-- Бейджик даты / наличия -->
-      <?php if ($showDate && $d <= $today): ?>
-        <span class="availability-badge availability-badge--instock absolute top-3 left-3 text-xs font-semibold <?= $isStaff ? 'cursor-pointer' : '' ?>" <?= $isStaff ? 'data-edit-date="' . $p['id'] . '"' : '' ?>>
-          В наличии
+      <?php if ($showInStockBadge): ?>
+        <span class="absolute top-3 left-3 text-[11px] font-semibold px-2 py-1 rounded-full border border-[#C86052] bg-white text-[#C86052] inline-flex items-center gap-1 <?= $isStaff ? 'cursor-pointer' : '' ?>" <?= $isStaff ? 'data-edit-date="' . $p['id'] . '"' : '' ?>>
+          <span class="material-icons-round text-[13px] leading-none">storefront</span>
+          <span>В магазине</span>
         </span>
       <?php elseif ($showDate): ?>
         <span class="availability-badge availability-badge--date absolute top-3 left-3 text-xs font-semibold <?= $isStaff ? 'cursor-pointer' : '' ?>" <?= $isStaff ? 'data-edit-date="' . $p['id'] . '"' : '' ?>>
@@ -99,6 +103,13 @@ if ($plannedDateRaw === '' && $preorderDateKnown) {
       <?php else: ?>
         <span class="availability-badge availability-badge--placeholder absolute top-3 left-3 text-xs font-semibold <?= $isStaff ? 'cursor-pointer' : '' ?>" <?= $isStaff ? 'data-edit-date="' . $p['id'] . '"' : '' ?>>
           Ближайшая возможная дата
+        </span>
+      <?php endif; ?>
+
+      <?php if ($showNextSupplyBadge): ?>
+        <span class="absolute top-3 right-3 text-[11px] font-semibold px-2 py-1 rounded-full border border-emerald-500 bg-white text-emerald-700 inline-flex items-center gap-1">
+          <span class="material-icons-round text-[13px] leading-none">local_shipping</span>
+          <span><?= htmlspecialchars($nextSupplyDateText) ?></span>
         </span>
       <?php endif; ?>
 
@@ -226,9 +237,9 @@ if ($plannedDateRaw === '' && $preorderDateKnown) {
           <!-- Строка: qty-stepper + кнопка корзины -->
           <div class="flex items-center gap-2 mb-2">
             <!-- Qty stepper -->
-            <div class="flex items-center rounded-xl border border-gray-200 bg-gray-50 overflow-hidden h-10 shrink-0">
+            <div class="flex items-center gap-1 h-10 shrink-0">
               <button type="button"
-                      class="w-9 h-10 flex items-center justify-center text-gray-500 hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                      class="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 active:bg-gray-100 transition-colors"
                       onclick="let inp=this.nextElementSibling; if(+inp.value>1) inp.value=+inp.value-1;">
                 <span class="material-icons-round text-base leading-none">remove</span>
               </button>
@@ -237,9 +248,9 @@ if ($plannedDateRaw === '' && $preorderDateKnown) {
                      value="1"
                      min="1"
                      step="1"
-                     class="w-10 h-10 text-center text-sm font-medium bg-transparent border-x border-gray-200 focus:outline-none preorder-qty" />
+                     class="w-8 text-center text-lg font-bold bg-transparent border-0 focus:outline-none preorder-qty" />
               <button type="button"
-                      class="w-9 h-10 flex items-center justify-center text-gray-500 hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                      class="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 active:bg-gray-100 transition-colors"
                       onclick="let inp=this.previousElementSibling; inp.value=+inp.value+1;">
                 <span class="material-icons-round text-base leading-none">add</span>
               </button>
@@ -267,12 +278,10 @@ if ($plannedDateRaw === '' && $preorderDateKnown) {
                 data-delivery-date="<?= htmlspecialchars((string)($d ?? '')) ?>"
                 data-planned-date="<?= htmlspecialchars($plannedDateRaw) ?>">
           <span class="material-icons-round text-base leading-none">schedule</span>
-          <?= $isInStockSection ? 'Предзаказ' : 'Предзаказ −10%' ?>
+          Предзаказ −10%
         </button>
 
-        <?php if ($preorderDateKnown): ?>
-          <p class="mt-1.5 text-[11px] text-gray-400 text-center">Следующая поставка: <?= htmlspecialchars($preorderDateText) ?></p>
-        <?php elseif (!$isSaleSection): ?>
+        <?php if (!$isSaleSection && !$showNextSupplyBadge): ?>
           <p class="mt-1.5 text-[11px] text-gray-400 text-center">Дата следующей поставки уточняется</p>
         <?php elseif ($preorderPurchaseDate !== ''): ?>
           <p class="mt-1.5 text-[11px] text-gray-400 text-center">Дата закупки: <?= htmlspecialchars($preorderPurchaseDate) ?></p>
