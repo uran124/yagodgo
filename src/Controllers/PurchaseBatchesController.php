@@ -312,11 +312,24 @@ ORDER BY is_closed ASC, pb.id DESC';
         $preorderCountStmt->execute([(int)($_POST['product_id'] ?? 0)]);
         $preorderBoxes = (float)$preorderCountStmt->fetchColumn();
 
+        $requestedBoxesTotal = (float)($_POST['boxes_total'] ?? 0);
+        if ($requestedBoxesTotal <= 0) {
+            $requestedBoxesTotal = $preorderBoxes > 0 ? $preorderBoxes : 1.0;
+        }
+
+        $requestedBoxesReserved = (float)($_POST['boxes_reserved'] ?? $preorderBoxes);
+        if ($requestedBoxesReserved < 0) {
+            $requestedBoxesReserved = 0.0;
+        }
+        if ($requestedBoxesReserved > $requestedBoxesTotal) {
+            $requestedBoxesReserved = $requestedBoxesTotal;
+        }
+
         $payload = [
             'product_id' => (int)($_POST['product_id'] ?? 0),
             'buyer_user_id' => (int)($_SESSION['user_id'] ?? 0),
-            'boxes_total' => (float)($_POST['boxes_total'] ?? $preorderBoxes),
-            'boxes_reserved' => (float)($_POST['boxes_reserved'] ?? $preorderBoxes),
+            'boxes_total' => $requestedBoxesTotal,
+            'boxes_reserved' => $requestedBoxesReserved,
             'boxes_free' => (float)($_POST['boxes_free'] ?? 0),
             'purchase_price_per_box' => $purchasePrice,
             'extra_cost_per_box' => (float)($_POST['extra_cost_per_box'] ?? 0),
