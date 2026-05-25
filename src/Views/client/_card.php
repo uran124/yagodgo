@@ -56,12 +56,9 @@ $preorderDiscountPercent = max(0.0, min(99.0, $preorderDiscountPercent));
 $discountFactor = (100 - $preorderDiscountPercent) / 100;
 $preorderDiscountBox = round($regularBox * $discountFactor, 0);
 $preorderPriceHint = (string)(get_setting('ui_preorder_price_hint', 'Цена ориентировочная, точная цена будет после поступления') ?? '');
-$plannedDateRaw = (string)($p['next_planned_date'] ?? '');
-if ($plannedDateRaw === '' && $preorderDateKnown) {
-    $plannedDateRaw = (string)$d;
-}
+$plannedDateRaw = $hasPlannedBatch ? (string)($p['next_planned_date'] ?? '') : '';
 $showInStockBadge = $showDate && $d <= $today && !$isPreorderSection;
-$showNextSupplyBadge = $plannedDateRaw !== '' && !$isPreorderSection;
+$showNextSupplyBadge = $hasPlannedBatch && $plannedDateRaw !== '' && !$isPreorderSection;
 $nextSupplyDateText = $showNextSupplyBadge ? date('d.m.Y', strtotime($plannedDateRaw)) : '';
 ?>
 <div class="product-card bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col hover:shadow-2xl transition-shadow duration-200 sm:h-full max-w-[350px]"
@@ -346,25 +343,25 @@ $nextSupplyDateText = $showNextSupplyBadge ? date('d.m.Y', strtotime($plannedDat
     }
 
     const overlay = document.createElement('div');
-    overlay.className = 'fixed inset-0 z-[120] bg-black/40 hidden items-end sm:items-center justify-center';
+    overlay.className = 'fixed inset-0 z-[120] bg-black/40 hidden items-center justify-center p-2 sm:p-4';
     overlay.innerHTML = `
-      <div class="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-4 sm:p-5">
-        <h3 class="text-lg font-bold mb-2 preorder-modal-title"></h3>
-        <p class="text-sm text-gray-600 mb-3">Ориентировочная цена с учетом скидки -10%</p>
+      <div class="bg-white w-full max-w-[360px] sm:max-w-md rounded-2xl p-3 sm:p-5">
+        <h3 class="text-base sm:text-lg font-bold mb-1.5 preorder-modal-title"></h3>
+        <p class="text-xs sm:text-sm text-gray-600 mb-2.5">Ориентировочная цена с учетом скидки -10%</p>
         <div class="flex items-center justify-between mb-2">
-          <span class="text-sm">Количество:</span>
+          <span class="text-xs sm:text-sm">Количество:</span>
           <div class="flex items-center rounded-lg border border-gray-200 overflow-hidden">
-            <button type="button" class="px-3 py-1 preorder-minus">−</button>
-            <input type="number" min="1" step="1" value="1" class="w-12 text-center preorder-modal-qty" />
-            <button type="button" class="px-3 py-1 preorder-plus">+</button>
+            <button type="button" class="px-2.5 py-1 preorder-minus">−</button>
+            <input type="number" min="1" step="1" value="1" class="w-10 text-center preorder-modal-qty" />
+            <button type="button" class="px-2.5 py-1 preorder-plus">+</button>
           </div>
         </div>
-        <p class="text-2xl font-bold mb-3 preorder-modal-price"></p>
-        <p class="text-sm mb-2">Выберите дату для бронирования:</p>
-        <div class="space-y-2 preorder-date-list mb-4"></div>
+        <p class="text-xl sm:text-2xl font-bold mb-2.5 preorder-modal-price"></p>
+        <p class="text-xs sm:text-sm mb-2">Выберите дату для бронирования:</p>
+        <div class="space-y-1.5 sm:space-y-2 preorder-date-list mb-3"></div>
         <div class="flex gap-2">
-          <button type="button" class="flex-1 h-10 rounded-xl border border-gray-200 preorder-cancel">Отмена</button>
-          <button type="button" class="flex-1 h-10 rounded-xl text-white bg-emerald-600 preorder-submit">Забронировать</button>
+          <button type="button" class="flex-1 h-9 sm:h-10 rounded-xl border border-gray-200 preorder-cancel text-sm">Отмена</button>
+          <button type="button" class="flex-1 h-9 sm:h-10 rounded-xl text-white bg-emerald-600 preorder-submit text-sm">Забронировать</button>
         </div>
       </div>`;
     document.body.appendChild(overlay);
@@ -379,14 +376,14 @@ $nextSupplyDateText = $showNextSupplyBadge ? date('d.m.Y', strtotime($plannedDat
     const renderDates = () => {
       const items = [...dateChoices, {label: 'Не имеет значения', value: 'any'}];
       dateList.innerHTML = items.map((item, idx) => `
-        <button type="button" data-date="${item.value}" class="w-full text-left px-3 py-2 rounded-lg border ${idx===0 ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200'} preorder-date-item">${item.label}</button>
+        <button type="button" data-date="${item.value}" class="w-full text-left px-2.5 sm:px-3 py-2 rounded-lg border text-sm ${idx===0 ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200'} preorder-date-item">${item.label}</button>
       `).join('');
       selectedDate = items[0]?.value ?? 'any';
       dateList.querySelectorAll('.preorder-date-item').forEach((el) => {
         el.addEventListener('click', () => {
           selectedDate = el.getAttribute('data-date') || 'any';
-          dateList.querySelectorAll('.preorder-date-item').forEach((node) => node.className = 'w-full text-left px-3 py-2 rounded-lg border border-gray-200 preorder-date-item');
-          el.className = 'w-full text-left px-3 py-2 rounded-lg border border-emerald-500 bg-emerald-50 preorder-date-item';
+          dateList.querySelectorAll('.preorder-date-item').forEach((node) => node.className = 'w-full text-left px-2.5 sm:px-3 py-2 rounded-lg border text-sm border-gray-200 preorder-date-item');
+          el.className = 'w-full text-left px-2.5 sm:px-3 py-2 rounded-lg border text-sm border-emerald-500 bg-emerald-50 preorder-date-item';
         });
       });
     };
