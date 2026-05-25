@@ -5,13 +5,16 @@ use PDO;
 
 class ClientCatalogService
 {
-    private const HOME_SALE_WHERE = "p.is_active = 1 AND p.current_purchase_batch_id IS NOT NULL
-                 AND pb.status = 'arrived' AND p.discount_stock_boxes > 0";
-    private const HOME_IN_STOCK_WHERE = "p.is_active = 1 AND p.current_purchase_batch_id IS NOT NULL
-                 AND p.seller_id IS NULL AND pb.status = 'purchased'
-                 AND pb.boxes_free > 0";
-    private const HOME_PREORDER_WHERE = "p.is_active = 1 AND p.current_purchase_batch_id IS NOT NULL
-                 AND p.seller_id IS NULL AND pb.status = 'planned'";
+    private const HOME_SALE_WHERE = "p.is_active = 1
+                 AND p.seller_id IS NULL
+                 AND p.discount_stock_boxes > 0
+                 AND availability.has_arrived_batch = 1";
+    private const HOME_IN_STOCK_WHERE = "p.is_active = 1
+                 AND p.seller_id IS NULL
+                 AND availability.has_in_stock_batch = 1";
+    private const HOME_PREORDER_WHERE = "p.is_active = 1
+                 AND p.seller_id IS NULL
+                 AND availability.has_planned_batch = 1";
 
     private PDO $pdo;
 
@@ -85,13 +88,17 @@ class ClientCatalogService
             $freeStock = (float)($product['batch_boxes_free'] ?? 0);
             $discountStock = (float)($product['discount_stock_boxes'] ?? 0);
 
-            if (!$isSeller && $batchStatus === 'arrived' && $discountStock > 0) {
+            $hasPlannedBatch = (int)($product['has_planned_batch'] ?? 0) === 1;
+            $hasInStockBatch = (int)($product['has_in_stock_batch'] ?? 0) === 1;
+            $hasArrivedBatch = (int)($product['has_arrived_batch'] ?? 0) === 1;
+
+            if (!$isSeller && $hasArrivedBatch && $discountStock > 0) {
                 $product['catalog_section'] = 'sale';
-            } elseif (!$isSeller && $batchStatus === 'purchased' && $freeStock > 0) {
+            } elseif (!$isSeller && $hasInStockBatch) {
                 $product['catalog_section'] = 'in_stock';
             } elseif ($isSeller) {
                 $product['catalog_section'] = 'seller';
-            } elseif (!$isSeller && $batchStatus === 'planned') {
+            } elseif (!$isSeller && $hasPlannedBatch) {
                 $product['catalog_section'] = 'preorder';
             } else {
                 $product['catalog_section'] = 'other';
@@ -134,10 +141,23 @@ class ClientCatalogService
             "       p.seller_id,\n" .
             "       p.discount_stock_boxes,\n" .
             "       pb.status AS purchase_batch_status,\n" .
-            "       COALESCE(pb.boxes_free, 0) AS batch_boxes_free\n" .
+            "       COALESCE(pb.boxes_free, 0) AS batch_boxes_free,\n" .
+            "       COALESCE(availability.has_planned_batch, 0) AS has_planned_batch,\n" .
+            "       COALESCE(availability.has_in_stock_batch, 0) AS has_in_stock_batch,\n" .
+            "       COALESCE(availability.has_arrived_batch, 0) AS has_arrived_batch,\n" .
+            "       DATE(availability.next_planned_date) AS next_planned_date\n" .
             "FROM products p\n" .
             "JOIN product_types t ON t.id = p.product_type_id\n" .
             "LEFT JOIN users u ON u.id = p.seller_id\n" .
+            "LEFT JOIN (\n" .
+            "    SELECT pbx.product_id,\n" .
+            "           MAX(CASE WHEN pbx.status = 'planned' THEN 1 ELSE 0 END) AS has_planned_batch,\n" .
+            "           MAX(CASE WHEN pbx.status IN ('purchased', 'arrived') AND pbx.boxes_free > 0 THEN 1 ELSE 0 END) AS has_in_stock_batch,\n" .
+            "           MAX(CASE WHEN pbx.status = 'arrived' THEN 1 ELSE 0 END) AS has_arrived_batch,\n" .
+            "           MIN(CASE WHEN pbx.status = 'planned' THEN pbx.purchased_at ELSE NULL END) AS next_planned_date\n" .
+            "    FROM purchase_batches pbx\n" .
+            "    GROUP BY pbx.product_id\n" .
+            ") availability ON availability.product_id = p.id\n" .
             "LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id\n" .
             "WHERE {$where}\n" .
             "ORDER BY {$orderBy}";
