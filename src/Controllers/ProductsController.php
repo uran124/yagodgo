@@ -449,6 +449,32 @@ class ProductsController
     }
 
 
+    private function resolveCurrentPurchaseBatchId(int $productId): ?int
+    {
+        $params = [$productId];
+        $sql = "SELECT pb.id
+                FROM purchase_batches pb
+                JOIN products p ON p.id = pb.product_id
+                WHERE pb.product_id = ?
+                  AND pb.status IN ('planned', 'active', 'arrived', 'purchased')";
+
+        $role = $_SESSION['role'] ?? '';
+        if ($role === 'seller') {
+            $sql .= " AND p.seller_id = ?";
+            $params[] = (int)($_SESSION['user_id'] ?? 0);
+        }
+
+        $sql .= " ORDER BY FIELD(pb.status, 'planned', 'active', 'arrived', 'purchased'),
+                          pb.purchased_at ASC,
+                          pb.id ASC
+                  LIMIT 1";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        $batchId = $stmt->fetchColumn();
+
+        return $batchId !== false && $batchId !== null ? (int)$batchId : null;
+    }
+
     private function resolvePlannedPurchaseBatchId(int $productId): ?int
     {
         $params = [$productId];
