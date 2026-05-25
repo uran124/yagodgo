@@ -50,11 +50,19 @@ $cardSection = (string)($cardSection ?? '');
 $isPreorderSection = $cardSection === 'preorder';
 $isSaleSection = $cardSection === 'sale';
 $isInStockSection = $cardSection === 'in_stock';
+$hasPlannedBatch = (int)($p['has_planned_batch'] ?? 0) === 1;
 $preorderDiscountPercent = (float)(get_setting('ui_preorder_discount_percent', '10') ?? '10');
 $preorderDiscountPercent = max(0.0, min(99.0, $preorderDiscountPercent));
 $discountFactor = (100 - $preorderDiscountPercent) / 100;
 $preorderDiscountBox = round($regularBox * $discountFactor, 0);
 $preorderPriceHint = (string)(get_setting('ui_preorder_price_hint', 'Цена ориентировочная, точная цена будет после поступления') ?? '');
+$plannedDateRaw = (string)($p['next_planned_date'] ?? '');
+if ($plannedDateRaw === '' && $preorderDateKnown) {
+    $plannedDateRaw = (string)$d;
+}
+$showInStockBadge = $showDate && $d <= $today && !$isPreorderSection;
+$showNextSupplyBadge = $plannedDateRaw !== '' && !$isPreorderSection;
+$nextSupplyDateText = $showNextSupplyBadge ? date('d.m.Y', strtotime($plannedDateRaw)) : '';
 ?>
 <div class="product-card bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col hover:shadow-2xl transition-shadow duration-200 sm:h-full max-w-[350px]"
      data-search="<?= htmlspecialchars($search) ?>"
@@ -83,9 +91,10 @@ $preorderPriceHint = (string)(get_setting('ui_preorder_price_hint', 'Цена о
       </span>
     <?php else: ?>
       <!-- Бейджик даты / наличия -->
-      <?php if ($showDate && $d <= $today): ?>
-        <span class="availability-badge availability-badge--instock absolute top-3 left-3 text-xs font-semibold <?= $isStaff ? 'cursor-pointer' : '' ?>" <?= $isStaff ? 'data-edit-date="' . $p['id'] . '"' : '' ?>>
-          В наличии
+      <?php if ($showInStockBadge): ?>
+        <span class="absolute top-3 left-3 text-[11px] font-semibold px-2 py-1 rounded-full border border-[#C86052] bg-white text-[#C86052] inline-flex items-center gap-1 <?= $isStaff ? 'cursor-pointer' : '' ?>" <?= $isStaff ? 'data-edit-date="' . $p['id'] . '"' : '' ?>>
+          <span class="material-icons-round text-[13px] leading-none">storefront</span>
+          <span>В магазине</span>
         </span>
       <?php elseif ($showDate): ?>
         <span class="availability-badge availability-badge--date absolute top-3 left-3 text-xs font-semibold <?= $isStaff ? 'cursor-pointer' : '' ?>" <?= $isStaff ? 'data-edit-date="' . $p['id'] . '"' : '' ?>>
@@ -94,6 +103,13 @@ $preorderPriceHint = (string)(get_setting('ui_preorder_price_hint', 'Цена о
       <?php else: ?>
         <span class="availability-badge availability-badge--placeholder absolute top-3 left-3 text-xs font-semibold <?= $isStaff ? 'cursor-pointer' : '' ?>" <?= $isStaff ? 'data-edit-date="' . $p['id'] . '"' : '' ?>>
           Ближайшая возможная дата
+        </span>
+      <?php endif; ?>
+
+      <?php if ($showNextSupplyBadge): ?>
+        <span class="absolute top-3 right-3 text-[11px] font-semibold px-2 py-1 rounded-full border border-emerald-500 bg-white text-emerald-700 inline-flex items-center gap-1">
+          <span class="material-icons-round text-[13px] leading-none">local_shipping</span>
+          <span><?= htmlspecialchars($nextSupplyDateText) ?></span>
         </span>
       <?php endif; ?>
 
@@ -221,9 +237,9 @@ $preorderPriceHint = (string)(get_setting('ui_preorder_price_hint', 'Цена о
           <!-- Строка: qty-stepper + кнопка корзины -->
           <div class="flex items-center gap-2 mb-2">
             <!-- Qty stepper -->
-            <div class="flex items-center rounded-xl border border-gray-200 bg-gray-50 overflow-hidden h-10 shrink-0">
+            <div class="flex items-center gap-1 h-10 shrink-0">
               <button type="button"
-                      class="w-9 h-10 flex items-center justify-center text-gray-500 hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                      class="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 active:bg-gray-100 transition-colors"
                       onclick="let inp=this.nextElementSibling; if(+inp.value>1) inp.value=+inp.value-1;">
                 <span class="material-icons-round text-base leading-none">remove</span>
               </button>
@@ -232,9 +248,9 @@ $preorderPriceHint = (string)(get_setting('ui_preorder_price_hint', 'Цена о
                      value="1"
                      min="1"
                      step="1"
-                     class="w-10 h-10 text-center text-sm font-medium bg-transparent border-x border-gray-200 focus:outline-none preorder-qty" />
+                     class="w-8 text-center text-lg font-bold bg-transparent border-0 focus:outline-none preorder-qty" />
               <button type="button"
-                      class="w-9 h-10 flex items-center justify-center text-gray-500 hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                      class="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 active:bg-gray-100 transition-colors"
                       onclick="let inp=this.previousElementSibling; inp.value=+inp.value+1;">
                 <span class="material-icons-round text-base leading-none">add</span>
               </button>
@@ -252,18 +268,20 @@ $preorderPriceHint = (string)(get_setting('ui_preorder_price_hint', 'Цена о
 
         <!-- Предзаказ — вторичное действие: outline-стиль, меньше веса -->
         <button type="button"
-                <?= ($isSaleSection || !$preorderDateKnown) ? 'disabled' : '' ?>
-                class="w-full h-9 flex items-center justify-center gap-1.5 border font-medium text-xs sm:text-sm rounded-xl transition-colors preorder-intent-btn <?= ($isSaleSection || !$preorderDateKnown) ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed' : 'border-emerald-500 text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100' ?>"
+                <?= (($isSaleSection || !$hasPlannedBatch)) ? 'disabled' : '' ?>
+                class="w-full h-9 flex items-center justify-center gap-1.5 border font-medium text-xs sm:text-sm rounded-xl transition-colors preorder-intent-btn <?= (($isSaleSection || !$hasPlannedBatch)) ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed' : 'border-emerald-500 text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100' ?>"
                 data-product-id="<?= (int)$p['id'] ?>"
+                data-product-title="<?= htmlspecialchars(trim(($p['product'] ?? '') . ' ' . ($p['variety'] ?? ''))) ?>"
+                data-preorder-price="<?= (float)$preorderDiscountBox ?>"
+                data-preorder-discount="<?= (float)$preorderDiscountPercent ?>"
                 data-source-section="<?= htmlspecialchars($cardSection) ?>"
-                data-delivery-date="<?= htmlspecialchars((string)($d ?? '')) ?>">
+                data-delivery-date="<?= htmlspecialchars((string)($d ?? '')) ?>"
+                data-planned-date="<?= htmlspecialchars($plannedDateRaw) ?>">
           <span class="material-icons-round text-base leading-none">schedule</span>
-          <?= $isInStockSection ? 'Предзаказ' : 'Предзаказ −10%' ?>
+          Предзаказ −10%
         </button>
 
-        <?php if ($preorderDateKnown): ?>
-          <p class="mt-1.5 text-[11px] text-gray-400 text-center">Следующая поставка: <?= htmlspecialchars($preorderDateText) ?></p>
-        <?php elseif (!$isSaleSection): ?>
+        <?php if (!$isSaleSection && !$showNextSupplyBadge): ?>
           <p class="mt-1.5 text-[11px] text-gray-400 text-center">Дата следующей поставки уточняется</p>
         <?php elseif ($preorderPurchaseDate !== ''): ?>
           <p class="mt-1.5 text-[11px] text-gray-400 text-center">Дата закупки: <?= htmlspecialchars($preorderPurchaseDate) ?></p>
@@ -300,13 +318,103 @@ $preorderPriceHint = (string)(get_setting('ui_preorder_price_hint', 'Цена о
     const qtyInput = root.querySelector('.preorder-qty');
     const hint = root.querySelector('.preorder-intent-hint');
     if (!btn) return;
+
+    const formatDate = (date) => {
+      const d = new Date(date + 'T00:00:00');
+      if (Number.isNaN(d.getTime())) return '';
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      return `${dd}.${mm}`;
+    };
+
+    const toIso = (d) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+
+    const basePlanned = btn.dataset.plannedDate || btn.dataset.deliveryDate || '';
+    const startDate = basePlanned ? new Date(basePlanned + 'T00:00:00') : new Date();
+    const dateChoices = [];
+    if (!Number.isNaN(startDate.getTime())) {
+      for (let i = 0; i < 3; i += 1) {
+        const current = new Date(startDate);
+        current.setDate(startDate.getDate() + i);
+        dateChoices.push({label: formatDate(toIso(current)), value: toIso(current)});
+      }
+    }
+
+    const overlay = document.createElement('div');
+    overlay.className = 'fixed inset-0 z-[120] bg-black/40 hidden items-end sm:items-center justify-center';
+    overlay.innerHTML = `
+      <div class="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-4 sm:p-5">
+        <h3 class="text-lg font-bold mb-2 preorder-modal-title"></h3>
+        <p class="text-sm text-gray-600 mb-3">Ориентировочная цена с учетом скидки -10%</p>
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-sm">Количество:</span>
+          <div class="flex items-center rounded-lg border border-gray-200 overflow-hidden">
+            <button type="button" class="px-3 py-1 preorder-minus">−</button>
+            <input type="number" min="1" step="1" value="1" class="w-12 text-center preorder-modal-qty" />
+            <button type="button" class="px-3 py-1 preorder-plus">+</button>
+          </div>
+        </div>
+        <p class="text-2xl font-bold mb-3 preorder-modal-price"></p>
+        <p class="text-sm mb-2">Выберите дату для бронирования:</p>
+        <div class="space-y-2 preorder-date-list mb-4"></div>
+        <div class="flex gap-2">
+          <button type="button" class="flex-1 h-10 rounded-xl border border-gray-200 preorder-cancel">Отмена</button>
+          <button type="button" class="flex-1 h-10 rounded-xl text-white bg-emerald-600 preorder-submit">Забронировать</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    const modalQty = overlay.querySelector('.preorder-modal-qty');
+    const modalTitle = overlay.querySelector('.preorder-modal-title');
+    const modalPrice = overlay.querySelector('.preorder-modal-price');
+    const dateList = overlay.querySelector('.preorder-date-list');
+    const submitBtn = overlay.querySelector('.preorder-submit');
+    let selectedDate = null;
+
+    const renderDates = () => {
+      const items = [...dateChoices, {label: 'Не имеет значения', value: 'any'}];
+      dateList.innerHTML = items.map((item, idx) => `
+        <button type="button" data-date="${item.value}" class="w-full text-left px-3 py-2 rounded-lg border ${idx===0 ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200'} preorder-date-item">${item.label}</button>
+      `).join('');
+      selectedDate = items[0]?.value ?? 'any';
+      dateList.querySelectorAll('.preorder-date-item').forEach((el) => {
+        el.addEventListener('click', () => {
+          selectedDate = el.getAttribute('data-date') || 'any';
+          dateList.querySelectorAll('.preorder-date-item').forEach((node) => node.className = 'w-full text-left px-3 py-2 rounded-lg border border-gray-200 preorder-date-item');
+          el.className = 'w-full text-left px-3 py-2 rounded-lg border border-emerald-500 bg-emerald-50 preorder-date-item';
+        });
+      });
+    };
+
+    const closeModal = () => overlay.classList.add('hidden');
+    overlay.querySelector('.preorder-cancel').addEventListener('click', closeModal);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+    overlay.querySelector('.preorder-minus').addEventListener('click', () => { modalQty.value = String(Math.max(1, parseInt(modalQty.value || '1', 10) - 1)); });
+    overlay.querySelector('.preorder-plus').addEventListener('click', () => { modalQty.value = String(Math.max(1, parseInt(modalQty.value || '1', 10) + 1)); });
+
     btn.addEventListener('click', async () => {
-      const qty = qtyInput ? parseFloat(qtyInput.value || '1') : 1;
+      modalTitle.textContent = `Ожидаем поставку ${btn.dataset.productTitle || ''} ${dateChoices[0]?.label || ''}`;
+      modalPrice.textContent = `${Math.round(parseFloat(btn.dataset.preorderPrice || '0')).toLocaleString('ru-RU')} ₽`;
+      modalQty.value = qtyInput ? String(Math.max(1, parseFloat(qtyInput.value || '1'))) : '1';
+      renderDates();
+      overlay.classList.remove('hidden');
+    });
+
+    submitBtn.addEventListener('click', async () => {
+      const qty = parseFloat(modalQty.value || '1');
       const payload = new URLSearchParams();
       payload.set('product_id', btn.dataset.productId || '0');
       payload.set('requested_boxes', String(qty > 0 ? qty : 1));
       payload.set('source_section', btn.dataset.sourceSection || '');
       payload.set('source_delivery_date', btn.dataset.deliveryDate || '');
+      payload.set('desired_delivery_date', selectedDate || 'any');
+      payload.set('expected_price_per_box', btn.dataset.preorderPrice || '0');
+      payload.set('discount_percent_snapshot', btn.dataset.preorderDiscount || '10');
       const res = await fetch('/preorder-intents', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
@@ -317,6 +425,7 @@ $preorderPriceHint = (string)(get_setting('ui_preorder_price_hint', 'Цена о
         hint.classList.remove('hidden');
         hint.textContent = data?.message || 'Предзаказ сохранён';
       }
+      closeModal();
     });
   })();
 </script>

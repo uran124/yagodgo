@@ -25,7 +25,7 @@
   .purchase-preorders-table { border-radius: 0.55rem; overflow: hidden; border: 1px solid rgba(148, 163, 184, 0.25); }
   .purchase-preorders-table thead th { font-size: 0.78rem; padding-top: 0.45rem; padding-bottom: 0.45rem; }
   .purchase-preorders-table td { font-size: 0.84rem; padding-top: 0.45rem; padding-bottom: 0.45rem; }
-  .purchase-preorders-table .purchase-col-product { width: auto; max-width: 0; }
+  .purchase-preorders-table .purchase-col-product { width: 100%; min-width: 0; }
   .purchase-preorders-table .purchase-col-product-name { display:block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .purchase-preorders-table .purchase-col-qty, .purchase-preorders-table .purchase-col-confirm { width: 72px; white-space: nowrap; text-align: right; }
   .purchase-preorders-table .purchase-col-intents { width: 78px; white-space: nowrap; text-align: right; }
@@ -106,7 +106,7 @@
     .purchase-preorders-table thead th { font-size: 0.75rem; padding-top: 0.36rem; padding-bottom: 0.36rem; }
     .purchase-preorders-table td { font-size: 0.8rem; padding-top: 0.4rem; padding-bottom: 0.4rem; }
     .purchase-preorders-table { table-layout: fixed; width: 100%; }
-    .purchase-preorders-table .purchase-col-product { width: auto; }
+    .purchase-preorders-table .purchase-col-product { width: 100%; min-width: 0; }
     .purchase-preorders-table .purchase-col-qty,
     .purchase-preorders-table .purchase-col-confirm { width: 54px; }
     .purchase-preorders-table .purchase-col-intents { display: none; }
