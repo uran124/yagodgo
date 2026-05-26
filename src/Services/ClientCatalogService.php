@@ -132,6 +132,7 @@ class ClientCatalogService
             "       p.box_unit,\n" .
             "       COALESCE(pb.instant_price_per_box, 0) AS price,\n" .
             "       COALESCE(pb.instant_price_per_box, 0) AS current_price_per_box,\n" .
+            "       COALESCE(pb.preorder_price_per_box, p.preorder_price_per_box, 0) AS preorder_price_per_box,\n" .
             "       p.sale_price,\n" .
             "       p.is_active,\n" .
             "       p.image_path,\n" .

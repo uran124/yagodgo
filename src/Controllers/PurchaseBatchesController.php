@@ -524,7 +524,9 @@ ORDER BY is_closed ASC, pb.id DESC';
             exit;
         }
         if ($action === 'confirm') {
-            $this->pdo->prepare("UPDATE preorder_intents SET status='confirmed', updated_at=NOW() WHERE id=? AND status IN ('intent_created','offer_sent')")->execute([$intentId]);
+            $token = bin2hex(random_bytes(24));
+            $this->pdo->prepare("UPDATE preorder_intents SET status='confirmed', checkout_token = ?, updated_at=NOW() WHERE id=? AND status IN ('intent_created','offer_sent')")
+                ->execute([$token, $intentId]);
         } else {
             $this->pdo->prepare("UPDATE preorder_intents SET status='declined', updated_at=NOW() WHERE id=? AND status IN ('intent_created','offer_sent')")->execute([$intentId]);
         }

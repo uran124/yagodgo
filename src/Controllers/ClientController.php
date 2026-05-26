@@ -1479,6 +1479,21 @@ public function cancelReservedOrder(int $orderId): void
         $existingStmt->execute([$userId, $productId]);
         $existingId = $existingStmt->fetchColumn();
 
+        $plannedBatchStmt = $this->pdo->prepare(
+            "SELECT id, preorder_price_per_box
+             FROM purchase_batches
+             WHERE product_id = ? AND status = 'planned'
+             ORDER BY purchased_at ASC, id ASC
+             LIMIT 1"
+        );
+        $plannedBatchStmt->execute([$productId]);
+        $plannedBatch = $plannedBatchStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        $hasPlannedBatch = $plannedBatch !== null;
+        $offerHours = max(1, (int)(get_setting('preorder_offer_expiration_hours', '48') ?? '48'));
+        $offerExpiresAt = date('Y-m-d H:i:s', time() + ($offerHours * 3600));
+        $autoOfferPrice = $hasPlannedBatch ? round((float)($plannedBatch['preorder_price_per_box'] ?? 0), 2) : 0.0;
+        $targetStatus = ($hasPlannedBatch && $autoOfferPrice > 0) ? 'offer_sent' : 'intent_created';
+
         $etaDateValue = null;
         if ($sourceSection === 'in_stock' && $sourceDeliveryDate !== '') {
             $ts = strtotime($sourceDeliveryDate);
@@ -1501,9 +1516,18 @@ public function cancelReservedOrder(int $orderId): void
             $this->pdo->prepare(
                 "UPDATE preorder_intents
                  SET requested_boxes = ?, desired_delivery_date = ?, expected_price_per_box = ?, discount_percent_snapshot = ?,
-                     status = 'intent_created', offered_price_per_box = NULL, offer_expires_at = NULL, checkout_token = NULL
+                     status = ?, offered_price_per_box = ?, offer_expires_at = ?, checkout_token = NULL, updated_at = NOW()
                  WHERE id = ?"
-            )->execute([$requestedBoxes, $desiredDeliveryDate, $expectedPriceStored, $discountSnapshotStored, (int)$existingId]);
+            )->execute([
+                $requestedBoxes,
+                $desiredDeliveryDate,
+                $expectedPriceStored,
+                $discountSnapshotStored,
+                $targetStatus,
+                $targetStatus === 'offer_sent' ? $autoOfferPrice : null,
+                $targetStatus === 'offer_sent' ? $offerExpiresAt : null,
+                (int)$existingId,
+            ]);
             $intentId = (int)$existingId;
             $this->logPreorderEvent($intentId, 'intent_updated', null, 'intent_created', [
                 'requested_boxes' => $requestedBoxes,
@@ -1513,14 +1537,21 @@ public function cancelReservedOrder(int $orderId): void
                 'desired_delivery_date' => $desiredDeliveryDate ?? 'any',
                 'expected_price_per_box' => $expectedPriceStored,
                 'discount_percent_snapshot' => $discountSnapshotStored,
+                'planned_batch_id' => $hasPlannedBatch ? (int)$plannedBatch['id'] : null,
+                'status' => $targetStatus,
             ]);
         } else {
             $this->pdo->prepare(
                 "INSERT INTO preorder_intents (
                     user_id, product_id, requested_boxes, desired_delivery_date, expected_price_per_box, discount_percent_snapshot, status, created_at, updated_at
-                 ) VALUES (?, ?, ?, ?, ?, ?, 'intent_created', NOW(), NOW())"
-            )->execute([$userId, $productId, $requestedBoxes, $desiredDeliveryDate, $expectedPriceStored, $discountSnapshotStored]);
+                 ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())"
+            )->execute([$userId, $productId, $requestedBoxes, $desiredDeliveryDate, $expectedPriceStored, $discountSnapshotStored, $targetStatus]);
             $intentId = (int)$this->pdo->lastInsertId();
+            if ($targetStatus === 'offer_sent') {
+                $this->pdo->prepare(
+                    "UPDATE preorder_intents SET offered_price_per_box = ?, offer_expires_at = ? WHERE id = ?"
+                )->execute([$autoOfferPrice, $offerExpiresAt, $intentId]);
+            }
             $this->logPreorderEvent($intentId, 'intent_created', null, 'intent_created', [
                 'requested_boxes' => $requestedBoxes,
                 'source_section' => $sourceSection,
@@ -1529,6 +1560,8 @@ public function cancelReservedOrder(int $orderId): void
                 'desired_delivery_date' => $desiredDeliveryDate ?? 'any',
                 'expected_price_per_box' => $expectedPriceStored,
                 'discount_percent_snapshot' => $discountSnapshotStored,
+                'planned_batch_id' => $hasPlannedBatch ? (int)$plannedBatch['id'] : null,
+                'status' => $targetStatus,
             ]);
         }
 
@@ -1544,8 +1577,8 @@ public function cancelReservedOrder(int $orderId): void
         echo json_encode([
             'ok' => true,
             'intent_id' => $intentId,
-            'status' => 'intent_created',
-            'status_label' => $this->preorderIntentStatusLabel('intent_created'),
+            'status' => $targetStatus,
+            'status_label' => $this->preorderIntentStatusLabel($targetStatus),
             'eta_delivery_date' => $etaDateValue,
             'message' => 'Предзаказ сохранён: ' . $etaText . '. Мы уведомим вас после поступления партии.',
         ], JSON_UNESCAPED_UNICODE);
