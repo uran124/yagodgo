@@ -202,7 +202,7 @@
         <?php else: ?>
           <?php foreach ($preorderDemand as $row): ?>
             <tr class="border-b last:border-b-0">
-              <td class="py-2 pr-3 font-medium text-gray-900 purchase-col-product"><span class="purchase-col-product-name"><?= htmlspecialchars(trim((string)($row['product_name'] ?? '') . ' ' . (string)($row['variety'] ?? ''))) ?></span></td>
+              <td class="py-2 pr-3 font-medium text-gray-900 purchase-col-product"><button type="button" class="purchase-col-product-name text-left underline js-open-preorder-modal" data-product-id="<?= (int)($row['product_id'] ?? 0) ?>"><?= htmlspecialchars(trim((string)($row['product_name'] ?? '') . ' ' . (string)($row['variety'] ?? ''))) ?></button></td>
               <td class="py-2 pr-3 purchase-col-qty"><?= (int)round((float)($row['requested_boxes'] ?? 0)) ?></td>
               <td class="py-2 pr-3 purchase-col-confirm"><?= (int)round((float)($row['confirmed_boxes'] ?? 0)) ?></td>
               <td class="py-2 pr-3 purchase-col-intents"><?= (int)($row['intents_count'] ?? 0) ?></td>
@@ -290,6 +290,14 @@
     <div id="reserve-modal-list" class="reserve-modal-list"></div>
   </div>
 </div>
+
+<div id="preorder-modal-backdrop" class="reserve-modal-backdrop">
+  <div class="reserve-modal">
+    <div class="p-3 border-b font-semibold flex justify-between"><span>Предзаказы по товару</span><button type="button" id="preorder-modal-close">✕</button></div>
+    <div id="preorder-modal-list" class="reserve-modal-list"></div>
+  </div>
+</div>
+
 <script>
   (function () {
     var filterForm = document.getElementById('purchase-auto-filter');
@@ -333,6 +341,32 @@
     });
     ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) {
       wrap.addEventListener(ev, function () { dragging = false; });
+    });
+
+
+    var preorderModal = document.getElementById('preorder-modal-backdrop');
+    var preorderCloseBtn = document.getElementById('preorder-modal-close');
+    var preorderList = document.getElementById('preorder-modal-list');
+    function closePreorderModal(){ preorderModal.classList.remove('is-open'); preorderList.innerHTML=''; }
+    if (preorderCloseBtn) preorderCloseBtn.addEventListener('click', closePreorderModal);
+    if (preorderModal) preorderModal.addEventListener('click', function(e){ if (e.target === preorderModal) closePreorderModal(); });
+    document.querySelectorAll('.js-open-preorder-modal').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var productId = btn.getAttribute('data-product-id');
+        fetch('<?= $basePath ?>/purchases/preorders/intents?product_id=' + encodeURIComponent(productId), { headers: { 'Accept': 'application/json' } })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            var items = Array.isArray(data.items) ? data.items : [];
+            preorderList.innerHTML = items.length ? items.map(function (item) {
+              return '<div class="reserve-modal-item"><div><div><b>' + (item.customer_name||'') + '</b></div><div class="text-xs text-gray-500">' + (item.customer_phone||'') + ' · ' + (item.requested_boxes||0) + ' ящ.</div></div>' +
+                     '<div class="flex gap-1">' +
+                     '<form method="post" action="<?= $basePath ?>/purchases/preorders/decision"><?= csrf_field() ?><input type="hidden" name="intent_id" value="' + item.id + '"><input type="hidden" name="action" value="confirm"><button class="text-green-600">✔</button></form>' +
+                     '<form method="post" action="<?= $basePath ?>/purchases/preorders/decision"><?= csrf_field() ?><input type="hidden" name="intent_id" value="' + item.id + '"><input type="hidden" name="action" value="decline"><button class="text-red-600">✖</button></form>' +
+                     '</div></div>';
+            }).join('') : '<div class="p-3 text-sm text-gray-500">Нет активных предзаказов</div>';
+            preorderModal.classList.add('is-open');
+          });
+      });
     });
 
     var modal = document.getElementById('reserve-modal-backdrop');
