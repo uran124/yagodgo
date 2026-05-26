@@ -206,7 +206,8 @@ public function cart(): void
                     }
                 }
                 if ($stockMode !== 'preorder') {
-                    $purchaseBatchId = isset($row['current_purchase_batch_id']) ? (int)$row['current_purchase_batch_id'] : null;
+                    $currentBatchId = (int)($row['current_purchase_batch_id'] ?? 0);
+                    $purchaseBatchId = $currentBatchId > 0 ? $currentBatchId : null;
                 }
             }
 
