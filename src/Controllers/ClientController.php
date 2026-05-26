@@ -1239,13 +1239,32 @@ public function cancelReservedOrder(int $orderId): void
         $stmt->execute([$userId]);
         $favorites = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        $preordersStmt = $this->pdo->prepare(
+            "SELECT pi.id, pi.status, pi.requested_boxes, pi.offer_expires_at, pi.updated_at,
+                    pt.name AS product_name, p.variety
+             FROM preorder_intents pi
+             JOIN products p ON p.id = pi.product_id
+             JOIN product_types pt ON pt.id = p.product_type_id
+             WHERE pi.user_id = ?
+             ORDER BY pi.updated_at DESC, pi.id DESC
+             LIMIT 20"
+        );
+        $preordersStmt->execute([$userId]);
+        $preorderIntents = $preordersStmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($preorderIntents as &$intent) {
+            $intent['status_label'] = $this->preorderIntentStatusLabel((string)($intent['status'] ?? ''));
+        }
+        unset($intent);
+
         $debugData = [
             'favoritesCount' => count($favorites),
+            'preorderCount'  => count($preorderIntents),
             'today'          => date('Y-m-d'),
         ];
 
         view('client/favorites', [
             'favorites' => $favorites,
+            'preorderIntents' => $preorderIntents,
             'userName'  => $_SESSION['name'] ?? null,
             'debugData' => $debugData,
         ]);

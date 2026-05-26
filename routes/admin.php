@@ -98,6 +98,14 @@ return [
         requireAdmin(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->reservationsList(); return true;
     },
     static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('GET', '/admin/purchases/preorders/intents', $method, $uri)) return false;
+        requireAdmin(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->preorderIntentsByProduct(); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('POST', '/admin/purchases/preorders/decision', $method, $uri)) return false;
+        requireAdmin(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->preorderIntentDecision(); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
         if (!routeExact('POST', '/admin/purchases/preorders/maintenance', $method, $uri)) return false;
         requireAdmin(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->maintenancePreorders(); return true;
     },

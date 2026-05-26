@@ -44,6 +44,8 @@ return [
             'POST /manager/purchases/move-to-discount' => ['App\\Controllers\\PurchaseBatchesController', 'moveToDiscount'],
             'POST /manager/purchases/cancel-reservations' => ['App\\Controllers\\PurchaseBatchesController', 'cancelReservations'],
             'GET /manager/purchases/reservations' => ['App\\Controllers\\PurchaseBatchesController', 'reservationsList'],
+            'GET /manager/purchases/preorders/intents' => ['App\\Controllers\\PurchaseBatchesController', 'preorderIntentsByProduct'],
+            'POST /manager/purchases/preorders/decision' => ['App\\Controllers\\PurchaseBatchesController', 'preorderIntentDecision'],
             'POST /manager/purchases/preorders/maintenance' => ['App\\Controllers\\PurchaseBatchesController', 'maintenancePreorders'],
             'POST /manager/purchases/write-off' => ['App\\Controllers\\PurchaseBatchesController', 'writeOff'],
             'POST /manager/purchases/photos/delete' => ['App\\Controllers\\PurchaseBatchesController', 'deletePhoto'],
