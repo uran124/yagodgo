@@ -44,6 +44,7 @@
   .purchase-item-top { display: grid; grid-template-columns: 74px 1fr; gap: 0.55rem; }
   .purchase-meta-line { display: flex; align-items: center; gap: 0.35rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .purchase-status-dot { width: 8px; height: 8px; border-radius: 9999px; background: #22c55e; display: inline-block; }
+  .purchase-status-dot--planned { background: #facc15; }
   .purchase-item-actions { margin-top: 0.45rem; display: flex; flex-wrap: nowrap; gap: 0.3rem; overflow-x: auto; }
   .purchase-action-form { display: inline-flex; align-items: center; gap: 0.2rem; flex: 0 0 auto; }
   .purchase-action-qty {
@@ -252,7 +253,7 @@
               </div>
               <div>
                 <?php if ((int)($batch['is_closed'] ?? 0) === 0): ?>
-                  <span class="purchase-status-dot" title="Активная"></span>
+                  <span class="purchase-status-dot <?= (($batch['status'] ?? '') === 'planned') ? 'purchase-status-dot--planned' : '' ?>" title="<?= (($batch['status'] ?? '') === 'planned') ? 'Запланирована' : 'Активная' ?>"></span>
                 <?php endif; ?>
               </div>
             </div>
