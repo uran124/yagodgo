@@ -343,7 +343,7 @@ ORDER BY is_closed ASC, pb.id DESC';
         try {
             $batchId = $this->purchaseBatchService->createBatch($payload);
             $batchSnapshot = $this->pdo->prepare('UPDATE products SET current_purchase_batch_id = ?, instant_price_per_box = ?, preorder_price_per_box = ?, price = ? WHERE id = ? LIMIT 1');
-            $batchSnapshot->execute([(int)($_POST['product_id'] ?? 0), $instantPrice, $preorderPrice, $instantPrice, (int)($_POST['product_id'] ?? 0)]);
+            $batchSnapshot->execute([$batchId, $instantPrice, $preorderPrice, $instantPrice, (int)($_POST['product_id'] ?? 0)]);
 
             $this->storeBatchPhotos($batchId);
             $this->setFlash('success', 'Закупка успешно создана.');
@@ -607,7 +607,7 @@ ORDER BY is_closed ASC, pb.id DESC';
             'comment' => trim((string)($_POST['comment'] ?? '')),
         ]);
                 $batchSnapshot = $this->pdo->prepare('UPDATE products SET current_purchase_batch_id = ?, instant_price_per_box = ?, preorder_price_per_box = ?, price = ? WHERE id = ? LIMIT 1');
-        $batchSnapshot->execute([(int)($_POST['product_id'] ?? 0), $instantPrice, $preorderPrice, $instantPrice, (int)($_POST['product_id'] ?? 0)]);
+        $batchSnapshot->execute([$batchId, $instantPrice, $preorderPrice, $instantPrice, (int)($_POST['product_id'] ?? 0)]);
 
         $this->storeBatchPhotos($batchId);
         $this->setFlash('success', 'Закупка обновлена.');
