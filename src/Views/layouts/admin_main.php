@@ -411,7 +411,7 @@
           <span class="material-icons-round text-[#C86052]">auto_awesome_mosaic</span>
           <?= htmlspecialchars($pageTitle) ?>
         </h1>
-        <main class="p-2 sm:p-3 md:p-4 overflow-auto bg-gray-50 flex-1">
+        <main class="p-0 sm:p-3 md:p-4 overflow-auto bg-gray-50 flex-1">
           <?= $content ?>
         </main>
       </div>
