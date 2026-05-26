@@ -32,6 +32,13 @@
   .purchase-preorders-table .purchase-mobile-icon { display: none; }
   .purchase-actions-row { margin-bottom: 0.4rem !important; gap: 0.35rem; }
   .purchase-actions-btn { padding: 0.45rem 0.6rem !important; font-size: 0.82rem !important; }
+  .purchase-list-toolbar { display:flex; align-items:center; justify-content:space-between; gap:0.5rem; margin-bottom:0.45rem; }
+  .purchase-active-toggle { display:inline-flex; align-items:center; gap:0.5rem; user-select:none; font-size:0.82rem; color:#374151; }
+  .purchase-active-toggle input { position:absolute; opacity:0; width:0; height:0; }
+  .purchase-toggle-track { width:42px; height:24px; border-radius:9999px; background:#cbd5e1; position:relative; transition:background 0.2s; }
+  .purchase-toggle-track::after { content:''; position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:9999px; background:#fff; transition:transform 0.2s; box-shadow:0 1px 2px rgba(0,0,0,0.15); }
+  .purchase-active-toggle input:checked + .purchase-toggle-track { background:#22c55e; }
+  .purchase-active-toggle input:checked + .purchase-toggle-track::after { transform:translateX(18px); }
   .purchase-list { display: grid; gap: 0.45rem; }
   .purchase-item { border: 1px solid rgba(148, 163, 184, 0.25); border-radius: 0.65rem; padding: 0.5rem; background: rgba(255,255,255,0.85); }
   .purchase-item-top { display: grid; grid-template-columns: 74px 1fr; gap: 0.55rem; }
@@ -88,6 +95,8 @@
   [data-theme='dark'] .text-gray-900 { color: #e2e8f0 !important; }
   [data-theme='dark'] .text-gray-700, [data-theme='dark'] .text-gray-600, [data-theme='dark'] .text-gray-500 { color: #94a3b8 !important; }
   [data-theme='dark'] .purchase-filter-select, [data-theme='dark'] .purchase-filter-reset { background: #0f172a; color: #e2e8f0; border-color: #475569; }
+  [data-theme='dark'] .purchase-active-toggle { color:#cbd5e1; }
+  [data-theme='dark'] .purchase-toggle-track { background:#475569; }
   [data-theme='dark'] .purchase-preorders-table { border-color: #475569; }
   [data-theme='dark'] .reserve-modal { background: #0f172a; border-color: #334155; color: #e2e8f0; }
   [data-theme='dark'] .reserve-modal-item { border-bottom-color: #334155; }
@@ -214,9 +223,18 @@
   </form>
 </div>
 
-<div class="purchase-list">
+<div class="purchase-list-toolbar">
+  <div class="text-xs text-gray-500">Показ закупок</div>
+  <label class="purchase-active-toggle" for="purchase-active-only">
+    <span>Только активные</span>
+    <input type="checkbox" id="purchase-active-only" checked>
+    <span class="purchase-toggle-track" aria-hidden="true"></span>
+  </label>
+</div>
+
+<div class="purchase-list" id="purchase-list">
     <?php foreach ($batches as $batch): ?>
-      <div class="purchase-item <?= ((int)($batch['is_closed'] ?? 0) === 1) ? 'bg-gray-50 text-gray-400' : '' ?>">
+      <div class="purchase-item <?= ((int)($batch['is_closed'] ?? 0) === 1) ? 'bg-gray-50 text-gray-400' : '' ?>" data-is-closed="<?= (int)($batch['is_closed'] ?? 0) ?>">
         <div class="purchase-item-top">
           <div class="purchase-mobile-photo">
           <?php if (!empty($batch['preview_photo'])): ?>
@@ -281,6 +299,21 @@
           filterForm.submit();
         });
       });
+    }
+
+    var activeOnlyToggle = document.getElementById('purchase-active-only');
+    var purchaseList = document.getElementById('purchase-list');
+    function applyPurchaseVisibility() {
+      if (!purchaseList || !activeOnlyToggle) return;
+      var activeOnly = activeOnlyToggle.checked;
+      purchaseList.querySelectorAll('.purchase-item').forEach(function (item) {
+        var isClosed = item.getAttribute('data-is-closed') === '1';
+        item.style.display = (activeOnly && isClosed) ? 'none' : '';
+      });
+    }
+    if (activeOnlyToggle) {
+      activeOnlyToggle.addEventListener('change', applyPurchaseVisibility);
+      applyPurchaseVisibility();
     }
 
     var wrap = document.getElementById('preorder-metrics-scroll');
