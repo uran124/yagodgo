@@ -502,6 +502,38 @@ ORDER BY is_closed ASC, pb.id DESC';
         exit;
     }
 
+
+    public function preorderIntentsByProduct(): void
+    {
+        $productId = (int)($_GET['product_id'] ?? 0);
+        header('Content-Type: application/json; charset=utf-8');
+        if ($productId <= 0) { echo json_encode(['items'=>[]], JSON_UNESCAPED_UNICODE); exit; }
+        $stmt = $this->pdo->prepare("SELECT pi.id, pi.status, pi.requested_boxes, COALESCE(u.name,'Без имени') AS customer_name, COALESCE(u.phone,'') AS customer_phone FROM preorder_intents pi JOIN users u ON u.id = pi.user_id WHERE pi.product_id = ? AND pi.status IN ('intent_created','offer_sent','confirmed') ORDER BY pi.created_at ASC, pi.id ASC");
+        $stmt->execute([$productId]);
+        echo json_encode(['items'=>$stmt->fetchAll(PDO::FETCH_ASSOC)], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    public function preorderIntentDecision(): void
+    {
+        $this->ensureCsrfOrRedirect();
+        $intentId = (int)($_POST['intent_id'] ?? 0);
+        $action = (string)($_POST['action'] ?? '');
+        if ($intentId <= 0 || !in_array($action, ['confirm','decline'], true)) {
+            header('Location: ' . $this->basePath() . '/purchases');
+            exit;
+        }
+        if ($action === 'confirm') {
+            $token = bin2hex(random_bytes(24));
+            $this->pdo->prepare("UPDATE preorder_intents SET status='confirmed', checkout_token = ?, updated_at=NOW() WHERE id=? AND status IN ('intent_created','offer_sent')")
+                ->execute([$token, $intentId]);
+        } else {
+            $this->pdo->prepare("UPDATE preorder_intents SET status='declined', updated_at=NOW() WHERE id=? AND status IN ('intent_created','offer_sent')")->execute([$intentId]);
+        }
+        header('Location: ' . $this->basePath() . '/purchases');
+        exit;
+    }
+
     public function maintenancePreorders(): void
     {
         $this->ensureCsrfOrRedirect();

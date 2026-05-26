@@ -13,8 +13,7 @@ class ClientCatalogService
                  AND p.seller_id IS NULL
                  AND availability.has_in_stock_batch = 1";
     private const HOME_PREORDER_WHERE = "p.is_active = 1
-                 AND p.seller_id IS NULL
-                 AND availability.has_planned_batch = 1";
+                 AND p.seller_id IS NULL";
 
     private PDO $pdo;
 
@@ -133,6 +132,7 @@ class ClientCatalogService
             "       p.box_unit,\n" .
             "       COALESCE(pb.instant_price_per_box, 0) AS price,\n" .
             "       COALESCE(pb.instant_price_per_box, 0) AS current_price_per_box,\n" .
+            "       COALESCE(pb.preorder_price_per_box, p.preorder_price_per_box, 0) AS preorder_price_per_box,\n" .
             "       p.sale_price,\n" .
             "       p.is_active,\n" .
             "       p.image_path,\n" .

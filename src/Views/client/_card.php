@@ -54,7 +54,8 @@ $hasPlannedBatch = (int)($p['has_planned_batch'] ?? 0) === 1;
 $preorderDiscountPercent = (float)(get_setting('ui_preorder_discount_percent', '10') ?? '10');
 $preorderDiscountPercent = max(0.0, min(99.0, $preorderDiscountPercent));
 $discountFactor = (100 - $preorderDiscountPercent) / 100;
-$preorderDiscountBox = round($regularBox * $discountFactor, 0);
+$batchPreorderBox = (float)($p['preorder_price_per_box'] ?? 0);
+$preorderDiscountBox = $batchPreorderBox > 0 ? round($batchPreorderBox, 0) : round($regularBox * $discountFactor, 0);
 $preorderPriceHint = (string)(get_setting('ui_preorder_price_hint', 'Цена ориентировочная, точная цена будет после поступления') ?? '');
 $plannedDateRaw = $hasPlannedBatch ? (string)($p['next_planned_date'] ?? '') : '';
 $showInStockBadge = $showDate && $d <= $today && !$isPreorderSection;
@@ -99,7 +100,7 @@ $nextSupplyDateText = $showNextSupplyBadge ? date('d.m.Y', strtotime($plannedDat
         </span>
       <?php else: ?>
         <span class="availability-badge availability-badge--placeholder absolute top-3 left-3 text-xs font-semibold <?= $isStaff ? 'cursor-pointer' : '' ?>" <?= $isStaff ? 'data-edit-date="' . $p['id'] . '"' : '' ?>>
-          Ближайшая возможная дата
+          нет даты
         </span>
       <?php endif; ?>
 
