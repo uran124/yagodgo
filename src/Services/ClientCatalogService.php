@@ -13,8 +13,7 @@ class ClientCatalogService
                  AND p.seller_id IS NULL
                  AND availability.has_in_stock_batch = 1";
     private const HOME_PREORDER_WHERE = "p.is_active = 1
-                 AND p.seller_id IS NULL
-                 AND availability.has_planned_batch = 1";
+                 AND p.seller_id IS NULL";
 
     private PDO $pdo;
 
