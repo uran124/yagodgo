@@ -7,11 +7,17 @@ files=(
   src/Services/ClientCatalogService.php
 )
 
-pattern='COALESCE\(pb\.[^\)]*,\s*p\.price\)'
+patterns=(
+  'COALESCE\(pb\.[^\)]*,\s*p\.price\)'
+  'COALESCE\(pb\.[^\)]*,\s*p\.preorder_price_per_box\)'
+  'COALESCE\(pb\.[^\)]*,\s*p\.instant_price_per_box\)'
+)
 
-if rg -n "$pattern" "${files[@]}"; then
-  echo "[guard] forbidden client price fallback found (batch->product)." >&2
-  exit 1
-fi
+for pattern in "${patterns[@]}"; do
+  if rg -n "$pattern" "${files[@]}"; then
+    echo "[guard] forbidden client price fallback found (batch->product): $pattern" >&2
+    exit 1
+  fi
+done
 
 echo "[guard] Price fallback guard passed."

@@ -549,6 +549,8 @@ class OrdersController
 
         try {
             $this->pdo->beginTransaction();
+            $stockService = new StockService($this->pdo);
+            $orderStock = new OrderStockOrchestrator($this->pdo, $stockService);
 
             // Логика скидок и баллов
             $discount = 0;
@@ -592,15 +594,25 @@ class OrdersController
                 "INSERT INTO order_items (order_id, product_id, quantity, boxes, unit_price, stock_mode, purchase_batch_id) VALUES (?, ?, ?, ?, ?, ?, ?)"
             );
             foreach ($cartItems as $ci) {
-                $stmtItem->execute([
+                $mode = (string)($ci['stock_mode'] ?? 'instant');
+                $batchId = isset($ci['purchase_batch_id']) ? (int)$ci['purchase_batch_id'] : 0;
+                if (in_array($mode, ['instant', 'discount_stock'], true) && $batchId <= 0) {
+                    throw new \RuntimeException('Для позиции корзины не определена партия отгрузки.');
+                }
+
+                $orderStock->persistOrderItemWithStock(
+                    $stmtItem,
                     $orderId,
-                    $ci['product_id'],
-                    $ci['kg_qty'],
-                    $ci['quantity'],
-                    $ci['kg_price'],
-                    (string)($ci['stock_mode'] ?? 'instant'),
-                    isset($ci['purchase_batch_id']) ? (int)$ci['purchase_batch_id'] : null
-                ]);
+                    (int)$ci['product_id'],
+                    [
+                        'quantity' => (float)$ci['quantity'],
+                        'box_size' => (float)$ci['box_size'],
+                        'unit_price' => (float)$ci['unit_price'],
+                        'purchase_batch_id' => $batchId > 0 ? $batchId : null,
+                    ],
+                    $mode,
+                    false
+                );
             }
 
             // Начисление бонусов по заказу
