@@ -525,7 +525,7 @@ class OrdersController
         }
 
         $stmt = $this->pdo->prepare(
-            "SELECT ci.product_id, ci.quantity, ci.unit_price, p.box_size\n" .
+            "SELECT ci.product_id, ci.purchase_batch_id, ci.stock_mode, ci.quantity, ci.unit_price, p.box_size\n" .
             "FROM cart_items ci\n" .
             "JOIN products p ON p.id = ci.product_id\n" .
             "WHERE ci.user_id = ?"
@@ -589,7 +589,7 @@ class OrdersController
             $orderId = (int)$this->pdo->lastInsertId();
 
             $stmtItem = $this->pdo->prepare(
-                "INSERT INTO order_items (order_id, product_id, quantity, boxes, unit_price) VALUES (?, ?, ?, ?, ?)"
+                "INSERT INTO order_items (order_id, product_id, quantity, boxes, unit_price, stock_mode, purchase_batch_id) VALUES (?, ?, ?, ?, ?, ?, ?)"
             );
             foreach ($cartItems as $ci) {
                 $stmtItem->execute([
@@ -597,7 +597,9 @@ class OrdersController
                     $ci['product_id'],
                     $ci['kg_qty'],
                     $ci['quantity'],
-                    $ci['kg_price']
+                    $ci['kg_price'],
+                    (string)($ci['stock_mode'] ?? 'instant'),
+                    isset($ci['purchase_batch_id']) ? (int)$ci['purchase_batch_id'] : null
                 ]);
             }
 

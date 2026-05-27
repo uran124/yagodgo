@@ -907,24 +907,20 @@ public function cart(): void
             return;
         }
 
-        $productStmt = $this->pdo->prepare(
-            "SELECT box_size, preorder_price_per_box, preorder_unit_price FROM products WHERE id = ? AND is_active = 1 LIMIT 1"
-        );
-        $productStmt->execute([$productId]);
-        $product = $productStmt->fetch(PDO::FETCH_ASSOC);
-        if (!$product) {
-            unset($_SESSION['preorder_continue']);
-            return;
-        }
-
         $priceBox = (float)($intent['offered_price_per_box'] ?? 0);
         if ($priceBox <= 0) {
-            $priceBox = (float)($product['preorder_price_per_box'] ?? 0);
-        }
-        if ($priceBox <= 0) {
-            $boxSize = max(0.0, (float)($product['box_size'] ?? 0));
-            $unitPreorder = (float)($product['preorder_unit_price'] ?? 0);
-            $priceBox = $boxSize > 0 ? $unitPreorder * $boxSize : $unitPreorder;
+            $batchStmt = $this->pdo->prepare(
+                "SELECT preorder_price_per_box
+                 FROM purchase_batches
+                 WHERE product_id = ?
+                   AND status = 'planned'
+                   AND preorder_price_per_box > 0
+                 ORDER BY purchased_at ASC, id ASC
+                 LIMIT 1"
+            );
+            $batchStmt->execute([$productId]);
+            $batch = $batchStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+            $priceBox = (float)($batch['preorder_price_per_box'] ?? 0);
         }
 
         $this->pdo->prepare(
