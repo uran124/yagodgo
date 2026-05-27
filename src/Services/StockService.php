@@ -19,8 +19,21 @@ class StockService
 
     public function getAvailableBoxes(int $productId, string $mode): float
     {
-        $column = $this->resolveModeColumn($mode);
-        $stmt = $this->pdo->prepare("SELECT {$column} AS available FROM products WHERE id = ? LIMIT 1");
+        if ($productId <= 0) {
+            throw new RuntimeException('Product not found.');
+        }
+
+        $column = $mode === 'discount_stock' ? 'boxes_discount' : 'boxes_free';
+        $statusFilter = $mode === 'preorder'
+            ? "status = 'planned'"
+            : "status IN ('active', 'arrived', 'purchased')";
+
+        $stmt = $this->pdo->prepare(
+            "SELECT COALESCE(SUM({$column}), 0) AS available
+             FROM purchase_batches
+             WHERE product_id = ?
+               AND {$statusFilter}"
+        );
         $stmt->execute([$productId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
