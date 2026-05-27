@@ -70,6 +70,9 @@ jobs:
       - name: Legacy read guard
         run: .github/scripts/guard-legacy-reads.sh
 
+      - name: Price fallback guard
+        run: .github/scripts/guard-price-fallbacks.sh
+
       - name: Run PHPUnit
         run: |
           set -euo pipefail
