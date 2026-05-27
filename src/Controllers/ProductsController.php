@@ -31,7 +31,18 @@ class ProductsController
     // Возвращает массив всех активных товаров
     public function getAllActive(): array
     {
-        $stmt = $this->pdo->query("SELECT id, variety, price, unit, image_path FROM products WHERE free_stock_boxes > 0");
+        $stmt = $this->pdo->query(
+            "SELECT p.id, p.variety, p.price, p.unit, p.image_path
+             FROM products p
+             WHERE p.is_active = 1
+               AND EXISTS (
+                 SELECT 1
+                 FROM purchase_batches pb
+                 WHERE pb.product_id = p.id
+                   AND pb.status IN ('active', 'arrived', 'purchased')
+                   AND (pb.boxes_free > 0 OR pb.boxes_discount > 0)
+               )"
+        );
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
