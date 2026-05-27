@@ -6,6 +6,7 @@ use App\Helpers\PhoneNormalizer;
 use App\Services\StockService;
 use App\Services\OrderStockOrchestrator;
 use App\Services\ClientCatalogService;
+use App\Services\SellableBatchResolver;
 
 class ClientController
 {
@@ -27,6 +28,14 @@ class ClientController
         $_SESSION['cart_total'] = (float)$stmt->fetchColumn();
     }
 
+    private function isBatchFirstEnabled(): bool
+    {
+        $raw = getenv('BATCH_FIRST_SALES_ENABLED');
+        if ($raw === false) {
+            return true;
+        }
+        return in_array(strtolower((string)$raw), ['1', 'true', 'yes', 'on'], true);
+    }
 
     /** Главная страница */
     public function home(): void
@@ -61,6 +70,7 @@ public function cart(): void
     $stmt = $this->pdo->prepare(
         "SELECT 
             ci.product_id,
+            ci.purchase_batch_id,
             ci.quantity,
             ci.unit_price,
             p.variety,
@@ -74,7 +84,7 @@ public function cart(): void
          FROM cart_items ci
          JOIN products p ON p.id = ci.product_id
          JOIN product_types t ON t.id = p.product_type_id
-         LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id
+         LEFT JOIN purchase_batches pb ON pb.id = ci.purchase_batch_id
          WHERE ci.user_id = ?"
     );
     $stmt->execute([$userId]);
@@ -106,6 +116,7 @@ public function cart(): void
             'image_path'    => $row['image_path'],
             'unit_price'    => $row['unit_price'],
             'quantity'      => $row['quantity'],
+            'purchase_batch_id' => $row['purchase_batch_id'],
             'delivery_date' => $deliveryDate,
             'sale_price'    => $row['sale_price'],
             'is_active'     => $row['is_active'],
@@ -158,61 +169,59 @@ public function cart(): void
         }
 
         if ($productId && $quantity > 0) {
-            if ($stockMode !== 'preorder') {
-                $stockService = new StockService($this->pdo);
-                $available = $stockService->getAvailableBoxes($productId, $stockMode);
-                if ($quantity > $available) {
-                    $_SESSION['cart_error'] = 'Недостаточно товара в наличии.';
+            $purchaseBatchId = 0;
+            $priceBox = 0.0;
+            $available = 0.0;
+            if ($this->isBatchFirstEnabled()) {
+                $resolver = new SellableBatchResolver($this->pdo);
+                $batch = $resolver->resolveForProduct($productId, $stockMode);
+                if ($batch === null) {
+                    $_SESSION['cart_error'] = 'Для этого товара сейчас нет доступной партии.';
                     $referer = $_SERVER['HTTP_REFERER'] ?? '/';
                     header('Location: ' . $referer);
                     exit;
                 }
-            }
-
-            $priceStmt = $this->pdo->prepare(
-                "SELECT p.price, p.sale_price, p.box_size, p.preorder_unit_price, p.instant_unit_price, p.discount_unit_price,
-                        p.current_purchase_batch_id,
-                        pb.preorder_price_per_box, pb.instant_price_per_box, pb.discount_price_per_box
-                 FROM products p
-                 LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id
-                 WHERE p.id = ? LIMIT 1"
-            );
-            $priceStmt->execute([$productId]);
-            $row = $priceStmt->fetch(PDO::FETCH_ASSOC);
-            $priceBox = 0.0;
-            $purchaseBatchId = null;
-            if ($row) {
-                $boxSize = (float)($row['box_size'] ?? 0);
-                $sale = (float)($row['sale_price'] ?? 0);
-                $regular = (float)($row['price'] ?? 0);
-                $fallbackKgPrice = $sale > 0 ? $sale : $regular;
-                $fallbackBoxPrice = $fallbackKgPrice * $boxSize;
-
+                $purchaseBatchId = (int)($batch['id'] ?? 0);
+                $priceBox = (float)($batch['price_per_box'] ?? 0);
+                $available = (float)($batch['boxes_available'] ?? ($batch['boxes_free'] ?? 0));
+            } else {
+                $legacyStmt = $this->pdo->prepare(
+                    "SELECT p.current_purchase_batch_id,
+                            p.box_size,
+                            p.price,
+                            pb.instant_price_per_box,
+                            pb.preorder_price_per_box,
+                            pb.discount_price_per_box,
+                            pb.boxes_free,
+                            pb.boxes_discount
+                     FROM products p
+                     LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id
+                     WHERE p.id = ?
+                     LIMIT 1"
+                );
+                $legacyStmt->execute([$productId]);
+                $legacy = $legacyStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+                $purchaseBatchId = (int)($legacy['current_purchase_batch_id'] ?? 0);
                 $priceBox = match ($stockMode) {
-                    'preorder' => (float)($row['preorder_price_per_box'] ?? 0),
-                    'discount_stock' => (float)($row['discount_price_per_box'] ?? 0),
-                    default => (float)($row['instant_price_per_box'] ?? 0),
+                    'preorder' => (float)($legacy['preorder_price_per_box'] ?? 0),
+                    'discount_stock' => (float)($legacy['discount_price_per_box'] ?? 0),
+                    default => (float)($legacy['instant_price_per_box'] ?? 0),
                 };
                 if ($priceBox <= 0) {
-                    $kgPrice = match ($stockMode) {
-                        'preorder' => (float)($row['preorder_unit_price'] ?? 0),
-                        'discount_stock' => (float)($row['discount_unit_price'] ?? 0),
-                        default => (float)($row['instant_unit_price'] ?? 0),
-                    };
-                    if ($kgPrice > 0 && $boxSize > 0) {
-                        $priceBox = $kgPrice * $boxSize;
-                    } else {
-                        $priceBox = $fallbackBoxPrice;
-                    }
+                    $priceBox = (float)($legacy['price'] ?? 0) * max(1.0, (float)($legacy['box_size'] ?? 1));
                 }
-                if ($stockMode !== 'preorder') {
-                    $currentBatchId = (int)($row['current_purchase_batch_id'] ?? 0);
-                    $purchaseBatchId = $currentBatchId > 0 ? $currentBatchId : null;
-                }
+                $available = $stockMode === 'discount_stock'
+                    ? (float)($legacy['boxes_discount'] ?? 0)
+                    : (float)($legacy['boxes_free'] ?? 0);
             }
-
-            if ($stockMode !== 'preorder' && $purchaseBatchId === null) {
-                $_SESSION['cart_error'] = 'Для этого товара сейчас нет активной закупки.';
+            if ($priceBox <= 0) {
+                $_SESSION['cart_error'] = 'Для выбранной партии не задана цена.';
+                $referer = $_SERVER['HTTP_REFERER'] ?? '/';
+                header('Location: ' . $referer);
+                exit;
+            }
+            if ($stockMode !== 'preorder' && $quantity > $available) {
+                $_SESSION['cart_error'] = 'Недостаточно товара в наличии.';
                 $referer = $_SERVER['HTTP_REFERER'] ?? '/';
                 header('Location: ' . $referer);
                 exit;
@@ -531,7 +540,7 @@ public function cart(): void
 
     // 1) Получаем товары из корзины
        $stmt = $this->pdo->prepare(
-           "SELECT ci.product_id, ci.quantity, ci.unit_price,
+           "SELECT ci.product_id, ci.purchase_batch_id, ci.quantity, ci.unit_price,
               p.box_size, p.box_unit, t.name AS product, t.alias AS type_alias, p.alias, p.variety, p.seller_id,
               ci.stock_mode
        FROM cart_items ci
@@ -555,11 +564,21 @@ public function cart(): void
             'unit_price' => $it['unit_price'],   // price per box
             'box_size'   => $it['box_size'],
             'seller_id'  => $it['seller_id'],
+            'purchase_batch_id' => isset($it['purchase_batch_id']) ? (int)$it['purchase_batch_id'] : null,
         ];
     }
 
         $postedOrderModes = is_array($_POST['order_mode'] ?? null) ? $_POST['order_mode'] : [];
     $orderModeByDate = $this->resolveOrderModesFromCart($itemsByDate, $rawItems, $postedOrderModes);
+    foreach ($itemsByDate as $dateKey => $block) {
+        $dateMode = (string)($orderModeByDate[$dateKey] ?? 'instant');
+        foreach ($block as $productId => $data) {
+            $batchId = (int)($data['purchase_batch_id'] ?? 0);
+            if (in_array($dateMode, ['instant', 'discount_stock'], true) && $batchId <= 0) {
+                throw new \RuntimeException('В корзине есть товар без привязки к партии. Обновите корзину и повторите.');
+            }
+        }
+    }
 
     // 3) Считаем общий чек
     $allTotal = 0;
@@ -785,6 +804,7 @@ public function cart(): void
                     'quantity' => (float)$data['quantity'],
                     'box_size' => (float)$data['box_size'],
                     'unit_price' => (float)$data['unit_price'],
+                    'purchase_batch_id' => isset($data['purchase_batch_id']) ? (int)$data['purchase_batch_id'] : null,
                 ],
                 $orderMode,
                 $isReservedOrder
@@ -1328,12 +1348,20 @@ public function cancelReservedOrder(int $orderId): void
             if ($pid) {
                 $pStmt = $this->pdo->prepare(
                     "SELECT p.id, p.alias, t.name AS product, t.alias AS type_alias, p.variety, p.description, p.origin_country,
-                            p.box_size, p.box_unit, COALESCE(pb.instant_unit_price, p.price) AS price, COALESCE(pb.instant_price_per_box, 0) AS current_price_per_box, p.sale_price, p.is_active,
+                            p.box_size, p.box_unit, COALESCE(pb.instant_unit_price, 0) AS price, COALESCE(pb.instant_price_per_box, 0) AS current_price_per_box, p.sale_price, p.is_active,
                             p.image_path, DATE(pb.purchased_at) AS delivery_date,
                             COALESCE(u.company_name,u.name,'berryGo') AS seller_name
                        FROM products p
                        JOIN product_types t ON t.id = p.product_type_id
-                       LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id
+                       LEFT JOIN purchase_batches pb ON pb.id = (
+                           SELECT pb2.id
+                           FROM purchase_batches pb2
+                           WHERE pb2.product_id = p.id
+                             AND pb2.status IN ('purchased', 'arrived')
+                             AND (pb2.boxes_free > 0 OR pb2.boxes_discount > 0)
+                           ORDER BY pb2.purchased_at ASC, pb2.id ASC
+                           LIMIT 1
+                       )
                        LEFT JOIN users u ON u.id = p.seller_id
                        WHERE p.id = ?"
                 );
@@ -1364,11 +1392,19 @@ public function cancelReservedOrder(int $orderId): void
     public function showProduct(string $alias, ?string $typeAlias = null): void
     {
         $query = "SELECT p.*, t.name AS product, t.alias AS type_alias,
-                         COALESCE(pb.instant_unit_price, p.price) AS price,
+                         COALESCE(pb.instant_unit_price, 0) AS price,
                          DATE(pb.purchased_at) AS delivery_date
                   FROM products p
                   JOIN product_types t ON t.id = p.product_type_id
-                  LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id
+                  LEFT JOIN purchase_batches pb ON pb.id = (
+                      SELECT pb2.id
+                      FROM purchase_batches pb2
+                      WHERE pb2.product_id = p.id
+                        AND pb2.status IN ('purchased', 'arrived')
+                        AND (pb2.boxes_free > 0 OR pb2.boxes_discount > 0)
+                      ORDER BY pb2.purchased_at ASC, pb2.id ASC
+                      LIMIT 1
+                  )
                   WHERE (p.alias = ? OR p.id = ?)";
         $params = [$alias, $alias];
         if ($typeAlias !== null) {
@@ -1414,13 +1450,21 @@ public function cancelReservedOrder(int $orderId): void
         }
 
         $pStmt = $this->pdo->prepare(
-            "SELECT p.id, p.alias, t.name AS product, t.alias AS type_alias, p.variety, p.description, p.origin_country, p.box_size, p.box_unit, COALESCE(pb_latest.instant_unit_price, p.price) AS price, COALESCE(pb_latest.instant_price_per_box, 0) AS current_price_per_box, p.sale_price, p.is_active, p.image_path, DATE(pb_latest.purchased_at) AS delivery_date,
+            "SELECT p.id, p.alias, t.name AS product, t.alias AS type_alias, p.variety, p.description, p.origin_country, p.box_size, p.box_unit, COALESCE(pb_latest.instant_unit_price, 0) AS price, COALESCE(pb_latest.instant_price_per_box, 0) AS current_price_per_box, p.sale_price, p.is_active, p.image_path, DATE(pb_latest.purchased_at) AS delivery_date,
                     COALESCE(u.company_name,u.name,'berryGo') AS seller_name,
                     pb_latest.purchased_at AS latest_purchase_date
              FROM products p
              JOIN product_types t ON t.id = p.product_type_id
              LEFT JOIN users u ON u.id = p.seller_id
-             LEFT JOIN purchase_batches pb_latest ON pb_latest.id = p.current_purchase_batch_id
+             LEFT JOIN purchase_batches pb_latest ON pb_latest.id = (
+                 SELECT pb2.id
+                 FROM purchase_batches pb2
+                 WHERE pb2.product_id = p.id
+                   AND pb2.status IN ('purchased', 'arrived')
+                   AND (pb2.boxes_free > 0 OR pb2.boxes_discount > 0)
+                 ORDER BY pb2.purchased_at ASC, pb2.id ASC
+                 LIMIT 1
+             )
              WHERE p.product_type_id = ? AND p.is_active = 1"
         );
         $pStmt->execute([$type['id']]);
