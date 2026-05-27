@@ -56,7 +56,7 @@ class OrderStockOrchestrator
     }
 
     /**
-     * @param array{quantity:float,box_size:float,unit_price:float} $data
+     * @param array{quantity:float,box_size:float,unit_price:float,purchase_batch_id?:int|null} $data
      */
     public function persistOrderItemWithStock(\PDOStatement $stmtItem, int $orderId, int $productId, array $data, string $orderMode, bool $isReservedOrder): void
     {
@@ -64,7 +64,10 @@ class OrderStockOrchestrator
         $kgPrice = $data['box_size'] > 0 ? $data['unit_price'] / $data['box_size'] : $data['unit_price'];
 
         $allocations = [];
-        if (in_array($orderMode, ['preorder', 'instant', 'discount_stock'], true)) {
+        $requestedBatchId = isset($data['purchase_batch_id']) ? (int)$data['purchase_batch_id'] : 0;
+        if ($requestedBatchId > 0 && in_array($orderMode, ['preorder', 'instant', 'discount_stock'], true)) {
+            $allocations = [['batch_id' => $requestedBatchId, 'boxes' => (float)$data['quantity']]];
+        } elseif (in_array($orderMode, ['preorder', 'instant', 'discount_stock'], true)) {
             $allocations = $this->allocateFifoBatches($productId, (float)$data['quantity'], $orderMode);
         }
 
