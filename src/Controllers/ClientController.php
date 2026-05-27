@@ -1305,12 +1305,20 @@ public function cancelReservedOrder(int $orderId): void
             if ($pid) {
                 $pStmt = $this->pdo->prepare(
                     "SELECT p.id, p.alias, t.name AS product, t.alias AS type_alias, p.variety, p.description, p.origin_country,
-                            p.box_size, p.box_unit, COALESCE(pb.instant_unit_price, p.price) AS price, COALESCE(pb.instant_price_per_box, 0) AS current_price_per_box, p.sale_price, p.is_active,
+                            p.box_size, p.box_unit, COALESCE(pb.instant_unit_price, 0) AS price, COALESCE(pb.instant_price_per_box, 0) AS current_price_per_box, p.sale_price, p.is_active,
                             p.image_path, DATE(pb.purchased_at) AS delivery_date,
                             COALESCE(u.company_name,u.name,'berryGo') AS seller_name
                        FROM products p
                        JOIN product_types t ON t.id = p.product_type_id
-                       LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id
+                       LEFT JOIN purchase_batches pb ON pb.id = (
+                           SELECT pb2.id
+                           FROM purchase_batches pb2
+                           WHERE pb2.product_id = p.id
+                             AND pb2.status IN ('purchased', 'arrived')
+                             AND (pb2.boxes_free > 0 OR pb2.boxes_discount > 0)
+                           ORDER BY pb2.purchased_at ASC, pb2.id ASC
+                           LIMIT 1
+                       )
                        LEFT JOIN users u ON u.id = p.seller_id
                        WHERE p.id = ?"
                 );
@@ -1341,11 +1349,19 @@ public function cancelReservedOrder(int $orderId): void
     public function showProduct(string $alias, ?string $typeAlias = null): void
     {
         $query = "SELECT p.*, t.name AS product, t.alias AS type_alias,
-                         COALESCE(pb.instant_unit_price, p.price) AS price,
+                         COALESCE(pb.instant_unit_price, 0) AS price,
                          DATE(pb.purchased_at) AS delivery_date
                   FROM products p
                   JOIN product_types t ON t.id = p.product_type_id
-                  LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id
+                  LEFT JOIN purchase_batches pb ON pb.id = (
+                      SELECT pb2.id
+                      FROM purchase_batches pb2
+                      WHERE pb2.product_id = p.id
+                        AND pb2.status IN ('purchased', 'arrived')
+                        AND (pb2.boxes_free > 0 OR pb2.boxes_discount > 0)
+                      ORDER BY pb2.purchased_at ASC, pb2.id ASC
+                      LIMIT 1
+                  )
                   WHERE (p.alias = ? OR p.id = ?)";
         $params = [$alias, $alias];
         if ($typeAlias !== null) {
@@ -1391,13 +1407,21 @@ public function cancelReservedOrder(int $orderId): void
         }
 
         $pStmt = $this->pdo->prepare(
-            "SELECT p.id, p.alias, t.name AS product, t.alias AS type_alias, p.variety, p.description, p.origin_country, p.box_size, p.box_unit, COALESCE(pb_latest.instant_unit_price, p.price) AS price, COALESCE(pb_latest.instant_price_per_box, 0) AS current_price_per_box, p.sale_price, p.is_active, p.image_path, DATE(pb_latest.purchased_at) AS delivery_date,
+            "SELECT p.id, p.alias, t.name AS product, t.alias AS type_alias, p.variety, p.description, p.origin_country, p.box_size, p.box_unit, COALESCE(pb_latest.instant_unit_price, 0) AS price, COALESCE(pb_latest.instant_price_per_box, 0) AS current_price_per_box, p.sale_price, p.is_active, p.image_path, DATE(pb_latest.purchased_at) AS delivery_date,
                     COALESCE(u.company_name,u.name,'berryGo') AS seller_name,
                     pb_latest.purchased_at AS latest_purchase_date
              FROM products p
              JOIN product_types t ON t.id = p.product_type_id
              LEFT JOIN users u ON u.id = p.seller_id
-             LEFT JOIN purchase_batches pb_latest ON pb_latest.id = p.current_purchase_batch_id
+             LEFT JOIN purchase_batches pb_latest ON pb_latest.id = (
+                 SELECT pb2.id
+                 FROM purchase_batches pb2
+                 WHERE pb2.product_id = p.id
+                   AND pb2.status IN ('purchased', 'arrived')
+                   AND (pb2.boxes_free > 0 OR pb2.boxes_discount > 0)
+                 ORDER BY pb2.purchased_at ASC, pb2.id ASC
+                 LIMIT 1
+             )
              WHERE p.product_type_id = ? AND p.is_active = 1"
         );
         $pStmt->execute([$type['id']]);
