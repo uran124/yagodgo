@@ -8,16 +8,31 @@ use Throwable;
 class StockService
 {
     private PDO $pdo;
+    private LegacyProductProjectionService $legacyProjection;
 
     public function __construct(PDO $pdo)
     {
         $this->pdo = $pdo;
+        $this->legacyProjection = new LegacyProductProjectionService($pdo);
     }
 
     public function getAvailableBoxes(int $productId, string $mode): float
     {
-        $column = $this->resolveModeColumn($mode);
-        $stmt = $this->pdo->prepare("SELECT {$column} AS available FROM products WHERE id = ? LIMIT 1");
+        if ($productId <= 0) {
+            throw new RuntimeException('Product not found.');
+        }
+
+        $column = $mode === 'discount_stock' ? 'boxes_discount' : 'boxes_free';
+        $statusFilter = $mode === 'preorder'
+            ? "status = 'planned'"
+            : "status IN ('active', 'arrived', 'purchased')";
+
+        $stmt = $this->pdo->prepare(
+            "SELECT COALESCE(SUM({$column}), 0) AS available
+             FROM purchase_batches
+             WHERE product_id = ?
+               AND {$statusFilter}"
+        );
         $stmt->execute([$productId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -63,7 +78,7 @@ class StockService
                 $batchColumn => $boxes,
             ]);
             $this->assertBatchInvariants($batchId);
-            $this->syncProductStock($productId);
+            $this->legacyProjection->syncAggregatesFromBatches($productId);
             if ($ownsTransaction) {
                 $this->pdo->commit();
             }
@@ -93,7 +108,7 @@ class StockService
                 'boxes_sold' => $boxes,
             ]);
             $this->assertBatchInvariants($batchId);
-            $this->syncProductStock($productId);
+            $this->legacyProjection->syncAggregatesFromBatches($productId);
             if ($ownsTransaction) {
                 $this->pdo->commit();
             }
@@ -124,7 +139,7 @@ class StockService
                 'boxes_written_off' => $boxes,
             ]);
             $this->assertBatchInvariants($batchId);
-            $this->syncProductStock($productId);
+            $this->legacyProjection->syncAggregatesFromBatches($productId);
             if ($ownsTransaction) {
                 $this->pdo->commit();
             }
@@ -149,48 +164,6 @@ class StockService
         $remaining = (float)$batch['boxes_total'] - (float)$batch['boxes_sold'] - (float)$batch['boxes_written_off'];
         $upd = $this->pdo->prepare('UPDATE purchase_batches SET boxes_remaining = ? WHERE id = ?');
         $upd->execute([$remaining, $batchId]);
-    }
-
-    public function syncProductStock(int $productId): void
-    {
-        $stmt = $this->pdo->prepare(
-            'SELECT
-                COALESCE(SUM(boxes_free), 0) AS free_boxes,
-                COALESCE(SUM(boxes_reserved), 0) AS reserved_boxes,
-                COALESCE(SUM(boxes_discount), 0) AS discount_boxes,
-                COALESCE(SUM(boxes_sold), 0) AS sold_boxes,
-                COALESCE(SUM(boxes_written_off), 0) AS written_off_boxes
-             FROM purchase_batches
-             WHERE product_id = ? AND status IN ("active", "arrived", "purchased")'
-        );
-        $stmt->execute([$productId]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$row) {
-            return;
-        }
-
-        $status = ((float)$row['free_boxes'] > 0) ? 'in_stock' : (((float)$row['reserved_boxes'] > 0) ? 'preorder' : 'sold_out');
-
-        $upd = $this->pdo->prepare(
-            'UPDATE products
-             SET free_stock_boxes = :free_boxes,
-                 reserved_stock_boxes = :reserved_boxes,
-                 discount_stock_boxes = :discount_boxes,
-                 sold_stock_boxes = :sold_boxes,
-                 written_off_stock_boxes = :written_off_boxes,
-                 stock_status = :stock_status
-             WHERE id = :product_id'
-        );
-        $upd->execute([
-            'free_boxes' => (float)$row['free_boxes'],
-            'reserved_boxes' => (float)$row['reserved_boxes'],
-            'discount_boxes' => (float)$row['discount_boxes'],
-            'sold_boxes' => (float)$row['sold_boxes'],
-            'written_off_boxes' => (float)$row['written_off_boxes'],
-            'stock_status' => $status,
-            'product_id' => $productId,
-        ]);
     }
 
     private function changeStock(int $productId, int $batchId, int $orderId, string $mode, float $delta, string $movementType): void
@@ -218,7 +191,7 @@ class StockService
 
             $this->updateBatchCounters($batchId, $updates);
             $this->assertBatchInvariants($batchId);
-            $this->syncProductStock($productId);
+            $this->legacyProjection->syncAggregatesFromBatches($productId);
             if ($ownsTransaction) {
                 $this->pdo->commit();
             }

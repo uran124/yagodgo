@@ -3,6 +3,7 @@ namespace App\Controllers;
 
 use App\Services\PurchaseBatchService;
 use App\Services\PreorderIntentService;
+use App\Services\LegacyProductProjectionService;
 use PDO;
 use RuntimeException;
 
@@ -11,12 +12,14 @@ class PurchaseBatchesController
     private PDO $pdo;
     private PurchaseBatchService $purchaseBatchService;
     private PreorderIntentService $preorderIntentService;
+    private LegacyProductProjectionService $legacyProjectionService;
 
     public function __construct(PDO $pdo)
     {
         $this->pdo = $pdo;
         $this->purchaseBatchService = new PurchaseBatchService($pdo);
         $this->preorderIntentService = new PreorderIntentService($pdo);
+        $this->legacyProjectionService = new LegacyProductProjectionService($pdo);
     }
 
     public function index(): void
@@ -344,8 +347,15 @@ ORDER BY is_closed ASC, pb.id DESC';
 
         try {
             $batchId = $this->purchaseBatchService->createBatch($payload);
-            $batchSnapshot = $this->pdo->prepare('UPDATE products SET current_purchase_batch_id = ?, instant_price_per_box = ?, preorder_price_per_box = ?, price = ? WHERE id = ? LIMIT 1');
-            $batchSnapshot->execute([$batchId, $instantPrice, $preorderPrice, $instantPrice, (int)($_POST['product_id'] ?? 0)]);
+            // compatibility-only projection for legacy admin/reporting surfaces
+            $this->legacyProjectionService->updateBatchSnapshot((int)($_POST['product_id'] ?? 0), $batchId, $requestedBoxesFree, $requestedBoxesReserved, [
+                'preorder_price_per_box' => $preorderPrice,
+                'instant_price_per_box' => $instantPrice,
+                'discount_price_per_box' => $instantPrice,
+                'preorder_unit_price' => $preorderPrice,
+                'instant_unit_price' => $instantPrice,
+                'discount_unit_price' => $instantPrice,
+            ]);
 
             $this->storeBatchPhotos($batchId);
             $this->setFlash('success', 'Закупка успешно создана.');
@@ -640,8 +650,15 @@ ORDER BY is_closed ASC, pb.id DESC';
             'purchased_at' => (string)($_POST['planned_supply_date'] ?? ''),
             'comment' => trim((string)($_POST['comment'] ?? '')),
         ]);
-                $batchSnapshot = $this->pdo->prepare('UPDATE products SET current_purchase_batch_id = ?, instant_price_per_box = ?, preorder_price_per_box = ?, price = ? WHERE id = ? LIMIT 1');
-        $batchSnapshot->execute([$batchId, $instantPrice, $preorderPrice, $instantPrice, (int)($_POST['product_id'] ?? 0)]);
+        // compatibility-only projection for legacy admin/reporting surfaces
+        $this->legacyProjectionService->updateBatchSnapshot((int)($_POST['product_id'] ?? 0), $batchId, (float)($_POST['boxes_free'] ?? 0), (float)($_POST['boxes_reserved'] ?? 0), [
+            'preorder_price_per_box' => $preorderPrice,
+            'instant_price_per_box' => $instantPrice,
+            'discount_price_per_box' => $instantPrice,
+            'preorder_unit_price' => $preorderPrice,
+            'instant_unit_price' => $instantPrice,
+            'discount_unit_price' => $instantPrice,
+        ]);
 
         $this->storeBatchPhotos($batchId);
         $this->setFlash('success', 'Закупка обновлена.');
