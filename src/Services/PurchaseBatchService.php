@@ -18,6 +18,7 @@ class PurchaseBatchService
     private PricingService $pricingService;
     private StockService $stockService;
     private PreorderIntentService $preorderIntentService;
+    private LegacyProductProjectionService $legacyProjection;
 
     public function __construct(PDO $pdo, ?PricingService $pricingService = null)
     {
@@ -25,6 +26,7 @@ class PurchaseBatchService
         $this->pricingService = $pricingService ?? new PricingService($pdo);
         $this->stockService = new StockService($pdo);
         $this->preorderIntentService = new PreorderIntentService($pdo);
+        $this->legacyProjection = new LegacyProductProjectionService($pdo);
     }
 
     /**
@@ -151,7 +153,7 @@ class PurchaseBatchService
 
             $batchId = (int)$this->pdo->lastInsertId();
 
-            $this->upsertProductSnapshot($productId, $batchId, $boxesFree, $boxesReserved, $prices);
+            $this->legacyProjection->updateBatchSnapshot($productId, $batchId, $boxesFree, $boxesReserved, $prices);
 
             $this->pdo->commit();
 
@@ -297,7 +299,7 @@ class PurchaseBatchService
             'id' => $batchId,
         ]);
 
-        $this->stockService->syncProductStock((int)$batch['product_id']);
+        $this->legacyProjection->syncAggregatesFromBatches((int)$batch['product_id']);
     }
 
     public function closeBatch(int $batchId): void
@@ -428,45 +430,6 @@ class PurchaseBatchService
 
         $stmt = $this->pdo->prepare('UPDATE purchase_batches SET status = ? WHERE id = ?');
         $stmt->execute([$status, $batchId]);
-    }
-
-    /**
-     * @param array<string, float> $prices
-     */
-    private function upsertProductSnapshot(int $productId, int $batchId, float $freeBoxes, float $reservedBoxes, array $prices): void
-    {
-        $stockStatus = $freeBoxes > 0 ? 'in_stock' : 'preorder';
-
-        $stmt = $this->pdo->prepare(
-            'UPDATE products
-             SET current_purchase_batch_id = :batch_id,
-                 free_stock_boxes = :free_stock_boxes,
-                 reserved_stock_boxes = :reserved_stock_boxes,
-                 preorder_price_per_box = :preorder_price_per_box,
-                 instant_price_per_box = :instant_price_per_box,
-                 discount_price_per_box = :discount_price_per_box,
-                 preorder_unit_price = :preorder_unit_price,
-                 instant_unit_price = :instant_unit_price,
-                 discount_unit_price = :discount_unit_price,
-                 price = :price,
-                 stock_status = :stock_status
-             WHERE id = :product_id'
-        );
-
-        $stmt->execute([
-            'batch_id' => $batchId,
-            'free_stock_boxes' => $freeBoxes,
-            'reserved_stock_boxes' => $reservedBoxes,
-            'preorder_price_per_box' => $prices['preorder_price_per_box'],
-            'instant_price_per_box' => $prices['instant_price_per_box'],
-            'discount_price_per_box' => $prices['discount_price_per_box'],
-            'preorder_unit_price' => $prices['preorder_unit_price'],
-            'instant_unit_price' => $prices['instant_unit_price'],
-            'discount_unit_price' => $prices['discount_unit_price'],
-            'price' => $prices['instant_unit_price'],
-            'stock_status' => $stockStatus,
-            'product_id' => $productId,
-        ]);
     }
 
     private function promoteIntentsToOfferSent(int $batchId): void

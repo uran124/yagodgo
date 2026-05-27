@@ -31,7 +31,18 @@ class ProductsController
     // Возвращает массив всех активных товаров
     public function getAllActive(): array
     {
-        $stmt = $this->pdo->query("SELECT id, variety, price, unit, image_path FROM products WHERE free_stock_boxes > 0");
+        $stmt = $this->pdo->query(
+            "SELECT p.id, p.variety, p.price, p.unit, p.image_path
+             FROM products p
+             WHERE p.is_active = 1
+               AND EXISTS (
+                 SELECT 1
+                 FROM purchase_batches pb
+                 WHERE pb.product_id = p.id
+                   AND pb.status IN ('active', 'arrived', 'purchased')
+                   AND (pb.boxes_free > 0 OR pb.boxes_discount > 0)
+               )"
+        );
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
@@ -69,14 +80,22 @@ class ProductsController
                 p.box_size,
                 p.box_unit,
                 p.unit,
-                COALESCE(pb.instant_price_per_box, p.price) AS price,
-                p.free_stock_boxes,
+                COALESCE(pb.instant_price_per_box, 0) AS price,
+                COALESCE(pb.boxes_free, 0) AS free_stock_boxes,
                 p.is_active,
                 p.image_path,
                 DATE(pb.purchased_at) AS delivery_date
              FROM products p
              JOIN product_types t ON t.id = p.product_type_id
-             LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id";
+             LEFT JOIN purchase_batches pb ON pb.id = (
+                SELECT pb2.id
+                FROM purchase_batches pb2
+                WHERE pb2.product_id = p.id
+                  AND pb2.status IN ('purchased', 'arrived')
+                  AND (pb2.boxes_free > 0 OR pb2.boxes_discount > 0)
+                ORDER BY pb2.purchased_at ASC, pb2.id ASC
+                LIMIT 1
+             )";
 
         if ($role === 'seller') {
             $selectedSeller = $_SESSION['user_id'] ?? 0;
@@ -132,19 +151,35 @@ class ProductsController
             $role = $_SESSION['role'] ?? '';
             if ($role === 'seller') {
                 $stmt = $this->pdo->prepare(
-                    "SELECT p.*, DATE(pb.purchased_at) AS delivery_date, COALESCE(pb.instant_price_per_box, p.price) AS price,
-                            COALESCE(pb.preorder_price_per_box, p.preorder_price_per_box) AS preorder_price_per_box
+                    "SELECT p.*, DATE(pb.purchased_at) AS delivery_date, COALESCE(pb.instant_price_per_box, 0) AS price,
+                            COALESCE(pb.preorder_price_per_box, 0) AS preorder_price_per_box
                      FROM products p
-                     LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id
+                     LEFT JOIN purchase_batches pb ON pb.id = (
+                        SELECT pb2.id
+                        FROM purchase_batches pb2
+                        WHERE pb2.product_id = p.id
+                          AND pb2.status IN ('purchased', 'arrived')
+                          AND (pb2.boxes_free > 0 OR pb2.boxes_discount > 0)
+                        ORDER BY pb2.purchased_at ASC, pb2.id ASC
+                        LIMIT 1
+                     )
                      WHERE p.id = ? AND p.seller_id = ?"
                 );
                 $stmt->execute([(int)$id, $_SESSION['user_id'] ?? 0]);
             } else {
                 $stmt = $this->pdo->prepare(
-                    "SELECT p.*, DATE(pb.purchased_at) AS delivery_date, COALESCE(pb.instant_price_per_box, p.price) AS price,
-                            COALESCE(pb.preorder_price_per_box, p.preorder_price_per_box) AS preorder_price_per_box
+                    "SELECT p.*, DATE(pb.purchased_at) AS delivery_date, COALESCE(pb.instant_price_per_box, 0) AS price,
+                            COALESCE(pb.preorder_price_per_box, 0) AS preorder_price_per_box
                      FROM products p
-                     LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id
+                     LEFT JOIN purchase_batches pb ON pb.id = (
+                        SELECT pb2.id
+                        FROM purchase_batches pb2
+                        WHERE pb2.product_id = p.id
+                          AND pb2.status IN ('purchased', 'arrived')
+                          AND (pb2.boxes_free > 0 OR pb2.boxes_discount > 0)
+                        ORDER BY pb2.purchased_at ASC, pb2.id ASC
+                        LIMIT 1
+                     )
                      WHERE p.id = ?"
                 );
                 $stmt->execute([(int)$id]);

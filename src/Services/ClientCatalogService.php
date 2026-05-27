@@ -7,8 +7,7 @@ class ClientCatalogService
 {
     private const HOME_SALE_WHERE = "p.is_active = 1
                  AND p.seller_id IS NULL
-                 AND p.discount_stock_boxes > 0
-                 AND availability.has_arrived_batch = 1";
+                 AND availability.has_discount_batch = 1";
     private const HOME_IN_STOCK_WHERE = "p.is_active = 1
                  AND p.seller_id IS NULL
                  AND availability.has_in_stock_batch = 1";
@@ -53,8 +52,8 @@ class ClientCatalogService
                 10
             ),
             'discountProducts' => $this->fetchProducts(
-                'p.is_active = 1 AND p.discount_stock_boxes > 0',
-                'p.discount_stock_boxes DESC, p.id DESC',
+                'p.is_active = 1 AND availability.has_discount_batch = 1',
+                'p.id DESC',
                 [],
                 10
             ),
@@ -72,26 +71,23 @@ class ClientCatalogService
         $products = $this->fetchProducts(
             'p.is_active = 1',
             "CASE\n" .
-            "  WHEN pb.purchased_at IS NULL THEN 3\n" .
-            "  WHEN DATE(pb.purchased_at) > ? THEN 2\n" .
+            "  WHEN availability.next_planned_date IS NULL THEN 3\n" .
+            "  WHEN DATE(availability.next_planned_date) > ? THEN 2\n" .
             "  ELSE 1\n" .
             "END,\n" .
-            "COALESCE(DATE(pb.purchased_at), '9999-12-31'),\n" .
+            "COALESCE(DATE(availability.next_planned_date), '9999-12-31'),\n" .
             "p.id DESC",
             [$today]
         );
 
         foreach ($products as &$product) {
-            $batchStatus = (string)($product['purchase_batch_status'] ?? '');
             $isSeller = !empty($product['seller_id']);
-            $freeStock = (float)($product['batch_boxes_free'] ?? 0);
-            $discountStock = (float)($product['discount_stock_boxes'] ?? 0);
 
             $hasPlannedBatch = (int)($product['has_planned_batch'] ?? 0) === 1;
             $hasInStockBatch = (int)($product['has_in_stock_batch'] ?? 0) === 1;
-            $hasArrivedBatch = (int)($product['has_arrived_batch'] ?? 0) === 1;
+            $hasDiscountBatch = (int)($product['has_discount_batch'] ?? 0) === 1;
 
-            if (!$isSeller && $hasArrivedBatch && $discountStock > 0) {
+            if (!$isSeller && $hasDiscountBatch) {
                 $product['catalog_section'] = 'sale';
             } elseif (!$isSeller && $hasInStockBatch) {
                 $product['catalog_section'] = 'in_stock';
@@ -130,21 +126,24 @@ class ClientCatalogService
             "       p.origin_country,\n" .
             "       p.box_size,\n" .
             "       p.box_unit,\n" .
-            "       COALESCE(pb.instant_price_per_box, 0) AS price,\n" .
+            "       CASE\n" .
+            "         WHEN COALESCE(pb.boxes_discount, 0) > 0 AND COALESCE(pb.discount_price_per_box, 0) > 0 THEN pb.discount_price_per_box\n" .
+            "         ELSE COALESCE(pb.instant_price_per_box, 0)\n" .
+            "       END AS price,\n" .
             "       COALESCE(pb.instant_price_per_box, 0) AS current_price_per_box,\n" .
-            "       COALESCE(pb.preorder_price_per_box, p.preorder_price_per_box, 0) AS preorder_price_per_box,\n" .
+            "       COALESCE(pb.preorder_price_per_box, 0) AS preorder_price_per_box,\n" .
             "       p.sale_price,\n" .
             "       p.is_active,\n" .
             "       p.image_path,\n" .
             "       DATE(pb.purchased_at) AS delivery_date,\n" .
             "       COALESCE(u.company_name, u.name, 'berryGo') AS seller_name,\n" .
             "       p.seller_id,\n" .
-            "       p.discount_stock_boxes,\n" .
             "       pb.status AS purchase_batch_status,\n" .
             "       COALESCE(pb.boxes_free, 0) AS batch_boxes_free,\n" .
+            "       COALESCE(pb.boxes_discount, 0) AS batch_boxes_discount,\n" .
             "       COALESCE(availability.has_planned_batch, 0) AS has_planned_batch,\n" .
             "       COALESCE(availability.has_in_stock_batch, 0) AS has_in_stock_batch,\n" .
-            "       COALESCE(availability.has_arrived_batch, 0) AS has_arrived_batch,\n" .
+            "       COALESCE(availability.has_discount_batch, 0) AS has_discount_batch,\n" .
             "       DATE(availability.next_planned_date) AS next_planned_date\n" .
             "FROM products p\n" .
             "JOIN product_types t ON t.id = p.product_type_id\n" .
@@ -153,12 +152,20 @@ class ClientCatalogService
             "    SELECT pbx.product_id,\n" .
             "           MAX(CASE WHEN pbx.status = 'planned' THEN 1 ELSE 0 END) AS has_planned_batch,\n" .
             "           MAX(CASE WHEN pbx.status IN ('purchased', 'arrived') AND pbx.boxes_free > 0 THEN 1 ELSE 0 END) AS has_in_stock_batch,\n" .
-            "           MAX(CASE WHEN pbx.status = 'arrived' THEN 1 ELSE 0 END) AS has_arrived_batch,\n" .
+            "           MAX(CASE WHEN pbx.status IN ('purchased', 'arrived') AND pbx.boxes_discount > 0 THEN 1 ELSE 0 END) AS has_discount_batch,\n" .
             "           MIN(CASE WHEN pbx.status = 'planned' THEN pbx.purchased_at ELSE NULL END) AS next_planned_date\n" .
             "    FROM purchase_batches pbx\n" .
             "    GROUP BY pbx.product_id\n" .
             ") availability ON availability.product_id = p.id\n" .
-            "LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id\n" .
+            "LEFT JOIN purchase_batches pb ON pb.id = (\n" .
+            "    SELECT pb2.id\n" .
+            "    FROM purchase_batches pb2\n" .
+            "    WHERE pb2.product_id = p.id\n" .
+            "      AND pb2.status IN ('purchased', 'arrived')\n" .
+            "      AND (pb2.boxes_free > 0 OR pb2.boxes_discount > 0)\n" .
+            "    ORDER BY pb2.purchased_at ASC, pb2.id ASC\n" .
+            "    LIMIT 1\n" .
+            ")\n" .
             "WHERE {$where}\n" .
             "ORDER BY {$orderBy}";
 

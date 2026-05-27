@@ -495,7 +495,7 @@ class OrdersController
             "FROM cart_items ci\n" .
             "JOIN products p ON p.id = ci.product_id\n" .
             "JOIN product_types t ON t.id = p.product_type_id\n" .
-            "LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id\n" .
+            "LEFT JOIN purchase_batches pb ON pb.id = ci.purchase_batch_id\n" .
             "WHERE ci.user_id = ?"
         );
         $stmt->execute([$user['id']]);
@@ -525,7 +525,7 @@ class OrdersController
         }
 
         $stmt = $this->pdo->prepare(
-            "SELECT ci.product_id, ci.quantity, ci.unit_price, p.box_size\n" .
+            "SELECT ci.product_id, ci.purchase_batch_id, ci.stock_mode, ci.quantity, ci.unit_price, p.box_size\n" .
             "FROM cart_items ci\n" .
             "JOIN products p ON p.id = ci.product_id\n" .
             "WHERE ci.user_id = ?"
@@ -549,6 +549,8 @@ class OrdersController
 
         try {
             $this->pdo->beginTransaction();
+            $stockService = new StockService($this->pdo);
+            $orderStock = new OrderStockOrchestrator($this->pdo, $stockService);
 
             // Логика скидок и баллов
             $discount = 0;
@@ -589,16 +591,28 @@ class OrdersController
             $orderId = (int)$this->pdo->lastInsertId();
 
             $stmtItem = $this->pdo->prepare(
-                "INSERT INTO order_items (order_id, product_id, quantity, boxes, unit_price) VALUES (?, ?, ?, ?, ?)"
+                "INSERT INTO order_items (order_id, product_id, quantity, boxes, unit_price, stock_mode, purchase_batch_id) VALUES (?, ?, ?, ?, ?, ?, ?)"
             );
             foreach ($cartItems as $ci) {
-                $stmtItem->execute([
+                $mode = (string)($ci['stock_mode'] ?? 'instant');
+                $batchId = isset($ci['purchase_batch_id']) ? (int)$ci['purchase_batch_id'] : 0;
+                if (in_array($mode, ['instant', 'discount_stock'], true) && $batchId <= 0) {
+                    throw new \RuntimeException('Для позиции корзины не определена партия отгрузки.');
+                }
+
+                $orderStock->persistOrderItemWithStock(
+                    $stmtItem,
                     $orderId,
-                    $ci['product_id'],
-                    $ci['kg_qty'],
-                    $ci['quantity'],
-                    $ci['kg_price']
-                ]);
+                    (int)$ci['product_id'],
+                    [
+                        'quantity' => (float)$ci['quantity'],
+                        'box_size' => (float)$ci['box_size'],
+                        'unit_price' => (float)$ci['unit_price'],
+                        'purchase_batch_id' => $batchId > 0 ? $batchId : null,
+                    ],
+                    $mode,
+                    false
+                );
             }
 
             // Начисление бонусов по заказу
