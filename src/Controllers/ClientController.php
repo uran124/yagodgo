@@ -497,7 +497,7 @@ public function cart(): void
 
     // 1) Получаем товары из корзины
        $stmt = $this->pdo->prepare(
-           "SELECT ci.product_id, ci.quantity, ci.unit_price,
+           "SELECT ci.product_id, ci.purchase_batch_id, ci.quantity, ci.unit_price,
               p.box_size, p.box_unit, t.name AS product, t.alias AS type_alias, p.alias, p.variety, p.seller_id,
               ci.stock_mode
        FROM cart_items ci
@@ -521,11 +521,21 @@ public function cart(): void
             'unit_price' => $it['unit_price'],   // price per box
             'box_size'   => $it['box_size'],
             'seller_id'  => $it['seller_id'],
+            'purchase_batch_id' => isset($it['purchase_batch_id']) ? (int)$it['purchase_batch_id'] : null,
         ];
     }
 
         $postedOrderModes = is_array($_POST['order_mode'] ?? null) ? $_POST['order_mode'] : [];
     $orderModeByDate = $this->resolveOrderModesFromCart($itemsByDate, $rawItems, $postedOrderModes);
+    foreach ($itemsByDate as $dateKey => $block) {
+        $dateMode = (string)($orderModeByDate[$dateKey] ?? 'instant');
+        foreach ($block as $productId => $data) {
+            $batchId = (int)($data['purchase_batch_id'] ?? 0);
+            if (in_array($dateMode, ['instant', 'discount_stock'], true) && $batchId <= 0) {
+                throw new \RuntimeException('В корзине есть товар без привязки к партии. Обновите корзину и повторите.');
+            }
+        }
+    }
 
     // 3) Считаем общий чек
     $allTotal = 0;
@@ -751,6 +761,7 @@ public function cart(): void
                     'quantity' => (float)$data['quantity'],
                     'box_size' => (float)$data['box_size'],
                     'unit_price' => (float)$data['unit_price'],
+                    'purchase_batch_id' => isset($data['purchase_batch_id']) ? (int)$data['purchase_batch_id'] : null,
                 ],
                 $orderMode,
                 $isReservedOrder
