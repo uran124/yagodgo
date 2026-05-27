@@ -169,51 +169,27 @@ public function cart(): void
         }
 
         if ($productId && $quantity > 0) {
+            if (!$this->isBatchFirstEnabled()) {
+                $_SESSION['cart_error'] = 'Режим legacy add-to-cart отключен. Включите batch-first продажи.';
+                $referer = $_SERVER['HTTP_REFERER'] ?? '/';
+                header('Location: ' . $referer);
+                exit;
+            }
+
             $purchaseBatchId = 0;
             $priceBox = 0.0;
             $available = 0.0;
-            if ($this->isBatchFirstEnabled()) {
-                $resolver = new SellableBatchResolver($this->pdo);
-                $batch = $resolver->resolveForProduct($productId, $stockMode);
-                if ($batch === null) {
-                    $_SESSION['cart_error'] = 'Для этого товара сейчас нет доступной партии.';
-                    $referer = $_SERVER['HTTP_REFERER'] ?? '/';
-                    header('Location: ' . $referer);
-                    exit;
-                }
-                $purchaseBatchId = (int)($batch['id'] ?? 0);
-                $priceBox = (float)($batch['price_per_box'] ?? 0);
-                $available = (float)($batch['boxes_available'] ?? ($batch['boxes_free'] ?? 0));
-            } else {
-                $legacyStmt = $this->pdo->prepare(
-                    "SELECT p.current_purchase_batch_id,
-                            p.box_size,
-                            p.price,
-                            pb.instant_price_per_box,
-                            pb.preorder_price_per_box,
-                            pb.discount_price_per_box,
-                            pb.boxes_free,
-                            pb.boxes_discount
-                     FROM products p
-                     LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id
-                     WHERE p.id = ?
-                     LIMIT 1"
-                );
-                $legacyStmt->execute([$productId]);
-                $legacy = $legacyStmt->fetch(PDO::FETCH_ASSOC) ?: [];
-                $purchaseBatchId = (int)($legacy['current_purchase_batch_id'] ?? 0);
-                $priceBox = match ($stockMode) {
-                    'preorder' => (float)($legacy['preorder_price_per_box'] ?? 0),
-                    'discount_stock' => (float)($legacy['discount_price_per_box'] ?? 0),
-                    default => (float)($legacy['instant_price_per_box'] ?? 0),
-                };
-                if ($priceBox <= 0) {
-                    $priceBox = (float)($legacy['price'] ?? 0) * max(1.0, (float)($legacy['box_size'] ?? 1));
-                }
-                $available = $stockMode === 'discount_stock'
-                    ? (float)($legacy['boxes_discount'] ?? 0)
-                    : (float)($legacy['boxes_free'] ?? 0);
+            $resolver = new SellableBatchResolver($this->pdo);
+            $batch = $resolver->resolveForProduct($productId, $stockMode);
+            if ($batch === null) {
+                $_SESSION['cart_error'] = 'Для этого товара сейчас нет доступной партии.';
+                $referer = $_SERVER['HTTP_REFERER'] ?? '/';
+                header('Location: ' . $referer);
+                exit;
             }
+            $purchaseBatchId = (int)($batch['id'] ?? 0);
+            $priceBox = (float)($batch['price_per_box'] ?? 0);
+            $available = (float)($batch['boxes_available'] ?? ($batch['boxes_free'] ?? 0));
             if ($priceBox <= 0) {
                 $_SESSION['cart_error'] = 'Для выбранной партии не задана цена.';
                 $referer = $_SERVER['HTTP_REFERER'] ?? '/';
