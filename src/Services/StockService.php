@@ -8,10 +8,13 @@ use Throwable;
 class StockService
 {
     private PDO $pdo;
+    private bool $legacyProjectionEnabled;
 
     public function __construct(PDO $pdo)
     {
         $this->pdo = $pdo;
+        $raw = getenv('LEGACY_PRODUCT_PROJECTION_ENABLED');
+        $this->legacyProjectionEnabled = $raw === false ? true : in_array(strtolower((string)$raw), ['1', 'true', 'yes', 'on'], true);
     }
 
     public function getAvailableBoxes(int $productId, string $mode): float
@@ -153,6 +156,10 @@ class StockService
 
     public function syncProductStock(int $productId): void
     {
+        if (!$this->legacyProjectionEnabled) {
+            return;
+        }
+
         $stmt = $this->pdo->prepare(
             'SELECT
                 COALESCE(SUM(boxes_free), 0) AS free_boxes,
