@@ -122,5 +122,27 @@ class StockServiceTest extends TestCase
         $this->service->writeOff(1, 31, 7, 'Too much write off');
     }
 
-}
+    public function testGetAvailableBoxesReadsPurchaseBatchesNotProducts(): void
+    {
+        $this->pdo->exec('UPDATE products SET free_stock_boxes = 999 WHERE id = 1');
+        $this->pdo->exec('UPDATE purchase_batches SET boxes_free = 4 WHERE id = 1');
 
+        $available = $this->service->getAvailableBoxes(1, 'instant');
+        $this->assertSame(4.0, $available);
+    }
+
+    public function testLegacyProjectionCanBeDisabledViaEnvFlag(): void
+    {
+        putenv('LEGACY_PRODUCT_PROJECTION_ENABLED=0');
+        $service = new StockService($this->pdo);
+
+        $service->reserve(1, 1, 2, 88, 'instant');
+
+        $product = $this->pdo->query('SELECT free_stock_boxes, reserved_stock_boxes FROM products WHERE id = 1')->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame(10.0, (float)$product['free_stock_boxes']);
+        $this->assertSame(0.0, (float)$product['reserved_stock_boxes']);
+
+        putenv('LEGACY_PRODUCT_PROJECTION_ENABLED');
+    }
+
+}
