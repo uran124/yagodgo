@@ -122,5 +122,18 @@ class StockServiceTest extends TestCase
         $this->service->writeOff(1, 31, 7, 'Too much write off');
     }
 
-}
+    public function testLegacyProjectionCanBeDisabledViaEnvFlag(): void
+    {
+        putenv('LEGACY_PRODUCT_PROJECTION_ENABLED=0');
+        $service = new StockService($this->pdo);
 
+        $service->reserve(1, 1, 2, 88, 'instant');
+
+        $product = $this->pdo->query('SELECT free_stock_boxes, reserved_stock_boxes FROM products WHERE id = 1')->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame(10.0, (float)$product['free_stock_boxes']);
+        $this->assertSame(0.0, (float)$product['reserved_stock_boxes']);
+
+        putenv('LEGACY_PRODUCT_PROJECTION_ENABLED');
+    }
+
+}
