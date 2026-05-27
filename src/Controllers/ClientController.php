@@ -6,6 +6,7 @@ use App\Helpers\PhoneNormalizer;
 use App\Services\StockService;
 use App\Services\OrderStockOrchestrator;
 use App\Services\ClientCatalogService;
+use App\Services\SellableBatchResolver;
 
 class ClientController
 {
@@ -26,50 +27,6 @@ class ClientController
         $stmt->execute([$userId]);
         $_SESSION['cart_total'] = (float)$stmt->fetchColumn();
     }
-
-    /**
-     * Возвращает продаваемую партию товара по FIFO для конкретного режима.
-     *
-     * @return array<string,mixed>|null
-     */
-    private function resolveSellableBatch(int $productId, string $stockMode): ?array
-    {
-        if ($stockMode === 'preorder') {
-            $stmt = $this->pdo->prepare(
-                "SELECT id, preorder_price_per_box AS price_per_box, boxes_free, boxes_discount
-                 FROM purchase_batches
-                 WHERE product_id = ?
-                   AND status = 'planned'
-                   AND preorder_price_per_box > 0
-                 ORDER BY purchased_at ASC, id ASC
-                 LIMIT 1"
-            );
-            $stmt->execute([$productId]);
-            $row = $stmt->fetch(PDO::FETCH_ASSOC);
-            return $row ?: null;
-        }
-
-        $priceColumn = $stockMode === 'discount_stock'
-            ? 'discount_price_per_box'
-            : 'instant_price_per_box';
-        $stockColumn = $stockMode === 'discount_stock'
-            ? 'boxes_discount'
-            : 'boxes_free';
-
-        $stmt = $this->pdo->prepare(
-            "SELECT id, {$priceColumn} AS price_per_box, {$stockColumn} AS boxes_available
-             FROM purchase_batches
-             WHERE product_id = ?
-               AND status IN ('purchased', 'arrived')
-               AND {$stockColumn} > 0
-             ORDER BY purchased_at ASC, id ASC
-             LIMIT 1"
-        );
-        $stmt->execute([$productId]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $row ?: null;
-    }
-
 
     /** Главная страница */
     public function home(): void
@@ -203,7 +160,8 @@ public function cart(): void
         }
 
         if ($productId && $quantity > 0) {
-            $batch = $this->resolveSellableBatch($productId, $stockMode);
+            $resolver = new SellableBatchResolver($this->pdo);
+            $batch = $resolver->resolveForProduct($productId, $stockMode);
             if ($batch === null) {
                 $_SESSION['cart_error'] = 'Для этого товара сейчас нет доступной партии.';
                 $referer = $_SERVER['HTTP_REFERER'] ?? '/';
