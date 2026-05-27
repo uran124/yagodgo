@@ -18,6 +18,7 @@ class PurchaseBatchService
     private PricingService $pricingService;
     private StockService $stockService;
     private PreorderIntentService $preorderIntentService;
+    private bool $legacyProjectionEnabled;
 
     public function __construct(PDO $pdo, ?PricingService $pricingService = null)
     {
@@ -25,6 +26,8 @@ class PurchaseBatchService
         $this->pricingService = $pricingService ?? new PricingService($pdo);
         $this->stockService = new StockService($pdo);
         $this->preorderIntentService = new PreorderIntentService($pdo);
+        $raw = getenv('LEGACY_PRODUCT_PROJECTION_ENABLED');
+        $this->legacyProjectionEnabled = $raw === false ? true : in_array(strtolower((string)$raw), ['1', 'true', 'yes', 'on'], true);
     }
 
     /**
@@ -435,6 +438,10 @@ class PurchaseBatchService
      */
     private function upsertProductSnapshot(int $productId, int $batchId, float $freeBoxes, float $reservedBoxes, array $prices): void
     {
+        if (!$this->legacyProjectionEnabled) {
+            return;
+        }
+
         $stockStatus = $freeBoxes > 0 ? 'in_stock' : 'preorder';
 
         $stmt = $this->pdo->prepare(
