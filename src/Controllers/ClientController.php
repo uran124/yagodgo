@@ -27,6 +27,49 @@ class ClientController
         $_SESSION['cart_total'] = (float)$stmt->fetchColumn();
     }
 
+    /**
+     * Возвращает продаваемую партию товара по FIFO для конкретного режима.
+     *
+     * @return array<string,mixed>|null
+     */
+    private function resolveSellableBatch(int $productId, string $stockMode): ?array
+    {
+        if ($stockMode === 'preorder') {
+            $stmt = $this->pdo->prepare(
+                "SELECT id, preorder_price_per_box AS price_per_box, boxes_free, boxes_discount
+                 FROM purchase_batches
+                 WHERE product_id = ?
+                   AND status = 'planned'
+                   AND preorder_price_per_box > 0
+                 ORDER BY purchased_at ASC, id ASC
+                 LIMIT 1"
+            );
+            $stmt->execute([$productId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $row ?: null;
+        }
+
+        $priceColumn = $stockMode === 'discount_stock'
+            ? 'discount_price_per_box'
+            : 'instant_price_per_box';
+        $stockColumn = $stockMode === 'discount_stock'
+            ? 'boxes_discount'
+            : 'boxes_free';
+
+        $stmt = $this->pdo->prepare(
+            "SELECT id, {$priceColumn} AS price_per_box, {$stockColumn} AS boxes_available
+             FROM purchase_batches
+             WHERE product_id = ?
+               AND status IN ('purchased', 'arrived')
+               AND {$stockColumn} > 0
+             ORDER BY purchased_at ASC, id ASC
+             LIMIT 1"
+        );
+        $stmt->execute([$productId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
 
     /** Главная страница */
     public function home(): void
@@ -61,6 +104,7 @@ public function cart(): void
     $stmt = $this->pdo->prepare(
         "SELECT 
             ci.product_id,
+            ci.purchase_batch_id,
             ci.quantity,
             ci.unit_price,
             p.variety,
@@ -74,7 +118,7 @@ public function cart(): void
          FROM cart_items ci
          JOIN products p ON p.id = ci.product_id
          JOIN product_types t ON t.id = p.product_type_id
-         LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id
+         LEFT JOIN purchase_batches pb ON pb.id = ci.purchase_batch_id
          WHERE ci.user_id = ?"
     );
     $stmt->execute([$userId]);
@@ -106,6 +150,7 @@ public function cart(): void
             'image_path'    => $row['image_path'],
             'unit_price'    => $row['unit_price'],
             'quantity'      => $row['quantity'],
+            'purchase_batch_id' => $row['purchase_batch_id'],
             'delivery_date' => $deliveryDate,
             'sale_price'    => $row['sale_price'],
             'is_active'     => $row['is_active'],
@@ -158,61 +203,24 @@ public function cart(): void
         }
 
         if ($productId && $quantity > 0) {
-            if ($stockMode !== 'preorder') {
-                $stockService = new StockService($this->pdo);
-                $available = $stockService->getAvailableBoxes($productId, $stockMode);
-                if ($quantity > $available) {
-                    $_SESSION['cart_error'] = 'Недостаточно товара в наличии.';
-                    $referer = $_SERVER['HTTP_REFERER'] ?? '/';
-                    header('Location: ' . $referer);
-                    exit;
-                }
+            $batch = $this->resolveSellableBatch($productId, $stockMode);
+            if ($batch === null) {
+                $_SESSION['cart_error'] = 'Для этого товара сейчас нет доступной партии.';
+                $referer = $_SERVER['HTTP_REFERER'] ?? '/';
+                header('Location: ' . $referer);
+                exit;
             }
-
-            $priceStmt = $this->pdo->prepare(
-                "SELECT p.price, p.sale_price, p.box_size, p.preorder_unit_price, p.instant_unit_price, p.discount_unit_price,
-                        p.current_purchase_batch_id,
-                        pb.preorder_price_per_box, pb.instant_price_per_box, pb.discount_price_per_box
-                 FROM products p
-                 LEFT JOIN purchase_batches pb ON pb.id = p.current_purchase_batch_id
-                 WHERE p.id = ? LIMIT 1"
-            );
-            $priceStmt->execute([$productId]);
-            $row = $priceStmt->fetch(PDO::FETCH_ASSOC);
-            $priceBox = 0.0;
-            $purchaseBatchId = null;
-            if ($row) {
-                $boxSize = (float)($row['box_size'] ?? 0);
-                $sale = (float)($row['sale_price'] ?? 0);
-                $regular = (float)($row['price'] ?? 0);
-                $fallbackKgPrice = $sale > 0 ? $sale : $regular;
-                $fallbackBoxPrice = $fallbackKgPrice * $boxSize;
-
-                $priceBox = match ($stockMode) {
-                    'preorder' => (float)($row['preorder_price_per_box'] ?? 0),
-                    'discount_stock' => (float)($row['discount_price_per_box'] ?? 0),
-                    default => (float)($row['instant_price_per_box'] ?? 0),
-                };
-                if ($priceBox <= 0) {
-                    $kgPrice = match ($stockMode) {
-                        'preorder' => (float)($row['preorder_unit_price'] ?? 0),
-                        'discount_stock' => (float)($row['discount_unit_price'] ?? 0),
-                        default => (float)($row['instant_unit_price'] ?? 0),
-                    };
-                    if ($kgPrice > 0 && $boxSize > 0) {
-                        $priceBox = $kgPrice * $boxSize;
-                    } else {
-                        $priceBox = $fallbackBoxPrice;
-                    }
-                }
-                if ($stockMode !== 'preorder') {
-                    $currentBatchId = (int)($row['current_purchase_batch_id'] ?? 0);
-                    $purchaseBatchId = $currentBatchId > 0 ? $currentBatchId : null;
-                }
+            $purchaseBatchId = (int)($batch['id'] ?? 0);
+            $priceBox = (float)($batch['price_per_box'] ?? 0);
+            $available = (float)($batch['boxes_available'] ?? ($batch['boxes_free'] ?? 0));
+            if ($priceBox <= 0) {
+                $_SESSION['cart_error'] = 'Для выбранной партии не задана цена.';
+                $referer = $_SERVER['HTTP_REFERER'] ?? '/';
+                header('Location: ' . $referer);
+                exit;
             }
-
-            if ($stockMode !== 'preorder' && $purchaseBatchId === null) {
-                $_SESSION['cart_error'] = 'Для этого товара сейчас нет активной закупки.';
+            if ($stockMode !== 'preorder' && $quantity > $available) {
+                $_SESSION['cart_error'] = 'Недостаточно товара в наличии.';
                 $referer = $_SERVER['HTTP_REFERER'] ?? '/';
                 header('Location: ' . $referer);
                 exit;
