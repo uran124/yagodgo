@@ -12,7 +12,8 @@ class ClientCatalogService
                  AND p.seller_id IS NULL
                  AND availability.has_in_stock_batch = 1";
     private const HOME_PREORDER_WHERE = "p.is_active = 1
-                 AND p.seller_id IS NULL";
+                 AND p.seller_id IS NULL
+                 AND availability.has_planned_batch = 1";
 
     private PDO $pdo;
 
@@ -31,13 +32,15 @@ class ClientCatalogService
                 self::HOME_SALE_WHERE,
                 'p.id DESC',
                 [],
-                10
+                10,
+                'discount'
             ),
             'regularProducts' => $this->fetchProducts(
                 self::HOME_IN_STOCK_WHERE,
                 'p.id DESC',
                 [],
-                10
+                10,
+                'in_stock'
             ),
             'sellerProducts' => $this->fetchProducts(
                 'p.is_active = 1 AND p.seller_id IS NOT NULL',
@@ -49,13 +52,15 @@ class ClientCatalogService
                 self::HOME_PREORDER_WHERE,
                 'p.id DESC',
                 [],
-                10
+                10,
+                'preorder'
             ),
             'discountProducts' => $this->fetchProducts(
                 'p.is_active = 1 AND availability.has_discount_batch = 1',
                 'p.id DESC',
                 [],
-                10
+                10,
+                'discount'
             ),
             'materials' => $this->fetchLatestMaterials(),
         ];
@@ -115,8 +120,21 @@ class ClientCatalogService
      * @param array<int, mixed> $params
      * @return array<int, array<string, mixed>>
      */
-    private function fetchProducts(string $where, string $orderBy, array $params = [], ?int $limit = null): array
+    private function fetchProducts(string $where, string $orderBy, array $params = [], ?int $limit = null, string $offerMode = 'auto'): array
     {
+        $batchSelectorCondition = match ($offerMode) {
+            'preorder' => "pb2.status = 'planned' AND pb2.preorder_price_per_box > 0",
+            'discount' => "pb2.status IN ('purchased', 'arrived') AND pb2.boxes_discount > 0 AND pb2.discount_price_per_box > 0",
+            'in_stock' => "pb2.status IN ('purchased', 'arrived') AND pb2.boxes_free > 0 AND pb2.instant_price_per_box > 0",
+            default => "((pb2.status IN ('purchased', 'arrived') AND (pb2.boxes_free > 0 OR pb2.boxes_discount > 0)) OR (pb2.status = 'planned' AND pb2.preorder_price_per_box > 0))",
+        };
+        $batchSelectorOrder = match ($offerMode) {
+            'preorder' => "pb2.purchased_at ASC, pb2.id ASC",
+            'discount' => "pb2.purchased_at ASC, pb2.id ASC",
+            'in_stock' => "pb2.purchased_at ASC, pb2.id ASC",
+            default => "CASE WHEN pb2.status IN ('purchased', 'arrived') AND pb2.boxes_free > 0 THEN 1 WHEN pb2.status IN ('purchased', 'arrived') AND pb2.boxes_discount > 0 THEN 2 WHEN pb2.status = 'planned' THEN 3 ELSE 9 END, pb2.purchased_at ASC, pb2.id ASC",
+        };
+
         $sql = "SELECT p.id,\n" .
             "       p.alias,\n" .
             "       t.name AS product,\n" .
