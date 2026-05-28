@@ -18,7 +18,7 @@ class PricingService
     public function getSettings(): array
     {
         $defaults = [
-            'pricing_preorder_margin_percent' => 30.0,
+            'pricing_preorder_margin_percent' => 35.0,
             'pricing_instant_margin_percent' => 50.0,
             'pricing_discount_stock_markup_fixed' => 100.0,
             'pricing_rounding_step' => 10,
@@ -46,6 +46,11 @@ class PricingService
 
             $settings[$key] = (float) ($row['setting_value'] ?? $defaults[$key]);
         }
+
+        // Current business rule: preorder margin is fixed at +35%.
+        // Older databases may still contain pricing_preorder_margin_percent = 30;
+        // do not let that stale setting override the operational pricing rule.
+        $settings['pricing_preorder_margin_percent'] = 35.0;
 
         return $settings;
     }
