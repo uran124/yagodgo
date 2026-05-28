@@ -25,7 +25,7 @@ class StockService
         $column = $mode === 'discount_stock' ? 'boxes_discount' : 'boxes_free';
         $statusFilter = $mode === 'preorder'
             ? "status = 'planned'"
-            : "status IN ('active', 'arrived', 'purchased')";
+            : "status IN ('arrived', 'purchased')";
 
         $stmt = $this->pdo->prepare(
             "SELECT COALESCE(SUM({$column}), 0) AS available
@@ -171,8 +171,28 @@ class StockService
         $batch = $this->loadBatch($batchId);
         $column = $this->resolveModeColumn($mode, true);
 
-        if (((float)$batch[$column] + $delta) < 0) {
-            throw new RuntimeException('Not enough stock in selected mode.');
+        $updates = [];
+        if ($mode === 'preorder' && $movementType === 'reserve') {
+            // Preorder boxes may already be held in boxes_reserved from the booking queue.
+            // In that case adding the confirmed preorder to cart/order must not double-reserve
+            // and must not consume free stock again.
+            $requested = abs($delta);
+            $alreadyReserved = max(0.0, (float)($batch['boxes_reserved'] ?? 0));
+            $shortfall = max(0.0, $requested - $alreadyReserved);
+            if ($shortfall > 0 && ((float)$batch['boxes_free'] - $shortfall) < 0) {
+                throw new RuntimeException('Not enough stock in selected mode.');
+            }
+            if ($shortfall > 0) {
+                $updates = ['boxes_free' => -$shortfall, 'boxes_reserved' => $shortfall];
+            }
+        } else {
+            if (((float)$batch[$column] + $delta) < 0) {
+                throw new RuntimeException('Not enough stock in selected mode.');
+            }
+            $updates = [$column => $delta];
+            if ($movementType === 'reserve') {
+                $updates['boxes_reserved'] = abs($delta);
+            }
         }
 
         $ownsTransaction = !$this->pdo->inTransaction();
@@ -184,12 +204,9 @@ class StockService
 
             $this->appendMovement($batchId, $productId, $orderId, null, $movementType, $mode, $delta);
 
-            $updates = [$column => $delta];
-            if ($movementType === 'reserve') {
-                $updates['boxes_reserved'] = abs($delta);
+            if ($updates !== []) {
+                $this->updateBatchCounters($batchId, $updates);
             }
-
-            $this->updateBatchCounters($batchId, $updates);
             $this->assertBatchInvariants($batchId);
             $this->legacyProjection->syncAggregatesFromBatches($productId);
             if ($ownsTransaction) {
