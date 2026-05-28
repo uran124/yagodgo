@@ -2,6 +2,7 @@
 namespace App\Controllers;
 
 use PDO;
+use App\Services\PricingService;
 
 class ProductsController
 {
@@ -39,7 +40,7 @@ class ProductsController
                  SELECT 1
                  FROM purchase_batches pb
                  WHERE pb.product_id = p.id
-                   AND pb.status IN ('active', 'arrived', 'purchased')
+                   AND pb.status IN ('arrived', 'purchased')
                    AND (pb.boxes_free > 0 OR pb.boxes_discount > 0)
                )"
         );
@@ -188,6 +189,37 @@ class ProductsController
         }
 
         $priceKg = $product['price'] ?? null;
+        $activeBatches = [];
+        if ($id) {
+            $batchSql = "SELECT pb.*, DATE(pb.purchased_at) AS supply_date, photo.image_path AS preview_photo
+                         FROM purchase_batches pb
+                         LEFT JOIN (
+                           SELECT purchase_batch_id, MAX(id) AS latest_photo_id
+                           FROM purchase_batch_photos
+                           GROUP BY purchase_batch_id
+                         ) latest_photo ON latest_photo.purchase_batch_id = pb.id
+                         LEFT JOIN purchase_batch_photos photo ON photo.id = latest_photo.latest_photo_id
+                         WHERE pb.product_id = ?
+                           AND pb.status IN ('planned', 'purchased', 'arrived')
+                           AND (
+                               pb.boxes_free > 0
+                               OR pb.boxes_reserved > 0
+                               OR EXISTS (
+                                  SELECT 1 FROM preorder_intents pi
+                                  WHERE pi.purchase_batch_id = pb.id
+                                    AND pi.status IN ('linked_to_batch','awaiting_price_confirmation','confirmed','offer_sent')
+                               )
+                               OR EXISTS (
+                                  SELECT 1 FROM order_items oi JOIN orders o ON o.id = oi.order_id
+                                  WHERE oi.purchase_batch_id = pb.id
+                                    AND o.status NOT IN ('completed','cancelled','delivered')
+                               )
+                           )
+                         ORDER BY FIELD(pb.status, 'planned', 'purchased', 'arrived', 'active'), pb.purchased_at ASC, pb.id ASC";
+            $batchStmt = $this->pdo->prepare($batchSql);
+            $batchStmt->execute([(int)$id]);
+            $activeBatches = $batchStmt->fetchAll(PDO::FETCH_ASSOC);
+        }
 
         // Список типов
         $types = $this->pdo
@@ -202,6 +234,7 @@ class ProductsController
             'box_unit'      => $product['box_unit']      ?? 'кг',
             'delivery_date' => $product['delivery_date'] ?? null,
             'price_kg'      => $priceKg,
+            'activeBatches' => $activeBatches,
         ]);
     }
 
@@ -342,13 +375,8 @@ class ProductsController
                 $this->activateReservedOrdersByProduct((int)$id, $deliveryDate);
             }
 
-            $batchId = $this->resolveCurrentPurchaseBatchId((int)$id);
-            if ($batchId !== null) {
-                $updBatch = $this->pdo->prepare("UPDATE purchase_batches SET instant_price_per_box = ?, preorder_price_per_box = ? WHERE id = ?");
-                $updBatch->execute([$price, $preorderPrice, $batchId]);
-                $updProduct = $this->pdo->prepare("UPDATE products SET instant_price_per_box = ?, preorder_price_per_box = ? WHERE id = ?");
-                $updProduct->execute([$price, $preorderPrice, (int)$id]);
-            }
+            // Product edit saves default SKU values only.
+            // Active purchase prices are edited on the "Закупки" tab and stored in purchase_batches.
 
         } else {
             // INSERT
@@ -416,6 +444,64 @@ class ProductsController
             $this->pdo->prepare($sql)->execute($params);
         }
         header('Location: ' . $this->basePath());
+        exit;
+    }
+
+    // Inline update of a concrete purchase batch from product card.
+    public function updatePurchaseFromProduct(): void
+    {
+        $batchId = (int)($_POST['batch_id'] ?? 0);
+        $productId = (int)($_POST['product_id'] ?? 0);
+        if ($batchId <= 0 || $productId <= 0) {
+            header('Location: ' . $this->basePath());
+            exit;
+        }
+
+        $purchasePrice = (float)($_POST['purchase_price_per_box'] ?? 0);
+        // Operational prices are always derived from purchase price.
+        // This prevents stale manually-entered values from keeping +30% preorder markup.
+        $boxSizeStmt = $this->pdo->prepare('SELECT box_size FROM products WHERE id = ? LIMIT 1');
+        $boxSizeStmt->execute([$productId]);
+        $boxSize = max(1.0, (float)$boxSizeStmt->fetchColumn());
+        $prices = (new PricingService($this->pdo))->calculateFromPurchase($purchasePrice, $boxSize);
+        $instantPrice = (float)$prices['instant_price_per_box'];
+        $preorderPrice = (float)$prices['preorder_price_per_box'];
+
+        $stmt = $this->pdo->prepare(
+            "UPDATE purchase_batches
+             SET purchase_price_per_box = ?, instant_price_per_box = ?, preorder_price_per_box = ?
+             WHERE id = ? AND product_id = ?
+             LIMIT 1"
+        );
+        $stmt->execute([$purchasePrice, $instantPrice, $preorderPrice, $batchId, $productId]);
+
+        if (!empty($_FILES['batch_photo']['tmp_name'])) {
+            $tmp = $_FILES['batch_photo']['tmp_name'];
+            $dstName = uniqid('batch_', true) . '.webp';
+            $dst = __DIR__ . '/../../uploads/' . $dstName;
+            $src = @imagecreatefromstring((string)file_get_contents($tmp));
+            if ($src) {
+                $w = imagesx($src);
+                $h = imagesy($src);
+                $size = min($w, $h);
+                $x0 = (int)(($w - $size) / 2);
+                $y0 = (int)(($h - $size) / 2);
+                $crop = imagecrop($src, ['x' => $x0, 'y' => $y0, 'width' => $size, 'height' => $size]);
+                if ($crop) {
+                    $resized = imagecreatetruecolor(640, 640);
+                    imagecopyresampled($resized, $crop, 0, 0, 0, 0, 640, 640, $size, $size);
+                    imagewebp($resized, $dst, 80);
+                    imagedestroy($crop);
+                    imagedestroy($resized);
+                    $this->pdo->prepare('INSERT INTO purchase_batch_photos (purchase_batch_id, image_path) VALUES (?, ?)')
+                        ->execute([$batchId, '/uploads/' . $dstName]);
+                }
+                imagedestroy($src);
+            }
+        }
+
+        $referer = $_SERVER['HTTP_REFERER'] ?? '';
+        header('Location: ' . ($referer !== '' ? $referer : ($this->basePath() . '/edit?id=' . $productId)));
         exit;
     }
 
