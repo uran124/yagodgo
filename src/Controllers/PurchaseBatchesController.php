@@ -4,6 +4,7 @@ namespace App\Controllers;
 use App\Services\PurchaseBatchService;
 use App\Services\PreorderIntentService;
 use App\Services\LegacyProductProjectionService;
+use App\Services\PricingService;
 use PDO;
 use RuntimeException;
 
@@ -13,6 +14,7 @@ class PurchaseBatchesController
     private PurchaseBatchService $purchaseBatchService;
     private PreorderIntentService $preorderIntentService;
     private LegacyProductProjectionService $legacyProjectionService;
+    private PricingService $pricingService;
 
     public function __construct(PDO $pdo)
     {
@@ -20,6 +22,7 @@ class PurchaseBatchesController
         $this->purchaseBatchService = new PurchaseBatchService($pdo);
         $this->preorderIntentService = new PreorderIntentService($pdo);
         $this->legacyProjectionService = new LegacyProductProjectionService($pdo);
+        $this->pricingService = new PricingService($pdo);
     }
 
     public function index(): void
@@ -32,7 +35,7 @@ class PurchaseBatchesController
 '
           . '       TIMESTAMPDIFF(DAY, pb.purchased_at, NOW()) AS age_days,
 '
-          . "       CASE WHEN pb.boxes_free <= 0 OR pb.comment LIKE '[CLOSED]%' THEN 1 ELSE 0 END AS is_closed,\n"
+          . "       CASE WHEN pb.status = 'closed' THEN 1 ELSE 0 END AS is_closed,\n"
           . '       photo.image_path AS preview_photo,
 '
           . "       COALESCE(sm_writeoff.comments_count, 0) AS writeoff_comments_count,\n"
@@ -110,7 +113,7 @@ ORDER BY is_closed ASC, pb.id DESC';
 '
           . '  COUNT(*) AS total_batches,
 '
-          . '  COALESCE(SUM(CASE WHEN status IN ("active","arrived","purchased") THEN boxes_remaining ELSE 0 END), 0) AS remaining_boxes,
+          . '  COALESCE(SUM(CASE WHEN status IN ("planned","arrived","purchased") THEN boxes_remaining ELSE 0 END), 0) AS remaining_boxes,
 '
           . '  COALESCE(SUM(boxes_written_off), 0) AS written_off_boxes,
 '
@@ -133,7 +136,7 @@ ORDER BY is_closed ASC, pb.id DESC';
 "
           . "  COUNT(*) AS intents_count,
 "
-          . "  COALESCE(SUM(CASE WHEN pi.status = 'confirmed' THEN pi.requested_boxes ELSE 0 END), 0) AS confirmed_boxes
+          . "  COALESCE(SUM(CASE WHEN pi.status IN ('confirmed','awaiting_price_confirmation','offer_sent') THEN pi.requested_boxes ELSE 0 END), 0) AS confirmed_boxes
 "
           . "FROM preorder_intents pi
 "
@@ -141,7 +144,7 @@ ORDER BY is_closed ASC, pb.id DESC';
 "
           . "JOIN product_types t ON t.id = p.product_type_id
 "
-          . "WHERE pi.status IN ('intent_created', 'offer_sent', 'confirmed')
+          . "WHERE pi.status IN ('waiting_batch','linked_to_batch','awaiting_price_confirmation','offer_sent','confirmed','intent_created')
 "
           . "GROUP BY p.id, p.variety, t.name
 "
@@ -229,6 +232,16 @@ ORDER BY is_closed ASC, pb.id DESC';
         $photosStmt->execute([$id]);
 
         $pnl = $this->purchaseBatchService->calculateBatchPnl($id);
+
+        $reservedStmt = $this->pdo->prepare(
+            "SELECT COALESCE(SUM(requested_boxes), 0)
+             FROM preorder_intents
+             WHERE purchase_batch_id = ?
+               AND status IN ('linked_to_batch','awaiting_price_confirmation','offer_sent','confirmed')"
+        );
+        $reservedStmt->execute([$id]);
+        $reservedIntentBoxes = (float)$reservedStmt->fetchColumn();
+
         $products = $this->pdo->query(
             'SELECT p.id, p.variety, p.box_size, p.box_unit, t.name AS product_name
              FROM products p
@@ -245,6 +258,7 @@ ORDER BY is_closed ASC, pb.id DESC';
             'photos' => $photosStmt->fetchAll(PDO::FETCH_ASSOC),
             'pnl' => $pnl,
             'products' => $products,
+            'reservedIntentBoxes' => $reservedIntentBoxes,
             'flash' => $this->pullFlash(),
         ]);
     }
@@ -304,15 +318,18 @@ ORDER BY is_closed ASC, pb.id DESC';
         $this->ensureCsrfOrRedirect();
 
         $status = 'planned';
+        $productId = (int)($_POST['product_id'] ?? 0);
         $purchasePrice = (float)($_POST['purchase_price_per_box'] ?? 0);
-        $instantPrice = $purchasePrice > 0 ? $purchasePrice : 0.0;
-        $preorderPrice = $instantPrice > 0 ? round($instantPrice * 0.9, 2) : 0.0;
+        $boxSize = $this->getProductBoxSize($productId);
+        $prices = $this->pricingService->calculateFromPurchase($purchasePrice, $boxSize);
+        $instantPrice = (float)$prices['instant_price_per_box'];
+        $preorderPrice = (float)$prices['preorder_price_per_box'];
         $preorderCountStmt = $this->pdo->prepare(
             "SELECT COALESCE(SUM(requested_boxes), 0)
              FROM preorder_intents
              WHERE product_id = ? AND status IN ('intent_created','offer_sent','confirmed')"
         );
-        $preorderCountStmt->execute([(int)($_POST['product_id'] ?? 0)]);
+        $preorderCountStmt->execute([$productId]);
         $preorderBoxes = (float)$preorderCountStmt->fetchColumn();
 
         $requestedBoxesTotal = (float)($_POST['boxes_total'] ?? 0);
@@ -331,7 +348,7 @@ ORDER BY is_closed ASC, pb.id DESC';
         $requestedBoxesFree = max($requestedBoxesTotal - $requestedBoxesReserved, 1.0);
 
         $payload = [
-            'product_id' => (int)($_POST['product_id'] ?? 0),
+            'product_id' => $productId,
             'buyer_user_id' => (int)($_SESSION['user_id'] ?? 0),
             'boxes_total' => $requestedBoxesTotal,
             'boxes_reserved' => $requestedBoxesReserved,
@@ -340,6 +357,8 @@ ORDER BY is_closed ASC, pb.id DESC';
             'extra_cost_per_box' => (float)($_POST['extra_cost_per_box'] ?? 0),
             'instant_price_per_box' => $instantPrice,
             'preorder_price_per_box' => $preorderPrice,
+            'instant_unit_price' => (float)$prices['instant_unit_price'],
+            'preorder_unit_price' => (float)$prices['preorder_unit_price'],
             'status' => $status,
             'purchased_at' => (string)($_POST['planned_supply_date'] ?? ''),
             'comment' => trim((string)($_POST['comment'] ?? '')),
@@ -348,7 +367,7 @@ ORDER BY is_closed ASC, pb.id DESC';
         try {
             $batchId = $this->purchaseBatchService->createBatch($payload);
             // compatibility-only projection for legacy admin/reporting surfaces
-            $this->legacyProjectionService->updateBatchSnapshot((int)($_POST['product_id'] ?? 0), $batchId, $requestedBoxesFree, $requestedBoxesReserved, [
+            $this->legacyProjectionService->updateBatchSnapshot($productId, $batchId, $requestedBoxesFree, $requestedBoxesReserved, [
                 'preorder_price_per_box' => $preorderPrice,
                 'instant_price_per_box' => $instantPrice,
                 'discount_price_per_box' => $instantPrice,
@@ -427,15 +446,109 @@ ORDER BY is_closed ASC, pb.id DESC';
     {
         $this->ensureCsrfOrRedirect();
         $batchId = (int)($_POST['batch_id'] ?? 0);
-        if ($batchId > 0) {
-            try {
-                $this->purchaseBatchService->markPurchased($batchId);
-                $this->setFlash('success', 'Партия отмечена как выкупленная.');
-            } catch (RuntimeException $e) {
-                $this->setFlash('error', $e->getMessage());
-            }
+        if ($batchId <= 0) {
+            header('Location: ' . $this->basePath() . '/purchases');
+            exit;
         }
-        header('Location: ' . $this->basePath() . '/purchases');
+
+        try {
+            $batchStmt = $this->pdo->prepare('SELECT * FROM purchase_batches WHERE id = ? LIMIT 1');
+            $batchStmt->execute([$batchId]);
+            $batch = $batchStmt->fetch(PDO::FETCH_ASSOC);
+            if (!$batch) {
+                throw new RuntimeException('Закупка не найдена.');
+            }
+            if ((string)($batch['status'] ?? '') !== 'planned') {
+                throw new RuntimeException('В статус Выкуплена можно перевести только запланированную закупку.');
+            }
+
+            $productId = (int)($batch['product_id'] ?? 0);
+            $purchasePrice = (float)($_POST['purchase_price_per_box'] ?? $batch['purchase_price_per_box'] ?? 0);
+            $boxesTotal = max(0.0, (float)($_POST['boxes_total'] ?? $batch['boxes_total'] ?? 0));
+            if ($boxesTotal <= 0) {
+                throw new RuntimeException('Укажите количество выкупленных ящиков.');
+            }
+
+            $boxSize = $this->getProductBoxSize($productId);
+            $prices = $this->pricingService->calculateFromPurchase($purchasePrice, $boxSize);
+            $instantPosted = (float)($_POST['instant_price_per_box'] ?? 0);
+            $preorderPosted = (float)($_POST['preorder_price_per_box'] ?? 0);
+            $instantPrice = $instantPosted > 0 ? $instantPosted : (float)$prices['instant_price_per_box'];
+            $preorderPrice = $preorderPosted > 0 ? $preorderPosted : (float)$prices['preorder_price_per_box'];
+
+            $reservedStmt = $this->pdo->prepare(
+                "SELECT COALESCE(SUM(requested_boxes), 0)
+                 FROM preorder_intents
+                 WHERE purchase_batch_id = ?
+                   AND status IN ('linked_to_batch','awaiting_price_confirmation','offer_sent','confirmed')"
+            );
+            $reservedStmt->execute([$batchId]);
+            $reservedRequested = max(0.0, (float)$reservedStmt->fetchColumn());
+            $reservedAllocated = min($reservedRequested, $boxesTotal);
+            $boxesFree = max(0.0, $boxesTotal - $reservedAllocated);
+
+            $this->pdo->beginTransaction();
+            $stmt = $this->pdo->prepare(
+                'UPDATE purchase_batches
+                 SET boxes_total = :boxes_total,
+                     boxes_reserved = :boxes_reserved,
+                     boxes_free = :boxes_free,
+                     boxes_remaining = :boxes_remaining,
+                     purchase_price_per_box = :purchase_price_per_box,
+                     instant_price_per_box = :instant_price_per_box,
+                     preorder_price_per_box = :preorder_price_per_box,
+                     instant_unit_price = :instant_unit_price,
+                     preorder_unit_price = :preorder_unit_price,
+                     purchased_at = :purchased_at,
+                     status = "purchased",
+                     comment = :comment
+                 WHERE id = :id
+                   AND status = "planned"
+                 LIMIT 1'
+            );
+            $stmt->execute([
+                'id' => $batchId,
+                'boxes_total' => $boxesTotal,
+                'boxes_reserved' => $reservedAllocated,
+                'boxes_free' => $boxesFree,
+                'boxes_remaining' => $boxesTotal,
+                'purchase_price_per_box' => $purchasePrice,
+                'instant_price_per_box' => $instantPrice,
+                'preorder_price_per_box' => $preorderPrice,
+                'instant_unit_price' => $instantPrice,
+                'preorder_unit_price' => $preorderPrice,
+                'purchased_at' => (string)($_POST['planned_supply_date'] ?? $batch['purchased_at'] ?? date('Y-m-d')),
+                'comment' => trim((string)($_POST['comment'] ?? $batch['comment'] ?? '')),
+            ]);
+            if ($stmt->rowCount() < 1) {
+                throw new RuntimeException('Не удалось перевести закупку в статус Выкуплена.');
+            }
+            $this->pdo->commit();
+
+            $this->storeBatchPhotos($batchId);
+            $this->purchaseBatchService->markPurchased($batchId);
+            $this->legacyProjectionService->updateBatchSnapshot($productId, $batchId, $boxesFree, $reservedAllocated, [
+                'preorder_price_per_box' => $preorderPrice,
+                'instant_price_per_box' => $instantPrice,
+                'discount_price_per_box' => $instantPrice,
+                'preorder_unit_price' => $preorderPrice,
+                'instant_unit_price' => $instantPrice,
+                'discount_unit_price' => $instantPrice,
+            ]);
+
+            $msg = 'Партия отмечена как выкупленная. Свободно: ' . number_format($boxesFree, 0, '.', ' ') . ' ящ.';
+            if ($reservedRequested > $reservedAllocated) {
+                $msg .= ' Броней больше, чем выкуплено: часть останется в ожидании следующей закупки.';
+            }
+            $this->setFlash('success', $msg);
+        } catch (RuntimeException $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            $this->setFlash('error', $e->getMessage());
+        }
+
+        header('Location: ' . $this->basePath() . '/purchases/' . $batchId);
         exit;
     }
 
@@ -453,6 +566,7 @@ ORDER BY is_closed ASC, pb.id DESC';
         if ($batchId > 0 && $boxes > 0) {
             if ($reason === '') { $reason = 'Без причины'; }
             $this->purchaseBatchService->moveToDiscountStock($batchId, $boxes);
+            $this->purchaseBatchService->autoCloseEligibleBatches($batchId);
             $this->setFlash('success', 'Часть партии переведена в выгодный остаток.');
         }
         header('Location: ' . $this->basePath() . '/purchases');
@@ -518,7 +632,7 @@ ORDER BY is_closed ASC, pb.id DESC';
         $productId = (int)($_GET['product_id'] ?? 0);
         header('Content-Type: application/json; charset=utf-8');
         if ($productId <= 0) { echo json_encode(['items'=>[]], JSON_UNESCAPED_UNICODE); exit; }
-        $stmt = $this->pdo->prepare("SELECT pi.id, pi.status, pi.requested_boxes, COALESCE(u.name,'Без имени') AS customer_name, COALESCE(u.phone,'') AS customer_phone FROM preorder_intents pi JOIN users u ON u.id = pi.user_id WHERE pi.product_id = ? AND pi.status IN ('intent_created','offer_sent','confirmed') ORDER BY pi.created_at ASC, pi.id ASC");
+        $stmt = $this->pdo->prepare("SELECT pi.id, pi.status, pi.requested_boxes, COALESCE(u.name,'Без имени') AS customer_name, COALESCE(u.phone,'') AS customer_phone FROM preorder_intents pi JOIN users u ON u.id = pi.user_id WHERE pi.product_id = ? AND pi.status IN ('waiting_batch','linked_to_batch','awaiting_price_confirmation','offer_sent','confirmed','intent_created') ORDER BY pi.created_at ASC, pi.id ASC");
         $stmt->execute([$productId]);
         echo json_encode(['items'=>$stmt->fetchAll(PDO::FETCH_ASSOC)], JSON_UNESCAPED_UNICODE);
         exit;
@@ -535,10 +649,10 @@ ORDER BY is_closed ASC, pb.id DESC';
         }
         if ($action === 'confirm') {
             $token = bin2hex(random_bytes(24));
-            $this->pdo->prepare("UPDATE preorder_intents SET status='confirmed', checkout_token = ?, updated_at=NOW() WHERE id=? AND status IN ('intent_created','offer_sent')")
+            $this->pdo->prepare("UPDATE preorder_intents SET status='confirmed', checkout_token = ?, updated_at=NOW() WHERE id=? AND status IN ('awaiting_price_confirmation','offer_sent')")
                 ->execute([$token, $intentId]);
         } else {
-            $this->pdo->prepare("UPDATE preorder_intents SET status='declined', updated_at=NOW() WHERE id=? AND status IN ('intent_created','offer_sent')")->execute([$intentId]);
+            $this->pdo->prepare("UPDATE preorder_intents SET status='declined', updated_at=NOW() WHERE id=? AND status IN ('awaiting_price_confirmation','offer_sent')")->execute([$intentId]);
         }
         header('Location: ' . $this->basePath() . '/purchases');
         exit;
@@ -569,6 +683,7 @@ ORDER BY is_closed ASC, pb.id DESC';
         if ($comment === '') { $comment = 'Без причины'; }
         if ($batchId > 0 && $boxes > 0) {
             $this->purchaseBatchService->writeOff($batchId, $boxes, $comment);
+            $this->purchaseBatchService->autoCloseEligibleBatches($batchId);
             $this->setFlash('success', 'Списание выполнено.');
         }
         header('Location: ' . $this->basePath() . '/purchases');
@@ -616,42 +731,84 @@ ORDER BY is_closed ASC, pb.id DESC';
             exit;
         }
         $status = (string)($_POST['status'] ?? 'planned');
-        $instantPrice = (float)($_POST['instant_price_per_box'] ?? 0);
-        $preorderPrice = (float)($_POST['preorder_price_per_box'] ?? 0);
-        if ($status === 'purchased') {
-            if ($instantPrice <= 0) {
-                $instantPrice = (float)($_POST['purchase_price_per_box'] ?? 0);
-            }
-            if ($preorderPrice <= 0 && $instantPrice > 0) {
-                $preorderPrice = round($instantPrice * 0.9, 2);
-            }
+        $productId = (int)($_POST['product_id'] ?? 0);
+        $purchasePrice = (float)($_POST['purchase_price_per_box'] ?? 0);
+        $boxSize = $this->getProductBoxSize($productId);
+        $prices = $this->pricingService->calculateFromPurchase($purchasePrice, $boxSize);
+        // Batch-first pricing: prices are derived from purchase price by default,
+        // but admin/buyer may correct final prices manually on the batch.
+        $instantPosted = (float)($_POST['instant_price_per_box'] ?? 0);
+        $preorderPosted = (float)($_POST['preorder_price_per_box'] ?? 0);
+        $instantPrice = $instantPosted > 0 ? $instantPosted : (float)$prices['instant_price_per_box'];
+        $preorderPrice = $preorderPosted > 0 ? $preorderPosted : (float)$prices['preorder_price_per_box'];
+
+        $boxesTotal = max(0.0, (float)($_POST['boxes_total'] ?? 0));
+        $boxesReserved = max(0.0, (float)($_POST['boxes_reserved'] ?? 0));
+        $boxesFree = max(0.0, (float)($_POST['boxes_free'] ?? 0));
+
+        $currentStmt = $this->pdo->prepare(
+            'SELECT boxes_sold, boxes_written_off, boxes_discount
+               FROM purchase_batches
+              WHERE id = ?
+              LIMIT 1'
+        );
+        $currentStmt->execute([$batchId]);
+        $currentBatch = $currentStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        $boxesSold = (float)($currentBatch['boxes_sold'] ?? 0);
+        $boxesWrittenOff = (float)($currentBatch['boxes_written_off'] ?? 0);
+        $boxesDiscount = (float)($currentBatch['boxes_discount'] ?? 0);
+        $boxesRemaining = $boxesTotal - $boxesSold - $boxesWrittenOff;
+
+        if ($boxesRemaining < -0.01) {
+            $this->setFlash('error', 'Куплено ящиков не может быть меньше уже проданных и списанных ящиков.');
+            header('Location: ' . $this->basePath() . '/purchases/' . $batchId);
+            exit;
+        }
+
+        if (($boxesFree + $boxesReserved + $boxesDiscount) > ($boxesRemaining + 0.01)) {
+            $this->setFlash('error', 'Свободно + резерв + уценка не может быть больше остатка партии. Проверьте количество ящиков.');
+            header('Location: ' . $this->basePath() . '/purchases/' . $batchId);
+            exit;
         }
 
         $stmt = $this->pdo->prepare(
             'UPDATE purchase_batches
-             SET product_id = :product_id, boxes_total = :boxes_total, boxes_reserved = :boxes_reserved, boxes_free = :boxes_free,
-                 purchase_price_per_box = :purchase_price_per_box, extra_cost_per_box = :extra_cost_per_box,
-                 instant_price_per_box = :instant_price_per_box, preorder_price_per_box = :preorder_price_per_box,
-                 status = :status, purchased_at = :purchased_at, comment = :comment
+             SET product_id = :product_id,
+                 boxes_total = :boxes_total,
+                 boxes_reserved = :boxes_reserved,
+                 boxes_free = :boxes_free,
+                 boxes_remaining = :boxes_remaining,
+                 purchase_price_per_box = :purchase_price_per_box,
+                 extra_cost_per_box = :extra_cost_per_box,
+                 instant_price_per_box = :instant_price_per_box,
+                 preorder_price_per_box = :preorder_price_per_box,
+                 instant_unit_price = :instant_unit_price,
+                 preorder_unit_price = :preorder_unit_price,
+                 status = :status,
+                 purchased_at = :purchased_at,
+                 comment = :comment
              WHERE id = :id
              LIMIT 1'
         );
         $stmt->execute([
             'id' => $batchId,
-            'product_id' => (int)($_POST['product_id'] ?? 0),
-            'boxes_total' => (float)($_POST['boxes_total'] ?? 0),
-            'boxes_reserved' => (float)($_POST['boxes_reserved'] ?? 0),
-            'boxes_free' => (float)($_POST['boxes_free'] ?? 0),
+            'product_id' => $productId,
+            'boxes_total' => $boxesTotal,
+            'boxes_reserved' => $boxesReserved,
+            'boxes_free' => $boxesFree,
+            'boxes_remaining' => max(0.0, $boxesRemaining),
             'purchase_price_per_box' => (float)($_POST['purchase_price_per_box'] ?? 0),
             'extra_cost_per_box' => (float)($_POST['extra_cost_per_box'] ?? 0),
             'instant_price_per_box' => $instantPrice,
             'preorder_price_per_box' => $preorderPrice,
+            'instant_unit_price' => (float)$prices['instant_unit_price'],
+            'preorder_unit_price' => (float)$prices['preorder_unit_price'],
             'status' => $status,
             'purchased_at' => (string)($_POST['planned_supply_date'] ?? ''),
             'comment' => trim((string)($_POST['comment'] ?? '')),
         ]);
         // compatibility-only projection for legacy admin/reporting surfaces
-        $this->legacyProjectionService->updateBatchSnapshot((int)($_POST['product_id'] ?? 0), $batchId, (float)($_POST['boxes_free'] ?? 0), (float)($_POST['boxes_reserved'] ?? 0), [
+        $this->legacyProjectionService->updateBatchSnapshot($productId, $batchId, $boxesFree, $boxesReserved, [
             'preorder_price_per_box' => $preorderPrice,
             'instant_price_per_box' => $instantPrice,
             'discount_price_per_box' => $instantPrice,
@@ -675,23 +832,13 @@ ORDER BY is_closed ASC, pb.id DESC';
             header('Location: ' . $this->basePath() . '/purchases');
             exit;
         }
-        $stmt = $this->pdo->prepare('SELECT comment FROM purchase_batches WHERE id = ? LIMIT 1');
-        $stmt->execute([$batchId]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        if (!$row) {
-            $this->setFlash('error', 'Закупка не найдена.');
-            header('Location: ' . $this->basePath() . '/purchases');
-            exit;
+        $reason = trim((string)($_POST['close_reason'] ?? 'Ручное закрытие'));
+        try {
+            $this->purchaseBatchService->closeBatch($batchId, $reason !== '' ? $reason : 'Ручное закрытие');
+            $this->setFlash('success', 'Закупка закрыта (без удаления данных).');
+        } catch (RuntimeException $e) {
+            $this->setFlash('error', $e->getMessage());
         }
-
-        $comment = trim((string)($row['comment'] ?? ''));
-        if (!str_starts_with($comment, '[CLOSED]')) {
-            $comment = trim('[CLOSED] ' . $comment);
-        }
-
-        $upd = $this->pdo->prepare('UPDATE purchase_batches SET boxes_free = 0, comment = :comment WHERE id = :id LIMIT 1');
-        $upd->execute(['id' => $batchId, 'comment' => $comment]);
-        $this->setFlash('success', 'Закупка закрыта (без удаления данных).');
         header('Location: ' . $this->basePath() . '/purchases');
         exit;
     }
@@ -704,6 +851,19 @@ ORDER BY is_closed ASC, pb.id DESC';
             'buyer' => '/buyer',
             default => '/admin',
         };
+    }
+
+    private function getProductBoxSize(int $productId): float
+    {
+        if ($productId <= 0) {
+            return 1.0;
+        }
+
+        $stmt = $this->pdo->prepare('SELECT box_size FROM products WHERE id = ? LIMIT 1');
+        $stmt->execute([$productId]);
+        $boxSize = (float)$stmt->fetchColumn();
+
+        return $boxSize > 0 ? $boxSize : 1.0;
     }
 
     private function storeBatchPhotos(int $batchId): void
