@@ -838,9 +838,9 @@ public function cart(): void
         $preorderIntentId = (int)($_SESSION['preorder_checkout_intent_id'] ?? 0);
     if ($preorderIntentId > 0) {
         $this->pdo->prepare(
-            "UPDATE preorder_intents SET status = 'completed', updated_at = NOW() WHERE id = ? AND user_id = ? AND status = 'confirmed'"
+            "UPDATE preorder_intents SET status = 'completed', updated_at = NOW() WHERE id = ? AND user_id = ? AND status IN ('confirmed','moved_to_cart')"
         )->execute([$preorderIntentId, $userId]);
-        $this->logPreorderEvent($preorderIntentId, 'checkout_completed', 'confirmed', 'completed');
+        $this->logPreorderEvent($preorderIntentId, 'checkout_completed', 'moved_to_cart', 'completed');
     }
 
     if ($referralUsed && $referrerId !== null) {
@@ -898,7 +898,7 @@ public function cart(): void
         }
 
         $intentStmt = $this->pdo->prepare(
-            "SELECT status, offered_price_per_box FROM preorder_intents WHERE id = ? AND user_id = ? AND product_id = ? LIMIT 1"
+            "SELECT status, offered_price_per_box, purchase_batch_id FROM preorder_intents WHERE id = ? AND user_id = ? AND product_id = ? LIMIT 1"
         );
         $intentStmt->execute([$intentId, $userId, $productId]);
         $intent = $intentStmt->fetch(PDO::FETCH_ASSOC);
@@ -907,28 +907,37 @@ public function cart(): void
             return;
         }
 
+        $purchaseBatchId = (int)($intent['purchase_batch_id'] ?? 0);
+        $batchStmt = $this->pdo->prepare(
+            "SELECT id, preorder_price_per_box
+             FROM purchase_batches
+             WHERE product_id = ?
+               AND id = ?
+               AND status IN ('purchased','arrived')
+               AND preorder_price_per_box > 0
+             LIMIT 1"
+        );
+        $batchStmt->execute([$productId, $purchaseBatchId]);
+        $batch = $batchStmt->fetch(PDO::FETCH_ASSOC) ?: [];
         $priceBox = (float)($intent['offered_price_per_box'] ?? 0);
         if ($priceBox <= 0) {
-            $batchStmt = $this->pdo->prepare(
-                "SELECT preorder_price_per_box
-                 FROM purchase_batches
-                 WHERE product_id = ?
-                   AND status = 'planned'
-                   AND preorder_price_per_box > 0
-                 ORDER BY purchased_at ASC, id ASC
-                 LIMIT 1"
-            );
-            $batchStmt->execute([$productId]);
-            $batch = $batchStmt->fetch(PDO::FETCH_ASSOC) ?: [];
             $priceBox = (float)($batch['preorder_price_per_box'] ?? 0);
+        }
+        if ($purchaseBatchId <= 0 || $priceBox <= 0) {
+            unset($_SESSION['preorder_continue']);
+            $_SESSION['cart_error'] = 'Для предзаказа сейчас нет выкупленной партии с подтвержденной ценой.';
+            return;
         }
 
         $this->pdo->prepare(
             "INSERT INTO cart_items (user_id, product_id, quantity, unit_price, stock_mode, purchase_batch_id, boxes, sale_price_per_box)
-             VALUES (?, ?, ?, ?, 'preorder', NULL, ?, ?)
-             ON DUPLICATE KEY UPDATE quantity = VALUES(quantity), unit_price = VALUES(unit_price), stock_mode = 'preorder', purchase_batch_id = NULL, boxes = VALUES(boxes), sale_price_per_box = VALUES(sale_price_per_box)"
-        )->execute([$userId, $productId, $requestedBoxes, $priceBox, $requestedBoxes, $priceBox]);
+             VALUES (?, ?, ?, ?, 'preorder', ?, ?, ?)
+             ON DUPLICATE KEY UPDATE quantity = VALUES(quantity), unit_price = VALUES(unit_price), stock_mode = 'preorder', purchase_batch_id = VALUES(purchase_batch_id), boxes = VALUES(boxes), sale_price_per_box = VALUES(sale_price_per_box)"
+        )->execute([$userId, $productId, $requestedBoxes, $priceBox, $purchaseBatchId, $requestedBoxes, $priceBox]);
 
+        $this->pdo->prepare("UPDATE preorder_intents SET status = 'moved_to_cart', updated_at = NOW() WHERE id = ? AND user_id = ? AND status IN ('confirmed','moved_to_cart')")
+            ->execute([$intentId, $userId]);
+        $this->logPreorderEvent($intentId, 'moved_to_cart', 'confirmed', 'moved_to_cart');
         $_SESSION['preorder_checkout_intent_id'] = $intentId;
         unset($_SESSION['preorder_continue']);
         $this->refreshCartTotal();
@@ -1282,7 +1291,7 @@ public function cancelReservedOrder(int $orderId): void
              JOIN products p ON p.id = pi.product_id
              JOIN product_types pt ON pt.id = p.product_type_id
              WHERE pi.user_id = ?
-               AND pi.status IN ('offer_sent', 'confirmed', 'declined', 'expired')
+               AND pi.status IN ('waiting_batch','linked_to_batch','awaiting_price_confirmation','offer_sent', 'confirmed', 'declined', 'expired','moved_to_cart')
              ORDER BY pi.updated_at DESC, pi.id DESC"
         );
         $offersStmt->execute([$userId]);
@@ -1490,7 +1499,7 @@ public function cancelReservedOrder(int $orderId): void
         }
 
         $existingStmt = $this->pdo->prepare(
-            "SELECT id FROM preorder_intents WHERE user_id = ? AND product_id = ? AND status IN ('intent_created','offer_sent') ORDER BY id DESC LIMIT 1"
+            "SELECT id FROM preorder_intents WHERE user_id = ? AND product_id = ? AND status IN ('waiting_batch','linked_to_batch','awaiting_price_confirmation','intent_created','offer_sent') ORDER BY id DESC LIMIT 1"
         );
         $existingStmt->execute([$userId, $productId]);
         $existingId = $existingStmt->fetchColumn();
@@ -1505,10 +1514,9 @@ public function cancelReservedOrder(int $orderId): void
         $plannedBatchStmt->execute([$productId]);
         $plannedBatch = $plannedBatchStmt->fetch(PDO::FETCH_ASSOC) ?: null;
         $hasPlannedBatch = $plannedBatch !== null;
-        $offerHours = max(1, (int)(get_setting('preorder_offer_expiration_hours', '48') ?? '48'));
-        $offerExpiresAt = date('Y-m-d H:i:s', time() + ($offerHours * 3600));
         $autoOfferPrice = $hasPlannedBatch ? round((float)($plannedBatch['preorder_price_per_box'] ?? 0), 2) : 0.0;
-        $targetStatus = ($hasPlannedBatch && $autoOfferPrice > 0) ? 'offer_sent' : 'intent_created';
+        $targetStatus = $hasPlannedBatch ? 'linked_to_batch' : 'waiting_batch';
+        $targetBatchId = $hasPlannedBatch ? (int)$plannedBatch['id'] : null;
 
         $etaDateValue = null;
         if ($sourceSection === 'in_stock' && $sourceDeliveryDate !== '') {
@@ -1532,16 +1540,16 @@ public function cancelReservedOrder(int $orderId): void
             $this->pdo->prepare(
                 "UPDATE preorder_intents
                  SET requested_boxes = ?, desired_delivery_date = ?, expected_price_per_box = ?, discount_percent_snapshot = ?,
-                     status = ?, offered_price_per_box = ?, offer_expires_at = ?, checkout_token = NULL, updated_at = NOW()
+                     purchase_batch_id = ?, status = ?, offered_price_per_box = ?, offer_expires_at = NULL, checkout_token = NULL, updated_at = NOW()
                  WHERE id = ?"
             )->execute([
                 $requestedBoxes,
                 $desiredDeliveryDate,
                 $expectedPriceStored,
                 $discountSnapshotStored,
+                $targetBatchId,
                 $targetStatus,
-                $targetStatus === 'offer_sent' ? $autoOfferPrice : null,
-                $targetStatus === 'offer_sent' ? $offerExpiresAt : null,
+                $autoOfferPrice > 0 ? $autoOfferPrice : null,
                 (int)$existingId,
             ]);
             $intentId = (int)$existingId;
@@ -1553,21 +1561,16 @@ public function cancelReservedOrder(int $orderId): void
                 'desired_delivery_date' => $desiredDeliveryDate ?? 'any',
                 'expected_price_per_box' => $expectedPriceStored,
                 'discount_percent_snapshot' => $discountSnapshotStored,
-                'planned_batch_id' => $hasPlannedBatch ? (int)$plannedBatch['id'] : null,
+                'planned_batch_id' => $targetBatchId,
                 'status' => $targetStatus,
             ]);
         } else {
             $this->pdo->prepare(
                 "INSERT INTO preorder_intents (
-                    user_id, product_id, requested_boxes, desired_delivery_date, expected_price_per_box, discount_percent_snapshot, status, created_at, updated_at
-                 ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())"
-            )->execute([$userId, $productId, $requestedBoxes, $desiredDeliveryDate, $expectedPriceStored, $discountSnapshotStored, $targetStatus]);
+                    user_id, product_id, purchase_batch_id, requested_boxes, desired_delivery_date, expected_price_per_box, discount_percent_snapshot, status, offered_price_per_box, created_at, updated_at
+                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())"
+            )->execute([$userId, $productId, $targetBatchId, $requestedBoxes, $desiredDeliveryDate, $expectedPriceStored, $discountSnapshotStored, $targetStatus, $autoOfferPrice > 0 ? $autoOfferPrice : null]);
             $intentId = (int)$this->pdo->lastInsertId();
-            if ($targetStatus === 'offer_sent') {
-                $this->pdo->prepare(
-                    "UPDATE preorder_intents SET offered_price_per_box = ?, offer_expires_at = ? WHERE id = ?"
-                )->execute([$autoOfferPrice, $offerExpiresAt, $intentId]);
-            }
             $this->logPreorderEvent($intentId, 'intent_created', null, 'intent_created', [
                 'requested_boxes' => $requestedBoxes,
                 'source_section' => $sourceSection,
@@ -1576,7 +1579,7 @@ public function cancelReservedOrder(int $orderId): void
                 'desired_delivery_date' => $desiredDeliveryDate ?? 'any',
                 'expected_price_per_box' => $expectedPriceStored,
                 'discount_percent_snapshot' => $discountSnapshotStored,
-                'planned_batch_id' => $hasPlannedBatch ? (int)$plannedBatch['id'] : null,
+                'planned_batch_id' => $targetBatchId,
                 'status' => $targetStatus,
             ]);
         }
@@ -1616,7 +1619,7 @@ public function cancelReservedOrder(int $orderId): void
             echo json_encode(['ok' => false, 'error' => 'Предзаказ не найден'], JSON_UNESCAPED_UNICODE);
             return;
         }
-        if ((string)$intent['status'] !== 'offer_sent') {
+        if (!in_array((string)$intent['status'], ['awaiting_price_confirmation','offer_sent'], true)) {
             http_response_code(409);
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode(['ok' => false, 'error' => 'Оффер недоступен для подтверждения'], JSON_UNESCAPED_UNICODE);
@@ -1637,7 +1640,7 @@ public function cancelReservedOrder(int $orderId): void
         $this->pdo->prepare(
             "UPDATE preorder_intents SET status = 'confirmed', checkout_token = ?, updated_at = NOW() WHERE id = ?"
         )->execute([$token, $intentId]);
-        $this->logPreorderEvent($intentId, 'offer_confirmed', 'offer_sent', 'confirmed');
+        $this->logPreorderEvent($intentId, 'offer_confirmed', (string)$intent['status'], 'confirmed');
 
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode([
@@ -1663,7 +1666,7 @@ public function cancelReservedOrder(int $orderId): void
             echo json_encode(['ok' => false, 'error' => 'Предзаказ не найден'], JSON_UNESCAPED_UNICODE);
             return;
         }
-        if ((string)$intent['status'] !== 'offer_sent') {
+        if (!in_array((string)$intent['status'], ['awaiting_price_confirmation','offer_sent'], true)) {
             http_response_code(409);
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode(['ok' => false, 'error' => 'Оффер недоступен для отказа'], JSON_UNESCAPED_UNICODE);
@@ -1672,7 +1675,7 @@ public function cancelReservedOrder(int $orderId): void
 
         $this->pdo->prepare("UPDATE preorder_intents SET status = 'declined', updated_at = NOW() WHERE id = ?")
             ->execute([$intentId]);
-        $this->logPreorderEvent($intentId, 'offer_declined', 'offer_sent', 'declined');
+        $this->logPreorderEvent($intentId, 'offer_declined', (string)$intent['status'], 'declined');
 
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode([
@@ -1733,13 +1736,15 @@ public function cancelReservedOrder(int $orderId): void
     private function preorderIntentStatusLabel(string $status): string
     {
         return match ($status) {
-            'intent_created' => 'Новый',
-            'offer_sent' => 'Ожидает подтверждения',
-            'confirmed' => 'Подтвержден',
-            'completed' => 'Выполнен',
-            'checkout_completed' => 'Выполнен',
-            'declined' => 'Отменен',
-            'expired' => 'Просрочен',
+            'waiting_batch', 'intent_created' => 'Ожидает закупку',
+            'linked_to_batch' => 'Привязана к закупке',
+            'awaiting_price_confirmation', 'offer_sent' => 'Ожидает подтверждения цены',
+            'confirmed' => 'Подтверждена',
+            'moved_to_cart' => 'Переведена в корзину',
+            'completed' => 'Выполнена',
+            'checkout_completed' => 'Выполнена',
+            'declined' => 'Отказ',
+            'expired' => 'Истекла',
             default => $status,
         };
     }
