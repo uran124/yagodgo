@@ -7,11 +7,12 @@ use Throwable;
 
 class PurchaseBatchService
 {
-    private const ALLOWED_BATCH_STATUSES = ['planned', 'purchased', 'arrived'];
+    private const ALLOWED_BATCH_STATUSES = ['planned', 'purchased', 'arrived', 'closed'];
     private const ALLOWED_STATUS_TRANSITIONS = [
-        'planned' => ['purchased'],
-        'purchased' => ['arrived'],
-        'arrived' => [],
+        'planned' => ['purchased', 'closed'],
+        'purchased' => ['arrived', 'closed'],
+        'arrived' => ['closed'],
+        'closed' => [],
     ];
 
     private PDO $pdo;
@@ -154,6 +155,9 @@ class PurchaseBatchService
             $batchId = (int)$this->pdo->lastInsertId();
 
             $this->legacyProjection->updateBatchSnapshot($productId, $batchId, $boxesFree, $boxesReserved, $prices);
+            if ($status === 'planned') {
+                $this->bindWaitingIntentsToBatch($batchId, $productId, $boxesReserved);
+            }
 
             $this->pdo->commit();
 
@@ -302,9 +306,42 @@ class PurchaseBatchService
         $this->legacyProjection->syncAggregatesFromBatches((int)$batch['product_id']);
     }
 
-    public function closeBatch(int $batchId): void
+    public function closeBatch(int $batchId, string $reason = 'Ручное закрытие'): void
     {
+        $batch = $this->loadBatch($batchId);
         $this->updateBatchStatus($batchId, 'closed');
+        $stmt = $this->pdo->prepare('UPDATE purchase_batches SET closed_at = NOW(), close_reason = ? WHERE id = ? LIMIT 1');
+        $stmt->execute([$reason, $batchId]);
+        $this->legacyProjection->syncAggregatesFromBatches((int)$batch['product_id']);
+    }
+
+    /**
+     * Close batches that no longer have free stock, active reservations or unfinished orders.
+     */
+    public function autoCloseEligibleBatches(?int $batchId = null): int
+    {
+        $where = "pb.status IN ('planned','purchased','arrived')
+              AND COALESCE(pb.boxes_free, 0) <= 0
+              AND COALESCE(pb.boxes_discount, 0) <= 0
+              AND NOT EXISTS (
+                SELECT 1 FROM preorder_intents pi
+                WHERE pi.purchase_batch_id = pb.id
+                  AND pi.status IN ('linked_to_batch','awaiting_price_confirmation','confirmed','offer_sent')
+              )
+              AND NOT EXISTS (
+                SELECT 1 FROM order_items oi
+                JOIN orders o ON o.id = oi.order_id
+                WHERE oi.purchase_batch_id = pb.id
+                  AND o.status NOT IN ('completed','cancelled','delivered')
+              )";
+        $params = [];
+        if ($batchId !== null && $batchId > 0) {
+            $where .= ' AND pb.id = ?';
+            $params[] = $batchId;
+        }
+        $stmt = $this->pdo->prepare("UPDATE purchase_batches pb SET pb.status = 'closed', pb.closed_at = NOW(), pb.close_reason = COALESCE(pb.close_reason, 'Автозакрытие: нет активных остатков и обязательств') WHERE {$where}");
+        $stmt->execute($params);
+        return $stmt->rowCount();
     }
 
     public function cancelPendingReservations(int $batchId): int
@@ -350,6 +387,65 @@ class PurchaseBatchService
         return count($ids);
     }
 
+
+    private function bindWaitingIntentsToBatch(int $batchId, int $productId, float $reservedCapacity): void
+    {
+        if ($batchId <= 0 || $productId <= 0) {
+            return;
+        }
+        $limitByCapacity = $reservedCapacity > 0;
+        $remaining = $reservedCapacity;
+        $select = $this->pdo->prepare(
+            "SELECT id, requested_boxes
+             FROM preorder_intents
+             WHERE product_id = ?
+               AND status IN ('waiting_batch','intent_created')
+               AND (purchase_batch_id IS NULL OR purchase_batch_id = 0)
+             ORDER BY created_at ASC, id ASC"
+        );
+        $select->execute([$productId]);
+        $items = $select->fetchAll(PDO::FETCH_ASSOC);
+        $update = $this->pdo->prepare(
+            "UPDATE preorder_intents
+             SET purchase_batch_id = ?, status = 'linked_to_batch', updated_at = NOW()
+             WHERE id = ?"
+        );
+        foreach ($items as $item) {
+            $need = (float)($item['requested_boxes'] ?? 0);
+            if ($need <= 0) {
+                continue;
+            }
+            if ($limitByCapacity && $need > $remaining) {
+                continue;
+            }
+            $update->execute([$batchId, (int)$item['id']]);
+            $this->logPreorderEvent((int)$item['id'], 'linked_to_batch', null, 'linked_to_batch', [
+                'purchase_batch_id' => $batchId,
+            ]);
+            if ($limitByCapacity) {
+                $remaining -= $need;
+            }
+        }
+    }
+
+    private function logPreorderEvent(int $intentId, string $eventType, ?string $fromStatus, ?string $toStatus, ?array $meta = null): void
+    {
+        try {
+            $this->pdo->prepare(
+                "INSERT INTO preorder_intent_events (preorder_intent_id, event_type, from_status, to_status, meta_json, created_at)
+                 VALUES (?, ?, ?, ?, ?, NOW())"
+            )->execute([
+                $intentId,
+                $eventType,
+                $fromStatus,
+                $toStatus,
+                $meta ? json_encode($meta, JSON_UNESCAPED_UNICODE) : null,
+            ]);
+        } catch (Throwable) {
+            // audit logging is non-blocking
+        }
+    }
+
     /**
      * @param array<string, mixed> $settings
      * @return array<string, float>
@@ -357,7 +453,7 @@ class PurchaseBatchService
     private function calculatePricesFromSettings(float $purchasePricePerBox, float $boxSize, array $settings): array
     {
         $roundingStep = max(1, (int)($settings['pricing_rounding_step'] ?? 10));
-        $preorderMargin = (float)($settings['pricing_preorder_margin_percent'] ?? 30);
+        $preorderMargin = (float)($settings['pricing_preorder_margin_percent'] ?? 35);
         $instantMargin = (float)($settings['pricing_instant_margin_percent'] ?? 50);
         $discountMarkup = (float)($settings['pricing_discount_stock_markup_fixed'] ?? 100);
 
@@ -440,27 +536,62 @@ class PurchaseBatchService
             return;
         }
 
-        $offerHours = max(1, (int)($this->pricingService->getSettings()['preorder_offer_expiration_hours'] ?? 48));
-        $availableBoxes = max(0.0, (float)($batch['boxes_free'] ?? 0));
+        $offerHours = (int)(get_setting('preorder_offer_expiration_hours', '48') ?? '48');
+        $offerHours = max(1, $offerHours);
+        $expiresAt = (new \DateTimeImmutable('now'))->modify('+' . $offerHours . ' hours')->format('Y-m-d H:i:s');
         $pricePerBox = max(0.0, (float)($batch['preorder_price_per_box'] ?? 0));
-        if ($availableBoxes <= 0 || $pricePerBox <= 0) {
+        if ($pricePerBox <= 0) {
             return;
         }
 
-        $wave = $this->preorderIntentService->allocateOfferWave(
-            $productId,
-            $availableBoxes,
-            $pricePerBox,
-            $offerHours
-        );
+        // FIFO: first booking gets first right to confirm final price.
+        $capacity = max(0.0, (float)($batch['boxes_total'] ?? 0) - (float)($batch['boxes_free'] ?? 0));
+        if ($capacity <= 0) {
+            $capacity = max(0.0, (float)($batch['boxes_total'] ?? 0));
+        }
 
-        if (($wave['offered_count'] ?? 0) > 0) {
+        $select = $this->pdo->prepare(
+            "SELECT id, requested_boxes, status
+             FROM preorder_intents
+             WHERE product_id = ?
+               AND (purchase_batch_id = ? OR purchase_batch_id IS NULL OR purchase_batch_id = 0)
+               AND status IN ('linked_to_batch','waiting_batch','intent_created')
+             ORDER BY created_at ASC, id ASC"
+        );
+        $select->execute([$productId, $batchId]);
+        $items = $select->fetchAll(PDO::FETCH_ASSOC);
+
+        $offered = 0;
+        $allocated = 0.0;
+        $update = $this->pdo->prepare(
+            "UPDATE preorder_intents
+             SET purchase_batch_id = ?, status = 'awaiting_price_confirmation',
+                 offered_price_per_box = ?, offer_expires_at = ?, updated_at = NOW()
+             WHERE id = ?"
+        );
+        foreach ($items as $item) {
+            $need = (float)($item['requested_boxes'] ?? 0);
+            if ($need <= 0 || ($allocated + $need) > $capacity) {
+                continue;
+            }
+            $from = (string)($item['status'] ?? 'linked_to_batch');
+            $update->execute([$batchId, $pricePerBox, $expiresAt, (int)$item['id']]);
+            $this->logPreorderEvent((int)$item['id'], 'price_confirmation_requested', $from, 'awaiting_price_confirmation', [
+                'purchase_batch_id' => $batchId,
+                'offered_price_per_box' => $pricePerBox,
+                'offer_expires_at' => $expiresAt,
+            ]);
+            $allocated += $need;
+            $offered++;
+        }
+
+        if ($offered > 0) {
             $this->pdo->prepare(
                 "INSERT INTO notifications (code, description)
                  VALUES (?, ?)"
             )->execute([
-                'preorder_offer_sent',
-                'По товару #' . $productId . ' отправлены офферы предзаказа: ' . (int)$wave['offered_count'],
+                'preorder_price_confirmation_requested',
+                'Поставка пришла. Предзаказам по товару #' . $productId . ' отправлено подтверждение цены: ' . $offered,
             ]);
         }
     }
@@ -482,37 +613,14 @@ class PurchaseBatchService
                AND offer_expires_at < NOW()"
         )->execute([$productId]);
 
-        $readyIdsStmt = $this->pdo->prepare(
-            "SELECT id FROM preorder_intents
-             WHERE product_id = ?
-               AND status = 'confirmed'"
-        );
-        $readyIdsStmt->execute([$productId]);
-        $readyIds = $readyIdsStmt->fetchAll(PDO::FETCH_COLUMN);
-        if ($readyIds !== []) {
-            $this->pdo->prepare(
-                "UPDATE preorder_intents
-                 SET status = 'completed',
-                     updated_at = NOW()
-                 WHERE product_id = ?
-                   AND status = 'confirmed'"
-            )->execute([$productId]);
-
-            $eventStmt = $this->pdo->prepare(
-                "INSERT INTO preorder_intent_events (preorder_intent_id, event_type, from_status, to_status, meta_json, created_at)
-                 VALUES (?, 'ready_for_pickup', 'confirmed', 'completed', NULL, NOW())"
-            );
-            foreach ($readyIds as $intentId) {
-                $eventStmt->execute([(int)$intentId]);
-            }
-
-            $this->pdo->prepare(
-                "INSERT INTO notifications (code, description)
-                 VALUES (?, ?)"
-            )->execute([
-                'preorder_ready_for_pickup',
-                'По товару #' . $productId . ' предзаказов готово к выдаче: ' . count($readyIds),
-            ]);
-        }
+        // Arrived means the batch is physically ready for pickup/delivery.
+        // Do not auto-complete reservations here: confirmed reservations are converted to cart items by the client.
+        $this->pdo->prepare(
+            "INSERT INTO notifications (code, description)
+             VALUES (?, ?)"
+        )->execute([
+            'batch_ready_for_pickup',
+            'Партия #' . $batchId . ' по товару #' . $productId . ' готова к выдаче.',
+        ]);
     }
 }
