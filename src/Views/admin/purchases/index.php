@@ -347,6 +347,22 @@
     var preorderModal = document.getElementById('preorder-modal-backdrop');
     var preorderCloseBtn = document.getElementById('preorder-modal-close');
     var preorderList = document.getElementById('preorder-modal-list');
+    var preorderStatusLabels = {
+      waiting_batch: 'Ожидает закупки',
+      linked_to_batch: 'Привязан к закупке',
+      awaiting_price_confirmation: 'Ожидает цены',
+      offer_sent: 'Оффер отправлен',
+      confirmed: 'Подтверждено',
+      intent_created: 'Новая заявка'
+    };
+    function escapeHtml(value) {
+      return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
     function closePreorderModal(){ preorderModal.classList.remove('is-open'); preorderList.innerHTML=''; }
     if (preorderCloseBtn) preorderCloseBtn.addEventListener('click', closePreorderModal);
     if (preorderModal) preorderModal.addEventListener('click', function(e){ if (e.target === preorderModal) closePreorderModal(); });
@@ -358,10 +374,15 @@
           .then(function (data) {
             var items = Array.isArray(data.items) ? data.items : [];
             preorderList.innerHTML = items.length ? items.map(function (item) {
-              return '<div class="reserve-modal-item"><div><div><b>' + (item.customer_name||'') + '</b></div><div class="text-xs text-gray-500">' + (item.customer_phone||'') + ' · ' + (item.requested_boxes||0) + ' ящ.</div></div>' +
+              var status = item.status || '';
+              var statusLabel = preorderStatusLabels[status] || status;
+              var confirmButton = status === 'confirmed'
+                ? '<span class="text-xs text-green-600" title="Уже подтверждено">✔</span>'
+                : '<form method="post" action="<?= $basePath ?>/purchases/preorders/decision"><?= csrf_field() ?><input type="hidden" name="intent_id" value="' + encodeURIComponent(item.id) + '"><input type="hidden" name="action" value="confirm"><button type="submit" class="text-green-600" title="Подтвердить">✔</button></form>';
+              return '<div class="reserve-modal-item"><div><div><b>' + escapeHtml(item.customer_name || '') + '</b></div><div class="text-xs text-gray-500">' + escapeHtml(item.customer_phone || '') + ' · ' + escapeHtml(item.requested_boxes || 0) + ' ящ. · ' + escapeHtml(statusLabel) + '</div></div>' +
                      '<div class="flex gap-1">' +
-                     '<form method="post" action="<?= $basePath ?>/purchases/preorders/decision"><?= csrf_field() ?><input type="hidden" name="intent_id" value="' + item.id + '"><input type="hidden" name="action" value="confirm"><button class="text-green-600">✔</button></form>' +
-                     '<form method="post" action="<?= $basePath ?>/purchases/preorders/decision"><?= csrf_field() ?><input type="hidden" name="intent_id" value="' + item.id + '"><input type="hidden" name="action" value="decline"><button class="text-red-600">✖</button></form>' +
+                     confirmButton +
+                     '<form method="post" action="<?= $basePath ?>/purchases/preorders/decision"><?= csrf_field() ?><input type="hidden" name="intent_id" value="' + encodeURIComponent(item.id) + '"><input type="hidden" name="action" value="decline"><button type="submit" class="text-red-600" title="Отменить">✖</button></form>' +
                      '</div></div>';
             }).join('') : '<div class="p-3 text-sm text-gray-500">Нет активных предзаказов</div>';
             preorderModal.classList.add('is-open');

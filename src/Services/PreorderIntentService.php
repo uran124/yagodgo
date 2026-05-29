@@ -123,6 +123,66 @@ class PreorderIntentService
         return $affected;
     }
 
+    /**
+     * @return array{ok:bool,from_status:?string,to_status:?string}
+     */
+    public function decideByManager(int $intentId, string $action): array
+    {
+        if ($intentId <= 0 || !in_array($action, ['confirm', 'decline'], true)) {
+            return ['ok' => false, 'from_status' => null, 'to_status' => null];
+        }
+
+        $stmt = $this->pdo->prepare('SELECT id, status FROM preorder_intents WHERE id = ? LIMIT 1');
+        $stmt->execute([$intentId]);
+        $intent = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$intent) {
+            return ['ok' => false, 'from_status' => null, 'to_status' => null];
+        }
+
+        $fromStatus = (string)($intent['status'] ?? '');
+        $confirmable = ['waiting_batch', 'linked_to_batch', 'awaiting_price_confirmation', 'offer_sent', 'intent_created', 'confirmed'];
+        $declinable = ['waiting_batch', 'linked_to_batch', 'awaiting_price_confirmation', 'offer_sent', 'intent_created', 'confirmed'];
+
+        if ($action === 'confirm') {
+            if (!in_array($fromStatus, $confirmable, true)) {
+                return ['ok' => false, 'from_status' => $fromStatus, 'to_status' => null];
+            }
+
+            if ($fromStatus === 'confirmed') {
+                return ['ok' => true, 'from_status' => $fromStatus, 'to_status' => 'confirmed'];
+            }
+
+            $token = bin2hex(random_bytes(24));
+            $update = $this->pdo->prepare(
+                "UPDATE preorder_intents
+                 SET status = 'confirmed', checkout_token = ?, updated_at = CURRENT_TIMESTAMP
+                 WHERE id = ? AND status IN ('waiting_batch','linked_to_batch','awaiting_price_confirmation','offer_sent','intent_created')"
+            );
+            $update->execute([$token, $intentId]);
+            if ($update->rowCount() < 1) {
+                return ['ok' => false, 'from_status' => $fromStatus, 'to_status' => null];
+            }
+            $this->logEvent($intentId, 'manager_confirmed', $fromStatus, 'confirmed');
+            return ['ok' => true, 'from_status' => $fromStatus, 'to_status' => 'confirmed'];
+        }
+
+        if (!in_array($fromStatus, $declinable, true)) {
+            return ['ok' => false, 'from_status' => $fromStatus, 'to_status' => null];
+        }
+
+        $update = $this->pdo->prepare(
+            "UPDATE preorder_intents
+             SET status = 'declined', checkout_token = NULL, updated_at = CURRENT_TIMESTAMP
+             WHERE id = ? AND status IN ('waiting_batch','linked_to_batch','awaiting_price_confirmation','offer_sent','intent_created','confirmed')"
+        );
+        $update->execute([$intentId]);
+        if ($update->rowCount() < 1) {
+            return ['ok' => false, 'from_status' => $fromStatus, 'to_status' => null];
+        }
+        $this->logEvent($intentId, 'manager_declined', $fromStatus, 'declined');
+        return ['ok' => true, 'from_status' => $fromStatus, 'to_status' => 'declined'];
+    }
+
     /** @return array{offered_count:int,allocated_boxes:float} */
     public function reallocateForProduct(int $productId, float $freedBoxes, float $pricePerBox, int $ttlHours = 4): array
     {
