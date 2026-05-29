@@ -20,11 +20,13 @@ class SellableBatchResolver
     public function resolveForProduct(int $productId, string $stockMode): ?array
     {
         if ($stockMode === 'preorder') {
+            $plannedAvailableExpr = "(COALESCE(NULLIF(boxes_total, 0), boxes_free + boxes_reserved) - boxes_reserved)";
             $stmt = $this->pdo->prepare(
-                "SELECT id, preorder_price_per_box AS price_per_box, boxes_free AS boxes_available
+                "SELECT id, preorder_price_per_box AS price_per_box, {$plannedAvailableExpr} AS boxes_available
                  FROM purchase_batches
                  WHERE product_id = ?
                    AND status = 'planned'
+                   AND {$plannedAvailableExpr} > 0
                    AND preorder_price_per_box > 0
                  ORDER BY purchased_at ASC, id ASC
                  LIMIT 1"

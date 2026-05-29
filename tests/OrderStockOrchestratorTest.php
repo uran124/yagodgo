@@ -89,6 +89,11 @@ class OrderStockOrchestratorTest extends TestCase
         $this->assertSame(6.0, (float)$batch11['boxes_free']);
         $this->assertSame(0.0, (float)$batch11['boxes_reserved']);
         $this->assertSame(2.0, (float)$batch11['boxes_sold']);
+
+        $movements = $this->pdo->query('SELECT movement_type, stock_mode FROM stock_movements WHERE order_id = 100 ORDER BY id')->fetchAll(PDO::FETCH_ASSOC);
+        $this->assertCount(1, $movements);
+        $this->assertSame('sale', $movements[0]['movement_type']);
+        $this->assertSame('instant', $movements[0]['stock_mode']);
     }
 }
 
