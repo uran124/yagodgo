@@ -88,12 +88,28 @@ class StockServiceTest extends TestCase
     }
 
 
-    public function testPreorderReserveConsumesFreeAndIncreasesReserved(): void
+    public function testSellAvailableMovesFreeStockDirectlyToSold(): void
+    {
+        $this->service->sellAvailable(1, 1, 4, 91, 'instant');
+
+        $batch = $this->pdo->query('SELECT boxes_free, boxes_reserved, boxes_sold, boxes_remaining FROM purchase_batches WHERE id = 1')->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame(6.0, (float)$batch['boxes_free']);
+        $this->assertSame(0.0, (float)$batch['boxes_reserved']);
+        $this->assertSame(4.0, (float)$batch['boxes_sold']);
+        $this->assertSame(26.0, (float)$batch['boxes_remaining']);
+
+        $movement = $this->pdo->query('SELECT movement_type, stock_mode, boxes_delta FROM stock_movements ORDER BY id DESC LIMIT 1')->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame('sale', $movement['movement_type']);
+        $this->assertSame('instant', $movement['stock_mode']);
+        $this->assertSame(-4.0, (float)$movement['boxes_delta']);
+    }
+
+    public function testPreorderReserveUsesPlannedLimitAndIncreasesReserved(): void
     {
         $this->service->reserve(1, 1, 2, 77, 'preorder');
 
         $batch = $this->pdo->query('SELECT boxes_free, boxes_reserved, boxes_remaining FROM purchase_batches WHERE id = 1')->fetch(PDO::FETCH_ASSOC);
-        $this->assertSame(8.0, (float)$batch['boxes_free']);
+        $this->assertSame(10.0, (float)$batch['boxes_free']);
         $this->assertSame(2.0, (float)$batch['boxes_reserved']);
         $this->assertSame(30.0, (float)$batch['boxes_remaining']);
 

@@ -55,7 +55,22 @@ class AdminOrdersPageServiceTest extends TestCase
             unit TEXT,
             box_size REAL,
             box_unit TEXT,
+            price REAL DEFAULT 0,
+            image_path TEXT NULL,
             is_active INTEGER
+        )');
+        $this->pdo->exec('CREATE TABLE purchase_batches (
+            id INTEGER PRIMARY KEY,
+            product_id INTEGER,
+            status TEXT,
+            purchased_at TEXT,
+            box_size_snapshot REAL,
+            box_unit_snapshot TEXT,
+            boxes_free REAL,
+            boxes_total REAL DEFAULT 0,
+            boxes_reserved REAL DEFAULT 0,
+            instant_price_per_box REAL,
+            preorder_price_per_box REAL
         )');
         $this->pdo->exec('CREATE TABLE order_items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -83,8 +98,11 @@ class AdminOrdersPageServiceTest extends TestCase
         $this->pdo->exec("INSERT INTO orders (id, user_id, address_id, slot_id, status, total_amount, delivery_date, points_used, coupon_code, discount_applied, comment, created_by_user_id, created_at)
             VALUES (1, 1, 1, 1, 'new', 1200, '2025-03-25', 70, 'POINTS70', 70, 'comment', 3, '2025-03-20 10:00:00')");
         $this->pdo->exec("INSERT INTO product_types (id, name) VALUES (1, 'Клубника')");
-        $this->pdo->exec("INSERT INTO products (id, product_type_id, variety, unit, box_size, box_unit, is_active) VALUES
-            (1, 1, 'Клери', 'кг', 2, 'кг', 1)");
+        $this->pdo->exec("INSERT INTO products (id, product_type_id, variety, unit, box_size, box_unit, price, image_path, is_active) VALUES
+            (1, 1, 'Клери', 'кг', 2, 'кг', 600, '/berry.jpg', 1)");
+        $this->pdo->exec("INSERT INTO purchase_batches (id, product_id, status, purchased_at, box_size_snapshot, box_unit_snapshot, boxes_free, boxes_total, boxes_reserved, instant_price_per_box, preorder_price_per_box) VALUES
+            (10, 1, 'arrived', '2026-05-29 08:00:00', 2, 'кг', 12, 12, 0, 1500, 1300),
+            (11, 1, 'planned', '2026-06-01 08:00:00', 2, 'кг', 0, 10, 3, 1600, 1400)");
         $this->pdo->exec("INSERT INTO order_items (order_id, product_id, quantity, boxes, unit_price) VALUES
             (1, 1, 2, 1, 600)");
         $this->pdo->exec("INSERT INTO points_transactions (order_id, created_at) VALUES (1, '2025-03-20 11:00:00')");
@@ -106,5 +124,20 @@ class AdminOrdersPageServiceTest extends TestCase
         $this->assertCount(2, $data['addresses']);
         $this->assertCount(1, $data['slots']);
         $this->assertCount(1, $data['products']);
+        $this->assertSame(1500.0, (float)$data['products'][0]['price_per_box']);
+    }
+
+    public function testBuildCreateDataReturnsSellablePurchaseBatches(): void
+    {
+        $data = $this->service->buildCreateData();
+
+        $this->assertCount(2, $data['purchaseBatches']);
+        $this->assertSame(10, (int)$data['purchaseBatches'][0]['purchase_batch_id']);
+        $this->assertSame('in_stock', $data['purchaseBatches'][0]['mode_group']);
+        $this->assertSame(1500.0, (float)$data['purchaseBatches'][0]['price_per_box']);
+        $this->assertSame(12.0, (float)$data['purchaseBatches'][0]['available_boxes']);
+        $this->assertSame(11, (int)$data['purchaseBatches'][1]['purchase_batch_id']);
+        $this->assertSame('preorder', $data['purchaseBatches'][1]['mode_group']);
+        $this->assertSame(1400.0, (float)$data['purchaseBatches'][1]['price_per_box']);
     }
 }

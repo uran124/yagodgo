@@ -19,6 +19,8 @@ class SellableBatchResolverTest extends TestCase
             product_id INTEGER,
             status TEXT,
             boxes_free REAL DEFAULT 0,
+            boxes_total REAL DEFAULT 0,
+            boxes_reserved REAL DEFAULT 0,
             boxes_discount REAL DEFAULT 0,
             preorder_price_per_box REAL DEFAULT 0,
             instant_price_per_box REAL DEFAULT 0,
