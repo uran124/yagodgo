@@ -84,6 +84,46 @@ class OrdersController
         return $cache[$key] = ((int)$stmt->fetchColumn() > 0);
     }
 
+    /**
+     * @return array{box_size:float,unit_price:float}
+     */
+    private function fetchManualItemPricing(int $productId): array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT p.box_size, p.price,\n" .
+            "       COALESCE((\n" .
+            "           SELECT CASE WHEN pb.status = 'planned' THEN pb.preorder_price_per_box ELSE pb.instant_price_per_box END\n" .
+            "           FROM purchase_batches pb\n" .
+            "           WHERE pb.product_id = p.id\n" .
+            "             AND (\n" .
+            "               (pb.status IN ('purchased', 'arrived') AND pb.boxes_free > 0 AND pb.instant_price_per_box > 0)\n" .
+            "               OR (pb.status = 'planned' AND (COALESCE(NULLIF(pb.boxes_total, 0), pb.boxes_free + pb.boxes_reserved) - pb.boxes_reserved) > 0 AND pb.preorder_price_per_box > 0)\n" .
+            "             )\n" .
+            "           ORDER BY CASE WHEN pb.status IN ('purchased', 'arrived') THEN 1 ELSE 2 END, pb.purchased_at ASC, pb.id ASC\n" .
+            "           LIMIT 1\n" .
+            "       ), p.price * COALESCE(NULLIF(p.box_size, 0), 1)) AS price_per_box\n" .
+            "FROM products p\n" .
+            "WHERE p.id = ?"
+        );
+        $stmt->execute([$productId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+
+        $boxSize = (float)($row['box_size'] ?? 1);
+        if ($boxSize <= 0) {
+            $boxSize = 1.0;
+        }
+
+        $pricePerBox = (float)($row['price_per_box'] ?? 0);
+        if ($pricePerBox <= 0) {
+            $pricePerBox = (float)($row['price'] ?? 0) * $boxSize;
+        }
+
+        return [
+            'box_size' => $boxSize,
+            'unit_price' => $boxSize > 0 ? $pricePerBox / $boxSize : $pricePerBox,
+        ];
+    }
+
     // Список заказов (админ/менеджер)
     public function index(): void
     {
@@ -970,12 +1010,10 @@ class OrdersController
         $qty       = (float)($_POST['quantity'] ?? 0);
         $price     = (float)($_POST['unit_price'] ?? 0);
         if ($orderId && $productId && $qty > 0) {
-            $stmtBox = $this->pdo->prepare("SELECT box_size, price FROM products WHERE id = ?");
-            $stmtBox->execute([$productId]);
-            $prod = $stmtBox->fetch(PDO::FETCH_ASSOC) ?: [];
-            $boxSize = (float)($prod['box_size'] ?? 1);
+            $pricing = $this->fetchManualItemPricing($productId);
+            $boxSize = $pricing['box_size'];
             if ($price <= 0) {
-                $price = (float)($prod['price'] ?? 0);
+                $price = $pricing['unit_price'];
             }
             $boxes = $boxSize > 0 ? $qty / $boxSize : $qty;
             $this->pdo->prepare(
@@ -995,12 +1033,10 @@ class OrdersController
         $qty       = (float)($_POST['quantity'] ?? 0);
         $price     = (float)($_POST['unit_price'] ?? 0);
         if ($orderId && $productId && $qty > 0) {
-            $stmt = $this->pdo->prepare("SELECT price, box_size FROM products WHERE id = ?");
-            $stmt->execute([$productId]);
-            $prod = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
-            $boxSize = (float)($prod['box_size'] ?? 1);
+            $pricing = $this->fetchManualItemPricing($productId);
+            $boxSize = $pricing['box_size'];
             if ($price <= 0) {
-                $price = (float)($prod['price'] ?? 0);
+                $price = $pricing['unit_price'];
             }
             $boxes = $boxSize > 0 ? $qty / $boxSize : $qty;
 

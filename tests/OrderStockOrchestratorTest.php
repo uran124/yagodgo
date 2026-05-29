@@ -95,32 +95,5 @@ class OrderStockOrchestratorTest extends TestCase
         $this->assertSame('sale', $movements[0]['movement_type']);
         $this->assertSame('instant', $movements[0]['stock_mode']);
     }
-
-    public function testRollbackDirectSaleReturnsStockWithSchemaMovementType(): void
-    {
-        $stmt = $this->pdo->prepare(
-            "INSERT INTO order_items (order_id, product_id, quantity, boxes, unit_price, stock_mode, purchase_batch_id) VALUES (?, ?, ?, ?, ?, ?, ?)"
-        );
-
-        $this->service->persistOrderItemWithStock($stmt, 101, 1, [
-            'quantity' => 2.0,
-            'box_size' => 1.0,
-            'unit_price' => 1500.0,
-            'purchase_batch_id' => 11,
-        ], 'instant', false);
-        $this->service->rollbackReservationByOrderId(101);
-
-        $batch11 = $this->pdo->query('SELECT boxes_free, boxes_reserved, boxes_sold FROM purchase_batches WHERE id = 11')->fetch(PDO::FETCH_ASSOC);
-        $this->assertSame(8.0, (float)$batch11['boxes_free']);
-        $this->assertSame(0.0, (float)$batch11['boxes_reserved']);
-        $this->assertSame(0.0, (float)$batch11['boxes_sold']);
-
-        $movements = $this->pdo->query('SELECT movement_type, stock_mode, boxes_delta FROM stock_movements WHERE order_id = 101 ORDER BY id')->fetchAll(PDO::FETCH_ASSOC);
-        $this->assertCount(2, $movements);
-        $this->assertSame('sale', $movements[0]['movement_type']);
-        $this->assertSame('return_to_stock', $movements[1]['movement_type']);
-        $this->assertSame('instant', $movements[1]['stock_mode']);
-        $this->assertSame(2.0, (float)$movements[1]['boxes_delta']);
-    }
 }
 

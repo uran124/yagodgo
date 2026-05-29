@@ -196,7 +196,18 @@ class AdminOrdersPageService
     private function fetchActiveProducts(): array
     {
         $stmt = $this->pdo->query(
-            "SELECT p.id, t.name AS product, p.variety, p.price, p.box_size\n" .
+            "SELECT p.id, t.name AS product, p.variety, p.price, p.box_size,\n" .
+            "       COALESCE((\n" .
+            "           SELECT CASE WHEN pb.status = 'planned' THEN pb.preorder_price_per_box ELSE pb.instant_price_per_box END\n" .
+            "           FROM purchase_batches pb\n" .
+            "           WHERE pb.product_id = p.id\n" .
+            "             AND (\n" .
+            "               (pb.status IN ('purchased', 'arrived') AND pb.boxes_free > 0 AND pb.instant_price_per_box > 0)\n" .
+            "               OR (pb.status = 'planned' AND (COALESCE(NULLIF(pb.boxes_total, 0), pb.boxes_free + pb.boxes_reserved) - pb.boxes_reserved) > 0 AND pb.preorder_price_per_box > 0)\n" .
+            "             )\n" .
+            "           ORDER BY CASE WHEN pb.status IN ('purchased', 'arrived') THEN 1 ELSE 2 END, pb.purchased_at ASC, pb.id ASC\n" .
+            "           LIMIT 1\n" .
+            "       ), p.price * COALESCE(NULLIF(p.box_size, 0), 1)) AS price_per_box\n" .
             "FROM products p\n" .
             "JOIN product_types t ON t.id = p.product_type_id\n" .
             "WHERE p.is_active = 1\n" .
