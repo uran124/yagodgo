@@ -90,9 +90,10 @@ class OrderStockOrchestrator
                 (int)$allocation['batch_id'],
             ]);
 
-            $this->stockService->reserve($productId, (int)$allocation['batch_id'], $allocatedBoxes, $orderId, $orderMode);
-            if (!$isReservedOrder) {
-                $this->stockService->sell($productId, (int)$allocation['batch_id'], $allocatedBoxes, $orderId);
+            if ($orderMode === 'preorder' || $isReservedOrder) {
+                $this->stockService->reserve($productId, (int)$allocation['batch_id'], $allocatedBoxes, $orderId, $orderMode);
+            } else {
+                $this->stockService->sellAvailable($productId, (int)$allocation['batch_id'], $allocatedBoxes, $orderId, $orderMode);
             }
         }
     }
@@ -104,12 +105,24 @@ class OrderStockOrchestrator
         );
         $itemsStmt->execute([$orderId]);
         foreach ($itemsStmt->fetchAll(PDO::FETCH_ASSOC) as $item) {
-            $this->stockService->unreserve(
+            $mode = (string)($item['stock_mode'] ?? 'instant');
+            if ($mode === 'preorder') {
+                $this->stockService->unreserve(
+                    (int)$item['product_id'],
+                    (int)$item['purchase_batch_id'],
+                    (float)$item['boxes'],
+                    $orderId,
+                    $mode
+                );
+                continue;
+            }
+
+            $this->stockService->returnSale(
                 (int)$item['product_id'],
                 (int)$item['purchase_batch_id'],
                 (float)$item['boxes'],
                 $orderId,
-                (string)($item['stock_mode'] ?? 'instant')
+                $mode
             );
         }
     }
