@@ -140,17 +140,4 @@ class AdminOrdersPageServiceTest extends TestCase
         $this->assertSame('preorder', $data['purchaseBatches'][1]['mode_group']);
         $this->assertSame(1400.0, (float)$data['purchaseBatches'][1]['price_per_box']);
     }
-    public function testBuildCreateDataReturnsSellablePurchaseBatches(): void
-    {
-        $data = $this->service->buildCreateData();
-
-        $this->assertCount(2, $data['purchaseBatches']);
-        $this->assertSame(10, (int)$data['purchaseBatches'][0]['purchase_batch_id']);
-        $this->assertSame('in_stock', $data['purchaseBatches'][0]['mode_group']);
-        $this->assertSame(1500.0, (float)$data['purchaseBatches'][0]['price_per_box']);
-        $this->assertSame(12.0, (float)$data['purchaseBatches'][0]['available_boxes']);
-        $this->assertSame(11, (int)$data['purchaseBatches'][1]['purchase_batch_id']);
-        $this->assertSame('preorder', $data['purchaseBatches'][1]['mode_group']);
-        $this->assertSame(1400.0, (float)$data['purchaseBatches'][1]['price_per_box']);
-    }
 }

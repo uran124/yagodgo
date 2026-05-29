@@ -1329,8 +1329,16 @@ public function cancelReservedOrder(int $orderId): void
             if ($pid) {
                 $pStmt = $this->pdo->prepare(
                     "SELECT p.id, p.alias, t.name AS product, t.alias AS type_alias, p.variety, p.description, p.origin_country,
-                            p.box_size, p.box_unit, COALESCE(pb.instant_unit_price, 0) AS price, COALESCE(pb.instant_price_per_box, 0) AS current_price_per_box, p.sale_price, p.is_active,
-                            p.image_path, DATE(pb.purchased_at) AS delivery_date,
+                            p.box_size, p.box_unit,
+                            CASE
+                                WHEN COALESCE(pb.boxes_discount, 0) > 0 AND COALESCE(pb.discount_price_per_box, 0) > 0 THEN pb.discount_price_per_box
+                                ELSE COALESCE(pb.instant_price_per_box, p.price, 0)
+                            END AS price,
+                            COALESCE(pb.instant_price_per_box, 0) AS current_price_per_box, p.sale_price, p.is_active,
+                            COALESCE(batch_photo.image_path, p.image_path) AS image_path,
+                            p.image_path AS product_image_path,
+                            batch_photo.image_path AS batch_image_path,
+                            DATE(pb.purchased_at) AS delivery_date,
                             COALESCE(u.company_name,u.name,'berryGo') AS seller_name
                        FROM products p
                        JOIN product_types t ON t.id = p.product_type_id
@@ -1341,6 +1349,13 @@ public function cancelReservedOrder(int $orderId): void
                              AND pb2.status IN ('purchased', 'arrived')
                              AND (pb2.boxes_free > 0 OR pb2.boxes_discount > 0)
                            ORDER BY pb2.purchased_at ASC, pb2.id ASC
+                           LIMIT 1
+                       )
+                       LEFT JOIN purchase_batch_photos batch_photo ON batch_photo.id = (
+                           SELECT pbp.id
+                           FROM purchase_batch_photos pbp
+                           WHERE pbp.purchase_batch_id = pb.id
+                           ORDER BY pbp.id DESC
                            LIMIT 1
                        )
                        LEFT JOIN users u ON u.id = p.seller_id
@@ -1373,17 +1388,34 @@ public function cancelReservedOrder(int $orderId): void
     public function showProduct(string $alias, ?string $typeAlias = null): void
     {
         $query = "SELECT p.*, t.name AS product, t.alias AS type_alias,
-                         COALESCE(pb.instant_unit_price, 0) AS price,
-                         DATE(pb.purchased_at) AS delivery_date
+                         CASE
+                             WHEN COALESCE(pb.boxes_discount, 0) > 0 AND COALESCE(pb.discount_price_per_box, 0) > 0 THEN pb.discount_price_per_box
+                             WHEN pb.status = 'planned' THEN COALESCE(pb.preorder_price_per_box, 0)
+                             ELSE COALESCE(pb.instant_price_per_box, p.price, 0)
+                         END AS price,
+                         COALESCE(pb.instant_price_per_box, 0) AS current_price_per_box,
+                         COALESCE(pb.preorder_price_per_box, 0) AS preorder_price_per_box,
+                         COALESCE(batch_photo.image_path, p.image_path) AS display_image_path,
+                         p.image_path AS product_image_path,
+                         batch_photo.image_path AS batch_image_path,
+                         DATE(pb.purchased_at) AS delivery_date,
+                         pb.purchased_at AS latest_purchase_date
                   FROM products p
                   JOIN product_types t ON t.id = p.product_type_id
                   LEFT JOIN purchase_batches pb ON pb.id = (
                       SELECT pb2.id
                       FROM purchase_batches pb2
                       WHERE pb2.product_id = p.id
-                        AND pb2.status IN ('purchased', 'arrived')
-                        AND (pb2.boxes_free > 0 OR pb2.boxes_discount > 0)
-                      ORDER BY pb2.purchased_at ASC, pb2.id ASC
+                        AND ((pb2.status IN ('purchased', 'arrived') AND (pb2.boxes_free > 0 OR pb2.boxes_discount > 0))
+                             OR (pb2.status = 'planned' AND (COALESCE(NULLIF(pb2.boxes_total, 0), pb2.boxes_free + pb2.boxes_reserved) - pb2.boxes_reserved) > 0 AND pb2.preorder_price_per_box > 0))
+                      ORDER BY CASE WHEN pb2.status IN ('purchased', 'arrived') AND pb2.boxes_free > 0 THEN 1 WHEN pb2.status IN ('purchased', 'arrived') AND pb2.boxes_discount > 0 THEN 2 WHEN pb2.status = 'planned' THEN 3 ELSE 9 END, pb2.purchased_at ASC, pb2.id ASC
+                      LIMIT 1
+                  )
+                  LEFT JOIN purchase_batch_photos batch_photo ON batch_photo.id = (
+                      SELECT pbp.id
+                      FROM purchase_batch_photos pbp
+                      WHERE pbp.purchase_batch_id = pb.id
+                      ORDER BY pbp.id DESC
                       LIMIT 1
                   )
                   WHERE (p.alias = ? OR p.id = ?)";
@@ -1399,6 +1431,9 @@ public function cancelReservedOrder(int $orderId): void
             http_response_code(404);
             echo 'Товар не найден';
             return;
+        }
+        if (!empty($product['display_image_path'])) {
+            $product['image_path'] = $product['display_image_path'];
         }
 
         view('client/product', [
@@ -1431,7 +1466,19 @@ public function cancelReservedOrder(int $orderId): void
         }
 
         $pStmt = $this->pdo->prepare(
-            "SELECT p.id, p.alias, t.name AS product, t.alias AS type_alias, p.variety, p.description, p.origin_country, p.box_size, p.box_unit, COALESCE(pb_latest.instant_unit_price, 0) AS price, COALESCE(pb_latest.instant_price_per_box, 0) AS current_price_per_box, p.sale_price, p.is_active, p.image_path, DATE(pb_latest.purchased_at) AS delivery_date,
+            "SELECT p.id, p.alias, t.name AS product, t.alias AS type_alias, p.variety, p.description, p.origin_country, p.box_size, p.box_unit,
+                    CASE
+                        WHEN COALESCE(pb_latest.boxes_discount, 0) > 0 AND COALESCE(pb_latest.discount_price_per_box, 0) > 0 THEN pb_latest.discount_price_per_box
+                        WHEN pb_latest.status = 'planned' THEN COALESCE(pb_latest.preorder_price_per_box, 0)
+                        ELSE COALESCE(pb_latest.instant_price_per_box, p.price, 0)
+                    END AS price,
+                    COALESCE(pb_latest.instant_price_per_box, 0) AS current_price_per_box,
+                    COALESCE(pb_latest.preorder_price_per_box, 0) AS preorder_price_per_box,
+                    p.sale_price, p.is_active,
+                    COALESCE(batch_photo.image_path, p.image_path) AS image_path,
+                    p.image_path AS product_image_path,
+                    batch_photo.image_path AS batch_image_path,
+                    DATE(pb_latest.purchased_at) AS delivery_date,
                     COALESCE(u.company_name,u.name,'berryGo') AS seller_name,
                     pb_latest.purchased_at AS latest_purchase_date
              FROM products p
@@ -1441,9 +1488,16 @@ public function cancelReservedOrder(int $orderId): void
                  SELECT pb2.id
                  FROM purchase_batches pb2
                  WHERE pb2.product_id = p.id
-                   AND pb2.status IN ('purchased', 'arrived')
-                   AND (pb2.boxes_free > 0 OR pb2.boxes_discount > 0)
-                 ORDER BY pb2.purchased_at ASC, pb2.id ASC
+                   AND ((pb2.status IN ('purchased', 'arrived') AND (pb2.boxes_free > 0 OR pb2.boxes_discount > 0))
+                        OR (pb2.status = 'planned' AND (COALESCE(NULLIF(pb2.boxes_total, 0), pb2.boxes_free + pb2.boxes_reserved) - pb2.boxes_reserved) > 0 AND pb2.preorder_price_per_box > 0))
+                 ORDER BY CASE WHEN pb2.status IN ('purchased', 'arrived') AND pb2.boxes_free > 0 THEN 1 WHEN pb2.status IN ('purchased', 'arrived') AND pb2.boxes_discount > 0 THEN 2 WHEN pb2.status = 'planned' THEN 3 ELSE 9 END, pb2.purchased_at ASC, pb2.id ASC
+                 LIMIT 1
+             )
+             LEFT JOIN purchase_batch_photos batch_photo ON batch_photo.id = (
+                 SELECT pbp.id
+                 FROM purchase_batch_photos pbp
+                 WHERE pbp.purchase_batch_id = pb_latest.id
+                 ORDER BY pbp.id DESC
                  LIMIT 1
              )
              WHERE p.product_type_id = ? AND p.is_active = 1"

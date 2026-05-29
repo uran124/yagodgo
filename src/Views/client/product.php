@@ -65,15 +65,14 @@
       <div class="md:w-1/2">
         <?php
         $active = (int)($product['is_active'] ?? 0);
-        $price  = floatval($product['price'] ?? 0);
-        $sale   = floatval($product['sale_price'] ?? 0);
+        $price  = floatval($product['price'] ?? 0); // цена за ящик из закупки
+        $sale   = floatval($product['sale_price'] ?? 0); // legacy-акция за базовую единицу, если заполнена
         $boxSize = floatval($product['box_size'] ?? 0);
         $boxUnit = $product['box_unit'] ?? '';
-        $effectiveKg = $sale > 0 ? $sale : $price;
-        $priceBox   = $effectiveKg * $boxSize;
-        $pricePerKg = round($effectiveKg, 2);
-        $regularBox = $price * $boxSize;
-        $regularKg  = round($price, 2);
+        $regularBox = $price;
+        $regularKg  = $boxSize > 0 ? round($regularBox / $boxSize, 2) : round($regularBox, 2);
+        $priceBox   = $sale > 0 && $boxSize > 0 ? ($sale * $boxSize) : $regularBox;
+        $pricePerKg = $boxSize > 0 ? round($priceBox / $boxSize, 2) : round($priceBox, 2);
         $deliveryDate = (string)($product['delivery_date'] ?? '');
         $placeholderDate = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
         $preorderDateKnown = ($deliveryDate !== '' && $deliveryDate !== $placeholderDate);
