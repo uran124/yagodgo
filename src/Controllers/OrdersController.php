@@ -227,7 +227,15 @@ class OrdersController
             } else {
                 $addressId = null;
             }
-            $referralDiscount = false;
+
+            $hasUsedReferral = 1;
+            $referralDiscount = isset($_POST['has_used_referral_coupon']) && $_POST['has_used_referral_coupon'] === '1';
+            if ($referralDiscount) {
+                $stmtReferralUser = $this->pdo->prepare('SELECT has_used_referral_coupon FROM users WHERE id = ?');
+                $stmtReferralUser->execute([$userId]);
+                $hasUsedReferral = (int)$stmtReferralUser->fetchColumn();
+                $referralDiscount = $hasUsedReferral === 0;
+            }
         }
 
         if ($userId <= 0) {

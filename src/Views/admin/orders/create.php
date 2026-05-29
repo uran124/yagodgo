@@ -6,12 +6,12 @@ $batches = $purchaseBatches ?? [];
 ?>
 
 <?php if (!empty($_GET['error'])): ?>
-  <div class="mb-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+  <div class="mb-4 rounded-2xl border border-red-400/40 bg-red-950/40 p-4 text-sm text-red-100">
     Ошибка оформления: <?= htmlspecialchars($_GET['error']) ?>
   </div>
 <?php endif; ?>
 
-<div class="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+<div class="mb-4 rounded-2xl border border-amber-400/40 bg-amber-950/30 p-4 text-sm text-amber-100">
   <div class="font-semibold">Новая логика BerryGo</div>
   <div>Продажа ведется ящиками из конкретной закупки. Цена, остаток и списание фиксируются по <code>purchase_batch_id</code>.</div>
 </div>
@@ -19,94 +19,103 @@ $batches = $purchaseBatches ?? [];
 <form action="<?= $base ?>/orders/create" method="post" class="space-y-4 pb-24" id="orderForm">
   <input type="hidden" name="stock_mode" id="stockMode" value="instant">
 
-  <section id="step1" class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
+  <div class="rounded-2xl bg-slate-800/80 p-3 ring-1 ring-slate-700" aria-label="Прогресс оформления заказа">
+    <div class="mb-2 flex justify-between text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+      <span>Клиент</span><span>Режим</span><span>Закупка</span><span>Товары</span><span>Дата</span><span>Итог</span>
+    </div>
+    <div class="h-2 overflow-hidden rounded-full bg-slate-700">
+      <div id="orderProgressFill" class="h-full rounded-full bg-[#F04483] transition-all duration-300" style="width: 16.6667%"></div>
+    </div>
+  </div>
+
+  <section id="step1" class="rounded-2xl bg-slate-800/90 p-4 text-slate-100 shadow-sm ring-1 ring-slate-700">
     <div class="mb-3 flex items-center justify-between gap-3">
       <div>
-        <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">Шаг 1</p>
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Шаг 1</p>
         <h2 class="text-lg font-semibold">Клиент</h2>
       </div>
-      <span class="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-600">обязателен</span>
+      <span class="rounded-full bg-slate-900/80 px-3 py-1 text-xs text-slate-300">обязателен</span>
     </div>
 
     <div id="existBlock" class="space-y-3">
       <div class="relative">
-        <label class="mb-1 block text-sm font-medium text-gray-700">Телефон клиента</label>
-        <input type="text" id="searchPhone" placeholder="7XXXXXXXXXX" inputmode="tel" class="w-full rounded-xl border px-3 py-3 text-base">
+        <label class="mb-1 block text-sm font-medium text-slate-200">Телефон клиента</label>
+        <input type="text" id="searchPhone" placeholder="7XXXXXXXXXX" inputmode="tel" class="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-base text-white placeholder:text-slate-500" value="" autocomplete="off">
         <input type="hidden" name="user_id" id="userId">
-        <ul id="suggestions" class="absolute z-20 mt-1 hidden w-full rounded-xl border bg-white shadow-lg"></ul>
+        <ul id="suggestions" class="absolute z-20 mt-1 hidden max-h-64 w-full overflow-y-auto rounded-xl border border-slate-600 bg-slate-900 text-slate-100 shadow-lg"></ul>
       </div>
 
       <div id="addressWrapper" class="hidden space-y-2">
-        <label class="block text-sm font-medium text-gray-700">Адрес / самовывоз</label>
-        <select name="address_id" id="addressSelect" class="w-full rounded-xl border px-3 py-3"></select>
-        <input type="text" name="address_new" id="addressNew" placeholder="Новый адрес" class="hidden w-full rounded-xl border px-3 py-3">
+        <label class="block text-sm font-medium text-slate-200">Адрес / самовывоз</label>
+        <select name="address_id" id="addressSelect" class="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-white placeholder:text-slate-500"></select>
+        <input type="text" name="address_new" id="addressNew" placeholder="Новый адрес" class="hidden w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-white placeholder:text-slate-500">
       </div>
-      <div id="userInfo" class="hidden rounded-xl bg-gray-50 p-3 text-sm text-gray-600"></div>
+      <div id="userInfo" class="hidden rounded-xl bg-slate-900/70 p-3 text-sm text-slate-200"></div>
     </div>
 
-    <div id="newBlock" class="mt-3 hidden space-y-3 rounded-xl border border-dashed border-gray-300 p-3">
-      <div class="text-sm font-semibold text-gray-700">Новый клиент</div>
-      <input type="text" name="new_name" placeholder="Имя" class="w-full rounded-xl border px-3 py-3">
+    <div id="newBlock" class="mt-3 hidden space-y-3 rounded-xl border border-dashed border-slate-600 p-3">
+      <div class="text-sm font-semibold text-slate-200">Новый клиент</div>
+      <input type="text" name="new_name" placeholder="Имя" class="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-white placeholder:text-slate-500">
       <input type="hidden" name="new_phone" id="newPhoneHidden">
-      <input type="password" name="new_pin" placeholder="PIN, 4 цифры" maxlength="4" inputmode="numeric" class="w-full rounded-xl border px-3 py-3">
-      <input type="text" name="new_address" placeholder="Адрес, пусто = самовывоз" class="w-full rounded-xl border px-3 py-3">
+      <input type="password" name="new_pin" placeholder="PIN, 4 цифры" maxlength="4" inputmode="numeric" class="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-white placeholder:text-slate-500">
+      <input type="text" name="new_address" placeholder="Адрес, пусто = самовывоз" class="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-white placeholder:text-slate-500">
     </div>
 
-    <button type="button" data-next="step2" class="next-step mt-4 w-full rounded-xl bg-[#C86052] px-4 py-3 font-semibold text-white">Далее</button>
+    <div class="mt-4 grid grid-cols-2 gap-2"><a href="<?= $base ?>/orders" class="rounded-xl border border-slate-600 bg-slate-900 px-4 py-3 font-semibold text-slate-100 text-center">Назад</a><button type="button" data-next="step2" class="next-step rounded-xl bg-[#F04483] px-4 py-3 font-semibold text-white shadow-sm shadow-pink-950/30">Далее</button></div>
   </section>
 
-  <section id="step2" class="hidden rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
-    <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">Шаг 2</p>
+  <section id="step2" class="hidden rounded-2xl bg-slate-800/90 p-4 text-slate-100 shadow-sm ring-1 ring-slate-700">
+    <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Шаг 2</p>
     <h2 class="mb-3 text-lg font-semibold">Режим продажи</h2>
     <div class="grid gap-3 sm:grid-cols-2">
-      <button type="button" class="mode-card rounded-2xl border-2 border-green-500 bg-green-50 p-4 text-left" data-mode="instant" data-group="in_stock">
-        <div class="text-lg font-semibold text-green-800">В наличии</div>
-        <div class="text-sm text-green-700">Закупки «Выкуплена» и «Готова к выдаче». Списание свободных ящиков сразу из партии.</div>
+      <button type="button" class="mode-card rounded-2xl border-2 border-emerald-400 bg-emerald-950/40 p-4 text-left text-emerald-100" data-mode="instant" data-group="in_stock">
+        <div class="text-lg font-semibold text-emerald-100">В наличии</div>
+        <div class="text-sm text-emerald-200">Закупки «Выкуплена» и «Готова к выдаче». Списание свободных ящиков сразу из партии.</div>
       </button>
-      <button type="button" class="mode-card rounded-2xl border-2 border-transparent bg-orange-50 p-4 text-left" data-mode="preorder" data-group="preorder">
-        <div class="text-lg font-semibold text-orange-800">Предзаказ</div>
-        <div class="text-sm text-orange-700">Закупки «Запланирована». Создается бронь по выбранной партии.</div>
+      <button type="button" class="mode-card rounded-2xl border-2 border-transparent bg-amber-950/40 p-4 text-left text-amber-100" data-mode="preorder" data-group="preorder">
+        <div class="text-lg font-semibold text-amber-100">Предзаказ</div>
+        <div class="text-sm text-amber-200">Закупки «Запланирована». Создается бронь по выбранной партии.</div>
       </button>
     </div>
-    <button type="button" data-next="step3" class="next-step mt-4 w-full rounded-xl bg-[#C86052] px-4 py-3 font-semibold text-white">Далее</button>
+    <div class="mt-4 grid grid-cols-2 gap-2"><button type="button" data-prev="step1" class="back-step rounded-xl border border-slate-600 bg-slate-900 px-4 py-3 font-semibold text-slate-100">Назад</button><button type="button" data-next="step3" class="next-step rounded-xl bg-[#F04483] px-4 py-3 font-semibold text-white shadow-sm shadow-pink-950/30">Далее</button></div>
   </section>
 
-  <section id="step3" class="hidden rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
-    <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">Шаг 3</p>
+  <section id="step3" class="hidden rounded-2xl bg-slate-800/90 p-4 text-slate-100 shadow-sm ring-1 ring-slate-700">
+    <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Шаг 3</p>
     <h2 class="mb-3 text-lg font-semibold">Закупка</h2>
     <div id="batchList" class="space-y-3"></div>
-    <button type="button" data-next="step4" class="next-step mt-4 w-full rounded-xl bg-[#C86052] px-4 py-3 font-semibold text-white">Далее</button>
+    <div class="mt-4 grid grid-cols-2 gap-2"><button type="button" data-prev="step2" class="back-step rounded-xl border border-slate-600 bg-slate-900 px-4 py-3 font-semibold text-slate-100">Назад</button><button type="button" data-next="step4" class="next-step rounded-xl bg-[#F04483] px-4 py-3 font-semibold text-white shadow-sm shadow-pink-950/30">Далее</button></div>
   </section>
 
-  <section id="step4" class="hidden rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
-    <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">Шаг 4</p>
+  <section id="step4" class="hidden rounded-2xl bg-slate-800/90 p-4 text-slate-100 shadow-sm ring-1 ring-slate-700">
+    <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Шаг 4</p>
     <h2 class="mb-3 text-lg font-semibold">Товары закупки</h2>
     <div id="productsList" class="space-y-3"></div>
-    <button type="button" data-next="step5" class="next-step mt-4 w-full rounded-xl bg-[#C86052] px-4 py-3 font-semibold text-white">Далее</button>
+    <div class="mt-4 grid grid-cols-2 gap-2"><button type="button" data-prev="step3" class="back-step rounded-xl border border-slate-600 bg-slate-900 px-4 py-3 font-semibold text-slate-100">Назад</button><button type="button" data-next="step5" class="next-step rounded-xl bg-[#F04483] px-4 py-3 font-semibold text-white shadow-sm shadow-pink-950/30">Далее</button></div>
   </section>
 
-  <section id="step5" class="hidden rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
-    <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">Шаг 5</p>
+  <section id="step5" class="hidden rounded-2xl bg-slate-800/90 p-4 text-slate-100 shadow-sm ring-1 ring-slate-700">
+    <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Шаг 5</p>
     <h2 class="mb-3 text-lg font-semibold">Дата и интервал</h2>
-    <div class="rounded-xl bg-blue-50 p-3 text-sm text-blue-800">Один заказ создается только на одну дату получения. Для другой даты оформите отдельный заказ.</div>
+    <div class="rounded-xl border border-blue-400/30 bg-blue-950/40 p-3 text-sm text-blue-100">Один заказ создается только на одну дату получения. Для другой даты оформите отдельный заказ.</div>
     <div class="mt-3 grid grid-cols-3 gap-2" id="dateOptions"></div>
     <input type="hidden" id="deliveryDate" name="delivery_date" value="<?= htmlspecialchars($today) ?>">
-    <label class="mt-3 block text-sm font-medium text-gray-700">Интервал</label>
-    <select name="slot_id" class="mt-1 w-full rounded-xl border px-3 py-3">
+    <label class="mt-3 block text-sm font-medium text-slate-200">Интервал</label>
+    <select name="slot_id" class="mt-1 w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-white">
       <?php foreach ($slots as $i => $s): ?>
         <option value="<?= $s['id'] ?>" <?= $i === 0 ? 'selected' : '' ?>>
           <?= htmlspecialchars(format_time_range($s['time_from'], $s['time_to'])) ?>
         </option>
       <?php endforeach; ?>
     </select>
-    <button type="button" data-next="step6" class="next-step mt-4 w-full rounded-xl bg-[#C86052] px-4 py-3 font-semibold text-white">Далее</button>
+    <div class="mt-4 grid grid-cols-2 gap-2"><button type="button" data-prev="step4" class="back-step rounded-xl border border-slate-600 bg-slate-900 px-4 py-3 font-semibold text-slate-100">Назад</button><button type="button" data-next="step6" class="next-step rounded-xl bg-[#F04483] px-4 py-3 font-semibold text-white shadow-sm shadow-pink-950/30">Далее</button></div>
   </section>
 
-  <section id="step6" class="hidden rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
-    <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">Шаг 6</p>
+  <section id="step6" class="hidden rounded-2xl bg-slate-800/90 p-4 text-slate-100 shadow-sm ring-1 ring-slate-700">
+    <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Шаг 6</p>
     <h2 class="mb-3 text-lg font-semibold">Проверка заказа</h2>
     <div id="itemsList" class="space-y-2 text-sm"></div>
-    <div class="mt-3 space-y-2 rounded-xl bg-gray-50 p-3 text-sm">
+    <div class="mt-3 space-y-2 rounded-xl bg-slate-900/70 p-3 text-sm text-slate-100">
       <div class="flex justify-between"><span>Товары:</span><span id="sumSubtotal">0 ₽</span></div>
       <div id="rowReferral" class="hidden justify-between"><span>Скидка -10%:</span><span id="sumReferral">0 ₽</span></div>
       <div id="rowPoints" class="hidden justify-between"><span>Баллы:</span><span id="sumPoints">0 ₽</span></div>
@@ -115,25 +124,25 @@ $batches = $purchaseBatches ?? [];
     </div>
 
     <div class="mt-3 space-y-3">
-      <label class="block text-sm font-medium text-gray-700">Купон</label>
-      <input type="text" name="coupon_code" class="w-full rounded-xl border px-3 py-3">
-      <div id="referralToggleWrap" class="hidden rounded-xl bg-pink-50 p-3">
-        <label class="flex items-center justify-between gap-3 text-sm font-medium text-pink-900">
-          <span>Применить реферальную скидку менеджера</span>
+      <label class="block text-sm font-medium text-slate-200">Купон</label>
+      <input type="text" name="coupon_code" value="<?= htmlspecialchars($_SESSION['referral_code'] ?? '') ?>" class="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-white placeholder:text-slate-500">
+      <div id="referralToggleWrap" class="hidden rounded-xl border border-pink-400/30 bg-pink-950/30 p-3">
+        <label class="flex items-center justify-between gap-3 text-sm font-medium text-pink-100">
+          <span>Списать 10% за первый заказ</span>
           <input type="hidden" name="has_used_referral_coupon" value="0">
           <input type="checkbox" id="referralToggle" name="has_used_referral_coupon" value="1" class="h-5 w-5">
         </label>
       </div>
-      <div id="pointsBlock" class="hidden rounded-xl bg-gray-50 p-3">
+      <div id="pointsBlock" class="hidden rounded-xl border border-slate-600 bg-slate-900/70 p-3">
         <label class="flex items-center justify-between gap-3 text-sm font-medium">
           <span>Списать баллы</span>
           <input type="checkbox" name="use_points" id="usePointsToggle" value="1" class="h-5 w-5">
         </label>
-        <input type="number" name="points" id="pointsInput" min="0" value="0" class="mt-2 w-full rounded-xl border px-3 py-2">
+        <input type="number" name="points" id="pointsInput" min="0" value="0" class="mt-2 w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-2 text-white">
       </div>
     </div>
 
-    <button type="submit" class="mt-4 w-full rounded-xl bg-green-600 px-4 py-3 font-semibold text-white">Создать заказ</button>
+    <div class="mt-4 grid grid-cols-2 gap-2"><button type="button" data-prev="step5" class="back-step rounded-xl border border-slate-600 bg-slate-900 px-4 py-3 font-semibold text-slate-100">Назад</button><button type="submit" class="rounded-xl bg-emerald-600 px-4 py-3 font-semibold text-white">Создать заказ</button></div>
   </section>
 </form>
 
@@ -147,7 +156,7 @@ $batches = $purchaseBatches ?? [];
   const today = '<?= htmlspecialchars($today) ?>';
   const myReferralCode = <?= json_encode($_SESSION['referral_code'] ?? '') ?>;
 
-  const state = { mode: 'instant', group: 'in_stock', batchKey: null };
+  const state = { mode: 'instant', group: 'in_stock', batchKey: null, selectedClientCanReferral: true };
   const steps = ['step1','step2','step3','step4','step5','step6'];
   const batchList = document.getElementById('batchList');
   const productsList = document.getElementById('productsList');
@@ -171,6 +180,9 @@ $batches = $purchaseBatches ?? [];
 
   function showStep(stepId) {
     steps.forEach(id => document.getElementById(id).classList.toggle('hidden', id !== stepId));
+    const index = Math.max(0, steps.indexOf(stepId));
+    const progressFill = document.getElementById('orderProgressFill');
+    if (progressFill) progressFill.style.width = (((index + 1) / steps.length) * 100).toFixed(4) + '%';
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -178,17 +190,22 @@ $batches = $purchaseBatches ?? [];
     if (btn.dataset.next === 'step3') renderBatches();
     if (btn.dataset.next === 'step4') renderProducts();
     if (btn.dataset.next === 'step5') renderDates();
-    if (btn.dataset.next === 'step6') updateSummary();
+    if (btn.dataset.next === 'step6') {
+      prepareReferralToggle();
+      updateSummary();
+    }
     showStep(btn.dataset.next);
   }));
+
+  document.querySelectorAll('.back-step').forEach(btn => btn.addEventListener('click', () => showStep(btn.dataset.prev)));
 
   document.querySelectorAll('.mode-card').forEach(btn => btn.addEventListener('click', () => {
     state.mode = btn.dataset.mode;
     state.group = btn.dataset.group;
     state.batchKey = null;
     stockMode.value = state.mode;
-    document.querySelectorAll('.mode-card').forEach(card => card.classList.remove('border-green-500', 'border-orange-500'));
-    btn.classList.add(state.mode === 'preorder' ? 'border-orange-500' : 'border-green-500');
+    document.querySelectorAll('.mode-card').forEach(card => card.classList.remove('border-emerald-400', 'border-amber-400', 'ring-2', 'ring-[#F04483]'));
+    btn.classList.add(state.mode === 'preorder' ? 'border-amber-400' : 'border-emerald-400', 'ring-2', 'ring-[#F04483]');
   }));
 
   function groupedBatches() {
@@ -209,7 +226,7 @@ $batches = $purchaseBatches ?? [];
     batchList.innerHTML = '';
     const grouped = groupedBatches();
     if (grouped.size === 0) {
-      batchList.innerHTML = '<div class="rounded-xl bg-gray-50 p-4 text-sm text-gray-500">Нет доступных закупок для выбранного режима.</div>';
+      batchList.innerHTML = '<div class="rounded-xl border border-slate-600 bg-slate-900/70 p-4 text-sm text-slate-300">Нет доступных закупок для выбранного режима.</div>';
       return;
     }
     grouped.forEach((items, key) => {
@@ -217,13 +234,13 @@ $batches = $purchaseBatches ?? [];
       const totalBoxes = items.reduce((sum, b) => sum + Number(b.available_boxes || 0), 0);
       const button = document.createElement('button');
       button.type = 'button';
-      button.className = 'batch-card w-full rounded-2xl border-2 p-4 text-left ' + (state.mode === 'preorder' ? 'border-orange-200 bg-orange-50' : 'border-green-200 bg-green-50');
+      button.className = 'batch-card w-full rounded-2xl border-2 p-4 text-left text-slate-100 ' + (state.mode === 'preorder' ? 'border-amber-500/40 bg-amber-950/30' : 'border-emerald-500/40 bg-emerald-950/30');
       button.dataset.key = key;
-      button.innerHTML = '<div class="flex items-start justify-between gap-3"><div><div class="font-semibold">Закупка ' + date + '</div><div class="text-sm text-gray-600">' + statusLabel(status) + '</div></div><div class="rounded-full bg-white px-3 py-1 text-sm font-semibold">' + totalBoxes + ' ящ.</div></div>';
+      button.innerHTML = '<div class="flex items-start justify-between gap-3"><div><div class="font-semibold">Закупка ' + date + '</div><div class="text-sm text-slate-300">' + statusLabel(status) + '</div></div><div class="rounded-full bg-slate-950 px-3 py-1 text-sm font-semibold text-slate-100">' + totalBoxes + ' ящ.</div></div>';
       button.addEventListener('click', () => {
         state.batchKey = key;
-        document.querySelectorAll('.batch-card').forEach(card => card.classList.remove('ring-2', 'ring-[#C86052]'));
-        button.classList.add('ring-2', 'ring-[#C86052]');
+        document.querySelectorAll('.batch-card').forEach(card => card.classList.remove('ring-2', 'ring-[#F04483]'));
+        button.classList.add('ring-2', 'ring-[#F04483]');
       });
       batchList.appendChild(button);
     });
@@ -246,12 +263,12 @@ $batches = $purchaseBatches ?? [];
     productsList.innerHTML = '';
     const selected = selectedBatchItems();
     if (selected.length === 0) {
-      productsList.innerHTML = '<div class="rounded-xl bg-red-50 p-4 text-sm text-red-700">Сначала выберите закупку.</div>';
+      productsList.innerHTML = '<div class="rounded-xl border border-red-400/30 bg-red-950/40 p-4 text-sm text-red-100">Сначала выберите закупку.</div>';
       return;
     }
     selected.forEach(b => {
       const card = document.createElement('div');
-      card.className = 'rounded-2xl border bg-white p-3 shadow-sm';
+      card.className = 'rounded-2xl border border-slate-600 bg-slate-900/70 p-3 text-slate-100 shadow-sm';
       const safeName = escapeHtml(productName(b));
       const safeImage = b.image_path ? escapeHtml(b.image_path) : '';
       card.innerHTML = `
@@ -259,15 +276,15 @@ $batches = $purchaseBatches ?? [];
           ${safeImage ? `<img src="${safeImage}" class="h-16 w-16 rounded-xl object-cover" alt="">` : ''}
           <div class="min-w-0 flex-1">
             <div class="font-semibold">${safeName}</div>
-            <div class="text-sm text-gray-600">Свободно: <b>${b.available_boxes}</b> ящиков</div>
-            <div class="text-sm text-gray-600">Цена: <b>${Number(b.price_per_box).toFixed(0)} ₽/ящик</b></div>
-            <div class="text-xs text-gray-400">purchase_batch_id: ${b.purchase_batch_id}</div>
+            <div class="text-sm text-slate-300">Свободно: <b>${b.available_boxes}</b> ящиков</div>
+            <div class="text-sm text-slate-300">Цена: <b>${Number(b.price_per_box).toFixed(0)} ₽/ящик</b></div>
+            <div class="text-xs text-slate-400">purchase_batch_id: ${b.purchase_batch_id}</div>
           </div>
         </div>
         <div class="mt-3 flex items-center justify-between gap-2">
-          <button type="button" class="dec rounded-xl bg-gray-100 px-4 py-3 text-lg" data-target="batch${b.purchase_batch_id}">−</button>
-          <input id="batch${b.purchase_batch_id}" name="batch_items[${b.purchase_batch_id}]" type="number" min="0" max="${b.available_boxes}" step="1" value="0" data-price="${b.price_per_box}" data-name="${safeName}" class="qty w-24 rounded-xl border px-3 py-3 text-center text-lg">
-          <button type="button" class="inc rounded-xl bg-gray-100 px-4 py-3 text-lg" data-target="batch${b.purchase_batch_id}">+</button>
+          <button type="button" class="dec rounded-xl bg-slate-700 px-4 py-3 text-lg text-white" data-target="batch${b.purchase_batch_id}">−</button>
+          <input id="batch${b.purchase_batch_id}" name="batch_items[${b.purchase_batch_id}]" type="number" min="0" max="${b.available_boxes}" step="1" value="0" data-price="${b.price_per_box}" data-name="${safeName}" class="qty w-24 rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-center text-lg text-white">
+          <button type="button" class="inc rounded-xl bg-slate-700 px-4 py-3 text-lg text-white" data-target="batch${b.purchase_batch_id}">+</button>
         </div>`;
       productsList.appendChild(card);
     });
@@ -295,6 +312,11 @@ $batches = $purchaseBatches ?? [];
     return d.toISOString().slice(0, 10);
   }
 
+  function formatDateShort(isoDate) {
+    const [year, month, day] = isoDate.split('-');
+    return day + '.' + month;
+  }
+
   function renderDates() {
     const selected = selectedBatchItems();
     const baseDate = state.mode === 'preorder' && selected[0] ? selected[0].batch_date : today;
@@ -303,13 +325,17 @@ $batches = $purchaseBatches ?? [];
       const value = addDays(baseDate, i);
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'date-option rounded-xl border px-2 py-3 text-sm font-semibold ' + (i === 0 ? 'border-[#C86052] bg-[#C86052] text-white' : 'bg-white');
+      btn.className = 'date-option rounded-xl border px-2 py-3 text-sm font-semibold ' + (i === 0 ? 'border-[#F04483] bg-[#F04483] text-white' : 'border-slate-600 bg-slate-900 text-slate-100');
       btn.dataset.date = value;
-      btn.textContent = i === 0 ? value : '+' + i + ' день';
+      btn.textContent = formatDateShort(value);
       btn.addEventListener('click', () => {
         deliveryDate.value = value;
-        document.querySelectorAll('.date-option').forEach(el => el.classList.remove('border-[#C86052]', 'bg-[#C86052]', 'text-white'));
-        btn.classList.add('border-[#C86052]', 'bg-[#C86052]', 'text-white');
+        document.querySelectorAll('.date-option').forEach(el => {
+          el.classList.remove('border-[#F04483]', 'bg-[#F04483]', 'text-white');
+          el.classList.add('border-slate-600', 'bg-slate-900', 'text-slate-100');
+        });
+        btn.classList.remove('border-slate-600', 'bg-slate-900', 'text-slate-100');
+        btn.classList.add('border-[#F04483]', 'bg-[#F04483]', 'text-white');
       });
       dateOptions.appendChild(btn);
       if (i === 0) deliveryDate.value = value;
@@ -326,6 +352,17 @@ $batches = $purchaseBatches ?? [];
     return addressSelect && addressSelect.value === 'pickup';
   }
 
+  function prepareReferralToggle() {
+    if (!referralToggleWrap || !couponInput) return;
+    couponInput.value = myReferralCode || '';
+    if (state.selectedClientCanReferral && myReferralCode) {
+      referralToggleWrap.classList.remove('hidden');
+    } else {
+      referralToggleWrap.classList.add('hidden');
+      if (referralToggle) referralToggle.checked = false;
+    }
+  }
+
   function updateSummary() {
     let subtotal = 0;
     itemsList.innerHTML = '';
@@ -338,7 +375,7 @@ $batches = $purchaseBatches ?? [];
       if (safeQty > 0) {
         subtotal += safeQty * price;
         const row = document.createElement('div');
-        row.className = 'flex justify-between rounded-xl bg-gray-50 p-2';
+        row.className = 'flex justify-between rounded-xl bg-slate-900/70 p-2 text-slate-100';
         row.innerHTML = '<span>' + input.dataset.name + ' × ' + safeQty + ' ящ.</span><span>' + (safeQty * price).toFixed(0) + ' ₽</span>';
         itemsList.appendChild(row);
       }
@@ -389,29 +426,39 @@ $batches = $purchaseBatches ?? [];
   const newPhoneHidden = document.getElementById('newPhoneHidden');
   const couponInput = document.querySelector('input[name="coupon_code"]');
 
+  searchPhone.value = '';
+
   searchPhone.addEventListener('input', () => {
-    const q = searchPhone.value.trim();
+    const raw = searchPhone.value.trim();
+    const q = raw.replace(/\D+/g, '');
     userIdInput.value = '';
-    if (q.length < 3) {
+    addressWrapper.classList.add('hidden');
+    userInfo.classList.add('hidden');
+    pointsBlock.classList.add('hidden');
+    state.selectedClientCanReferral = true;
+    if (q.length === 0) {
       sugg.classList.add('hidden');
+      newBlock.classList.add('hidden');
       return;
     }
-    fetch(basePath + '/users/search?phone=' + encodeURIComponent(q))
+
+    fetch(basePath + '/users/search?term=' + encodeURIComponent(q))
       .then(r => r.json())
       .then(list => {
         sugg.innerHTML = '';
+        if (list.length === 0) {
+          createNewClient(q);
+          return;
+        }
+
+        newBlock.classList.add('hidden');
         list.forEach(u => {
           const li = document.createElement('li');
-          li.className = 'cursor-pointer px-3 py-2 hover:bg-gray-100';
+          li.className = 'cursor-pointer px-3 py-2 text-slate-100 hover:bg-slate-800';
           li.textContent = (u.name || 'Клиент') + ' — ' + u.phone;
           li.addEventListener('click', () => selectUser(u));
           sugg.appendChild(li);
         });
-        const liNew = document.createElement('li');
-        liNew.className = 'cursor-pointer px-3 py-2 font-semibold text-[#C86052] hover:bg-gray-100';
-        liNew.textContent = 'Создать нового клиента';
-        liNew.addEventListener('click', () => createNewClient(q));
-        sugg.appendChild(liNew);
         sugg.classList.remove('hidden');
       });
   });
@@ -423,8 +470,9 @@ $batches = $purchaseBatches ?? [];
     userInfo.textContent = (u.name || 'Клиент') + ', баланс: ' + (u.points_balance || 0) + ' баллов';
     userInfo.classList.remove('hidden');
     pointsBlock.classList.remove('hidden');
-    referralToggleWrap.classList.add('hidden');
-    if (couponInput) couponInput.value = '';
+    state.selectedClientCanReferral = Number(u.has_used_referral_coupon || 0) === 0;
+    if (couponInput) couponInput.value = myReferralCode || '';
+    prepareReferralToggle();
     sugg.classList.add('hidden');
     loadAddresses(u.id);
   }
@@ -436,8 +484,9 @@ $batches = $purchaseBatches ?? [];
     addressWrapper.classList.add('hidden');
     pointsBlock.classList.add('hidden');
     userInfo.classList.add('hidden');
-    referralToggleWrap.classList.remove('hidden');
-    if (couponInput) couponInput.value = myReferralCode;
+    state.selectedClientCanReferral = true;
+    if (couponInput) couponInput.value = myReferralCode || '';
+    prepareReferralToggle();
     sugg.classList.add('hidden');
     updateSummary();
   }
