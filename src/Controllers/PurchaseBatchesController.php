@@ -647,12 +647,11 @@ ORDER BY is_closed ASC, pb.id DESC';
             header('Location: ' . $this->basePath() . '/purchases');
             exit;
         }
-        if ($action === 'confirm') {
-            $token = bin2hex(random_bytes(24));
-            $this->pdo->prepare("UPDATE preorder_intents SET status='confirmed', checkout_token = ?, updated_at=NOW() WHERE id=? AND status IN ('awaiting_price_confirmation','offer_sent')")
-                ->execute([$token, $intentId]);
+        $result = $this->preorderIntentService->decideByManager($intentId, $action);
+        if ($result['ok']) {
+            $this->setFlash('success', $action === 'confirm' ? 'Предзаказ подтверждён.' : 'Предзаказ отменён.');
         } else {
-            $this->pdo->prepare("UPDATE preorder_intents SET status='declined', updated_at=NOW() WHERE id=? AND status IN ('awaiting_price_confirmation','offer_sent')")->execute([$intentId]);
+            $this->setFlash('error', 'Не удалось изменить предзаказ: статус уже изменён или недоступен для операции.');
         }
         header('Location: ' . $this->basePath() . '/purchases');
         exit;

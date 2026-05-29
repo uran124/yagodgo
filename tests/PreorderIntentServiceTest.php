@@ -103,4 +103,55 @@ class PreorderIntentServiceTest extends TestCase
             ->fetchColumn();
         $this->assertSame('intent_created', $row2);
     }
+
+    public function testManagerDecisionConfirmsWaitingIntentAndWritesAuditEvent(): void
+    {
+        $this->pdo->exec("INSERT INTO preorder_intents (user_id, product_id, requested_boxes, status, created_at, updated_at)
+            VALUES (20, 44, 1, 'waiting_batch', '2026-01-03 10:00:00', '2026-01-03 10:00:00')");
+
+        $service = new PreorderIntentService($this->pdo);
+        $result = $service->decideByManager(1, 'confirm');
+
+        $this->assertTrue($result['ok']);
+        $this->assertSame('waiting_batch', $result['from_status']);
+        $this->assertSame('confirmed', $result['to_status']);
+
+        $row = $this->pdo
+            ->query("SELECT status, checkout_token FROM preorder_intents WHERE id = 1")
+            ->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame('confirmed', $row['status']);
+        $this->assertMatchesRegularExpression('/^[a-f0-9]{48}$/', (string)$row['checkout_token']);
+
+        $event = $this->pdo
+            ->query("SELECT event_type, from_status, to_status FROM preorder_intent_events WHERE preorder_intent_id = 1")
+            ->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame('manager_confirmed', $event['event_type']);
+        $this->assertSame('waiting_batch', $event['from_status']);
+        $this->assertSame('confirmed', $event['to_status']);
+    }
+
+    public function testManagerDecisionDeclinesAlreadyConfirmedIntentAndClearsToken(): void
+    {
+        $this->pdo->exec("INSERT INTO preorder_intents (user_id, product_id, requested_boxes, status, checkout_token, created_at, updated_at)
+            VALUES (21, 44, 2, 'confirmed', 'abc123', '2026-01-03 10:00:00', '2026-01-03 10:00:00')");
+
+        $service = new PreorderIntentService($this->pdo);
+        $result = $service->decideByManager(1, 'decline');
+
+        $this->assertTrue($result['ok']);
+        $this->assertSame('confirmed', $result['from_status']);
+        $this->assertSame('declined', $result['to_status']);
+
+        $row = $this->pdo
+            ->query("SELECT status, checkout_token FROM preorder_intents WHERE id = 1")
+            ->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame('declined', $row['status']);
+        $this->assertNull($row['checkout_token']);
+
+        $eventType = $this->pdo
+            ->query("SELECT event_type FROM preorder_intent_events WHERE preorder_intent_id = 1")
+            ->fetchColumn();
+        $this->assertSame('manager_declined', $eventType);
+    }
+
 }
