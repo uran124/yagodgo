@@ -57,6 +57,33 @@ class OrdersController
         return (int)$this->pdo->lastInsertId();
     }
 
+
+    private function columnExists(string $table, string $column): bool
+    {
+        static $cache = [];
+        $key = spl_object_id($this->pdo) . '.' . $table . '.' . $column;
+        if (array_key_exists($key, $cache)) {
+            return $cache[$key];
+        }
+
+        $driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+        if ($driver === 'sqlite') {
+            $stmt = $this->pdo->query("PRAGMA table_info({$table})");
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                if (($row['name'] ?? '') === $column) {
+                    return $cache[$key] = true;
+                }
+            }
+            return $cache[$key] = false;
+        }
+
+        $stmt = $this->pdo->prepare(
+            'SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?'
+        );
+        $stmt->execute([$table, $column]);
+        return $cache[$key] = ((int)$stmt->fetchColumn() > 0);
+    }
+
     // Список заказов (админ/менеджер)
     public function index(): void
     {
@@ -200,7 +227,15 @@ class OrdersController
             } else {
                 $addressId = null;
             }
-            $referralDiscount = false;
+
+            $hasUsedReferral = 1;
+            $referralDiscount = isset($_POST['has_used_referral_coupon']) && $_POST['has_used_referral_coupon'] === '1';
+            if ($referralDiscount) {
+                $stmtReferralUser = $this->pdo->prepare('SELECT has_used_referral_coupon FROM users WHERE id = ?');
+                $stmtReferralUser->execute([$userId]);
+                $hasUsedReferral = (int)$stmtReferralUser->fetchColumn();
+                $referralDiscount = $hasUsedReferral === 0;
+            }
         }
 
         if ($userId <= 0) {
@@ -212,30 +247,103 @@ class OrdersController
         $deliveryDate = $_POST['delivery_date'] ?? null;
         $couponCode = trim($_POST['coupon_code'] ?? '');
 
-        $items = $_POST['items'] ?? [];
+        $items = $_POST['batch_items'] ?? [];
         if (!$items) {
             header('Location: ' . $this->basePath() . '/create?error=' . urlencode('empty'));
             exit;
         }
 
+        $selectedMode = $_POST['stock_mode'] ?? '';
+        if (!in_array($selectedMode, ['instant', 'preorder'], true)) {
+            header('Location: ' . $this->basePath() . '/create?error=' . urlencode('stock_mode'));
+            exit;
+        }
+
+        $batchIds = [];
+        foreach ($items as $batchId => $boxes) {
+            if ((float)$boxes > 0) {
+                $batchIds[] = (int)$batchId;
+            }
+        }
+        if ($batchIds === []) {
+            header('Location: ' . $this->basePath() . '/create?error=' . urlencode('empty'));
+            exit;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($batchIds), '?'));
+        $stmtBatches = $this->pdo->prepare(
+            "SELECT pb.id AS purchase_batch_id, pb.product_id, pb.status, pb.purchased_at,\n" .
+            "       pb.boxes_free, pb.boxes_total, pb.boxes_reserved,\n" .
+            "       pb.instant_price_per_box, pb.preorder_price_per_box,\n" .
+            "       COALESCE(NULLIF(pb.box_size_snapshot, 0), NULLIF(p.box_size, 0), 1) AS box_size\n" .
+            "FROM purchase_batches pb\n" .
+            "JOIN products p ON p.id = pb.product_id\n" .
+            "WHERE pb.id IN ({$placeholders})"
+        );
+        $stmtBatches->execute($batchIds);
+        $batchRows = [];
+        foreach ($stmtBatches->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $batchRows[(int)$row['purchase_batch_id']] = $row;
+        }
+
         $total = 0;
-        $stmtProd = $this->pdo->prepare("SELECT price, box_size FROM products WHERE id = ?");
         $itemsPrepared = [];
-        foreach ($items as $pid => $boxes) {
-            $boxes = (float)$boxes;
-            if ($boxes <= 0) continue;
-            $stmtProd->execute([$pid]);
-            $row = $stmtProd->fetch(PDO::FETCH_ASSOC);
-            if (!$row) continue;
-            $pricePerKg = (float)$row['price'];
-            $boxSize = (float)($row['box_size'] ?: 1);
-            $qtyKg = $boxes * $boxSize;
-            $total += $qtyKg * $pricePerKg;
-            $itemsPrepared[$pid] = [
-                'qtyKg'  => $qtyKg,
-                'boxes'  => $boxes,
-                'price'  => $pricePerKg,
+        $dateBases = [];
+        foreach ($batchIds as $batchId) {
+            if (!isset($batchRows[$batchId])) {
+                header('Location: ' . $this->basePath() . '/create?error=' . urlencode('batch'));
+                exit;
+            }
+            $boxes = (float)$items[$batchId];
+            $batch = $batchRows[$batchId];
+            $isPreorderBatch = ($batch['status'] ?? '') === 'planned';
+            $mode = $isPreorderBatch ? 'preorder' : 'instant';
+            if ($mode !== $selectedMode) {
+                header('Location: ' . $this->basePath() . '/create?error=' . urlencode('mixed_mode'));
+                exit;
+            }
+            if ($mode === 'instant' && !in_array($batch['status'], ['purchased', 'arrived'], true)) {
+                header('Location: ' . $this->basePath() . '/create?error=' . urlencode('batch_status'));
+                exit;
+            }
+            $availableBoxes = $mode === 'preorder'
+                ? max(0.0, (float)($batch['boxes_total'] ?: ((float)$batch['boxes_free'] + (float)$batch['boxes_reserved'])) - (float)$batch['boxes_reserved'])
+                : (float)$batch['boxes_free'];
+            if ($boxes > $availableBoxes) {
+                header('Location: ' . $this->basePath() . '/create?error=' . urlencode('stock'));
+                exit;
+            }
+
+            $pricePerBox = (float)($mode === 'preorder' ? $batch['preorder_price_per_box'] : $batch['instant_price_per_box']);
+            if ($pricePerBox <= 0) {
+                header('Location: ' . $this->basePath() . '/create?error=' . urlencode('price'));
+                exit;
+            }
+            $total += $boxes * $pricePerBox;
+            $dateBases[] = $mode === 'preorder' ? substr((string)$batch['purchased_at'], 0, 10) : date('Y-m-d');
+            $itemsPrepared[] = [
+                'product_id' => (int)$batch['product_id'],
+                'purchase_batch_id' => $batchId,
+                'boxes' => $boxes,
+                'box_size' => (float)$batch['box_size'],
+                'price_per_box' => $pricePerBox,
+                'stock_mode' => $mode,
             ];
+        }
+
+        if (count(array_unique($dateBases)) > 1) {
+            header('Location: ' . $this->basePath() . '/create?error=' . urlencode('mixed_delivery_date'));
+            exit;
+        }
+
+        $baseDate = min($dateBases);
+        $allowedDates = [];
+        for ($i = 0; $i <= 2; $i++) {
+            $allowedDates[] = date('Y-m-d', strtotime($baseDate . " +{$i} day"));
+        }
+        if (!in_array($deliveryDate, $allowedDates, true)) {
+            header('Location: ' . $this->basePath() . '/create?error=' . urlencode('delivery_date'));
+            exit;
         }
 
         if ($referralDiscount) {
@@ -255,27 +363,62 @@ class OrdersController
             $total -= $pointsUsed;
         }
 
-          $shippingFee = $isPickup ? 0 : 300;
-          $total += $shippingFee;
+        $shippingFee = $isPickup ? 0 : 300;
+        $total += $shippingFee;
 
-        $stmt = $this->pdo->prepare(
-            "INSERT INTO orders (user_id, address_id, slot_id, status, total_amount, discount_applied, points_used, points_accrued, coupon_code, delivery_date, created_by_user_id, created_at) VALUES (?, ?, ?, 'new', ?, 0, ?, 0, ?, ?, ?, NOW())"
-        );
         $createdByUserId = (int)($_SESSION['user_id'] ?? 0);
-        $stmt->execute([$userId, $addressId, $slotId, $total, $pointsUsed, $couponCode, $deliveryDate, $createdByUserId > 0 ? $createdByUserId : null]);
-        $orderId = (int)$this->pdo->lastInsertId();
+        $orderStatus = $selectedMode === 'preorder' ? 'reserved' : 'new';
+        $orderMode = $selectedMode === 'preorder' ? 'preorder' : 'instant';
+        $orderBatchId = count($itemsPrepared) === 1 ? $itemsPrepared[0]['purchase_batch_id'] : null;
 
-        $stmtItem = $this->pdo->prepare(
-            "INSERT INTO order_items (order_id, product_id, quantity, boxes, unit_price) VALUES (?, ?, ?, ?, ?)"
-        );
-        foreach ($itemsPrepared as $pid => $data) {
-            $stmtItem->execute([
-                $orderId,
-                $pid,
-                $data['qtyKg'],
-                $data['boxes'],
-                $data['price'],
-            ]);
+        try {
+            $this->pdo->beginTransaction();
+            $orderColumns = ['user_id', 'address_id', 'slot_id', 'status', 'total_amount', 'discount_applied', 'points_used', 'points_accrued', 'coupon_code', 'delivery_date', 'created_by_user_id', 'created_at'];
+            $orderValues = [$userId, $addressId, $slotId, $orderStatus, $total, 0, $pointsUsed, 0, $couponCode, $deliveryDate, $createdByUserId > 0 ? $createdByUserId : null];
+            $orderPlaceholders = ['?', '?', '?', '?', '?', '?', '?', '?', '?', '?', '?', 'NOW()'];
+            if ($this->columnExists('orders', 'order_mode')) {
+                $orderColumns[] = 'order_mode';
+                $orderValues[] = $orderMode;
+                $orderPlaceholders[] = '?';
+            }
+            if ($this->columnExists('orders', 'purchase_batch_id')) {
+                $orderColumns[] = 'purchase_batch_id';
+                $orderValues[] = $orderBatchId;
+                $orderPlaceholders[] = '?';
+            }
+
+            $stmt = $this->pdo->prepare(
+                'INSERT INTO orders (' . implode(', ', $orderColumns) . ') VALUES (' . implode(', ', $orderPlaceholders) . ')'
+            );
+            $stmt->execute($orderValues);
+            $orderId = (int)$this->pdo->lastInsertId();
+
+            $stmtItem = $this->pdo->prepare(
+                "INSERT INTO order_items (order_id, product_id, quantity, boxes, unit_price, stock_mode, purchase_batch_id) VALUES (?, ?, ?, ?, ?, ?, ?)"
+            );
+            $orderStock = new OrderStockOrchestrator($this->pdo, new StockService($this->pdo));
+            foreach ($itemsPrepared as $data) {
+                $orderStock->persistOrderItemWithStock(
+                    $stmtItem,
+                    $orderId,
+                    $data['product_id'],
+                    [
+                        'quantity' => $data['boxes'],
+                        'box_size' => $data['box_size'],
+                        'unit_price' => $data['price_per_box'],
+                        'purchase_batch_id' => $data['purchase_batch_id'],
+                    ],
+                    $data['stock_mode'],
+                    $selectedMode === 'preorder'
+                );
+            }
+            $this->pdo->commit();
+        } catch (\Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            header('Location: ' . $this->basePath() . '/create?error=' . urlencode($e->getMessage()));
+            exit;
         }
 
         if ($pointsUsed > 0) {

@@ -82,6 +82,7 @@ class AdminOrdersPageService
     {
         return [
             'products' => $this->fetchCreateFormProducts(),
+            'purchaseBatches' => $this->fetchCreateFormPurchaseBatches(),
             'slots' => $this->fetchSlots(),
             'debugData' => $session['debug_order_data'] ?? [],
             'today' => date('Y-m-d'),
@@ -203,6 +204,50 @@ class AdminOrdersPageService
         );
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function fetchCreateFormPurchaseBatches(): array
+    {
+        $plannedAvailableExpr = "(COALESCE(NULLIF(pb.boxes_total, 0), pb.boxes_free + pb.boxes_reserved) - pb.boxes_reserved)";
+        $availableExpr = "CASE WHEN pb.status = 'planned' THEN CASE WHEN {$plannedAvailableExpr} > 0 THEN {$plannedAvailableExpr} ELSE 0 END ELSE pb.boxes_free END";
+
+        $stmt = $this->pdo->query(
+            "SELECT pb.id AS purchase_batch_id, pb.product_id, pb.status, pb.purchased_at,\n" .
+            "       pb.box_size_snapshot, pb.box_unit_snapshot, pb.boxes_free, pb.boxes_total, pb.boxes_reserved,\n" .
+            "       {$availableExpr} AS available_boxes,\n" .
+            "       pb.instant_price_per_box, pb.preorder_price_per_box,\n" .
+            "       t.name AS product, p.variety, p.image_path, p.box_size, p.box_unit\n" .
+            "FROM purchase_batches pb\n" .
+            "JOIN products p ON p.id = pb.product_id\n" .
+            "JOIN product_types t ON t.id = p.product_type_id\n" .
+            "WHERE p.is_active = 1\n" .
+            "  AND (\n" .
+            "    (pb.status IN ('purchased', 'arrived') AND pb.boxes_free > 0 AND pb.instant_price_per_box > 0)\n" .
+            "    OR (pb.status = 'planned' AND {$plannedAvailableExpr} > 0 AND pb.preorder_price_per_box > 0)\n" .
+            "  )\n" .
+            "ORDER BY pb.purchased_at ASC, pb.status ASC, t.name ASC, p.variety ASC"
+        );
+
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($rows as &$row) {
+            $isPreorder = ($row['status'] ?? '') === 'planned';
+            $row['stock_mode'] = $isPreorder ? 'preorder' : 'instant';
+            $row['mode_group'] = $isPreorder ? 'preorder' : 'in_stock';
+            $row['mode_label'] = $isPreorder ? 'Предзаказ' : 'В наличии';
+            $row['available_boxes'] = (float)($row['available_boxes'] ?? 0);
+            $row['price_per_box'] = (float)($isPreorder ? $row['preorder_price_per_box'] : $row['instant_price_per_box']);
+            $row['batch_date'] = substr((string)($row['purchased_at'] ?? ''), 0, 10);
+            $row['display_box_size'] = (float)($row['box_size_snapshot'] ?: ($row['box_size'] ?: 1));
+            $row['display_box_unit'] = (string)($row['box_unit_snapshot'] ?: ($row['box_unit'] ?? ''));
+        }
+        unset($row);
+
+        return $rows;
+    }
+
 
     /**
      * @return array<int, array<string, mixed>>
