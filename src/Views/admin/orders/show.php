@@ -152,8 +152,8 @@
       <select name="product_id" class="border px-2 py-1 rounded w-full">
         <?php foreach ($products as $p): ?>
           <?php $productBoxSize = (float)($p['box_size'] ?? 1); if ($productBoxSize <= 0) { $productBoxSize = 1.0; } ?>
-          <?php $productPricePerKg = (float)($p['price'] ?? 0); ?>
-          <option value="<?= $p['id'] ?>" data-box-size="<?= htmlspecialchars((string)$productBoxSize) ?>" data-price-per-kg="<?= htmlspecialchars((string)$productPricePerKg) ?>"><?= htmlspecialchars($p['product']) ?><?php if(!empty($p['variety'])): ?> <?= htmlspecialchars($p['variety']) ?><?php endif; ?></option>
+          <?php $productPricePerBox = (float)($p['price_per_box'] ?? (($p['price'] ?? 0) * $productBoxSize)); ?>
+          <option value="<?= $p['id'] ?>" data-box-size="<?= htmlspecialchars((string)$productBoxSize) ?>" data-price-per-box="<?= htmlspecialchars((string)$productPricePerBox) ?>"><?= htmlspecialchars($p['product']) ?><?php if(!empty($p['variety'])): ?> <?= htmlspecialchars($p['variety']) ?><?php endif; ?></option>
         <?php endforeach; ?>
       </select>
       </label>
@@ -320,8 +320,7 @@
       const selected = productSelect.selectedOptions[0];
       if (!selected) return;
       const boxSize = Number(selected.dataset.boxSize || 1);
-      const pricePerKg = Number(selected.dataset.pricePerKg || 0);
-      const pricePerBox = pricePerKg * (boxSize > 0 ? boxSize : 1);
+      const pricePerBox = Number(selected.dataset.pricePerBox || 0);
 
       if (force || !boxesField.value) {
         boxesField.value = '1';

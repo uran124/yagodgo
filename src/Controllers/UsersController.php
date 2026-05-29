@@ -1084,17 +1084,19 @@ class UsersController
     {
         $auth = Auth::user();
 
-        $term = preg_replace('/\D+/', '', $_GET['term'] ?? '');
+        $rawTerm = $_GET['term'] ?? ($_GET['phone'] ?? '');
+        $term = preg_replace('/\D+/', '', $rawTerm);
         if ($term === '') {
             echo json_encode([]);
             return;
         }
 
-        $sql = "SELECT u.id, u.name, u.phone, u.points_balance, u.referred_by, ref.name AS referrer_name
+        $orderedDigitsPattern = '%' . implode('%', str_split($term)) . '%';
+        $sql = "SELECT u.id, u.name, u.phone, u.points_balance, u.referred_by, u.has_used_referral_coupon, ref.name AS referrer_name
                 FROM users u
                 LEFT JOIN users ref ON ref.id = u.referred_by
-                WHERE u.phone LIKE ?";
-        $params = ['%' . $term . '%'];
+                WHERE REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(u.phone, '+', ''), ' ', ''), '-', ''), '(', ''), ')', '') LIKE ?";
+        $params = [$orderedDigitsPattern];
         if ($auth && in_array($auth['role'], ['manager', 'partner'], true)) {
             $sql    .= " AND (u.role NOT IN ('partner','manager') OR u.id = ?)";
             $params[] = $auth['id'];

@@ -123,10 +123,10 @@ class ClientCatalogService
     private function fetchProducts(string $where, string $orderBy, array $params = [], ?int $limit = null, string $offerMode = 'auto'): array
     {
         $batchSelectorCondition = match ($offerMode) {
-            'preorder' => "pb2.status = 'planned' AND pb2.preorder_price_per_box > 0",
+            'preorder' => "pb2.status = 'planned' AND (COALESCE(NULLIF(pb2.boxes_total, 0), pb2.boxes_free + pb2.boxes_reserved) - pb2.boxes_reserved) > 0 AND pb2.preorder_price_per_box > 0",
             'discount' => "pb2.status IN ('purchased', 'arrived') AND pb2.boxes_discount > 0 AND pb2.discount_price_per_box > 0",
             'in_stock' => "pb2.status IN ('purchased', 'arrived') AND pb2.boxes_free > 0 AND pb2.instant_price_per_box > 0",
-            default => "((pb2.status IN ('purchased', 'arrived') AND (pb2.boxes_free > 0 OR pb2.boxes_discount > 0)) OR (pb2.status = 'planned' AND pb2.preorder_price_per_box > 0))",
+            default => "((pb2.status IN ('purchased', 'arrived') AND (pb2.boxes_free > 0 OR pb2.boxes_discount > 0)) OR (pb2.status = 'planned' AND (COALESCE(NULLIF(pb2.boxes_total, 0), pb2.boxes_free + pb2.boxes_reserved) - pb2.boxes_reserved) > 0 AND pb2.preorder_price_per_box > 0))",
         };
         $batchSelectorOrder = match ($offerMode) {
             'preorder' => "pb2.purchased_at ASC, pb2.id ASC",
@@ -146,13 +146,16 @@ class ClientCatalogService
             "       p.box_unit,\n" .
             "       CASE\n" .
             "         WHEN COALESCE(pb.boxes_discount, 0) > 0 AND COALESCE(pb.discount_price_per_box, 0) > 0 THEN pb.discount_price_per_box\n" .
-            "         ELSE COALESCE(pb.instant_price_per_box, 0)\n" .
+            "         WHEN pb.status = 'planned' THEN COALESCE(pb.preorder_price_per_box, 0)\n" .
+            "         ELSE COALESCE(pb.instant_price_per_box, p.price, 0)\n" .
             "       END AS price,\n" .
             "       COALESCE(pb.instant_price_per_box, 0) AS current_price_per_box,\n" .
             "       COALESCE(pb.preorder_price_per_box, 0) AS preorder_price_per_box,\n" .
             "       p.sale_price,\n" .
             "       p.is_active,\n" .
-            "       p.image_path,\n" .
+            "       COALESCE(batch_photo.image_path, p.image_path) AS image_path,\n" .
+            "       p.image_path AS product_image_path,\n" .
+            "       batch_photo.image_path AS batch_image_path,\n" .
             "       DATE(pb.purchased_at) AS delivery_date,\n" .
             "       COALESCE(u.company_name, u.name, 'berryGo') AS seller_name,\n" .
             "       p.seller_id,\n" .
@@ -168,10 +171,10 @@ class ClientCatalogService
             "LEFT JOIN users u ON u.id = p.seller_id\n" .
             "LEFT JOIN (\n" .
             "    SELECT pbx.product_id,\n" .
-            "           MAX(CASE WHEN pbx.status = 'planned' THEN 1 ELSE 0 END) AS has_planned_batch,\n" .
+            "           MAX(CASE WHEN pbx.status = 'planned' AND (COALESCE(NULLIF(pbx.boxes_total, 0), pbx.boxes_free + pbx.boxes_reserved) - pbx.boxes_reserved) > 0 AND pbx.preorder_price_per_box > 0 THEN 1 ELSE 0 END) AS has_planned_batch,\n" .
             "           MAX(CASE WHEN pbx.status IN ('purchased', 'arrived') AND pbx.boxes_free > 0 THEN 1 ELSE 0 END) AS has_in_stock_batch,\n" .
             "           MAX(CASE WHEN pbx.status IN ('purchased', 'arrived') AND pbx.boxes_discount > 0 THEN 1 ELSE 0 END) AS has_discount_batch,\n" .
-            "           MIN(CASE WHEN pbx.status = 'planned' THEN pbx.purchased_at ELSE NULL END) AS next_planned_date\n" .
+            "           MIN(CASE WHEN pbx.status = 'planned' AND (COALESCE(NULLIF(pbx.boxes_total, 0), pbx.boxes_free + pbx.boxes_reserved) - pbx.boxes_reserved) > 0 AND pbx.preorder_price_per_box > 0 THEN pbx.purchased_at ELSE NULL END) AS next_planned_date\n" .
             "    FROM purchase_batches pbx\n" .
             "    GROUP BY pbx.product_id\n" .
             ") availability ON availability.product_id = p.id\n" .
@@ -179,9 +182,15 @@ class ClientCatalogService
             "    SELECT pb2.id\n" .
             "    FROM purchase_batches pb2\n" .
             "    WHERE pb2.product_id = p.id\n" .
-            "      AND pb2.status IN ('purchased', 'arrived')\n" .
-            "      AND (pb2.boxes_free > 0 OR pb2.boxes_discount > 0)\n" .
-            "    ORDER BY pb2.purchased_at ASC, pb2.id ASC\n" .
+            "      AND {$batchSelectorCondition}\n" .
+            "    ORDER BY {$batchSelectorOrder}\n" .
+            "    LIMIT 1\n" .
+            ")\n" .
+            "LEFT JOIN purchase_batch_photos batch_photo ON batch_photo.id = (\n" .
+            "    SELECT pbp.id\n" .
+            "    FROM purchase_batch_photos pbp\n" .
+            "    WHERE pbp.purchase_batch_id = pb.id\n" .
+            "    ORDER BY pbp.id DESC\n" .
             "    LIMIT 1\n" .
             ")\n" .
             "WHERE {$where}\n" .
