@@ -382,6 +382,17 @@ $isMobileNavActive = static function (string $href) use ($currentPath): bool {
         letter-spacing: -0.02em;
       }
 
+      .order-create-form {
+        padding-bottom: calc(180px + env(safe-area-inset-bottom, 0px)) !important;
+      }
+
+      .order-step-actions {
+        bottom: calc(100px + env(safe-area-inset-bottom, 0px)) !important;
+        z-index: 55;
+        border-radius: 18px 18px 0 0;
+        box-shadow: 0 -12px 28px rgba(2, 6, 23, 0.38);
+      }
+
       #globalScrollTopBtn {
         bottom: calc(100px + env(safe-area-inset-bottom, 0px)) !important;
       }
