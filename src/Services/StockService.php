@@ -22,17 +22,23 @@ class StockService
             throw new RuntimeException('Product not found.');
         }
 
-        $column = $mode === 'discount_stock' ? 'boxes_discount' : 'boxes_free';
-        $statusFilter = $mode === 'preorder'
-            ? "status = 'planned'"
-            : "status IN ('arrived', 'purchased')";
-
-        $stmt = $this->pdo->prepare(
-            "SELECT COALESCE(SUM({$column}), 0) AS available
-             FROM purchase_batches
-             WHERE product_id = ?
-               AND {$statusFilter}"
-        );
+        if ($mode === 'preorder') {
+            $plannedAvailableExpr = "(COALESCE(NULLIF(boxes_total, 0), boxes_free + boxes_reserved) - boxes_reserved)";
+            $stmt = $this->pdo->prepare(
+                "SELECT COALESCE(SUM(CASE WHEN {$plannedAvailableExpr} > 0 THEN {$plannedAvailableExpr} ELSE 0 END), 0) AS available
+                 FROM purchase_batches
+                 WHERE product_id = ?
+                   AND status = 'planned'"
+            );
+        } else {
+            $column = $mode === 'discount_stock' ? 'boxes_discount' : 'boxes_free';
+            $stmt = $this->pdo->prepare(
+                "SELECT COALESCE(SUM({$column}), 0) AS available
+                 FROM purchase_batches
+                 WHERE product_id = ?
+                   AND status IN ('arrived', 'purchased')"
+            );
+        }
         $stmt->execute([$productId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -64,7 +70,12 @@ class StockService
             throw new RuntimeException('Unsupported stock mode for unreserve.');
         }
 
+        $batch = $this->loadBatch($batchId);
         $batchColumn = $this->resolveModeColumn($mode, true);
+        $counterUpdates = ['boxes_reserved' => -$boxes];
+        if (!($mode === 'preorder' && ($batch['status'] ?? '') === 'planned')) {
+            $counterUpdates[$batchColumn] = $boxes;
+        }
 
         $ownsTransaction = !$this->pdo->inTransaction();
 
@@ -73,10 +84,7 @@ class StockService
                 $this->pdo->beginTransaction();
             }
             $this->appendMovement($batchId, $productId, $orderId, null, 'unreserve', $mode, $boxes);
-            $this->updateBatchCounters($batchId, [
-                'boxes_reserved' => -$boxes,
-                $batchColumn => $boxes,
-            ]);
+            $this->updateBatchCounters($batchId, $counterUpdates);
             $this->assertBatchInvariants($batchId);
             $this->legacyProjection->syncAggregatesFromBatches($productId);
             if ($ownsTransaction) {
@@ -106,6 +114,84 @@ class StockService
             $this->updateBatchCounters($batchId, [
                 'boxes_reserved' => -$boxes,
                 'boxes_sold' => $boxes,
+            ]);
+            $this->assertBatchInvariants($batchId);
+            $this->legacyProjection->syncAggregatesFromBatches($productId);
+            if ($ownsTransaction) {
+                $this->pdo->commit();
+            }
+        } catch (Throwable $e) {
+            if ($ownsTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    public function sellAvailable(int $productId, int $batchId, float $boxes, int $orderId, string $mode = 'instant'): void
+    {
+        if ($boxes <= 0) {
+            throw new RuntimeException('Sell boxes must be greater than zero.');
+        }
+        if (!in_array($mode, ['instant', 'discount_stock'], true)) {
+            throw new RuntimeException('Unsupported stock mode for direct sale.');
+        }
+
+        $batch = $this->loadBatch($batchId);
+        $column = $this->resolveModeColumn($mode, true);
+        if (((float)$batch[$column] - $boxes) < 0) {
+            throw new RuntimeException('Not enough stock in selected mode.');
+        }
+
+        $ownsTransaction = !$this->pdo->inTransaction();
+
+        try {
+            if ($ownsTransaction) {
+                $this->pdo->beginTransaction();
+            }
+            $this->appendMovement($batchId, $productId, $orderId, null, 'sale', $mode, -$boxes);
+            $this->updateBatchCounters($batchId, [
+                $column => -$boxes,
+                'boxes_sold' => $boxes,
+            ]);
+            $this->assertBatchInvariants($batchId);
+            $this->legacyProjection->syncAggregatesFromBatches($productId);
+            if ($ownsTransaction) {
+                $this->pdo->commit();
+            }
+        } catch (Throwable $e) {
+            if ($ownsTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    public function returnSale(int $productId, int $batchId, float $boxes, int $orderId, string $mode = 'instant'): void
+    {
+        if ($boxes <= 0) {
+            throw new RuntimeException('Return boxes must be greater than zero.');
+        }
+        if (!in_array($mode, ['instant', 'discount_stock'], true)) {
+            throw new RuntimeException('Unsupported stock mode for sale return.');
+        }
+
+        $batch = $this->loadBatch($batchId);
+        if (((float)$batch['boxes_sold'] - $boxes) < 0) {
+            throw new RuntimeException('Not enough sold stock to return.');
+        }
+
+        $column = $this->resolveModeColumn($mode, true);
+        $ownsTransaction = !$this->pdo->inTransaction();
+
+        try {
+            if ($ownsTransaction) {
+                $this->pdo->beginTransaction();
+            }
+            $this->appendMovement($batchId, $productId, $orderId, null, 'sale_return', $mode, $boxes);
+            $this->updateBatchCounters($batchId, [
+                $column => $boxes,
+                'boxes_sold' => -$boxes,
             ]);
             $this->assertBatchInvariants($batchId);
             $this->legacyProjection->syncAggregatesFromBatches($productId);
@@ -173,18 +259,16 @@ class StockService
 
         $updates = [];
         if ($mode === 'preorder' && $movementType === 'reserve') {
-            // Preorder boxes may already be held in boxes_reserved from the booking queue.
-            // In that case adding the confirmed preorder to cart/order must not double-reserve
-            // and must not consume free stock again.
             $requested = abs($delta);
+            $plannedLimit = (float)($batch['boxes_total'] ?? 0);
+            if ($plannedLimit <= 0) {
+                $plannedLimit = (float)($batch['boxes_free'] ?? 0) + (float)($batch['boxes_reserved'] ?? 0);
+            }
             $alreadyReserved = max(0.0, (float)($batch['boxes_reserved'] ?? 0));
-            $shortfall = max(0.0, $requested - $alreadyReserved);
-            if ($shortfall > 0 && ((float)$batch['boxes_free'] - $shortfall) < 0) {
+            if (($alreadyReserved + $requested) > $plannedLimit) {
                 throw new RuntimeException('Not enough stock in selected mode.');
             }
-            if ($shortfall > 0) {
-                $updates = ['boxes_free' => -$shortfall, 'boxes_reserved' => $shortfall];
-            }
+            $updates = ['boxes_reserved' => $requested];
         } else {
             if (((float)$batch[$column] + $delta) < 0) {
                 throw new RuntimeException('Not enough stock in selected mode.');
