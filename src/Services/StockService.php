@@ -188,7 +188,7 @@ class StockService
             if ($ownsTransaction) {
                 $this->pdo->beginTransaction();
             }
-            $this->appendMovement($batchId, $productId, $orderId, null, 'sale_return', $mode, $boxes);
+            $this->appendMovement($batchId, $productId, $orderId, null, 'return_to_stock', $mode, $boxes);
             $this->updateBatchCounters($batchId, [
                 $column => $boxes,
                 'boxes_sold' => -$boxes,
