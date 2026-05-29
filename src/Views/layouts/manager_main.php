@@ -3,6 +3,17 @@ $role = $_SESSION['role'] ?? '';
 $base = $role === 'partner' ? '/partner' : '/manager';
 $titleRole = $role === 'partner' ? 'Partner' : 'Manager';
 $labelRole = $role === 'partner' ? 'Партнёр' : 'Менеджер';
+$currentPath = parse_url($_SERVER['REQUEST_URI'] ?? $base . '/orders', PHP_URL_PATH) ?: $base . '/orders';
+$mobileNavItems = [
+    ['href' => $base . '/orders', 'icon' => 'receipt_long', 'label' => 'Заказы'],
+    ['href' => $base . '/purchases', 'icon' => 'local_shipping', 'label' => 'Закупки'],
+    ['href' => $base . '/products', 'icon' => 'inventory_2', 'label' => 'Товары'],
+    ['href' => $base . '/users', 'icon' => 'groups', 'label' => 'Клиенты'],
+    ['href' => $base . '/profile', 'icon' => 'account_circle', 'label' => 'Профиль'],
+];
+$isMobileNavActive = static function (string $href) use ($currentPath): bool {
+    return $currentPath === $href || str_starts_with($currentPath, $href . '/');
+};
 ?>
 <?php
   $lightTheme = get_theme_colors('light');
@@ -273,6 +284,108 @@ $labelRole = $role === 'partner' ? 'Партнёр' : 'Менеджер';
     @media (max-width: 768px) {
       body { font-size: 14px; }
     }
+
+    @media (max-width: 767px) {
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 35;
+      }
+
+      main.manager-main-content {
+        padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px)) !important;
+      }
+
+      .mobile-app-nav {
+        position: fixed;
+        left: 10px;
+        right: 10px;
+        bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+        z-index: 60;
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 4px;
+        padding: 8px;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        border-radius: 28px;
+        background:
+          linear-gradient(135deg, rgba(15, 23, 42, 0.92), rgba(30, 41, 59, 0.88)),
+          radial-gradient(circle at 50% -10%, color-mix(in srgb, var(--accent-primary) 28%, transparent), transparent 58%);
+        box-shadow: 0 18px 44px rgba(2, 6, 23, 0.48), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+        backdrop-filter: blur(22px);
+        -webkit-backdrop-filter: blur(22px);
+      }
+
+      .mobile-app-nav::before {
+        content: '';
+        position: absolute;
+        inset: 6px;
+        z-index: -1;
+        border-radius: 23px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 56%);
+        pointer-events: none;
+      }
+
+      .mobile-app-nav__link {
+        position: relative;
+        display: flex;
+        min-width: 0;
+        min-height: 58px;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        border-radius: 20px;
+        color: #cbd5e1;
+        text-decoration: none;
+        transform: none !important;
+        text-shadow: none !important;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      .mobile-app-nav__link:hover,
+      .mobile-app-nav__link:focus-visible {
+        color: #ffffff;
+        background: rgba(255, 255, 255, 0.08);
+        outline: none;
+      }
+
+      .mobile-app-nav__link.is-active {
+        color: var(--accent-contrast);
+        background: linear-gradient(135deg, var(--accent-primary), var(--accent-hover));
+        box-shadow: 0 10px 24px color-mix(in srgb, var(--accent-primary) 38%, transparent), 0 1px 0 rgba(255, 255, 255, 0.26) inset;
+      }
+
+      .mobile-app-nav__link.is-active::after {
+        content: '';
+        position: absolute;
+        top: 7px;
+        width: 5px;
+        height: 5px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.92);
+        box-shadow: 0 0 12px rgba(255, 255, 255, 0.8);
+      }
+
+      .mobile-app-nav__icon {
+        font-size: 23px;
+        line-height: 1;
+      }
+
+      .mobile-app-nav__label {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+
+      #globalScrollTopBtn {
+        bottom: calc(100px + env(safe-area-inset-bottom, 0px)) !important;
+      }
+    }
   </style>
 </head>
 <body class="flex flex-col h-screen overflow-hidden bg-gray-100 font-sans">
@@ -288,9 +401,6 @@ $labelRole = $role === 'partner' ? 'Партнёр' : 'Менеджер';
         <a href="<?= $base ?>/users" class="hover:underline">Пользователи</a>
         <a href="<?= $base ?>/profile" class="hover:underline">Профиль</a>
       </nav>
-      <button id="burgerBtn" class="md:hidden p-2 text-gray-600">
-        <span class="material-icons-round">menu</span>
-      </button>
     </div>
     <form action="/logout" method="post">
       <?= csrf_field() ?>
@@ -300,47 +410,29 @@ $labelRole = $role === 'partner' ? 'Партнёр' : 'Менеджер';
     </form>
   </header>
 
-  <!-- Sidebar for small screens -->
-  <aside id="sidebar" class="md:hidden fixed top-16 left-0 w-52 md:w-64 bg-white shadow-md transform -translate-x-full transition-transform duration-300 z-40">
-    <nav class="p-2 md:p-4">
-      <a href="<?= $base ?>/orders" class="flex items-center p-2 mb-2 rounded hover:bg-gray-200">
-        <span class="material-icons-round mr-2 text-base md:text-lg">receipt_long</span>
-        <span class="menu-text text-sm md:text-base">Заказы</span>
-      </a>
-      <a href="<?= $base ?>/purchases" class="flex items-center p-2 mb-2 rounded hover:bg-gray-200">
-        <span class="material-icons-round mr-2 text-base md:text-lg">local_shipping</span>
-        <span class="menu-text text-sm md:text-base">Закупки</span>
-      </a>
-      <a href="<?= $base ?>/products" class="flex items-center p-2 mb-2 rounded hover:bg-gray-200">
-        <span class="material-icons-round mr-2 text-base md:text-lg">inventory_2</span>
-        <span class="menu-text text-sm md:text-base">Товары</span>
-      </a>
-      <a href="<?= $base ?>/users" class="flex items-center p-2 rounded hover:bg-gray-200">
-        <span class="material-icons-round mr-2 text-base md:text-lg">people</span>
-        <span class="menu-text text-sm md:text-base">Пользователи</span>
-      </a>
-      <a href="<?= $base ?>/profile" class="flex items-center p-2 mt-2 rounded hover:bg-gray-200">
-      <span class="material-icons-round mr-2 text-base md:text-lg">account_circle</span>
-      <span class="menu-text text-sm md:text-base">Профиль</span>
-      </a>
-    </nav>
-  </aside>
-
   <!-- Контент -->
   <div class="flex-1 flex flex-col overflow-hidden">
     <h1 class="text-xl md:text-2xl font-semibold text-gray-700 p-2 md:p-4"><?= htmlspecialchars($pageTitle) ?></h1>
     <!-- Main -->
-    <main class="p-0 sm:p-3 md:p-6 overflow-auto bg-gray-50 flex-1">
+    <main class="manager-main-content p-0 sm:p-3 md:p-6 overflow-auto bg-gray-50 flex-1">
       <?= $content ?>
     </main>
   </div>
 
+
+  <nav class="mobile-app-nav md:hidden" aria-label="Нижняя навигация <?= htmlspecialchars($labelRole) ?>">
+    <?php foreach ($mobileNavItems as $item): ?>
+      <?php $active = $isMobileNavActive($item['href']); ?>
+      <a href="<?= htmlspecialchars($item['href']) ?>" class="mobile-app-nav__link<?= $active ? ' is-active' : '' ?>"<?= $active ? ' aria-current="page"' : '' ?>>
+        <span class="material-icons-round mobile-app-nav__icon" aria-hidden="true"><?= htmlspecialchars($item['icon']) ?></span>
+        <span class="mobile-app-nav__label"><?= htmlspecialchars($item['label']) ?></span>
+      </a>
+    <?php endforeach; ?>
+  </nav>
+
   <button id="globalScrollTopBtn" type="button" aria-label="Наверх" class="fixed right-4 bottom-5 z-50 w-10 h-10 rounded-full bg-[#C86052] text-white shadow-lg transition-all duration-300" style="opacity:0;pointer-events:none;transform:translateY(12px);">↑</button>
 
   <script>
-    const sidebar = document.getElementById('sidebar');
-    const burgerBtn = document.getElementById('burgerBtn');
-
     const globalScrollTopBtn = document.getElementById('globalScrollTopBtn');
     const mainScrollContainer = document.querySelector('main.overflow-auto') || document.querySelector('main') || window;
     const getMainScrollTop = () => mainScrollContainer === window ? window.scrollY : mainScrollContainer.scrollTop;
@@ -361,36 +453,6 @@ $labelRole = $role === 'partner' ? 'Партнёр' : 'Менеджер';
     });
     updateGlobalScrollBtn();
 
-
-    function closeSidebar() {
-      sidebar.classList.add('-translate-x-full');
-    }
-
-    function openSidebar() {
-      sidebar.classList.remove('-translate-x-full');
-    }
-
-    burgerBtn?.addEventListener('click', () => {
-      if (sidebar.classList.contains('-translate-x-full')) {
-        openSidebar();
-      } else {
-        closeSidebar();
-      }
-    });
-
-    document.addEventListener('click', (e) => {
-      if (window.innerWidth < 768 && !sidebar.contains(e.target) && !burgerBtn.contains(e.target)) {
-        closeSidebar();
-      }
-    });
-
-    function handleResize() {
-      if (window.innerWidth >= 768) {
-        closeSidebar();
-      }
-    }
-
-    window.addEventListener('resize', handleResize);
   </script>
 <?php include __DIR__ . '/scripts.php'; ?>
 </body>
