@@ -188,7 +188,7 @@ class StockService
             if ($ownsTransaction) {
                 $this->pdo->beginTransaction();
             }
-            $this->appendMovement($batchId, $productId, $orderId, null, 'sale_return', $mode, $boxes);
+            $this->appendMovement($batchId, $productId, $orderId, null, 'return_to_stock', $mode, $boxes);
             $this->updateBatchCounters($batchId, [
                 $column => $boxes,
                 'boxes_sold' => -$boxes,
@@ -347,15 +347,16 @@ class StockService
     /** @param array<string, float> $deltas */
     private function updateBatchCounters(int $batchId, array $deltas): void
     {
-        $parts = [];
-        $params = [];
+        $parts = ['boxes_remaining = boxes_total - (boxes_sold + ?) - (boxes_written_off + ?)'];
+        $params = [
+            (float)($deltas['boxes_sold'] ?? 0),
+            (float)($deltas['boxes_written_off'] ?? 0),
+        ];
         foreach ($deltas as $column => $delta) {
             $parts[] = "{$column} = {$column} + ?";
             $params[] = $delta;
         }
         $params[] = $batchId;
-
-        $parts[] = 'boxes_remaining = boxes_total - boxes_sold - boxes_written_off';
 
         $sql = 'UPDATE purchase_batches SET ' . implode(', ', $parts) . ' WHERE id = ?';
         $stmt = $this->pdo->prepare($sql);
