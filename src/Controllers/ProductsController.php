@@ -152,8 +152,7 @@ class ProductsController
             $role = $_SESSION['role'] ?? '';
             if ($role === 'seller') {
                 $stmt = $this->pdo->prepare(
-                    "SELECT p.*, DATE(pb.purchased_at) AS delivery_date, COALESCE(pb.instant_price_per_box, 0) AS price,
-                            COALESCE(pb.preorder_price_per_box, 0) AS preorder_price_per_box
+                    "SELECT p.*, DATE(pb.purchased_at) AS delivery_date
                      FROM products p
                      LEFT JOIN purchase_batches pb ON pb.id = (
                         SELECT pb2.id
@@ -169,8 +168,7 @@ class ProductsController
                 $stmt->execute([(int)$id, $_SESSION['user_id'] ?? 0]);
             } else {
                 $stmt = $this->pdo->prepare(
-                    "SELECT p.*, DATE(pb.purchased_at) AS delivery_date, COALESCE(pb.instant_price_per_box, 0) AS price,
-                            COALESCE(pb.preorder_price_per_box, 0) AS preorder_price_per_box
+                    "SELECT p.*, DATE(pb.purchased_at) AS delivery_date
                      FROM products p
                      LEFT JOIN purchase_batches pb ON pb.id = (
                         SELECT pb2.id
@@ -343,6 +341,7 @@ class ProductsController
                         box_unit        = ?,
                         unit            = ?,
                         price           = ?,
+                        preorder_price_per_box = ?,
                         sale_price      = ?,
                         delivery_date   = ?,
                         is_active       = ?";
@@ -350,7 +349,7 @@ class ProductsController
                 $typeId, $alias, $variety, $description, $fullDesc, $compositionJson,
                 $metaTitle, $metaDesc, $metaKeys,
                 $manufacturer, $originCountry, $boxSize, $boxUnit,
-                $unit, $price, $salePrice,
+                $unit, $price, $preorderPrice, $salePrice,
                 $deliveryDate, $isActive
             ];
 
@@ -380,14 +379,14 @@ class ProductsController
 
         } else {
             // INSERT
-            $columns      = "product_type_id,alias,variety,description,full_description,composition,meta_title,meta_description,meta_keywords,manufacturer,origin_country,box_size,box_unit,unit,price,sale_price,delivery_date,is_active";
-            // 18 placeholders corresponding to the columns above
-            $placeholders = "?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?";
+            $columns      = "product_type_id,alias,variety,description,full_description,composition,meta_title,meta_description,meta_keywords,manufacturer,origin_country,box_size,box_unit,unit,price,preorder_price_per_box,sale_price,delivery_date,is_active";
+            // 19 placeholders corresponding to the columns above
+            $placeholders = "?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?";
             $params       = [
                 $typeId, $alias, $variety, $description, $fullDesc, $compositionJson,
                 $metaTitle, $metaDesc, $metaKeys,
                 $manufacturer, $originCountry, $boxSize, $boxUnit,
-                $unit, $price, $salePrice,
+                $unit, $price, $preorderPrice, $salePrice,
                 $deliveryDate, $isActive
             ];
             if ($sellerId) {

@@ -143,11 +143,11 @@ class ClientCatalogService
             "       p.box_unit,\n" .
             "       CASE\n" .
             "         WHEN COALESCE(pb.boxes_discount, 0) > 0 AND COALESCE(pb.discount_price_per_box, 0) > 0 THEN pb.discount_price_per_box\n" .
-            "         WHEN pb.status = 'planned' THEN COALESCE(NULLIF(pb.preorder_price_per_box, 0), p.price, 0)\n" .
+            "         WHEN pb.status = 'planned' THEN COALESCE(NULLIF(pb.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0)\n" .
             "         ELSE COALESCE(pb.instant_price_per_box, p.price, 0)\n" .
             "       END AS price,\n" .
             "       COALESCE(pb.instant_price_per_box, 0) AS current_price_per_box,\n" .
-            "       CASE WHEN pb.status = 'planned' THEN COALESCE(NULLIF(pb.preorder_price_per_box, 0), p.price, 0) ELSE COALESCE(pb.preorder_price_per_box, 0) END AS preorder_price_per_box,\n" .
+            "       CASE WHEN pb.status = 'planned' THEN COALESCE(NULLIF(pb.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) ELSE COALESCE(pb.preorder_price_per_box, 0) END AS preorder_price_per_box,\n" .
             "       p.sale_price,\n" .
             "       p.is_active,\n" .
             "       COALESCE(batch_photo.image_path, p.image_path) AS image_path,\n" .

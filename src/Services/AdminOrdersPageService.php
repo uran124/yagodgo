@@ -197,7 +197,7 @@ class AdminOrdersPageService
         $stmt = $this->pdo->query(
             "SELECT p.id, t.name AS product, p.variety, p.price, p.box_size,\n" .
             "       COALESCE((\n" .
-            "           SELECT CASE WHEN pb.status = 'planned' THEN COALESCE(NULLIF(pb.preorder_price_per_box, 0), p.price, 0) ELSE pb.instant_price_per_box END\n" .
+            "           SELECT CASE WHEN pb.status = 'planned' THEN COALESCE(NULLIF(pb.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) ELSE pb.instant_price_per_box END\n" .
             "           FROM purchase_batches pb\n" .
             "           WHERE pb.product_id = p.id\n" .
             "             AND (\n" .
@@ -229,7 +229,7 @@ class AdminOrdersPageService
             "       pb.box_size_snapshot, pb.box_unit_snapshot, pb.boxes_free, pb.boxes_total, pb.boxes_reserved,\n" .
             "       {$availableExpr} AS available_boxes,\n" .
             "       pb.instant_price_per_box, pb.preorder_price_per_box,\n" .
-            "       p.price AS product_price_per_box,\n" .
+            "       p.price AS product_price_per_box, p.preorder_price_per_box AS product_preorder_price_per_box,\n" .
             "       t.name AS product, p.variety, p.image_path, p.box_size, p.box_unit\n" .
             "FROM purchase_batches pb\n" .
             "JOIN products p ON p.id = pb.product_id\n" .
@@ -250,7 +250,7 @@ class AdminOrdersPageService
             $row['mode_label'] = $isPreorder ? 'Предзаказ' : 'В наличии';
             $row['available_boxes'] = (float)($row['available_boxes'] ?? 0);
             $row['display_box_size'] = (float)($row['box_size_snapshot'] ?: ($row['box_size'] ?: 1));
-            $fallbackPreorderPrice = (float)($row['product_price_per_box'] ?? 0);
+            $fallbackPreorderPrice = (float)(($row['product_preorder_price_per_box'] ?? 0) ?: ($row['product_price_per_box'] ?? 0));
             $row['price_per_box'] = (float)($isPreorder ? (((float)$row['preorder_price_per_box'] > 0) ? $row['preorder_price_per_box'] : $fallbackPreorderPrice) : $row['instant_price_per_box']);
             $row['batch_date'] = substr((string)($row['purchased_at'] ?? ''), 0, 10);
             $row['display_box_unit'] = (string)($row['box_unit_snapshot'] ?: ($row['box_unit'] ?? ''));

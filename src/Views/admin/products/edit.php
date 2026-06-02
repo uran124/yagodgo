@@ -73,16 +73,19 @@ $statusLabels = [
 
             <div class="space-y-3">
               <label class="block text-sm">
-                <span class="block mb-1 text-slate-300">Закупка</span>
+                <span class="block mb-1 text-slate-300">Закупочная цена за ящик</span>
                 <input name="purchase_price_per_box" type="number" step="1" value="<?= (int)round($purchasePrice) ?>" class="w-full border border-slate-600 bg-slate-900/70 text-slate-100 px-3 py-2 rounded js-purchase-price">
+                <span class="mt-1 block text-xs text-slate-500">От неё автоматически пересчитываются цены ниже.</span>
               </label>
               <label class="block text-sm">
-                <span class="block mb-1 text-slate-300">В наличии</span>
+                <span class="block mb-1 text-slate-300">Цена в наличии за ящик</span>
                 <input name="instant_price_per_box" type="number" step="1" value="<?= (int)round($instantPrice) ?>" class="w-full border border-slate-600 bg-slate-900/70 text-slate-100 px-3 py-2 rounded js-instant-price">
+                <span class="mt-1 block text-xs text-slate-500">Закупка + <?= htmlspecialchars((string)$pricingInstantMarginPercent) ?>%, округление вниз до <?= htmlspecialchars((string)$pricingRoundingStep) ?> ₽.</span>
               </label>
               <label class="block text-sm">
-                <span class="block mb-1 text-slate-300">Предзаказ</span>
+                <span class="block mb-1 text-slate-300">Цена предзаказа за ящик</span>
                 <input name="preorder_price_per_box" type="number" step="1" value="<?= (int)round($preorderPrice) ?>" class="w-full border border-slate-600 bg-slate-900/70 text-slate-100 px-3 py-2 rounded js-preorder-price">
+                <span class="mt-1 block text-xs text-slate-500">Цена в наличии − <?= htmlspecialchars((string)$pricingPreorderDiscountPercent) ?>%.</span>
               </label>
             </div>
 
