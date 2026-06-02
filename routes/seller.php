@@ -13,6 +13,7 @@ return [
             'GET /seller/products/edit' => ['App\\Controllers\\ProductsController', 'edit'],
             'POST /seller/products/save' => ['App\\Controllers\\ProductsController', 'save'],
             'POST /seller/products/toggle' => ['App\\Controllers\\ProductsController', 'toggle'],
+            'POST /seller/products/purchase/update' => ['App\\Controllers\\ProductsController', 'updatePurchaseFromProduct'],
             'POST /seller/products/update-date' => ['App\\Controllers\\ProductsController', 'updateDeliveryDate'],
             'POST /seller/products/delete' => ['App\\Controllers\\ProductsController', 'delete'],
             'GET /seller/product-types' => ['App\\Controllers\\ProductTypesController', 'index'],

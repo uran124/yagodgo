@@ -24,6 +24,10 @@ return [
         requireAdmin(); (new App\Controllers\ProductsController($c['pdo']))->toggle(); return true;
     },
     static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('POST', '/admin/products/purchase/update', $method, $uri)) return false;
+        requireAdmin(); (new App\Controllers\ProductsController($c['pdo']))->updatePurchaseFromProduct(); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
         if (!(routeExact('POST', '/admin/products/update-price', $method, $uri) || routeExact('GET', '/admin/products/update-price', $method, $uri))) return false;
         requireAdmin(); (new App\Controllers\ProductsController($c['pdo']))->updatePrice(); return true;
     },

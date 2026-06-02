@@ -4,6 +4,9 @@
 <?php /** @var array<int,array<string,mixed>> $products */ ?>
 <?php $basePath = $basePath ?? '/admin'; ?>
 <?php $flash = $flash ?? null; ?>
+<?php $pricingInstantMarginPercent = (float)(get_setting('pricing_instant_margin_percent', '50') ?? '50'); ?>
+<?php $pricingPreorderDiscountPercent = max(0.0, min(99.0, (float)(get_setting('ui_preorder_discount_percent', '10') ?? '10'))); ?>
+<?php $pricingRoundingStep = max(1, (int)(get_setting('pricing_rounding_step', '10') ?? '10')); ?>
 <?php $batchDateValue = trim((string)($batch['purchased_at'] ?? '')) !== '' ? substr((string)$batch['purchased_at'], 0, 10) : ''; ?>
 <?php $statusLabels = [
   'planned' => 'Запланирована',
@@ -159,18 +162,21 @@
       </label>
 
       <label class="block">
-        <span class="text-slate-400 block mb-1">Закупка</span>
+        <span class="text-slate-400 block mb-1">Закупочная цена за ящик</span>
         <input name="purchase_price_per_box" type="number" step="1" value="<?= (int)round((float)$batch['purchase_price_per_box']) ?>" class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100 js-purchase-price" required>
+        <span class="text-xs text-slate-500 mt-1 block purchase-hint">Цена в наличии = закупка + <?= htmlspecialchars((string)$pricingInstantMarginPercent) ?>%.</span>
       </label>
 
       <label class="block">
-        <span class="text-slate-400 block mb-1">В наличии</span>
+        <span class="text-slate-400 block mb-1">Цена в наличии за ящик</span>
         <input name="instant_price_per_box" type="number" step="1" value="<?= (int)round((float)($batch['instant_price_per_box'] ?? 0)) ?>" class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100 js-instant-price" data-auto="1">
+        <span class="text-xs text-slate-500 mt-1 block purchase-hint">Округление вниз до <?= htmlspecialchars((string)$pricingRoundingStep) ?> ₽.</span>
       </label>
 
       <label class="block">
-        <span class="text-slate-400 block mb-1">Предзаказ</span>
+        <span class="text-slate-400 block mb-1">Цена предзаказа за ящик</span>
         <input name="preorder_price_per_box" type="number" step="1" value="<?= (int)round((float)($batch['preorder_price_per_box'] ?? 0)) ?>" class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100 js-preorder-price" data-auto="1">
+        <span class="text-xs text-slate-500 mt-1 block purchase-hint">Цена в наличии − <?= htmlspecialchars((string)$pricingPreorderDiscountPercent) ?>%.</span>
       </label>
 
       <div>
@@ -239,9 +245,9 @@
 
       <label class="block"><span class="text-slate-400 block mb-1">Дата</span><input name="planned_supply_date" type="date" value="<?= htmlspecialchars($batchDateValue) ?>" class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100"><span class="text-xs text-slate-500 mt-1 block">Для запланированной закупки дату можно не указывать.</span></label>
       <label class="block"><span class="text-slate-400 block mb-1">Куплено ящиков</span><input name="boxes_total" type="number" step="0.01" value="<?= (float)$batch['boxes_total'] ?>" class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100" required></label>
-      <label class="block"><span class="text-slate-400 block mb-1">Закупка</span><input name="purchase_price_per_box" type="number" step="1" value="<?= (int)round((float)$batch['purchase_price_per_box']) ?>" class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100 js-purchase-price" required></label>
-      <label class="block"><span class="text-slate-400 block mb-1">В наличии</span><input name="instant_price_per_box" type="number" step="1" value="<?= (int)round((float)($batch['instant_price_per_box'] ?? 0)) ?>" class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100 js-instant-price"></label>
-      <label class="block"><span class="text-slate-400 block mb-1">Предзаказ</span><input name="preorder_price_per_box" type="number" step="1" value="<?= (int)round((float)($batch['preorder_price_per_box'] ?? 0)) ?>" class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100 js-preorder-price"></label>
+      <label class="block"><span class="text-slate-400 block mb-1">Закупочная цена за ящик</span><input name="purchase_price_per_box" type="number" step="1" value="<?= (int)round((float)$batch['purchase_price_per_box']) ?>" class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100 js-purchase-price" required><span class="text-xs text-slate-500 mt-1 block">Цена в наличии = закупка + <?= htmlspecialchars((string)$pricingInstantMarginPercent) ?>%.</span></label>
+      <label class="block"><span class="text-slate-400 block mb-1">Цена в наличии за ящик</span><input name="instant_price_per_box" type="number" step="1" value="<?= (int)round((float)($batch['instant_price_per_box'] ?? 0)) ?>" class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100 js-instant-price"><span class="text-xs text-slate-500 mt-1 block">Округление вниз до <?= htmlspecialchars((string)$pricingRoundingStep) ?> ₽.</span></label>
+      <label class="block"><span class="text-slate-400 block mb-1">Цена предзаказа за ящик</span><input name="preorder_price_per_box" type="number" step="1" value="<?= (int)round((float)($batch['preorder_price_per_box'] ?? 0)) ?>" class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100 js-preorder-price"><span class="text-xs text-slate-500 mt-1 block">Цена в наличии − <?= htmlspecialchars((string)$pricingPreorderDiscountPercent) ?>%.</span></label>
       <label class="block"><span class="text-slate-400 block mb-1">Свободно ящиков</span><input name="boxes_free" type="number" step="0.01" value="<?= (float)$batch['boxes_free'] ?>" class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100" required></label>
       <label class="block"><span class="text-slate-400 block mb-1">Резерв ящиков</span><input name="boxes_reserved" type="number" step="0.01" value="<?= (float)$batch['boxes_reserved'] ?>" class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100" required></label>
       <label class="block purchase-field-full"><span class="text-slate-400 block mb-1">Комментарий</span><textarea name="comment" rows="2" class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100"><?= htmlspecialchars((string)($batch['comment'] ?? '')) ?></textarea></label>
@@ -384,12 +390,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const preorder = form.querySelector('.js-preorder-price');
     if (!purchase || !instant || !preorder) return;
 
-    const roundToStep = (value, step = 10) => Math.round(value / step) * step;
+    const instantMargin = <?= json_encode($pricingInstantMarginPercent) ?>;
+    const preorderDiscount = <?= json_encode($pricingPreorderDiscountPercent) ?>;
+    const roundingStep = <?= json_encode($pricingRoundingStep) ?>;
+    const roundToStep = (value, step = roundingStep) => Math.floor(value / Math.max(1, step)) * Math.max(1, step);
     const recalc = () => {
       const base = parseFloat(String(purchase.value).replace(',', '.')) || 0;
       if (base <= 0) return;
-      instant.value = String(roundToStep(base * 1.50, 10));
-      preorder.value = String(roundToStep(base * 1.35, 10));
+      const instantValue = roundToStep(base * (1 + instantMargin / 100));
+      instant.value = String(instantValue);
+      preorder.value = String(roundToStep(instantValue * (1 - preorderDiscount / 100)));
     };
     purchase.addEventListener('input', recalc);
     purchase.addEventListener('change', recalc);

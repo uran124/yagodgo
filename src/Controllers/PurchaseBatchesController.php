@@ -471,6 +471,7 @@ ORDER BY is_closed ASC, pb.id DESC';
 
             $boxSize = $this->getProductBoxSize($productId);
             $prices = $this->pricingService->calculateFromPurchase($purchasePrice, $boxSize);
+            $settings = $this->pricingService->getSettings();
             $instantPosted = (float)($_POST['instant_price_per_box'] ?? 0);
             $preorderPosted = (float)($_POST['preorder_price_per_box'] ?? 0);
             $instantPrice = $instantPosted > 0 ? $instantPosted : (float)$prices['instant_price_per_box'];
@@ -495,6 +496,9 @@ ORDER BY is_closed ASC, pb.id DESC';
                      boxes_free = :boxes_free,
                      boxes_remaining = :boxes_remaining,
                      purchase_price_per_box = :purchase_price_per_box,
+                     preorder_margin_percent = :preorder_margin_percent,
+                     preorder_discount_percent = :preorder_discount_percent,
+                     instant_margin_percent = :instant_margin_percent,
                      instant_price_per_box = :instant_price_per_box,
                      preorder_price_per_box = :preorder_price_per_box,
                      instant_unit_price = :instant_unit_price,
@@ -513,6 +517,9 @@ ORDER BY is_closed ASC, pb.id DESC';
                 'boxes_free' => $boxesFree,
                 'boxes_remaining' => $boxesTotal,
                 'purchase_price_per_box' => $purchasePrice,
+                'preorder_margin_percent' => (float)$settings['pricing_preorder_margin_percent'],
+                'preorder_discount_percent' => (float)$settings['ui_preorder_discount_percent'],
+                'instant_margin_percent' => (float)$settings['pricing_instant_margin_percent'],
                 'instant_price_per_box' => $instantPrice,
                 'preorder_price_per_box' => $preorderPrice,
                 'instant_unit_price' => $instantPrice,
@@ -768,6 +775,7 @@ ORDER BY is_closed ASC, pb.id DESC';
         $purchasePrice = (float)($_POST['purchase_price_per_box'] ?? 0);
         $boxSize = $this->getProductBoxSize($productId);
         $prices = $this->pricingService->calculateFromPurchase($purchasePrice, $boxSize);
+        $settings = $this->pricingService->getSettings();
         // Batch-first pricing: prices are derived from purchase price by default,
         // but admin/buyer may correct final prices manually on the batch.
         $instantPosted = (float)($_POST['instant_price_per_box'] ?? 0);
@@ -813,6 +821,9 @@ ORDER BY is_closed ASC, pb.id DESC';
                  boxes_remaining = :boxes_remaining,
                  purchase_price_per_box = :purchase_price_per_box,
                  extra_cost_per_box = :extra_cost_per_box,
+                 preorder_margin_percent = :preorder_margin_percent,
+                 preorder_discount_percent = :preorder_discount_percent,
+                 instant_margin_percent = :instant_margin_percent,
                  instant_price_per_box = :instant_price_per_box,
                  preorder_price_per_box = :preorder_price_per_box,
                  instant_unit_price = :instant_unit_price,
@@ -832,6 +843,9 @@ ORDER BY is_closed ASC, pb.id DESC';
             'boxes_remaining' => max(0.0, $boxesRemaining),
             'purchase_price_per_box' => (float)($_POST['purchase_price_per_box'] ?? 0),
             'extra_cost_per_box' => (float)($_POST['extra_cost_per_box'] ?? 0),
+            'preorder_margin_percent' => (float)$settings['pricing_preorder_margin_percent'],
+            'preorder_discount_percent' => (float)$settings['ui_preorder_discount_percent'],
+            'instant_margin_percent' => (float)$settings['pricing_instant_margin_percent'],
             'instant_price_per_box' => $instantPrice,
             'preorder_price_per_box' => $preorderPrice,
             'instant_unit_price' => (float)$prices['instant_unit_price'],

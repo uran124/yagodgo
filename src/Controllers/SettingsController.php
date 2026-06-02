@@ -25,6 +25,12 @@ class SettingsController
     // Сохранение
     public function save(): void
     {
+        $instantMargin = isset($_POST['pricing_instant_margin_percent']) ? (float)$_POST['pricing_instant_margin_percent'] : 50.0;
+        $_POST['pricing_instant_margin_percent'] = (string)max(0.0, min(500.0, $instantMargin));
+
+        $roundingStep = isset($_POST['pricing_rounding_step']) ? (int)$_POST['pricing_rounding_step'] : 10;
+        $_POST['pricing_rounding_step'] = (string)max(1, min(10000, $roundingStep));
+
         $discount = isset($_POST['ui_preorder_discount_percent']) ? (float)$_POST['ui_preorder_discount_percent'] : 10.0;
         $_POST['ui_preorder_discount_percent'] = (string)max(0.0, min(99.0, $discount));
 
