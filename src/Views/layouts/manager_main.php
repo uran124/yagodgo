@@ -4,8 +4,18 @@ $base = $role === 'partner' ? '/partner' : '/manager';
 $titleRole = $role === 'partner' ? 'Partner' : 'Manager';
 $labelRole = $role === 'partner' ? 'Партнёр' : 'Менеджер';
 $currentPath = parse_url($_SERVER['REQUEST_URI'] ?? $base . '/orders', PHP_URL_PATH) ?: $base . '/orders';
+$supportStaffUnreadCount = 0;
+try {
+    global $pdo;
+    if (isset($pdo) && $pdo instanceof PDO) {
+        $supportStaffUnreadCount = (int)$pdo->query('SELECT COALESCE(SUM(staff_unread_count),0) FROM support_chats')->fetchColumn();
+    }
+} catch (Throwable $e) {
+    $supportStaffUnreadCount = 0;
+}
 $mobileNavItems = [
     ['href' => $base . '/orders', 'icon' => 'receipt_long', 'label' => 'Заказы'],
+    ['href' => $base . '/chats', 'icon' => 'forum', 'label' => 'Чат'],
     ['href' => $base . '/purchases', 'icon' => 'local_shipping', 'label' => 'Закупки'],
     ['href' => $base . '/products', 'icon' => 'inventory_2', 'label' => 'Товары'],
     ['href' => $base . '/users', 'icon' => 'groups', 'label' => 'Клиенты'],
@@ -303,7 +313,7 @@ $isMobileNavActive = static function (string $href) use ($currentPath): bool {
         bottom: calc(10px + env(safe-area-inset-bottom, 0px));
         z-index: 60;
         display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-columns: repeat(6, minmax(0, 1fr));
         gap: 4px;
         padding: 8px;
         border: 1px solid rgba(148, 163, 184, 0.22);
@@ -409,6 +419,7 @@ $isMobileNavActive = static function (string $href) use ($currentPath): bool {
       <div class="font-bold text-lg md:text-xl text-[#C86052]">BerryGo <?= htmlspecialchars($titleRole) ?></div>
       <nav class="hidden md:flex space-x-2 md:space-x-4">
         <a href="<?= $base ?>/orders" class="hover:underline">Заказы</a>
+        <a href="<?= $base ?>/chats" class="relative hover:underline">Чат<?php if ($supportStaffUnreadCount > 0): ?><span class="ml-1 rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white"><?= $supportStaffUnreadCount ?></span><?php endif; ?></a>
         <a href="<?= $base ?>/purchases" class="hover:underline">Закупки</a>
         <a href="<?= $base ?>/products" class="hover:underline">Товары</a>
         <a href="<?= $base ?>/users" class="hover:underline">Пользователи</a>
@@ -438,7 +449,7 @@ $isMobileNavActive = static function (string $href) use ($currentPath): bool {
       <?php $active = $isMobileNavActive($item['href']); ?>
       <a href="<?= htmlspecialchars($item['href']) ?>" class="mobile-app-nav__link<?= $active ? ' is-active' : '' ?>"<?= $active ? ' aria-current="page"' : '' ?>>
         <span class="material-icons-round mobile-app-nav__icon" aria-hidden="true"><?= htmlspecialchars($item['icon']) ?></span>
-        <span class="mobile-app-nav__label"><?= htmlspecialchars($item['label']) ?></span>
+        <span class="mobile-app-nav__label"><?= htmlspecialchars($item['label']) ?></span><?php if (str_ends_with($item['href'], '/chats') && $supportStaffUnreadCount > 0): ?><span class="absolute right-2 top-2 rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white"><?= $supportStaffUnreadCount ?></span><?php endif; ?>
       </a>
     <?php endforeach; ?>
   </nav>
