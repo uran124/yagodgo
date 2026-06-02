@@ -123,10 +123,10 @@ class ClientCatalogService
     private function fetchProducts(string $where, string $orderBy, array $params = [], ?int $limit = null, string $offerMode = 'auto'): array
     {
         $batchSelectorCondition = match ($offerMode) {
-            'preorder' => "pb2.status = 'planned' AND (COALESCE(NULLIF(pb2.boxes_total, 0), pb2.boxes_free + pb2.boxes_reserved) - pb2.boxes_reserved) > 0 AND pb2.preorder_price_per_box > 0",
+            'preorder' => "pb2.status = 'planned' AND (COALESCE(NULLIF(pb2.boxes_total, 0), pb2.boxes_free + pb2.boxes_reserved) - pb2.boxes_reserved) > 0",
             'discount' => "pb2.status IN ('purchased', 'arrived') AND pb2.boxes_discount > 0 AND pb2.discount_price_per_box > 0",
             'in_stock' => "pb2.status IN ('purchased', 'arrived') AND pb2.boxes_free > 0 AND pb2.instant_price_per_box > 0",
-            default => "((pb2.status IN ('purchased', 'arrived') AND (pb2.boxes_free > 0 OR pb2.boxes_discount > 0)) OR (pb2.status = 'planned' AND (COALESCE(NULLIF(pb2.boxes_total, 0), pb2.boxes_free + pb2.boxes_reserved) - pb2.boxes_reserved) > 0 AND pb2.preorder_price_per_box > 0))",
+            default => "((pb2.status IN ('purchased', 'arrived') AND (pb2.boxes_free > 0 OR pb2.boxes_discount > 0)) OR (pb2.status = 'planned' AND (COALESCE(NULLIF(pb2.boxes_total, 0), pb2.boxes_free + pb2.boxes_reserved) - pb2.boxes_reserved) > 0))",
         };
         $batchSelectorOrder = match ($offerMode) {
             'preorder' => "pb2.purchased_at ASC, pb2.id ASC",
@@ -146,11 +146,11 @@ class ClientCatalogService
             "       p.box_unit,\n" .
             "       CASE\n" .
             "         WHEN COALESCE(pb.boxes_discount, 0) > 0 AND COALESCE(pb.discount_price_per_box, 0) > 0 THEN pb.discount_price_per_box\n" .
-            "         WHEN pb.status = 'planned' THEN COALESCE(pb.preorder_price_per_box, 0)\n" .
+            "         WHEN pb.status = 'planned' THEN COALESCE(NULLIF(pb.preorder_price_per_box, 0), p.price, 0)\n" .
             "         ELSE COALESCE(pb.instant_price_per_box, p.price, 0)\n" .
             "       END AS price,\n" .
             "       COALESCE(pb.instant_price_per_box, 0) AS current_price_per_box,\n" .
-            "       COALESCE(pb.preorder_price_per_box, 0) AS preorder_price_per_box,\n" .
+            "       CASE WHEN pb.status = 'planned' THEN COALESCE(NULLIF(pb.preorder_price_per_box, 0), p.price, 0) ELSE COALESCE(pb.preorder_price_per_box, 0) END AS preorder_price_per_box,\n" .
             "       p.sale_price,\n" .
             "       p.is_active,\n" .
             "       COALESCE(batch_photo.image_path, p.image_path) AS image_path,\n" .
@@ -171,10 +171,10 @@ class ClientCatalogService
             "LEFT JOIN users u ON u.id = p.seller_id\n" .
             "LEFT JOIN (\n" .
             "    SELECT pbx.product_id,\n" .
-            "           MAX(CASE WHEN pbx.status = 'planned' AND (COALESCE(NULLIF(pbx.boxes_total, 0), pbx.boxes_free + pbx.boxes_reserved) - pbx.boxes_reserved) > 0 AND pbx.preorder_price_per_box > 0 THEN 1 ELSE 0 END) AS has_planned_batch,\n" .
+            "           MAX(CASE WHEN pbx.status = 'planned' AND (COALESCE(NULLIF(pbx.boxes_total, 0), pbx.boxes_free + pbx.boxes_reserved) - pbx.boxes_reserved) > 0 THEN 1 ELSE 0 END) AS has_planned_batch,\n" .
             "           MAX(CASE WHEN pbx.status IN ('purchased', 'arrived') AND pbx.boxes_free > 0 THEN 1 ELSE 0 END) AS has_in_stock_batch,\n" .
             "           MAX(CASE WHEN pbx.status IN ('purchased', 'arrived') AND pbx.boxes_discount > 0 THEN 1 ELSE 0 END) AS has_discount_batch,\n" .
-            "           MIN(CASE WHEN pbx.status = 'planned' AND (COALESCE(NULLIF(pbx.boxes_total, 0), pbx.boxes_free + pbx.boxes_reserved) - pbx.boxes_reserved) > 0 AND pbx.preorder_price_per_box > 0 THEN pbx.purchased_at ELSE NULL END) AS next_planned_date\n" .
+            "           MIN(CASE WHEN pbx.status = 'planned' AND (COALESCE(NULLIF(pbx.boxes_total, 0), pbx.boxes_free + pbx.boxes_reserved) - pbx.boxes_reserved) > 0 THEN pbx.purchased_at ELSE NULL END) AS next_planned_date\n" .
             "    FROM purchase_batches pbx\n" .
             "    GROUP BY pbx.product_id\n" .
             ") availability ON availability.product_id = p.id\n" .
