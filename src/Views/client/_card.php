@@ -18,6 +18,8 @@
 <?php
 $search = mb_strtolower(($p['product'] ?? '') . ' ' . ($p['variety'] ?? ''), 'UTF-8');
 $img       = trim($p['image_path'] ?? '');
+$productImg = trim($p['product_image_path'] ?? '');
+$imageFallback = $productImg !== '' && $productImg !== $img ? $productImg : '';
 $hasImage  = $img !== '';
 $today     = date('Y-m-d');
 $d         = $p['delivery_date']     ?? null;
@@ -73,6 +75,9 @@ $nextSupplyDateText = $showNextSupplyBadge ? date('d.m.Y', strtotime($plannedDat
       <a href="/catalog/<?= urlencode($p['type_alias']) ?>/<?= urlencode($p['alias']) ?>">
         <img src="<?= htmlspecialchars($img) ?>"
              alt="<?= htmlspecialchars($p['product'] ?? '') ?>"
+             <?php if ($imageFallback !== ''): ?>
+             onerror="this.onerror=null;this.src='<?= htmlspecialchars($imageFallback, ENT_QUOTES) ?>'"
+             <?php endif; ?>
              class="w-full object-cover product-image" style="aspect-ratio:1/1">
       </a>
     <?php else: ?>

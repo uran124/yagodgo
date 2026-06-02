@@ -150,7 +150,7 @@ class ClientCatalogService
             "       CASE WHEN pb.status = 'planned' THEN COALESCE(NULLIF(pb.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) ELSE COALESCE(pb.preorder_price_per_box, 0) END AS preorder_price_per_box,\n" .
             "       p.sale_price,\n" .
             "       p.is_active,\n" .
-            "       COALESCE(batch_photo.image_path, p.image_path) AS image_path,\n" .
+            "       COALESCE(NULLIF(batch_photo.image_path, ''), NULLIF(p.image_path, ''), '') AS image_path,\n" .
             "       p.image_path AS product_image_path,\n" .
             "       batch_photo.image_path AS batch_image_path,\n" .
             "       DATE(pb.purchased_at) AS delivery_date,\n" .
