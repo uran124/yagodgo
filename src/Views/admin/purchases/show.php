@@ -4,6 +4,7 @@
 <?php /** @var array<int,array<string,mixed>> $products */ ?>
 <?php $basePath = $basePath ?? '/admin'; ?>
 <?php $flash = $flash ?? null; ?>
+<?php $batchDateValue = trim((string)($batch['purchased_at'] ?? '')) !== '' ? substr((string)$batch['purchased_at'], 0, 10) : ''; ?>
 <?php $statusLabels = [
   'planned' => 'Запланирована',
   'purchased' => 'Выкуплена',
@@ -60,7 +61,8 @@
 
       <label class="block">
         <span class="text-slate-400 block mb-1">Дата закупки</span>
-        <input name="planned_supply_date" type="date" value="<?= htmlspecialchars(substr((string)$batch['purchased_at'], 0, 10)) ?>" class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100">
+        <input name="planned_supply_date" type="date" value="<?= htmlspecialchars($batchDateValue) ?>" class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100">
+        <span class="text-xs text-slate-500 mt-1 block">Можно оставить пустой, если точная дата пока неизвестна.</span>
       </label>
 
       <label class="block">
@@ -139,7 +141,7 @@
         </select>
       </label>
 
-      <label class="block"><span class="text-slate-400 block mb-1">Дата</span><input name="planned_supply_date" type="date" value="<?= htmlspecialchars(substr((string)$batch['purchased_at'], 0, 10)) ?>" class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100"></label>
+      <label class="block"><span class="text-slate-400 block mb-1">Дата</span><input name="planned_supply_date" type="date" value="<?= htmlspecialchars($batchDateValue) ?>" class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100"><span class="text-xs text-slate-500 mt-1 block">Для запланированной закупки дату можно не указывать.</span></label>
       <label class="block"><span class="text-slate-400 block mb-1">Куплено ящиков</span><input name="boxes_total" type="number" step="0.01" value="<?= (float)$batch['boxes_total'] ?>" class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100" required></label>
       <label class="block"><span class="text-slate-400 block mb-1">Закупка</span><input name="purchase_price_per_box" type="number" step="1" value="<?= (int)round((float)$batch['purchase_price_per_box']) ?>" class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100 js-purchase-price" required></label>
       <label class="block"><span class="text-slate-400 block mb-1">В наличии</span><input name="instant_price_per_box" type="number" step="1" value="<?= (int)round((float)($batch['instant_price_per_box'] ?? 0)) ?>" class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100 js-instant-price"></label>
@@ -195,6 +197,21 @@
   </div>
 </div>
 
+<?php if ($basePath !== '/buyer'): ?>
+<div class="bg-slate-900 text-slate-100 p-4 rounded-xl shadow mb-4 border border-slate-700">
+  <h3 class="font-semibold mb-3">Фото закупки</h3>
+  <form action="<?= $basePath ?>/purchases/photos/upload" method="post" enctype="multipart/form-data" class="space-y-3">
+    <?= csrf_field() ?>
+    <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
+    <label class="block text-sm">
+      <span class="text-slate-400 block mb-1">Добавить или заменить фото можно в любом статусе закупки</span>
+      <input type="file" name="photos[]" accept="image/*" multiple class="block w-full max-w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 file:mr-3 file:rounded-md file:border-0 file:bg-pink-500 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-white">
+    </label>
+    <button type="submit" class="w-full md:w-auto bg-pink-500 hover:bg-pink-400 text-white px-4 py-2 rounded-lg font-semibold">Загрузить фото</button>
+  </form>
+</div>
+<?php endif; ?>
+
 <div class="bg-white p-4 rounded shadow mb-4">
   <h3 class="font-semibold mb-2">Фото партии</h3>
   <?php if ($photos === []): ?>
@@ -219,7 +236,8 @@
 
 <div class="bg-white p-4 rounded shadow">
   <h3 class="font-semibold mb-2">Движения склада</h3>
-  <table class="min-w-full">
+  <div class="overflow-x-auto max-w-full">
+  <table class="min-w-full text-sm">
     <thead>
       <tr class="text-left border-b">
         <th class="py-2">Тип</th>
@@ -241,6 +259,7 @@
       <?php endforeach; ?>
     </tbody>
   </table>
+  </div>
 </div>
 
 </div>

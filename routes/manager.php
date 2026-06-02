@@ -48,6 +48,7 @@ return [
             'POST /manager/purchases/preorders/decision' => ['App\\Controllers\\PurchaseBatchesController', 'preorderIntentDecision'],
             'POST /manager/purchases/preorders/maintenance' => ['App\\Controllers\\PurchaseBatchesController', 'maintenancePreorders'],
             'POST /manager/purchases/write-off' => ['App\\Controllers\\PurchaseBatchesController', 'writeOff'],
+            'POST /manager/purchases/photos/upload' => ['App\\Controllers\\PurchaseBatchesController', 'uploadPhotos'],
             'POST /manager/purchases/photos/delete' => ['App\\Controllers\\PurchaseBatchesController', 'deletePhoto'],
             'POST /manager/purchases/update' => ['App\\Controllers\\PurchaseBatchesController', 'update'],
             'POST /manager/purchases/close' => ['App\\Controllers\\PurchaseBatchesController', 'close'],

@@ -6,7 +6,7 @@
   'purchased' => 'Выкуплена',
   'arrived' => 'Готова к выдаче',
 ]; ?>
-<form action="<?= $basePath ?>/purchases/store" method="post" enctype="multipart/form-data" class="mobile-bottom-action-spacer bg-white p-6 rounded shadow max-w-2xl mx-auto space-y-4 pb-24 md:pb-6">
+<form action="<?= $basePath ?>/purchases/store" method="post" enctype="multipart/form-data" class="mobile-bottom-action-spacer bg-white p-4 sm:p-6 rounded shadow w-full max-w-2xl mx-auto space-y-4 pb-24 md:pb-6">
   <?= csrf_field() ?>
   <?php if (is_array($flash) && !empty($flash['message'])): ?>
     <div class="<?= ($flash['type'] ?? '') === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-700' ?> border p-3 rounded">
@@ -28,7 +28,8 @@
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
     <div>
       <label class="block mb-1">Дата</label>
-      <input name="planned_supply_date" type="date" class="w-full border px-2 py-1 rounded" value="<?= date('Y-m-d') ?>">
+      <input name="planned_supply_date" type="date" class="w-full border px-2 py-1 rounded" aria-describedby="planned-date-help">
+      <p id="planned-date-help" class="mt-1 text-xs text-gray-500">Можно оставить пустой, если точная дата закупки пока неизвестна.</p>
     </div>
     <div>
       <label class="block mb-1">Ожидаемая цена за ящик</label>

@@ -269,6 +269,24 @@
       background: #475569;
     }
 
+    /* Mobile width guard: allow nested flex/grid children and long table/form content to shrink instead of forcing horizontal page overflow. */
+    .admin-content-shell,
+    .admin-page-title,
+    main,
+    main > *,
+    form,
+    fieldset,
+    label {
+      min-width: 0;
+    }
+
+    input,
+    select,
+    textarea,
+    button {
+      max-width: 100%;
+    }
+
     /* Mobile optimizations */
     @media (max-width: 768px) {
       table {
@@ -389,7 +407,7 @@
     <div id="sidebarBackdrop" class="fixed inset-0 bg-black/40 z-30 hidden md:hidden"></div>
 
     <!-- Контент -->
-    <div class="flex-1 flex flex-col md:ml-0">
+    <div class="admin-content-shell flex-1 min-w-0 flex flex-col md:ml-0">
       <!-- Header -->
       <header class="flex items-center justify-between bg-white p-4 shadow md:ml-0">
         <div class="flex items-center space-x-3">
@@ -406,12 +424,12 @@
         </form>
       </header>
 
-      <div class="flex-1 flex flex-col overflow-hidden">
-        <h1 class="text-2xl font-semibold text-gray-700 p-4 flex items-center gap-3">
+      <div class="flex-1 min-w-0 flex flex-col overflow-hidden">
+        <h1 class="admin-page-title text-2xl font-semibold text-gray-700 p-4 flex items-center gap-3 min-w-0">
           <span class="material-icons-round text-[#C86052]">auto_awesome_mosaic</span>
           <?= htmlspecialchars($pageTitle) ?>
         </h1>
-        <main class="p-0 sm:p-3 md:p-4 overflow-auto bg-gray-50 flex-1">
+        <main class="p-0 sm:p-3 md:p-4 overflow-auto bg-gray-50 flex-1 min-w-0">
           <?= $content ?>
         </main>
       </div>
