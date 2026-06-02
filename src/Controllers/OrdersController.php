@@ -92,12 +92,12 @@ class OrdersController
         $stmt = $this->pdo->prepare(
             "SELECT p.box_size, p.price,\n" .
             "       COALESCE((\n" .
-            "           SELECT CASE WHEN pb.status = 'planned' THEN pb.preorder_price_per_box ELSE pb.instant_price_per_box END\n" .
+            "           SELECT CASE WHEN pb.status = 'planned' THEN COALESCE(NULLIF(pb.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) ELSE pb.instant_price_per_box END\n" .
             "           FROM purchase_batches pb\n" .
             "           WHERE pb.product_id = p.id\n" .
             "             AND (\n" .
             "               (pb.status IN ('purchased', 'arrived') AND pb.boxes_free > 0 AND pb.instant_price_per_box > 0)\n" .
-            "               OR (pb.status = 'planned' AND (COALESCE(NULLIF(pb.boxes_total, 0), pb.boxes_free + pb.boxes_reserved) - pb.boxes_reserved) > 0 AND pb.preorder_price_per_box > 0)\n" .
+            "               OR (pb.status = 'planned' AND (COALESCE(NULLIF(pb.boxes_total, 0), pb.boxes_free + pb.boxes_reserved) - pb.boxes_reserved) > 0 AND COALESCE(NULLIF(pb.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) > 0)\n" .
             "             )\n" .
             "           ORDER BY CASE WHEN pb.status IN ('purchased', 'arrived') THEN 1 ELSE 2 END, pb.purchased_at ASC, pb.id ASC\n" .
             "           LIMIT 1\n" .
@@ -300,7 +300,7 @@ class OrdersController
             "SELECT pb.id AS purchase_batch_id, pb.product_id, pb.status, pb.purchased_at,\n" .
             "       pb.boxes_free, pb.boxes_total, pb.boxes_reserved,\n" .
             "       pb.instant_price_per_box, pb.preorder_price_per_box,\n" .
-            "       p.price AS product_price_per_box,\n" .
+            "       p.price AS product_price_per_box, p.preorder_price_per_box AS product_preorder_price_per_box,\n" .
             "       COALESCE(NULLIF(pb.box_size_snapshot, 0), NULLIF(p.box_size, 0), 1) AS box_size\n" .
             "FROM purchase_batches pb\n" .
             "JOIN products p ON p.id = pb.product_id\n" .
@@ -342,7 +342,7 @@ class OrdersController
 
             $pricePerBox = (float)($mode === 'preorder' ? $batch['preorder_price_per_box'] : $batch['instant_price_per_box']);
             if ($mode === 'preorder' && $pricePerBox <= 0) {
-                $pricePerBox = (float)($batch['product_price_per_box'] ?? 0);
+                $pricePerBox = (float)(($batch['product_preorder_price_per_box'] ?? 0) ?: ($batch['product_price_per_box'] ?? 0));
             }
             if ($pricePerBox <= 0) {
                 header('Location: ' . $this->basePath() . '/create?error=' . urlencode('price'));

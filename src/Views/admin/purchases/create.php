@@ -1,6 +1,9 @@
 <?php /** @var array<int,array<string,mixed>> $products */ ?>
 <?php $basePath = $basePath ?? '/admin'; ?>
 <?php $flash = $flash ?? null; ?>
+<?php $pricingInstantMarginPercent = (float)(get_setting('pricing_instant_margin_percent', '50') ?? '50'); ?>
+<?php $pricingPreorderDiscountPercent = max(0.0, min(99.0, (float)(get_setting('ui_preorder_discount_percent', '10') ?? '10'))); ?>
+<?php $pricingRoundingStep = max(1, (int)(get_setting('pricing_rounding_step', '10') ?? '10')); ?>
 <?php $statusLabels = [
   'planned' => 'Запланирована',
   'purchased' => 'Выкуплена',
@@ -32,8 +35,9 @@
       <p id="planned-date-help" class="mt-1 text-xs text-gray-500">Можно оставить пустой, если точная дата закупки пока неизвестна.</p>
     </div>
     <div>
-      <label class="block mb-1">Ожидаемая цена за ящик</label>
+      <label class="block mb-1">Закупочная цена за ящик</label>
       <input name="purchase_price_per_box" type="number" step="0.01" class="w-full border px-2 py-1 rounded" placeholder="Можно оставить пустым">
+      <p class="mt-1 text-xs text-gray-500">Цена в наличии = закупка + <?= htmlspecialchars((string)$pricingInstantMarginPercent) ?>%, предзаказ = цена в наличии − <?= htmlspecialchars((string)$pricingPreorderDiscountPercent) ?>%. Округление вниз до <?= htmlspecialchars((string)$pricingRoundingStep) ?> ₽.</p>
     </div>
   </div>
   <input type="hidden" name="boxes_total" value="0">
