@@ -102,7 +102,8 @@ class AdminOrdersPageServiceTest extends TestCase
             (1, 1, 'Клери', 'кг', 2, 'кг', 600, '/berry.jpg', 1)");
         $this->pdo->exec("INSERT INTO purchase_batches (id, product_id, status, purchased_at, box_size_snapshot, box_unit_snapshot, boxes_free, boxes_total, boxes_reserved, instant_price_per_box, preorder_price_per_box) VALUES
             (10, 1, 'arrived', '2026-05-29 08:00:00', 2, 'кг', 12, 12, 0, 1500, 1300),
-            (11, 1, 'planned', '2026-06-01 08:00:00', 2, 'кг', 0, 10, 3, 1600, 1400)");
+            (11, 1, 'planned', '2026-06-01 08:00:00', 2, 'кг', 0, 10, 3, 1600, 1400),
+            (12, 1, 'planned', '2026-06-02 08:00:00', 2, 'кг', 0, 5, 1, 0, 0)");
         $this->pdo->exec("INSERT INTO order_items (order_id, product_id, quantity, boxes, unit_price) VALUES
             (1, 1, 2, 1, 600)");
         $this->pdo->exec("INSERT INTO points_transactions (order_id, created_at) VALUES (1, '2025-03-20 11:00:00')");
@@ -131,7 +132,7 @@ class AdminOrdersPageServiceTest extends TestCase
     {
         $data = $this->service->buildCreateData();
 
-        $this->assertCount(2, $data['purchaseBatches']);
+        $this->assertCount(3, $data['purchaseBatches']);
         $this->assertSame(10, (int)$data['purchaseBatches'][0]['purchase_batch_id']);
         $this->assertSame('in_stock', $data['purchaseBatches'][0]['mode_group']);
         $this->assertSame(1500.0, (float)$data['purchaseBatches'][0]['price_per_box']);
@@ -139,5 +140,9 @@ class AdminOrdersPageServiceTest extends TestCase
         $this->assertSame(11, (int)$data['purchaseBatches'][1]['purchase_batch_id']);
         $this->assertSame('preorder', $data['purchaseBatches'][1]['mode_group']);
         $this->assertSame(1400.0, (float)$data['purchaseBatches'][1]['price_per_box']);
+        $this->assertSame(12, (int)$data['purchaseBatches'][2]['purchase_batch_id']);
+        $this->assertSame('preorder', $data['purchaseBatches'][2]['mode_group']);
+        $this->assertSame(600.0, (float)$data['purchaseBatches'][2]['price_per_box']);
+        $this->assertSame(4.0, (float)$data['purchaseBatches'][2]['available_boxes']);
     }
 }

@@ -76,7 +76,8 @@ class ClientCatalogServiceTest extends TestCase
             (11, 1, 'arrived', 0, 3, 3, 0, 1000, 900, 800, '2025-03-25 08:00:00'),
             (12, 2, 'purchased', 5, 0, 5, 0, 900, 810, 0, '2025-03-24 08:00:00'),
             (13, 4, 'planned', 0, 0, 6, 1, 0, 990, 0, '2025-03-27 08:00:00'),
-            (14, 2, 'planned', 0, 0, 4, 0, 0, 810, 0, '2025-03-29 08:00:00')
+            (14, 2, 'planned', 0, 0, 4, 0, 0, 810, 0, '2025-03-29 08:00:00'),
+            (15, 1, 'planned', 0, 0, 4, 1, 0, 0, 0, '2025-03-30 08:00:00')
         ");
         $this->pdo->exec("INSERT INTO purchase_batch_photos (id, purchase_batch_id, image_path, created_at) VALUES
             (1, 12, '/batch-regular.jpg', '2025-03-24 09:00:00')
@@ -110,6 +111,8 @@ class ClientCatalogServiceTest extends TestCase
         $this->assertSame('preorder-product', $data['preorderProducts'][0]['alias']);
         $this->assertSame('material-1', $data['materials'][0]['mat_alias']);
         $this->assertSame(1, (int)$data['regularProducts'][0]['has_planned_batch']);
+        $saleByAlias = array_column($data['saleProducts'], null, 'alias');
+        $this->assertSame(1, (int)$saleByAlias['sale-product']['has_planned_batch']);
     }
 
     public function testCatalogDataReturnsProductsTypesAndDebugInfo(): void
@@ -122,6 +125,7 @@ class ClientCatalogServiceTest extends TestCase
         $this->assertSame('Клубника', $data['types'][0]['name']);
         $productsByAlias = array_column($data['products'], null, 'alias');
         $this->assertSame('sale', $productsByAlias['sale-product']['catalog_section']);
+        $this->assertSame(1, (int)$productsByAlias['sale-product']['has_planned_batch']);
         $this->assertSame('in_stock', $productsByAlias['regular-product']['catalog_section']);
         $this->assertSame(900.0, (float)$productsByAlias['regular-product']['price']);
         $this->assertSame('/batch-regular.jpg', $productsByAlias['regular-product']['image_path']);

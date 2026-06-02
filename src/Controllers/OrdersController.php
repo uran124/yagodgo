@@ -315,6 +315,7 @@ class OrdersController
             "SELECT pb.id AS purchase_batch_id, pb.product_id, pb.status, pb.purchased_at,\n" .
             "       pb.boxes_free, pb.boxes_total, pb.boxes_reserved,\n" .
             "       pb.instant_price_per_box, pb.preorder_price_per_box,\n" .
+            "       p.price AS product_price_per_box,\n" .
             "       COALESCE(NULLIF(pb.box_size_snapshot, 0), NULLIF(p.box_size, 0), 1) AS box_size\n" .
             "FROM purchase_batches pb\n" .
             "JOIN products p ON p.id = pb.product_id\n" .
@@ -355,6 +356,9 @@ class OrdersController
             }
 
             $pricePerBox = (float)($mode === 'preorder' ? $batch['preorder_price_per_box'] : $batch['instant_price_per_box']);
+            if ($mode === 'preorder' && $pricePerBox <= 0) {
+                $pricePerBox = (float)($batch['product_price_per_box'] ?? 0);
+            }
             if ($pricePerBox <= 0) {
                 header('Location: ' . $this->basePath() . '/create?error=' . urlencode('price'));
                 exit;
