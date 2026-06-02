@@ -12,7 +12,97 @@
     'closed' => 'Закрыта',
 ]; ?>
 
-<div class="mobile-bottom-action-spacer">
+<style>
+  @media (max-width: 640px) {
+    .purchase-mobile-page {
+      font-size: 12px;
+      letter-spacing: -0.01em;
+    }
+
+    .purchase-mobile-page .purchase-summary p {
+      margin: 0.18rem 0;
+    }
+
+    .purchase-mobile-page .purchase-card-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .purchase-mobile-page .purchase-edit-card {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .purchase-mobile-page .purchase-edit-card::before {
+      content: '';
+      position: absolute;
+      inset: 0 0 auto;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(236, 72, 153, 0.75), transparent);
+    }
+
+    .purchase-mobile-page .purchase-fields {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 0.45rem;
+    }
+
+    .purchase-mobile-page .purchase-fields > * {
+      min-width: 0;
+      margin-top: 0 !important;
+    }
+
+    .purchase-mobile-page .purchase-field-full,
+    .purchase-mobile-page .purchase-fields > label:first-child,
+    .purchase-mobile-page .purchase-fields textarea,
+    .purchase-mobile-page .purchase-photo-tools {
+      grid-column: 1 / -1;
+    }
+
+    .purchase-mobile-page label > span:first-child,
+    .purchase-mobile-page .text-slate-400,
+    .purchase-mobile-page label.block.mb-1 {
+      margin-bottom: 0.22rem !important;
+      font-size: 0.78rem !important;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+
+    .purchase-mobile-page .rounded-lg.border.bg-slate-800,
+    .purchase-mobile-page .rounded-lg.border.border-slate-600.bg-slate-800 {
+      padding: 0.42rem 0.55rem !important;
+    }
+
+    .purchase-mobile-page .purchase-hint {
+      margin-top: 0.2rem !important;
+      line-height: 1.12 !important;
+    }
+
+    .purchase-mobile-page .purchase-secondary-section {
+      display: none;
+    }
+
+    .purchase-mobile-page .purchase-photo-preview img,
+    .purchase-mobile-page .js-photo-preview img {
+      width: 3.4rem !important;
+      height: 3.4rem !important;
+    }
+
+    .purchase-mobile-page .purchase-bottom-inline-submit {
+      display: none;
+    }
+
+    .purchase-mobile-page .purchase-pnl-grid {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 0.28rem 0.45rem !important;
+      font-size: 0.82rem !important;
+    }
+  }
+</style>
+
+<div class="mobile-bottom-action-spacer purchase-mobile-page">
 <div class="mb-4">
   <a href="<?= $basePath ?>/purchases" class="text-[#C86052] hover:underline">← К списку закупок</a>
 </div>
@@ -23,8 +113,8 @@
   </div>
 <?php endif; ?>
 
-<div class="bg-white p-4 rounded shadow mb-4">
-  <h2 class="text-xl font-semibold mb-2">Партия #<?= (int)$batch['id'] ?></h2>
+<div class="bg-white p-4 rounded shadow mb-4 purchase-summary">
+  <h2 class="text-xl font-semibold mb-2 purchase-card-title">Партия #<?= (int)$batch['id'] ?></h2>
   <p class="mb-2"><a class="text-sm text-[#C86052] hover:underline" href="<?= $basePath ?>/purchases/<?= (int)$batch['id'] ?>/pnl.csv">Скачать P&L CSV</a></p>
   <p><b>Товар:</b> <?= htmlspecialchars(trim(($batch['product_name'] ?? '') . ' ' . ($batch['variety'] ?? ''))) ?></p>
   <p><b>Закупщик:</b> <?= htmlspecialchars((string)($batch['buyer_name'] ?? '—')) ?></p>
@@ -41,13 +131,13 @@
 <?php if ($isPlanned): ?>
 <div class="bg-slate-900 text-slate-100 p-4 rounded-xl shadow mb-4 border border-slate-700">
   <h3 class="font-semibold mb-4 text-lg">Выкуп запланированной закупки</h3>
-  <form action="<?= $basePath ?>/purchases/purchased" method="post" enctype="multipart/form-data" class="space-y-4 js-purchase-form">
+  <form action="<?= $basePath ?>/purchases/purchased" method="post" enctype="multipart/form-data" class="space-y-4 js-purchase-form purchase-edit-card">
     <?= csrf_field() ?>
     <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
     <input type="hidden" name="product_id" value="<?= (int)$batch['product_id'] ?>">
 
-    <div class="space-y-3 text-sm">
-      <div>
+    <div class="space-y-3 text-sm purchase-fields">
+      <div class="purchase-field-full">
         <div class="text-slate-400 mb-1">Товар</div>
         <div class="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 font-semibold">
           <?= htmlspecialchars(trim(($batch['product_name'] ?? '') . ' ' . ($batch['variety'] ?? ''))) ?>
@@ -62,7 +152,7 @@
       <label class="block">
         <span class="text-slate-400 block mb-1">Дата закупки</span>
         <input name="planned_supply_date" type="date" value="<?= htmlspecialchars($batchDateValue) ?>" class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100">
-        <span class="text-xs text-slate-500 mt-1 block">Можно оставить пустой, если точная дата пока неизвестна.</span>
+        <span class="text-xs text-slate-500 mt-1 block purchase-hint">Можно оставить пустой, если точная дата пока неизвестна.</span>
       </label>
 
       <label class="block">
@@ -88,15 +178,15 @@
       <label class="block">
         <span class="text-slate-400 block mb-1">Выкуплено ящиков</span>
         <input name="boxes_total" type="number" step="0.01" min="0" value="<?= (float)$batch['boxes_total'] ?>" class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100" required>
-        <span class="text-xs text-slate-500 mt-1 block">После нажатия “Выкуплено” бронь распределится по очереди, остаток станет свободной продажей.</span>
+        <span class="text-xs text-slate-500 mt-1 block purchase-hint">После нажатия “Выкуплено” бронь распределится по очереди, остаток станет свободной продажей.</span>
       </label>
 
-      <label class="block">
+      <label class="block purchase-field-full">
         <span class="text-slate-400 block mb-1">Комментарий</span>
         <textarea name="comment" rows="2" class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100"><?= htmlspecialchars((string)($batch['comment'] ?? '')) ?></textarea>
       </label>
 
-      <div>
+      <div class="purchase-photo-tools purchase-field-full">
         <span class="text-slate-400 block mb-2">Фото закупки</span>
         <input type="file" class="hidden js-gallery-input" accept="image/*" multiple>
         <input type="file" class="hidden js-camera-input" accept="image/*" capture="environment">
@@ -106,22 +196,22 @@
           <button type="button" class="rounded-lg border border-slate-500 px-4 py-2 text-sm hover:bg-slate-800 js-open-camera">Камера</button>
         </div>
         <div class="mt-2 text-xs text-slate-500 js-photo-status">Фото необязательно. Если фото нет, используется фото из карточки товара.</div>
-        <div class="mt-3 flex flex-wrap gap-2 js-photo-preview"></div>
+        <div class="mt-3 flex flex-wrap gap-2 js-photo-preview purchase-photo-preview"></div>
       </div>
     </div>
 
-    <button type="submit" class="w-full md:w-auto bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-3 rounded-lg font-semibold">Выкуплено</button>
+    <button type="submit" class="w-full md:w-auto bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-3 rounded-lg font-semibold purchase-bottom-inline-submit">Выкуплено</button>
   </form>
 </div>
 <?php else: ?>
 <div class="bg-slate-900 text-slate-100 p-4 rounded-xl shadow mb-4 border border-slate-700">
   <h3 class="font-semibold mb-4 text-lg">Редактирование закупки</h3>
-  <form action="<?= $basePath ?>/purchases/update" method="post" enctype="multipart/form-data" class="space-y-3 js-purchase-form">
+  <form action="<?= $basePath ?>/purchases/update" method="post" enctype="multipart/form-data" class="space-y-3 js-purchase-form purchase-edit-card">
     <?= csrf_field() ?>
     <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
 
-    <div class="space-y-3 text-sm">
-      <label class="block">
+    <div class="space-y-3 text-sm purchase-fields">
+      <label class="block purchase-field-full">
         <span class="text-slate-400 block mb-1">Товар</span>
         <select name="product_id" class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100" required>
           <?php foreach (($products ?? []) as $p): ?>
@@ -148,14 +238,14 @@
       <label class="block"><span class="text-slate-400 block mb-1">Предзаказ</span><input name="preorder_price_per_box" type="number" step="1" value="<?= (int)round((float)($batch['preorder_price_per_box'] ?? 0)) ?>" class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100 js-preorder-price"></label>
       <label class="block"><span class="text-slate-400 block mb-1">Свободно ящиков</span><input name="boxes_free" type="number" step="0.01" value="<?= (float)$batch['boxes_free'] ?>" class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100" required></label>
       <label class="block"><span class="text-slate-400 block mb-1">Резерв ящиков</span><input name="boxes_reserved" type="number" step="0.01" value="<?= (float)$batch['boxes_reserved'] ?>" class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100" required></label>
-      <label class="block"><span class="text-slate-400 block mb-1">Комментарий</span><textarea name="comment" rows="2" class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100"><?= htmlspecialchars((string)($batch['comment'] ?? '')) ?></textarea></label>
+      <label class="block purchase-field-full"><span class="text-slate-400 block mb-1">Комментарий</span><textarea name="comment" rows="2" class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100"><?= htmlspecialchars((string)($batch['comment'] ?? '')) ?></textarea></label>
     </div>
 
-    <button type="submit" class="bg-[#C86052] text-white px-4 py-2 rounded">Сохранить изменения</button>
+    <button type="submit" class="bg-[#C86052] text-white px-4 py-2 rounded purchase-bottom-inline-submit">Сохранить изменения</button>
   </form>
 </div>
 
-<div class="bg-slate-900 text-slate-100 p-4 rounded-xl shadow mb-4 border border-slate-700">
+<div class="bg-slate-900 text-slate-100 p-4 rounded-xl shadow mb-4 border border-slate-700 purchase-secondary-section">
   <h3 class="font-semibold mb-3">Этап закупки</h3>
   <div class="flex flex-wrap gap-2">
     <?php if (($batch['status'] ?? '') === 'purchased'): ?>
@@ -171,7 +261,7 @@
 </div>
 <?php endif; ?>
 
-<div class="bg-white p-4 rounded shadow mb-4 border border-amber-200">
+<div class="bg-white p-4 rounded shadow mb-4 border border-amber-200 purchase-secondary-section">
   <h3 class="font-semibold text-amber-700 mb-2">Закрытие закупки</h3>
   <form method="post" action="<?= $basePath ?>/purchases/close" onsubmit="return confirm('Закрыть закупку? Данные сохранятся, свободный остаток станет 0.');">
     <?= csrf_field() ?>
@@ -184,7 +274,7 @@
 
 <div class="bg-white p-4 rounded shadow mb-4">
   <h3 class="font-semibold mb-2">P&L партии</h3>
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm purchase-pnl-grid">
     <p><b>Выручка (продано):</b> <?= number_format((float)($pnl['revenue_sold'] ?? 0), 0, '.', ' ') ?> ₽</p>
     <p><b>Выручка (выгодный остаток):</b> <?= number_format((float)($pnl['revenue_discount'] ?? 0), 0, '.', ' ') ?> ₽</p>
     <p><b>Выручка (итого):</b> <?= number_format((float)($pnl['revenue_total'] ?? 0), 0, '.', ' ') ?> ₽</p>
@@ -267,8 +357,8 @@
 <?php if ($basePath !== '/buyer'): ?>
 <div class="mobile-sticky-actions md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 p-3">
   <div class="grid grid-cols-3 gap-2">
-    <a href="<?= $basePath ?>/purchases" class="h-10 rounded-lg border border-gray-300 text-gray-700 text-sm flex items-center justify-center">Вернуться</a>
-    <button type="submit" form="" onclick="document.querySelector('form[action$=\"/purchases/update\"]')?.requestSubmit();" class="h-10 rounded-lg border border-gray-300 text-gray-700 text-sm">Сохранить</button>
+    <a href="<?= $basePath ?>/purchases" class="h-10 rounded-lg border border-slate-600 text-slate-100 text-sm flex items-center justify-center">Вернуться</a>
+    <button type="submit" form="" onclick="(document.querySelector('form[action$=\"/purchases/update\"]') || document.querySelector('form[action$=\"/purchases/purchased\"]'))?.requestSubmit();" class="h-10 rounded-lg border border-slate-600 text-slate-100 text-sm">Сохранить</button>
     <?php if (($batch['status'] ?? '') === 'planned'): ?>
       <button type="submit" onclick="document.querySelector('form[action$=\"/purchases/purchased\"]')?.requestSubmit();" class="h-10 rounded-lg bg-emerald-600 text-white text-sm">Выкуплено</button>
     <?php elseif (($batch['status'] ?? '') === 'purchased'): ?>
