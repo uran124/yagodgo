@@ -461,14 +461,25 @@ class ProductsController
         $boxSizeStmt = $this->pdo->prepare('SELECT box_size FROM products WHERE id = ? LIMIT 1');
         $boxSizeStmt->execute([$productId]);
         $boxSize = max(1.0, (float)$boxSizeStmt->fetchColumn());
-        $prices = (new PricingService($this->pdo))->calculateFromPurchase($purchasePrice, $boxSize);
+        $pricingService = new PricingService($this->pdo);
+        $prices = $pricingService->calculateFromPurchase($purchasePrice, $boxSize);
+        $settings = $pricingService->getSettings();
         $instantPrice = (float)$prices['instant_price_per_box'];
         $preorderPrice = (float)$prices['preorder_price_per_box'];
 
-        $params = [$purchasePrice, $instantPrice, $preorderPrice, $batchId, $productId];
+        $params = [
+            $purchasePrice,
+            (float)$settings['pricing_preorder_margin_percent'],
+            (float)$settings['ui_preorder_discount_percent'],
+            (float)$settings['pricing_instant_margin_percent'],
+            $instantPrice,
+            $preorderPrice,
+            $batchId,
+            $productId,
+        ];
         $sql = "UPDATE purchase_batches pb
                 JOIN products p ON p.id = pb.product_id
-                SET pb.purchase_price_per_box = ?, pb.instant_price_per_box = ?, pb.preorder_price_per_box = ?
+                SET pb.purchase_price_per_box = ?, pb.preorder_margin_percent = ?, pb.preorder_discount_percent = ?, pb.instant_margin_percent = ?, pb.instant_price_per_box = ?, pb.preorder_price_per_box = ?
                 WHERE pb.id = ? AND pb.product_id = ?";
         if (($_SESSION['role'] ?? '') === 'seller') {
             $sql .= " AND p.seller_id = ?";
@@ -624,20 +635,20 @@ class ProductsController
             $preorderStmt = $this->pdo->prepare(
                 "UPDATE purchase_batches pb
                  JOIN products p ON p.id = pb.product_id
-                 SET pb.preorder_price_per_box = ?
+                 SET pb.preorder_price_per_box = ?, pb.preorder_discount_percent = ?
                  WHERE pb.product_id = ?
                    AND pb.status IN ('planned', 'purchased', 'arrived')" . $sellerSql
             );
-            $preorderStmt->execute(array_merge([$preorderPrice, $productId], $sellerParams));
+            $preorderStmt->execute(array_merge([$preorderPrice, $discount, $productId], $sellerParams));
 
             $instantStmt = $this->pdo->prepare(
                 "UPDATE purchase_batches pb
                  JOIN products p ON p.id = pb.product_id
-                 SET pb.instant_price_per_box = ?
+                 SET pb.instant_price_per_box = ?, pb.preorder_discount_percent = ?
                  WHERE pb.product_id = ?
                    AND pb.status = 'planned'" . $sellerSql
             );
-            $instantStmt->execute(array_merge([$instantPrice, $productId], $sellerParams));
+            $instantStmt->execute(array_merge([$instantPrice, $discount, $productId], $sellerParams));
 
             $this->pdo->commit();
         } catch (\Throwable $e) {

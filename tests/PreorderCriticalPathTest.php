@@ -47,6 +47,7 @@ class PreorderCriticalPathTest extends TestCase
             id INTEGER PRIMARY KEY,
             preorder_price_per_box REAL DEFAULT 9999,
             preorder_unit_price REAL DEFAULT 9999,
+            price REAL DEFAULT 0,
             box_size REAL DEFAULT 1,
             is_active INTEGER DEFAULT 1
         )');
@@ -61,7 +62,7 @@ class PreorderCriticalPathTest extends TestCase
         ];
         $_SESSION['preorder_checkout_intent_id'] = null;
 
-        $this->pdo->exec("INSERT INTO products (id, preorder_price_per_box, preorder_unit_price, box_size, is_active) VALUES (10, 7777, 6666, 2, 1)");
+        $this->pdo->exec("INSERT INTO products (id, preorder_price_per_box, preorder_unit_price, price, box_size, is_active) VALUES (10, 7777, 6666, 0, 2, 1)");
         $this->pdo->exec("INSERT INTO preorder_intents (id, user_id, product_id, requested_boxes, status, offered_price_per_box) VALUES (1, 5, 10, 3, 'confirmed', NULL)");
         $this->pdo->exec("INSERT INTO purchase_batches (id, product_id, status, preorder_price_per_box, purchased_at) VALUES (50, 10, 'planned', 1300, '2026-05-01 10:00:00')");
 

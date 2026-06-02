@@ -1972,6 +1972,7 @@ CREATE TABLE `purchase_batches` (
   `extra_cost_per_box` decimal(10,2) NOT NULL DEFAULT '0.00',
   `cost_price_per_box` decimal(10,2) NOT NULL DEFAULT '0.00',
   `preorder_margin_percent` decimal(5,2) NOT NULL DEFAULT '30.00',
+  `preorder_discount_percent` decimal(5,2) NOT NULL DEFAULT '10.00',
   `instant_margin_percent` decimal(5,2) NOT NULL DEFAULT '50.00',
   `discount_markup_fixed` decimal(10,2) NOT NULL DEFAULT '100.00',
   `preorder_price_per_box` decimal(10,2) NOT NULL DEFAULT '0.00',

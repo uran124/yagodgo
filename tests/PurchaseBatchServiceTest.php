@@ -48,6 +48,7 @@ class PurchaseBatchServiceTest extends TestCase
             extra_cost_per_box REAL,
             cost_price_per_box REAL,
             preorder_margin_percent REAL,
+            preorder_discount_percent REAL,
             instant_margin_percent REAL,
             discount_markup_fixed REAL,
             preorder_price_per_box REAL,
@@ -57,6 +58,7 @@ class PurchaseBatchServiceTest extends TestCase
             instant_unit_price REAL,
             discount_unit_price REAL,
             status TEXT,
+            purchased_at TEXT,
             comment TEXT
         )');
         $this->pdo->exec('CREATE TABLE orders (
@@ -134,7 +136,9 @@ class PurchaseBatchServiceTest extends TestCase
         $this->assertSame(30.0, (float)$batch['boxes_total']);
         $this->assertSame(1000.0, (float)$batch['purchase_price_per_box']);
         $this->assertSame(1020.0, (float)$batch['cost_price_per_box']);
-        $this->assertSame(1300.0, (float)$batch['preorder_price_per_box']);
+        $this->assertSame(1350.0, (float)$batch['preorder_price_per_box']);
+        $this->assertSame(35.0, (float)$batch['preorder_margin_percent']);
+        $this->assertSame(10.0, (float)$batch['preorder_discount_percent']);
         $this->assertSame(1500.0, (float)$batch['instant_price_per_box']);
         $this->assertSame(1100.0, (float)$batch['discount_price_per_box']);
         $this->assertSame('planned', (string)$batch['status']);
@@ -143,7 +147,7 @@ class PurchaseBatchServiceTest extends TestCase
         $this->assertSame((float)$batchId, (float)$product['current_purchase_batch_id']);
         $this->assertSame(10.0, (float)$product['free_stock_boxes']);
         $this->assertSame(18.0, (float)$product['reserved_stock_boxes']);
-        $this->assertSame(750.0, (float)$product['price']);
+        $this->assertSame(0.0, (float)$product['price']);
         $this->assertSame('in_stock', $product['stock_status']);
     }
 
