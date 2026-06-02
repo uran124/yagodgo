@@ -382,11 +382,13 @@ $isMobileNavActive = static function (string $href) use ($currentPath): bool {
         letter-spacing: -0.02em;
       }
 
-      .order-create-form {
+      .order-create-form,
+      .mobile-bottom-action-spacer {
         padding-bottom: calc(180px + env(safe-area-inset-bottom, 0px)) !important;
       }
 
-      .order-step-actions {
+      .order-step-actions,
+      .mobile-sticky-actions {
         bottom: calc(100px + env(safe-area-inset-bottom, 0px)) !important;
         z-index: 55;
         border-radius: 18px 18px 0 0;

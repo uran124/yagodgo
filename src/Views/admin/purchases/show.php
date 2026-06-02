@@ -11,6 +11,7 @@
     'closed' => 'Закрыта',
 ]; ?>
 
+<div class="mobile-bottom-action-spacer">
 <div class="mb-4">
   <a href="<?= $basePath ?>/purchases" class="text-[#C86052] hover:underline">← К списку закупок</a>
 </div>
@@ -242,8 +243,10 @@
   </table>
 </div>
 
+</div>
+
 <?php if ($basePath !== '/buyer'): ?>
-<div class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 p-3">
+<div class="mobile-sticky-actions md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 p-3">
   <div class="grid grid-cols-3 gap-2">
     <a href="<?= $basePath ?>/purchases" class="h-10 rounded-lg border border-gray-300 text-gray-700 text-sm flex items-center justify-center">Вернуться</a>
     <button type="submit" form="" onclick="document.querySelector('form[action$=\"/purchases/update\"]')?.requestSubmit();" class="h-10 rounded-lg border border-gray-300 text-gray-700 text-sm">Сохранить</button>
