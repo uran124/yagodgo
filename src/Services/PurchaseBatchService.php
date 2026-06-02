@@ -148,7 +148,7 @@ class PurchaseBatchService
                 'instant_unit_price' => $prices['instant_unit_price'],
                 'discount_unit_price' => $prices['discount_unit_price'],
                 'status' => $status,
-                'purchased_at' => $purchasedAt !== '' ? $purchasedAt : date('Y-m-d'),
+                'purchased_at' => $purchasedAt !== '' ? $purchasedAt : null,
                 'comment' => $comment,
             ]);
 

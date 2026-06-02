@@ -243,7 +243,8 @@ $batches = $purchaseBatches ?? [];
       button.type = 'button';
       button.className = 'batch-card w-full rounded-2xl border-2 p-4 text-left text-slate-100 ' + (state.mode === 'preorder' ? 'border-amber-500/40 bg-amber-950/30' : 'border-emerald-500/40 bg-emerald-950/30');
       button.dataset.key = key;
-      button.innerHTML = '<div class="flex items-start justify-between gap-3"><div><div class="font-semibold">Закупка ' + date + '</div><div class="text-xs text-slate-300">' + statusLabel(status) + '</div></div><div class="rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold text-slate-100">' + totalBoxes + ' ящ.</div></div>';
+      const displayDate = date || 'дата уточняется';
+      button.innerHTML = '<div class="flex items-start justify-between gap-3"><div><div class="font-semibold">Закупка ' + displayDate + '</div><div class="text-xs text-slate-300">' + statusLabel(status) + '</div></div><div class="rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold text-slate-100">' + totalBoxes + ' ящ.</div></div>';
       button.addEventListener('click', () => {
         state.batchKey = key;
         document.querySelectorAll('.batch-card').forEach(card => card.classList.remove('ring-2', 'ring-[#F04483]'));
@@ -326,7 +327,7 @@ $batches = $purchaseBatches ?? [];
 
   function renderDates() {
     const selected = selectedBatchItems();
-    const baseDate = state.mode === 'preorder' && selected[0] ? selected[0].batch_date : today;
+    const baseDate = state.mode === 'preorder' && selected[0] && selected[0].batch_date ? selected[0].batch_date : today;
     dateOptions.innerHTML = '';
     for (let i = 0; i < 3; i++) {
       const value = addDays(baseDate, i);

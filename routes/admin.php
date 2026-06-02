@@ -110,6 +110,10 @@ return [
         requireAdmin(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->maintenancePreorders(); return true;
     },
     static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('POST', '/admin/purchases/photos/upload', $method, $uri)) return false;
+        requireAdmin(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->uploadPhotos(); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
         if (!routeExact('POST', '/admin/purchases/photos/delete', $method, $uri)) return false;
         requireAdmin(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->deletePhoto(); return true;
     },

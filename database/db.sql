@@ -1957,7 +1957,7 @@ CREATE TABLE `purchase_batches` (
   `id` int UNSIGNED NOT NULL,
   `product_id` int UNSIGNED NOT NULL,
   `buyer_user_id` int UNSIGNED DEFAULT NULL,
-  `purchased_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `purchased_at` datetime DEFAULT NULL,
   `arrived_at` datetime DEFAULT NULL,
   `box_size_snapshot` decimal(10,2) NOT NULL DEFAULT '0.00',
   `box_unit_snapshot` enum('кг','л') NOT NULL DEFAULT 'кг',

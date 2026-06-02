@@ -360,7 +360,7 @@ ORDER BY is_closed ASC, pb.id DESC';
             'instant_unit_price' => (float)$prices['instant_unit_price'],
             'preorder_unit_price' => (float)$prices['preorder_unit_price'],
             'status' => $status,
-            'purchased_at' => (string)($_POST['planned_supply_date'] ?? ''),
+            'purchased_at' => $this->nullablePostedDate('planned_supply_date'),
             'comment' => trim((string)($_POST['comment'] ?? '')),
         ];
 
@@ -517,7 +517,7 @@ ORDER BY is_closed ASC, pb.id DESC';
                 'preorder_price_per_box' => $preorderPrice,
                 'instant_unit_price' => $instantPrice,
                 'preorder_unit_price' => $preorderPrice,
-                'purchased_at' => (string)($_POST['planned_supply_date'] ?? $batch['purchased_at'] ?? date('Y-m-d')),
+                'purchased_at' => $this->resolvePurchasedAtForPurchase($batch),
                 'comment' => trim((string)($_POST['comment'] ?? $batch['comment'] ?? '')),
             ]);
             if ($stmt->rowCount() < 1) {
@@ -689,6 +689,40 @@ ORDER BY is_closed ASC, pb.id DESC';
         exit;
     }
 
+    public function uploadPhotos(): void
+    {
+        $this->ensureCsrfOrRedirect();
+        $batchId = (int)($_POST['batch_id'] ?? 0);
+        if ($batchId <= 0) {
+            $this->setFlash('error', 'Некорректная закупка.');
+            header('Location: ' . $this->basePath() . '/purchases');
+            exit;
+        }
+
+        $this->storeBatchPhotos($batchId);
+        $this->setFlash('success', 'Фото закупки обновлены.');
+        header('Location: ' . $this->basePath() . '/purchases/' . $batchId);
+        exit;
+    }
+
+    private function nullablePostedDate(string $field): ?string
+    {
+        $date = trim((string)($_POST[$field] ?? ''));
+        return $date !== '' ? $date : null;
+    }
+
+    /** @param array<string,mixed> $batch */
+    private function resolvePurchasedAtForPurchase(array $batch): string
+    {
+        $postedDate = $this->nullablePostedDate('planned_supply_date');
+        if ($postedDate !== null) {
+            return $postedDate;
+        }
+
+        $currentDate = trim((string)($batch['purchased_at'] ?? ''));
+        return $currentDate !== '' ? $currentDate : date('Y-m-d');
+    }
+
     public function deletePhoto(): void
     {
         $this->ensureCsrfOrRedirect();
@@ -803,7 +837,7 @@ ORDER BY is_closed ASC, pb.id DESC';
             'instant_unit_price' => (float)$prices['instant_unit_price'],
             'preorder_unit_price' => (float)$prices['preorder_unit_price'],
             'status' => $status,
-            'purchased_at' => (string)($_POST['planned_supply_date'] ?? ''),
+            'purchased_at' => $this->nullablePostedDate('planned_supply_date'),
             'comment' => trim((string)($_POST['comment'] ?? '')),
         ]);
         // compatibility-only projection for legacy admin/reporting surfaces

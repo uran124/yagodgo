@@ -364,7 +364,8 @@ class OrdersController
                 exit;
             }
             $total += $boxes * $pricePerBox;
-            $dateBases[] = $mode === 'preorder' ? substr((string)$batch['purchased_at'], 0, 10) : date('Y-m-d');
+            $batchDate = substr((string)($batch['purchased_at'] ?? ''), 0, 10);
+            $dateBases[] = $mode === 'preorder' && $batchDate !== '' ? $batchDate : ($deliveryDate !== '' ? $deliveryDate : date('Y-m-d'));
             $itemsPrepared[] = [
                 'product_id' => (int)$batch['product_id'],
                 'purchase_batch_id' => $batchId,

@@ -248,7 +248,7 @@
             <div class="flex items-start justify-between gap-2">
               <div class="purchase-meta-line text-xs text-gray-700">
                 <b>#<?= (int)$batch['id'] ?></b>
-                <span><?= htmlspecialchars(substr((string)($batch['purchased_at'] ?? ''), 0, 10)) ?></span>
+                <span><?= trim((string)($batch['purchased_at'] ?? '')) !== '' ? htmlspecialchars(substr((string)$batch['purchased_at'], 0, 10)) : 'дата уточняется' ?></span>
                 <span><?= htmlspecialchars((string)($batch['buyer_name'] ?? '—')) ?></span>
               </div>
               <div>
