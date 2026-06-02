@@ -3,6 +3,43 @@
 declare(strict_types=1);
 
 return [
+
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('GET', '/chat', $method, $uri)) {
+            return false;
+        }
+
+        requireClient();
+        (new App\Controllers\SupportChatController($c['pdo'], $c['telegramConfig']))->clientIndex();
+        return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeRegex('GET', '#^/chat/(\d+)$#', $method, $uri, $m)) {
+            return false;
+        }
+
+        requireClient();
+        (new App\Controllers\SupportChatController($c['pdo'], $c['telegramConfig']))->clientIndex((int)$m[1]);
+        return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('POST', '/chat/start', $method, $uri)) {
+            return false;
+        }
+
+        requireClient();
+        (new App\Controllers\SupportChatController($c['pdo'], $c['telegramConfig']))->startClientChat();
+        return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeRegex('POST', '#^/chat/(\d+)/messages$#', $method, $uri, $m)) {
+            return false;
+        }
+
+        requireClient();
+        (new App\Controllers\SupportChatController($c['pdo'], $c['telegramConfig']))->clientMessage((int)$m[1]);
+        return true;
+    },
     static function (string $method, string $uri, array $c): bool {
         if (!routeExact('GET', '/catalog', $method, $uri)) {
             return false;
