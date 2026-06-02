@@ -131,10 +131,13 @@
 <?php if ($isPlanned): ?>
 <div class="bg-slate-900 text-slate-100 p-4 rounded-xl shadow mb-4 border border-slate-700">
   <h3 class="font-semibold mb-4 text-lg">Выкуп запланированной закупки</h3>
-  <form action="<?= $basePath ?>/purchases/purchased" method="post" enctype="multipart/form-data" class="space-y-4 js-purchase-form purchase-edit-card">
+  <form action="<?= $basePath ?>/purchases/update" method="post" enctype="multipart/form-data" class="space-y-4 js-purchase-form purchase-edit-card">
     <?= csrf_field() ?>
     <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
     <input type="hidden" name="product_id" value="<?= (int)$batch['product_id'] ?>">
+    <input type="hidden" name="status" value="planned">
+    <input type="hidden" name="boxes_free" value="<?= (float)$batch['boxes_free'] ?>">
+    <input type="hidden" name="boxes_reserved" value="<?= (float)$batch['boxes_reserved'] ?>">
 
     <div class="space-y-3 text-sm purchase-fields">
       <div class="purchase-field-full">
@@ -200,7 +203,10 @@
       </div>
     </div>
 
-    <button type="submit" class="w-full md:w-auto bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-3 rounded-lg font-semibold purchase-bottom-inline-submit">Выкуплено</button>
+    <div class="flex flex-col gap-2 sm:flex-row purchase-bottom-inline-submit">
+      <button type="submit" class="bg-[#C86052] text-white px-4 py-2 rounded">Сохранить изменения</button>
+      <button type="submit" formaction="<?= $basePath ?>/purchases/purchased" class="w-full md:w-auto bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-3 rounded-lg font-semibold js-purchase-buy-submit">Выкуплено</button>
+    </div>
   </form>
 </div>
 <?php else: ?>
@@ -358,9 +364,9 @@
 <div class="mobile-sticky-actions md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 p-3">
   <div class="grid grid-cols-3 gap-2">
     <a href="<?= $basePath ?>/purchases" class="h-10 rounded-lg border border-slate-600 text-slate-100 text-sm flex items-center justify-center">Вернуться</a>
-    <button type="submit" form="" onclick="(document.querySelector('form[action$=\"/purchases/update\"]') || document.querySelector('form[action$=\"/purchases/purchased\"]'))?.requestSubmit();" class="h-10 rounded-lg border border-slate-600 text-slate-100 text-sm">Сохранить</button>
+    <button type="submit" form="" onclick="document.querySelector('form[action$=\"/purchases/update\"]')?.requestSubmit();" class="h-10 rounded-lg border border-slate-600 text-slate-100 text-sm">Сохранить</button>
     <?php if (($batch['status'] ?? '') === 'planned'): ?>
-      <button type="submit" onclick="document.querySelector('form[action$=\"/purchases/purchased\"]')?.requestSubmit();" class="h-10 rounded-lg bg-emerald-600 text-white text-sm">Выкуплено</button>
+      <button type="submit" onclick="{ const form = document.querySelector('form[action$=\"/purchases/update\"]'); const buyButton = form?.querySelector('.js-purchase-buy-submit'); if (form && buyButton) form.requestSubmit(buyButton); }" class="h-10 rounded-lg bg-emerald-600 text-white text-sm">Выкуплено</button>
     <?php elseif (($batch['status'] ?? '') === 'purchased'): ?>
       <button type="submit" onclick="document.querySelector('form[action$=\"/purchases/arrived\"]')?.requestSubmit();" class="h-10 rounded-lg bg-blue-600 text-white text-sm">В магазине</button>
     <?php else: ?>
