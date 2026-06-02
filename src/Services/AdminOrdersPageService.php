@@ -78,13 +78,12 @@ class AdminOrdersPageService
     /**
      * @return array<string, mixed>
      */
-    public function buildCreateData(array $session = []): array
+    public function buildCreateData(): array
     {
         return [
             'products' => $this->fetchCreateFormProducts(),
             'purchaseBatches' => $this->fetchCreateFormPurchaseBatches(),
             'slots' => $this->fetchSlots(),
-            'debugData' => $session['debug_order_data'] ?? [],
             'today' => date('Y-m-d'),
         ];
     }

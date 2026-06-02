@@ -137,10 +137,6 @@ $batches = $purchaseBatches ?? [];
   </section>
 </form>
 
-<?php if (!empty($debugData)): ?>
-  <pre class="mt-4 overflow-auto rounded-xl bg-gray-900 p-3 text-xs text-white"><?= htmlspecialchars(json_encode($debugData, JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT)) ?></pre>
-<?php endif; ?>
-
 <script>
   const batches = <?= json_encode($batches, JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK) ?>;
   const basePath = '<?= $base ?>';

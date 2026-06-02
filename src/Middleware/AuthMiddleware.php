@@ -30,12 +30,8 @@ class AuthMiddleware
             return $redirectTo;
         }
 
-        $reason = empty($session['user_id']) ? 'empty_session' : 'role_mismatch';
-        $currentRole = (string)($session['role'] ?? 'guest');
-        $roles = implode(',', $allowedRoles);
         $query = http_build_query([
             'error' => 'Нет доступа к служебному разделу.',
-            'debug_auth' => sprintf('reason=%s; current_role=%s; allowed=%s', $reason, $currentRole, $roles),
         ]);
 
         return $redirectTo . '?' . $query;
