@@ -24,6 +24,7 @@ return [
             'GET /partner/products/edit' => ['App\\Controllers\\ProductsController', 'edit'],
             'POST /partner/products/save' => ['App\\Controllers\\ProductsController', 'save'],
             'POST /partner/products/toggle' => ['App\\Controllers\\ProductsController', 'toggle'],
+            'POST /partner/products/purchase/update' => ['App\\Controllers\\ProductsController', 'updatePurchaseFromProduct'],
             'POST /partner/products/update-date' => ['App\\Controllers\\ProductsController', 'updateDeliveryDate'],
             'POST /partner/products/delete' => ['App\\Controllers\\ProductsController', 'delete'],
             'GET /partner/users' => ['App\\Controllers\\UsersController', 'index'],

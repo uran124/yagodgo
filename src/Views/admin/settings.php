@@ -17,12 +17,30 @@ $themeColors = $themeColors ?? [];
            class="w-full border px-2 py-1 rounded">
   </div>
   <fieldset class="border border-gray-200 rounded-lg p-4 space-y-3">
-    <legend class="px-2 text-sm font-semibold text-gray-600">Предзаказ (витрина)</legend>
+    <legend class="px-2 text-sm font-semibold text-gray-600">Ценообразование закупок</legend>
+    <div>
+      <label class="block mb-1">Наценка к закупке, %</label>
+      <input name="pricing_instant_margin_percent" type="number" min="0" max="500" step="0.1"
+             value="<?= htmlspecialchars($settings['pricing_instant_margin_percent'] ?? '50') ?>"
+             class="w-full border px-2 py-1 rounded">
+      <p class="mt-1 text-xs text-gray-500">Цена в наличии считается от закупочной цены с этой наценкой.</p>
+    </div>
+    <div>
+      <label class="block mb-1">Шаг округления цен, ₽</label>
+      <input name="pricing_rounding_step" type="number" min="1" max="10000" step="1"
+             value="<?= htmlspecialchars($settings['pricing_rounding_step'] ?? '10') ?>"
+             class="w-full border px-2 py-1 rounded">
+      <p class="mt-1 text-xs text-gray-500">Цена в наличии и предзаказа округляются вниз до этого шага.</p>
+    </div>
+  </fieldset>
+  <fieldset class="border border-gray-200 rounded-lg p-4 space-y-3">
+    <legend class="px-2 text-sm font-semibold text-gray-600">Предзаказ (витрина и цены)</legend>
     <div>
       <label class="block mb-1">Скидка предзаказа, %</label>
       <input name="ui_preorder_discount_percent" type="number" min="0" max="99" step="0.1"
              value="<?= htmlspecialchars($settings['ui_preorder_discount_percent'] ?? '10') ?>"
              class="w-full border px-2 py-1 rounded">
+      <p class="mt-1 text-xs text-gray-500">Цена предзаказа считается от цены в наличии минус эта скидка.</p>
     </div>
     <div>
       <label class="block mb-1">Подсказка о цене</label>
