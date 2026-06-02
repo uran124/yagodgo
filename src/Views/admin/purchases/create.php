@@ -6,7 +6,7 @@
   'purchased' => 'Выкуплена',
   'arrived' => 'Готова к выдаче',
 ]; ?>
-<form action="<?= $basePath ?>/purchases/store" method="post" enctype="multipart/form-data" class="bg-white p-6 rounded shadow max-w-2xl mx-auto space-y-4 pb-24 md:pb-6">
+<form action="<?= $basePath ?>/purchases/store" method="post" enctype="multipart/form-data" class="mobile-bottom-action-spacer bg-white p-6 rounded shadow max-w-2xl mx-auto space-y-4 pb-24 md:pb-6">
   <?= csrf_field() ?>
   <?php if (is_array($flash) && !empty($flash['message'])): ?>
     <div class="<?= ($flash['type'] ?? '') === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-700' ?> border p-3 rounded">
@@ -46,7 +46,7 @@
     <button type="submit" class="bg-[#C86052] text-white px-4 py-2 rounded hover:bg-[#B44D47]">Создать</button>
   </div>
 
-  <div class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 p-3">
+  <div class="mobile-sticky-actions md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 p-3">
     <div class="grid grid-cols-3 gap-2">
       <a href="<?= $basePath ?>/purchases" class="h-10 rounded-lg border border-gray-300 text-gray-700 text-sm flex items-center justify-center">Вернуться</a>
       <button type="submit" class="h-10 rounded-lg border border-gray-300 text-gray-700 text-sm">Сохранить</button>
