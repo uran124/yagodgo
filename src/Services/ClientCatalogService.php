@@ -132,6 +132,7 @@ class ClientCatalogService
         };
 
         $sql = "SELECT p.id,\n" .
+            "       pb.id AS purchase_batch_id,\n" .
             "       p.alias,\n" .
             "       t.name AS product,\n" .
             "       t.alias AS type_alias,\n" .

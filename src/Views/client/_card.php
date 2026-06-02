@@ -213,7 +213,9 @@ $nextSupplyDateText = $showNextSupplyBadge ? date('d.m.Y', strtotime($plannedDat
         <div class="mt-2 hidden" data-price-form="<?= $p['id'] ?>">
           <form action="<?= $basePath ?>/products/update-price" method="post" class="flex items-center space-x-2">
             <input type="hidden" name="id" value="<?= $p['id'] ?>">
-            <input type="number" step="0.01" name="price" value="<?= htmlspecialchars((string)$currentPriceBoxForEdit) ?>" class="border px-1 py-1 rounded text-sm w-24" title="Цена сейчас за позицию">
+            <input type="hidden" name="purchase_batch_id" value="<?= (int)($p['purchase_batch_id'] ?? 0) ?>">
+            <input type="hidden" name="price_context" value="<?= htmlspecialchars($isPreorderSection ? 'preorder' : ($isInStockSection ? 'in_stock' : $cardSection)) ?>">
+            <input type="number" step="0.01" name="price" value="<?= htmlspecialchars((string)($isPreorderSection ? $preorderDiscountBox : $currentPriceBoxForEdit)) ?>" class="border px-1 py-1 rounded text-sm w-24" title="Цена сейчас за позицию">
             <button type="submit" class="bg-blue-500 text-white rounded px-2 py-1 text-xs">Обновить цену сейчас</button>
           </form>
           <p class="mt-1 text-[10px] text-gray-500">Изменяется поле «цена сейчас» активной позиции (за позицию).</p>

@@ -10,6 +10,9 @@ $role = $_SESSION['role'] ?? '';
 $isManager = in_array($role, ['manager','partner','seller'], true);
 $base = $role === 'manager' ? '/manager' : ($role === 'partner' ? '/partner' : ($role === 'seller' ? '/seller' : '/admin'));
 $activeBatches = $activeBatches ?? [];
+$pricingInstantMarginPercent = (float)(get_setting('pricing_instant_margin_percent', '50') ?? '50');
+$pricingPreorderDiscountPercent = max(0.0, min(99.0, (float)(get_setting('ui_preorder_discount_percent', '10') ?? '10')));
+$pricingRoundingStep = max(1, (int)(get_setting('pricing_rounding_step', '10') ?? '10'));
 $statusLabels = [
   'planned' => 'Запланирована',
   'purchased' => 'Выкуплена',
@@ -165,12 +168,16 @@ document.addEventListener('DOMContentLoaded', function(){
     const instant = form.querySelector('.js-instant-price');
     const preorder = form.querySelector('.js-preorder-price');
     if (!purchase || !instant || !preorder) return;
-    const roundToStep = (value, step = 10) => Math.floor(value / step) * step;
+    const instantMargin = <?= json_encode($pricingInstantMarginPercent) ?>;
+    const preorderDiscount = <?= json_encode($pricingPreorderDiscountPercent) ?>;
+    const roundingStep = <?= json_encode($pricingRoundingStep) ?>;
+    const roundToStep = (value, step = roundingStep) => Math.floor(value / Math.max(1, step)) * Math.max(1, step);
     const recalc = () => {
       const base = parseFloat(String(purchase.value).replace(',', '.')) || 0;
       if (base <= 0) return;
-      instant.value = String(roundToStep(base * 1.50, 10));
-      preorder.value = String(roundToStep(base * 1.35, 10));
+      const instantValue = roundToStep(base * (1 + instantMargin / 100));
+      instant.value = String(instantValue);
+      preorder.value = String(roundToStep(instantValue * (1 - preorderDiscount / 100)));
     };
     purchase.addEventListener('input', recalc);
     purchase.addEventListener('change', recalc);

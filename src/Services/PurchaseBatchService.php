@@ -453,12 +453,12 @@ class PurchaseBatchService
     private function calculatePricesFromSettings(float $purchasePricePerBox, float $boxSize, array $settings): array
     {
         $roundingStep = max(1, (int)($settings['pricing_rounding_step'] ?? 10));
-        $preorderMargin = (float)($settings['pricing_preorder_margin_percent'] ?? 35);
         $instantMargin = (float)($settings['pricing_instant_margin_percent'] ?? 50);
+        $preorderDiscount = max(0.0, min(99.0, (float)($settings['ui_preorder_discount_percent'] ?? 10)));
         $discountMarkup = (float)($settings['pricing_discount_stock_markup_fixed'] ?? 100);
 
-        $preorderPricePerBox = floor(($purchasePricePerBox * (1 + $preorderMargin / 100)) / $roundingStep) * $roundingStep;
         $instantPricePerBox = floor(($purchasePricePerBox * (1 + $instantMargin / 100)) / $roundingStep) * $roundingStep;
+        $preorderPricePerBox = floor(($instantPricePerBox * (1 - $preorderDiscount / 100)) / $roundingStep) * $roundingStep;
         $discountPricePerBox = $purchasePricePerBox + $discountMarkup;
 
         $safeBoxSize = $boxSize > 0 ? $boxSize : 1.0;
