@@ -297,6 +297,198 @@
       }
     }
 
+    @media (max-width: 640px) {
+      html {
+        font-size: 12px;
+      }
+
+      body {
+        font-size: 12px;
+        line-height: 1.25;
+      }
+
+      [data-theme='dark'] main {
+        margin: 2px;
+        border-radius: 8px 8px 0 0;
+      }
+
+      header {
+        min-height: 42px;
+        padding: 0.35rem 0.5rem !important;
+      }
+
+      .admin-page-title {
+        gap: 0.45rem !important;
+        padding: 0.55rem 0.65rem !important;
+        font-size: 1.2rem !important;
+        line-height: 1.18 !important;
+      }
+
+      main {
+        padding: 0.25rem !important;
+      }
+
+      .font-bold.text-xl,
+      .admin-page-title .material-icons-round {
+        font-size: 1.25rem !important;
+      }
+
+      .bg-white,
+      .bg-slate-900 {
+        border-radius: 0.75rem !important;
+      }
+
+      .p-4,
+      .sm\:p-6 {
+        padding: 0.65rem !important;
+      }
+
+      .mb-4 {
+        margin-bottom: 0.5rem !important;
+      }
+
+      .mb-3,
+      .mb-2 {
+        margin-bottom: 0.35rem !important;
+      }
+
+      .space-y-4 > :not([hidden]) ~ :not([hidden]),
+      .space-y-3 > :not([hidden]) ~ :not([hidden]) {
+        margin-top: 0.45rem !important;
+      }
+
+      .gap-4,
+      .gap-3,
+      .gap-2 {
+        gap: 0.45rem !important;
+      }
+
+      .text-sm {
+        font-size: 0.92rem !important;
+        line-height: 1.25 !important;
+      }
+
+      .text-xs {
+        font-size: 0.78rem !important;
+        line-height: 1.2 !important;
+      }
+
+      .text-lg {
+        font-size: 1.08rem !important;
+      }
+
+      .text-xl {
+        font-size: 1.18rem !important;
+      }
+
+      input,
+      select,
+      textarea,
+      button,
+      .rounded-lg.border,
+      .rounded.border {
+        font-size: 12px !important;
+      }
+
+      input,
+      select,
+      textarea {
+        border-radius: 0.55rem !important;
+        padding: 0.42rem 0.55rem !important;
+      }
+
+      input:not([type="checkbox"]):not([type="radio"]),
+      select {
+        min-height: 2.35rem;
+      }
+
+      textarea {
+        min-height: 3.7rem;
+      }
+
+      button,
+      a[class*="px-"],
+      .mobile-sticky-actions a,
+      .mobile-sticky-actions button {
+        min-height: 2.6rem;
+      }
+
+      button,
+      .px-5,
+      .px-4,
+      .px-3 {
+        padding-left: 0.7rem !important;
+        padding-right: 0.7rem !important;
+      }
+
+      button,
+      .py-3,
+      .py-2 {
+        padding-top: 0.45rem !important;
+        padding-bottom: 0.45rem !important;
+      }
+
+      table {
+        font-size: 0.82rem !important;
+      }
+
+      th,
+      td {
+        padding: 0.35rem 0.5rem !important;
+      }
+
+      .mobile-bottom-action-spacer {
+        padding-bottom: calc(4.7rem + env(safe-area-inset-bottom, 0px)) !important;
+      }
+
+      .mobile-sticky-actions {
+        padding: 0.45rem 0.55rem calc(0.45rem + env(safe-area-inset-bottom, 0px)) !important;
+        border-radius: 0.9rem 0.9rem 0 0;
+        background: rgba(15, 23, 42, 0.94) !important;
+        border-color: rgba(71, 85, 105, 0.9) !important;
+        box-shadow: 0 -10px 24px rgba(2, 6, 23, 0.42);
+        backdrop-filter: blur(14px);
+      }
+
+      .mobile-sticky-actions .grid {
+        gap: 0.45rem !important;
+      }
+
+      .mobile-sticky-actions a,
+      .mobile-sticky-actions button {
+        height: 2.55rem !important;
+        border-radius: 0.65rem !important;
+        font-size: 0.9rem !important;
+        font-weight: 700;
+      }
+
+      #globalScrollTopBtn {
+        right: 0.65rem !important;
+        bottom: calc(4.6rem + env(safe-area-inset-bottom, 0px)) !important;
+        width: 2.45rem !important;
+        height: 2.45rem !important;
+      }
+    }
+
+    @media (max-width: 380px) {
+      html {
+        font-size: 11px;
+      }
+
+      .admin-page-title {
+        font-size: 1.08rem !important;
+      }
+
+      input,
+      select,
+      textarea,
+      button,
+      .rounded-lg.border,
+      .rounded.border {
+        font-size: 11px !important;
+      }
+    }
+
     /* Remove tap highlight from menu buttons */
     #sidebar a {
       -webkit-tap-highlight-color: transparent;
