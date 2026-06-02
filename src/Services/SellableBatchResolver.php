@@ -20,15 +20,16 @@ class SellableBatchResolver
     public function resolveForProduct(int $productId, string $stockMode): ?array
     {
         if ($stockMode === 'preorder') {
-            $plannedAvailableExpr = "(COALESCE(NULLIF(boxes_total, 0), boxes_free + boxes_reserved) - boxes_reserved)";
+            $plannedAvailableExpr = "(COALESCE(NULLIF(pb.boxes_total, 0), pb.boxes_free + pb.boxes_reserved) - pb.boxes_reserved)";
             $stmt = $this->pdo->prepare(
-                "SELECT id, preorder_price_per_box AS price_per_box, {$plannedAvailableExpr} AS boxes_available
-                 FROM purchase_batches
-                 WHERE product_id = ?
-                   AND status = 'planned'
+                "SELECT pb.id, COALESCE(NULLIF(pb.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) AS price_per_box, {$plannedAvailableExpr} AS boxes_available
+                 FROM purchase_batches pb
+                 JOIN products p ON p.id = pb.product_id
+                 WHERE pb.product_id = ?
+                   AND pb.status = 'planned'
                    AND {$plannedAvailableExpr} > 0
-                   AND preorder_price_per_box > 0
-                 ORDER BY purchased_at ASC, id ASC
+                   AND COALESCE(NULLIF(pb.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) > 0
+                 ORDER BY pb.purchased_at ASC, pb.id ASC
                  LIMIT 1"
             );
             $stmt->execute([$productId]);

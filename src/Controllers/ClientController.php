@@ -879,12 +879,13 @@ public function cart(): void
 
         $purchaseBatchId = (int)($intent['purchase_batch_id'] ?? 0);
         $batchStmt = $this->pdo->prepare(
-            "SELECT id, preorder_price_per_box
-             FROM purchase_batches
-             WHERE product_id = ?
-               AND id = ?
-               AND status IN ('purchased','arrived')
-               AND preorder_price_per_box > 0
+            "SELECT pb.id, COALESCE(NULLIF(pb.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) AS preorder_price_per_box
+             FROM purchase_batches pb
+             JOIN products p ON p.id = pb.product_id
+             WHERE pb.product_id = ?
+               AND pb.id = ?
+               AND pb.status IN ('purchased','arrived')
+               AND COALESCE(NULLIF(pb.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) > 0
              LIMIT 1"
         );
         $batchStmt->execute([$productId, $purchaseBatchId]);
@@ -1340,11 +1341,11 @@ public function cancelReservedOrder(int $orderId): void
         $query = "SELECT p.*, t.name AS product, t.alias AS type_alias,
                          CASE
                              WHEN COALESCE(pb.boxes_discount, 0) > 0 AND COALESCE(pb.discount_price_per_box, 0) > 0 THEN pb.discount_price_per_box
-                             WHEN pb.status = 'planned' THEN COALESCE(pb.preorder_price_per_box, 0)
+                             WHEN pb.status = 'planned' THEN COALESCE(NULLIF(pb.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0)
                              ELSE COALESCE(pb.instant_price_per_box, p.price, 0)
                          END AS price,
                          COALESCE(pb.instant_price_per_box, 0) AS current_price_per_box,
-                         COALESCE(pb.preorder_price_per_box, 0) AS preorder_price_per_box,
+                         CASE WHEN pb.status = 'planned' THEN COALESCE(NULLIF(pb.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) ELSE COALESCE(pb.preorder_price_per_box, 0) END AS preorder_price_per_box,
                          COALESCE(batch_photo.image_path, p.image_path) AS display_image_path,
                          p.image_path AS product_image_path,
                          batch_photo.image_path AS batch_image_path,
@@ -1357,7 +1358,7 @@ public function cancelReservedOrder(int $orderId): void
                       FROM purchase_batches pb2
                       WHERE pb2.product_id = p.id
                         AND ((pb2.status IN ('purchased', 'arrived') AND (pb2.boxes_free > 0 OR pb2.boxes_discount > 0))
-                             OR (pb2.status = 'planned' AND (COALESCE(NULLIF(pb2.boxes_total, 0), pb2.boxes_free + pb2.boxes_reserved) - pb2.boxes_reserved) > 0 AND pb2.preorder_price_per_box > 0))
+                             OR (pb2.status = 'planned' AND (COALESCE(NULLIF(pb2.boxes_total, 0), pb2.boxes_free + pb2.boxes_reserved) - pb2.boxes_reserved) > 0 AND COALESCE(NULLIF(pb2.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) > 0))
                       ORDER BY CASE WHEN pb2.status IN ('purchased', 'arrived') AND pb2.boxes_free > 0 THEN 1 WHEN pb2.status IN ('purchased', 'arrived') AND pb2.boxes_discount > 0 THEN 2 WHEN pb2.status = 'planned' THEN 3 ELSE 9 END, pb2.purchased_at ASC, pb2.id ASC
                       LIMIT 1
                   )
@@ -1419,11 +1420,11 @@ public function cancelReservedOrder(int $orderId): void
             "SELECT p.id, p.alias, t.name AS product, t.alias AS type_alias, p.variety, p.description, p.origin_country, p.box_size, p.box_unit,
                     CASE
                         WHEN COALESCE(pb_latest.boxes_discount, 0) > 0 AND COALESCE(pb_latest.discount_price_per_box, 0) > 0 THEN pb_latest.discount_price_per_box
-                        WHEN pb_latest.status = 'planned' THEN COALESCE(pb_latest.preorder_price_per_box, 0)
+                        WHEN pb_latest.status = 'planned' THEN COALESCE(NULLIF(pb_latest.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0)
                         ELSE COALESCE(pb_latest.instant_price_per_box, p.price, 0)
                     END AS price,
                     COALESCE(pb_latest.instant_price_per_box, 0) AS current_price_per_box,
-                    COALESCE(pb_latest.preorder_price_per_box, 0) AS preorder_price_per_box,
+                    CASE WHEN pb_latest.status = 'planned' THEN COALESCE(NULLIF(pb_latest.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) ELSE COALESCE(pb_latest.preorder_price_per_box, 0) END AS preorder_price_per_box,
                     p.sale_price, p.is_active,
                     COALESCE(batch_photo.image_path, p.image_path) AS image_path,
                     p.image_path AS product_image_path,
@@ -1439,7 +1440,7 @@ public function cancelReservedOrder(int $orderId): void
                  FROM purchase_batches pb2
                  WHERE pb2.product_id = p.id
                    AND ((pb2.status IN ('purchased', 'arrived') AND (pb2.boxes_free > 0 OR pb2.boxes_discount > 0))
-                        OR (pb2.status = 'planned' AND (COALESCE(NULLIF(pb2.boxes_total, 0), pb2.boxes_free + pb2.boxes_reserved) - pb2.boxes_reserved) > 0 AND pb2.preorder_price_per_box > 0))
+                        OR (pb2.status = 'planned' AND (COALESCE(NULLIF(pb2.boxes_total, 0), pb2.boxes_free + pb2.boxes_reserved) - pb2.boxes_reserved) > 0 AND COALESCE(NULLIF(pb2.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) > 0))
                  ORDER BY CASE WHEN pb2.status IN ('purchased', 'arrived') AND pb2.boxes_free > 0 THEN 1 WHEN pb2.status IN ('purchased', 'arrived') AND pb2.boxes_discount > 0 THEN 2 WHEN pb2.status = 'planned' THEN 3 ELSE 9 END, pb2.purchased_at ASC, pb2.id ASC
                  LIMIT 1
              )
@@ -1509,10 +1510,11 @@ public function cancelReservedOrder(int $orderId): void
         $existingId = $existingStmt->fetchColumn();
 
         $plannedBatchStmt = $this->pdo->prepare(
-            "SELECT id, preorder_price_per_box
-             FROM purchase_batches
-             WHERE product_id = ? AND status = 'planned'
-             ORDER BY purchased_at ASC, id ASC
+            "SELECT pb.id, COALESCE(NULLIF(pb.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) AS preorder_price_per_box
+             FROM purchase_batches pb
+             JOIN products p ON p.id = pb.product_id
+             WHERE pb.product_id = ? AND pb.status = 'planned'
+             ORDER BY pb.purchased_at ASC, pb.id ASC
              LIMIT 1"
         );
         $plannedBatchStmt->execute([$productId]);

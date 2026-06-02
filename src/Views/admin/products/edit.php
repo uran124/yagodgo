@@ -10,6 +10,9 @@ $role = $_SESSION['role'] ?? '';
 $isManager = in_array($role, ['manager','partner','seller'], true);
 $base = $role === 'manager' ? '/manager' : ($role === 'partner' ? '/partner' : ($role === 'seller' ? '/seller' : '/admin'));
 $activeBatches = $activeBatches ?? [];
+$pricingInstantMarginPercent = (float)(get_setting('pricing_instant_margin_percent', '50') ?? '50');
+$pricingPreorderDiscountPercent = max(0.0, min(99.0, (float)(get_setting('ui_preorder_discount_percent', '10') ?? '10')));
+$pricingRoundingStep = max(1, (int)(get_setting('pricing_rounding_step', '10') ?? '10'));
 $statusLabels = [
   'planned' => 'Запланирована',
   'purchased' => 'Выкуплена',
@@ -70,16 +73,19 @@ $statusLabels = [
 
             <div class="space-y-3">
               <label class="block text-sm">
-                <span class="block mb-1 text-slate-300">Закупка</span>
+                <span class="block mb-1 text-slate-300">Закупочная цена за ящик</span>
                 <input name="purchase_price_per_box" type="number" step="1" value="<?= (int)round($purchasePrice) ?>" class="w-full border border-slate-600 bg-slate-900/70 text-slate-100 px-3 py-2 rounded js-purchase-price">
+                <span class="mt-1 block text-xs text-slate-500">От неё автоматически пересчитываются цены ниже.</span>
               </label>
               <label class="block text-sm">
-                <span class="block mb-1 text-slate-300">В наличии</span>
+                <span class="block mb-1 text-slate-300">Цена в наличии за ящик</span>
                 <input name="instant_price_per_box" type="number" step="1" value="<?= (int)round($instantPrice) ?>" class="w-full border border-slate-600 bg-slate-900/70 text-slate-100 px-3 py-2 rounded js-instant-price">
+                <span class="mt-1 block text-xs text-slate-500">Закупка + <?= htmlspecialchars((string)$pricingInstantMarginPercent) ?>%, округление вниз до <?= htmlspecialchars((string)$pricingRoundingStep) ?> ₽.</span>
               </label>
               <label class="block text-sm">
-                <span class="block mb-1 text-slate-300">Предзаказ</span>
+                <span class="block mb-1 text-slate-300">Цена предзаказа за ящик</span>
                 <input name="preorder_price_per_box" type="number" step="1" value="<?= (int)round($preorderPrice) ?>" class="w-full border border-slate-600 bg-slate-900/70 text-slate-100 px-3 py-2 rounded js-preorder-price">
+                <span class="mt-1 block text-xs text-slate-500">Цена в наличии − <?= htmlspecialchars((string)$pricingPreorderDiscountPercent) ?>%.</span>
               </label>
             </div>
 
@@ -165,12 +171,16 @@ document.addEventListener('DOMContentLoaded', function(){
     const instant = form.querySelector('.js-instant-price');
     const preorder = form.querySelector('.js-preorder-price');
     if (!purchase || !instant || !preorder) return;
-    const roundToStep = (value, step = 10) => Math.floor(value / step) * step;
+    const instantMargin = <?= json_encode($pricingInstantMarginPercent) ?>;
+    const preorderDiscount = <?= json_encode($pricingPreorderDiscountPercent) ?>;
+    const roundingStep = <?= json_encode($pricingRoundingStep) ?>;
+    const roundToStep = (value, step = roundingStep) => Math.floor(value / Math.max(1, step)) * Math.max(1, step);
     const recalc = () => {
       const base = parseFloat(String(purchase.value).replace(',', '.')) || 0;
       if (base <= 0) return;
-      instant.value = String(roundToStep(base * 1.50, 10));
-      preorder.value = String(roundToStep(base * 1.35, 10));
+      const instantValue = roundToStep(base * (1 + instantMargin / 100));
+      instant.value = String(instantValue);
+      preorder.value = String(roundToStep(instantValue * (1 - preorderDiscount / 100)));
     };
     purchase.addEventListener('input', recalc);
     purchase.addEventListener('change', recalc);

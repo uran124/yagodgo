@@ -18,8 +18,8 @@ class PricingService
     public function getSettings(): array
     {
         $defaults = [
-            'pricing_preorder_margin_percent' => 35.0,
             'pricing_instant_margin_percent' => 50.0,
+            'ui_preorder_discount_percent' => 10.0,
             'pricing_discount_stock_markup_fixed' => 100.0,
             'pricing_rounding_step' => 10,
         ];
@@ -47,10 +47,11 @@ class PricingService
             $settings[$key] = (float) ($row['setting_value'] ?? $defaults[$key]);
         }
 
-        // Current business rule: preorder margin is fixed at +35%.
-        // Older databases may still contain pricing_preorder_margin_percent = 30;
-        // do not let that stale setting override the operational pricing rule.
-        $settings['pricing_preorder_margin_percent'] = 35.0;
+        $instantMargin = (float)$settings['pricing_instant_margin_percent'];
+        $preorderDiscount = max(0.0, min(99.0, (float)$settings['ui_preorder_discount_percent']));
+        $settings['ui_preorder_discount_percent'] = $preorderDiscount;
+        // Compatibility snapshot: preorder margin is derived from instant margin and preorder discount.
+        $settings['pricing_preorder_margin_percent'] = round(((1 + ($instantMargin / 100)) * (1 - ($preorderDiscount / 100)) - 1) * 100, 4);
 
         return $settings;
     }
@@ -68,12 +69,12 @@ class PricingService
     {
         $settings = $this->getSettings();
 
-        $preorderPricePerBox = $this->floorToStep(
-            $purchasePricePerBox * (1 + ((float)$settings['pricing_preorder_margin_percent'] / 100)),
-            (int)$settings['pricing_rounding_step']
-        );
         $instantPricePerBox = $this->floorToStep(
             $purchasePricePerBox * (1 + ((float)$settings['pricing_instant_margin_percent'] / 100)),
+            (int)$settings['pricing_rounding_step']
+        );
+        $preorderPricePerBox = $this->floorToStep(
+            $instantPricePerBox * (1 - ((float)$settings['ui_preorder_discount_percent'] / 100)),
             (int)$settings['pricing_rounding_step']
         );
         $discountPricePerBox = $purchasePricePerBox + (float)$settings['pricing_discount_stock_markup_fixed'];

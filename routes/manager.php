@@ -24,6 +24,7 @@ return [
             'GET /manager/products/edit' => ['App\\Controllers\\ProductsController', 'edit'],
             'POST /manager/products/save' => ['App\\Controllers\\ProductsController', 'save'],
             'POST /manager/products/toggle' => ['App\\Controllers\\ProductsController', 'toggle'],
+            'POST /manager/products/purchase/update' => ['App\\Controllers\\ProductsController', 'updatePurchaseFromProduct'],
             'POST /manager/products/update-price' => ['App\\Controllers\\ProductsController', 'updatePrice'],
             'GET /manager/products/update-price' => ['App\\Controllers\\ProductsController', 'updatePrice'],
             'POST /manager/products/update-date' => ['App\\Controllers\\ProductsController', 'updateDeliveryDate'],
