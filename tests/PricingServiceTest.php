@@ -23,10 +23,10 @@ class PricingServiceTest extends TestCase
     {
         $result = $this->service->calculateFromPurchase(1000.0, 2.0);
 
-        $this->assertSame(1300.0, $result['preorder_price_per_box']);
+        $this->assertSame(1350.0, $result['preorder_price_per_box']);
         $this->assertSame(1500.0, $result['instant_price_per_box']);
         $this->assertSame(1100.0, $result['discount_price_per_box']);
-        $this->assertSame(650.0, $result['preorder_unit_price']);
+        $this->assertSame(675.0, $result['preorder_unit_price']);
         $this->assertSame(750.0, $result['instant_unit_price']);
         $this->assertSame(550.0, $result['discount_unit_price']);
     }
@@ -34,7 +34,7 @@ class PricingServiceTest extends TestCase
     public function testCalculateFromPurchaseUsesDbSettingsAndRoundingStep(): void
     {
         $this->pdo->exec("INSERT INTO settings (setting_key, setting_value) VALUES
-            ('pricing_preorder_margin_percent', '25'),
+            ('ui_preorder_discount_percent', '12'),
             ('pricing_instant_margin_percent', '47'),
             ('pricing_discount_stock_markup_fixed', '150'),
             ('pricing_rounding_step', '5')
@@ -42,12 +42,25 @@ class PricingServiceTest extends TestCase
 
         $result = $this->service->calculateFromPurchase(1180.0, 2.0);
 
-        $this->assertSame(1475.0, $result['preorder_price_per_box']);
+        $this->assertSame(1520.0, $result['preorder_price_per_box']);
         $this->assertSame(1730.0, $result['instant_price_per_box']);
         $this->assertSame(1330.0, $result['discount_price_per_box']);
-        $this->assertSame(737.5, $result['preorder_unit_price']);
+        $this->assertSame(760.0, $result['preorder_unit_price']);
         $this->assertSame(865.0, $result['instant_unit_price']);
         $this->assertSame(665.0, $result['discount_unit_price']);
+    }
+
+    public function testSettingsExposeDerivedPreorderMargin(): void
+    {
+        $this->pdo->exec("INSERT INTO settings (setting_key, setting_value) VALUES
+            ('pricing_instant_margin_percent', '50'),
+            ('ui_preorder_discount_percent', '10')
+        ");
+
+        $settings = $this->service->getSettings();
+
+        $this->assertSame(35.0, (float)$settings['pricing_preorder_margin_percent']);
+        $this->assertSame(10.0, (float)$settings['ui_preorder_discount_percent']);
     }
 
     public function testFloorToStepNeverUsesZeroStep(): void

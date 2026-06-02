@@ -69,13 +69,6 @@ class LegacyProductProjectionService
              SET current_purchase_batch_id = :batch_id,
                  free_stock_boxes = :free_stock_boxes,
                  reserved_stock_boxes = :reserved_stock_boxes,
-                 preorder_price_per_box = :preorder_price_per_box,
-                 instant_price_per_box = :instant_price_per_box,
-                 discount_price_per_box = :discount_price_per_box,
-                 preorder_unit_price = :preorder_unit_price,
-                 instant_unit_price = :instant_unit_price,
-                 discount_unit_price = :discount_unit_price,
-                 price = :price,
                  stock_status = :stock_status
              WHERE id = :product_id'
         );
@@ -83,13 +76,6 @@ class LegacyProductProjectionService
             'batch_id' => $batchId,
             'free_stock_boxes' => $freeBoxes,
             'reserved_stock_boxes' => $reservedBoxes,
-            'preorder_price_per_box' => $prices['preorder_price_per_box'],
-            'instant_price_per_box' => $prices['instant_price_per_box'],
-            'discount_price_per_box' => $prices['discount_price_per_box'],
-            'preorder_unit_price' => $prices['preorder_unit_price'],
-            'instant_unit_price' => $prices['instant_unit_price'],
-            'discount_unit_price' => $prices['discount_unit_price'],
-            'price' => $prices['instant_unit_price'],
             'stock_status' => $stockStatus,
             'product_id' => $productId,
         ]);

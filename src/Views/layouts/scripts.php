@@ -74,7 +74,11 @@ window.dataLayer = window.dataLayer || [];
     document.querySelectorAll('[data-edit-price]').forEach(function (el) {
       el.addEventListener('click', function () {
         var id = el.getAttribute('data-edit-price');
-        var form = document.querySelector('[data-price-form="' + id + '"]');
+        var card = el.closest('.product-card');
+        var form = card ? card.querySelector('[data-price-form="' + id + '"]') : null;
+        if (!form) {
+          form = document.querySelector('[data-price-form="' + id + '"]');
+        }
         if (form) {
           form.classList.toggle('hidden');
         }

@@ -152,8 +152,7 @@ class ProductsController
             $role = $_SESSION['role'] ?? '';
             if ($role === 'seller') {
                 $stmt = $this->pdo->prepare(
-                    "SELECT p.*, DATE(pb.purchased_at) AS delivery_date, COALESCE(pb.instant_price_per_box, 0) AS price,
-                            COALESCE(pb.preorder_price_per_box, 0) AS preorder_price_per_box
+                    "SELECT p.*, DATE(pb.purchased_at) AS delivery_date
                      FROM products p
                      LEFT JOIN purchase_batches pb ON pb.id = (
                         SELECT pb2.id
@@ -169,8 +168,7 @@ class ProductsController
                 $stmt->execute([(int)$id, $_SESSION['user_id'] ?? 0]);
             } else {
                 $stmt = $this->pdo->prepare(
-                    "SELECT p.*, DATE(pb.purchased_at) AS delivery_date, COALESCE(pb.instant_price_per_box, 0) AS price,
-                            COALESCE(pb.preorder_price_per_box, 0) AS preorder_price_per_box
+                    "SELECT p.*, DATE(pb.purchased_at) AS delivery_date
                      FROM products p
                      LEFT JOIN purchase_batches pb ON pb.id = (
                         SELECT pb2.id
@@ -343,6 +341,7 @@ class ProductsController
                         box_unit        = ?,
                         unit            = ?,
                         price           = ?,
+                        preorder_price_per_box = ?,
                         sale_price      = ?,
                         delivery_date   = ?,
                         is_active       = ?";
@@ -350,7 +349,7 @@ class ProductsController
                 $typeId, $alias, $variety, $description, $fullDesc, $compositionJson,
                 $metaTitle, $metaDesc, $metaKeys,
                 $manufacturer, $originCountry, $boxSize, $boxUnit,
-                $unit, $price, $salePrice,
+                $unit, $price, $preorderPrice, $salePrice,
                 $deliveryDate, $isActive
             ];
 
@@ -380,14 +379,14 @@ class ProductsController
 
         } else {
             // INSERT
-            $columns      = "product_type_id,alias,variety,description,full_description,composition,meta_title,meta_description,meta_keywords,manufacturer,origin_country,box_size,box_unit,unit,price,sale_price,delivery_date,is_active";
-            // 18 placeholders corresponding to the columns above
-            $placeholders = "?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?";
+            $columns      = "product_type_id,alias,variety,description,full_description,composition,meta_title,meta_description,meta_keywords,manufacturer,origin_country,box_size,box_unit,unit,price,preorder_price_per_box,sale_price,delivery_date,is_active";
+            // 19 placeholders corresponding to the columns above
+            $placeholders = "?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?";
             $params       = [
                 $typeId, $alias, $variety, $description, $fullDesc, $compositionJson,
                 $metaTitle, $metaDesc, $metaKeys,
                 $manufacturer, $originCountry, $boxSize, $boxUnit,
-                $unit, $price, $salePrice,
+                $unit, $price, $preorderPrice, $salePrice,
                 $deliveryDate, $isActive
             ];
             if ($sellerId) {
@@ -458,22 +457,36 @@ class ProductsController
         }
 
         $purchasePrice = (float)($_POST['purchase_price_per_box'] ?? 0);
-        // Operational prices are always derived from purchase price.
-        // This prevents stale manually-entered values from keeping +30% preorder markup.
+        // Operational prices are always derived from purchase price and current pricing settings.
         $boxSizeStmt = $this->pdo->prepare('SELECT box_size FROM products WHERE id = ? LIMIT 1');
         $boxSizeStmt->execute([$productId]);
         $boxSize = max(1.0, (float)$boxSizeStmt->fetchColumn());
-        $prices = (new PricingService($this->pdo))->calculateFromPurchase($purchasePrice, $boxSize);
+        $pricingService = new PricingService($this->pdo);
+        $prices = $pricingService->calculateFromPurchase($purchasePrice, $boxSize);
+        $settings = $pricingService->getSettings();
         $instantPrice = (float)$prices['instant_price_per_box'];
         $preorderPrice = (float)$prices['preorder_price_per_box'];
 
-        $stmt = $this->pdo->prepare(
-            "UPDATE purchase_batches
-             SET purchase_price_per_box = ?, instant_price_per_box = ?, preorder_price_per_box = ?
-             WHERE id = ? AND product_id = ?
-             LIMIT 1"
-        );
-        $stmt->execute([$purchasePrice, $instantPrice, $preorderPrice, $batchId, $productId]);
+        $params = [
+            $purchasePrice,
+            (float)$settings['pricing_preorder_margin_percent'],
+            (float)$settings['ui_preorder_discount_percent'],
+            (float)$settings['pricing_instant_margin_percent'],
+            $instantPrice,
+            $preorderPrice,
+            $batchId,
+            $productId,
+        ];
+        $sql = "UPDATE purchase_batches pb
+                JOIN products p ON p.id = pb.product_id
+                SET pb.purchase_price_per_box = ?, pb.preorder_margin_percent = ?, pb.preorder_discount_percent = ?, pb.instant_margin_percent = ?, pb.instant_price_per_box = ?, pb.preorder_price_per_box = ?
+                WHERE pb.id = ? AND pb.product_id = ?";
+        if (($_SESSION['role'] ?? '') === 'seller') {
+            $sql .= " AND p.seller_id = ?";
+            $params[] = (int)($_SESSION['user_id'] ?? 0);
+        }
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
 
         if (!empty($_FILES['batch_photo']['tmp_name'])) {
             $tmp = $_FILES['batch_photo']['tmp_name'];
@@ -509,13 +522,26 @@ class ProductsController
     public function updatePrice(): void
     {
         $id = (int)($_POST['id'] ?? 0);
-        $raw = trim($_POST['price'] ?? '');
+        $raw = trim((string)($_POST['price'] ?? ''));
+        $context = trim((string)($_POST['price_context'] ?? ''));
+        $postedBatchId = (int)($_POST['purchase_batch_id'] ?? 0);
+
         if ($id && $raw !== '') {
-            $price = (float)$raw;
-            $batchId = $this->resolveCurrentPurchaseBatchId($id);
-            if ($batchId !== null) {
-                $stmt = $this->pdo->prepare("UPDATE purchase_batches SET instant_price_per_box = ? WHERE id = ?");
-                $stmt->execute([$price, $batchId]);
+            $price = max(0.0, (float)$raw);
+            if ($context === 'preorder') {
+                $this->updatePreorderPricesFromCard($id, $price);
+            } elseif ($context === 'in_stock') {
+                $batchId = $postedBatchId > 0 ? $postedBatchId : $this->resolveInStockPurchaseBatchId($id);
+                if ($batchId !== null) {
+                    $this->updateInStockPriceFromCard($id, $batchId, $price);
+                }
+            } else {
+                // Legacy fallback for old forms that do not send context yet.
+                $batchId = $this->resolveCurrentPurchaseBatchId($id);
+                if ($batchId !== null) {
+                    $stmt = $this->pdo->prepare("UPDATE purchase_batches SET instant_price_per_box = ? WHERE id = ?");
+                    $stmt->execute([$price, $batchId]);
+                }
             }
         }
         // Redirect back to the page where the price was updated.
@@ -569,6 +595,92 @@ class ProductsController
         exit;
     }
 
+
+    private function updateInStockPriceFromCard(int $productId, int $batchId, float $price): void
+    {
+        $params = [$price, $batchId, $productId];
+        $sql = "UPDATE purchase_batches pb
+                JOIN products p ON p.id = pb.product_id
+                SET pb.instant_price_per_box = ?
+                WHERE pb.id = ?
+                  AND pb.product_id = ?
+                  AND pb.status IN ('purchased', 'arrived')";
+
+        if (($_SESSION['role'] ?? '') === 'seller') {
+            $sql .= " AND p.seller_id = ?";
+            $params[] = (int)($_SESSION['user_id'] ?? 0);
+        }
+
+        $this->pdo->prepare($sql)->execute($params);
+    }
+
+    private function updatePreorderPricesFromCard(int $productId, float $preorderPrice): void
+    {
+        $settings = (new PricingService($this->pdo))->getSettings();
+        $discount = max(0.0, min(99.0, (float)($settings['ui_preorder_discount_percent'] ?? 10)));
+        $discountFactor = (100.0 - $discount) / 100.0;
+        $instantPrice = $discountFactor > 0 ? round($preorderPrice / $discountFactor, 2) : $preorderPrice;
+
+        $role = $_SESSION['role'] ?? '';
+        $sellerId = (int)($_SESSION['user_id'] ?? 0);
+        $sellerSql = '';
+        $sellerParams = [];
+        if ($role === 'seller') {
+            $sellerSql = ' AND p.seller_id = ?';
+            $sellerParams[] = $sellerId;
+        }
+
+        $this->pdo->beginTransaction();
+        try {
+            $preorderStmt = $this->pdo->prepare(
+                "UPDATE purchase_batches pb
+                 JOIN products p ON p.id = pb.product_id
+                 SET pb.preorder_price_per_box = ?, pb.preorder_discount_percent = ?
+                 WHERE pb.product_id = ?
+                   AND pb.status IN ('planned', 'purchased', 'arrived')" . $sellerSql
+            );
+            $preorderStmt->execute(array_merge([$preorderPrice, $discount, $productId], $sellerParams));
+
+            $instantStmt = $this->pdo->prepare(
+                "UPDATE purchase_batches pb
+                 JOIN products p ON p.id = pb.product_id
+                 SET pb.instant_price_per_box = ?, pb.preorder_discount_percent = ?
+                 WHERE pb.product_id = ?
+                   AND pb.status = 'planned'" . $sellerSql
+            );
+            $instantStmt->execute(array_merge([$instantPrice, $discount, $productId], $sellerParams));
+
+            $this->pdo->commit();
+        } catch (\Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    private function resolveInStockPurchaseBatchId(int $productId): ?int
+    {
+        $params = [$productId];
+        $sql = "SELECT pb.id
+                FROM purchase_batches pb
+                JOIN products p ON p.id = pb.product_id
+                WHERE pb.product_id = ?
+                  AND pb.status IN ('purchased', 'arrived')
+                  AND (pb.boxes_free > 0 OR pb.boxes_discount > 0)";
+
+        if (($_SESSION['role'] ?? '') === 'seller') {
+            $sql .= " AND p.seller_id = ?";
+            $params[] = (int)($_SESSION['user_id'] ?? 0);
+        }
+
+        $sql .= " ORDER BY pb.purchased_at ASC, pb.id ASC LIMIT 1";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        $batchId = $stmt->fetchColumn();
+
+        return $batchId !== false && $batchId !== null ? (int)$batchId : null;
+    }
 
     private function resolveCurrentPurchaseBatchId(int $productId): ?int
     {
