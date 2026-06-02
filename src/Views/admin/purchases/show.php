@@ -131,7 +131,7 @@
 <?php if ($isPlanned): ?>
 <div class="bg-slate-900 text-slate-100 p-4 rounded-xl shadow mb-4 border border-slate-700">
   <h3 class="font-semibold mb-4 text-lg">Выкуп запланированной закупки</h3>
-  <form action="<?= $basePath ?>/purchases/update" method="post" enctype="multipart/form-data" class="space-y-4 js-purchase-form purchase-edit-card">
+  <form id="purchase-update-form" action="<?= $basePath ?>/purchases/update" method="post" enctype="multipart/form-data" class="space-y-4 js-purchase-form purchase-edit-card">
     <?= csrf_field() ?>
     <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
     <input type="hidden" name="product_id" value="<?= (int)$batch['product_id'] ?>">
@@ -212,7 +212,7 @@
 <?php else: ?>
 <div class="bg-slate-900 text-slate-100 p-4 rounded-xl shadow mb-4 border border-slate-700">
   <h3 class="font-semibold mb-4 text-lg">Редактирование закупки</h3>
-  <form action="<?= $basePath ?>/purchases/update" method="post" enctype="multipart/form-data" class="space-y-3 js-purchase-form purchase-edit-card">
+  <form id="purchase-update-form" action="<?= $basePath ?>/purchases/update" method="post" enctype="multipart/form-data" class="space-y-3 js-purchase-form purchase-edit-card">
     <?= csrf_field() ?>
     <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
 
@@ -255,7 +255,7 @@
   <h3 class="font-semibold mb-3">Этап закупки</h3>
   <div class="flex flex-wrap gap-2">
     <?php if (($batch['status'] ?? '') === 'purchased'): ?>
-      <form method="post" action="<?= $basePath ?>/purchases/arrived">
+      <form id="purchase-arrived-form" method="post" action="<?= $basePath ?>/purchases/arrived">
         <?= csrf_field() ?>
         <input type="hidden" name="batch_id" value="<?= (int)$batch['id'] ?>">
         <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">В магазине</button>
@@ -364,11 +364,11 @@
 <div class="mobile-sticky-actions md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 p-3">
   <div class="grid grid-cols-3 gap-2">
     <a href="<?= $basePath ?>/purchases" class="h-10 rounded-lg border border-slate-600 text-slate-100 text-sm flex items-center justify-center">Вернуться</a>
-    <button type="submit" form="" onclick="document.querySelector('form[action$=\"/purchases/update\"]')?.requestSubmit();" class="h-10 rounded-lg border border-slate-600 text-slate-100 text-sm">Сохранить</button>
+    <button type="submit" form="purchase-update-form" class="h-10 rounded-lg border border-slate-600 text-slate-100 text-sm">Сохранить</button>
     <?php if (($batch['status'] ?? '') === 'planned'): ?>
-      <button type="submit" onclick="{ const form = document.querySelector('form[action$=\"/purchases/update\"]'); const buyButton = form?.querySelector('.js-purchase-buy-submit'); if (form && buyButton) form.requestSubmit(buyButton); }" class="h-10 rounded-lg bg-emerald-600 text-white text-sm">Выкуплено</button>
+      <button type="submit" form="purchase-update-form" formaction="<?= $basePath ?>/purchases/purchased" class="h-10 rounded-lg bg-emerald-600 text-white text-sm">Выкуплено</button>
     <?php elseif (($batch['status'] ?? '') === 'purchased'): ?>
-      <button type="submit" onclick="document.querySelector('form[action$=\"/purchases/arrived\"]')?.requestSubmit();" class="h-10 rounded-lg bg-blue-600 text-white text-sm">В магазине</button>
+      <button type="submit" form="purchase-arrived-form" class="h-10 rounded-lg bg-blue-600 text-white text-sm">В магазине</button>
     <?php else: ?>
       <button type="button" disabled class="h-10 rounded-lg bg-gray-200 text-gray-500 text-sm">Готово</button>
     <?php endif; ?>
