@@ -128,24 +128,10 @@ public function cart(): void
     // 3) Пересчитываем общую сумму корзины
     $this->refreshCartTotal();
 
-    // 4) Получаем баланс баллов пользователя
-    $pointsStmt = $this->pdo->prepare("SELECT points_balance FROM users WHERE id = ?");
-    $pointsStmt->execute([$userId]);
-    $pointsBalance = (int)$pointsStmt->fetchColumn();
-
-    // 5) Составляем debug-данные (при необходимости)
-    $debugData = [
-        'raw_items'     => $items,
-        'cart_total'    => $_SESSION['cart_total'] ?? 0,
-        'pointsBalance' => $pointsBalance,
-        'today'         => date('Y-m-d'),
-    ];
-
-    // 6) Рендерим шаблон
+    // 4) Рендерим шаблон
     view('client/cart', [
         'items'      => $items,
         'userName'   => $_SESSION['name'] ?? null,
-        'debugData'  => $debugData,
     ]);
 }
 
@@ -467,22 +453,7 @@ public function cart(): void
         );
         $slots = $slotsStmt->fetchAll(PDO::FETCH_ASSOC);
     
-        // 9) Собираем debug-данные
-        $debugData = [
-            'raw_items'        => $rawItems,
-            'groups'           => $groups,
-            'subtotal'         => $subtotal,
-            'pointsBalance'    => $pointsBalance,
-            'pointsToUse'      => $pointsToUse,
-            'discountPercent'  => $discountPercent,
-            'couponPoints'     => $couponPoints,
-            'finalTotal'       => $finalTotal,
-            'today'            => date('Y-m-d'),
-            'address'          => $address,
-            'session_delivery' => $_SESSION['delivery_date'],
-        ];
-    
-        // 10) Рендерим шаблон, передаём всё в view
+        // 9) Рендерим шаблон, передаём всё в view
         view('client/checkout', [
             'groups'           => $groups,
             'subtotal'         => $subtotal,
@@ -498,7 +469,6 @@ public function cart(): void
             'userName'         => $_SESSION['name'] ?? null,
             'today'            => date('Y-m-d'),
             'slots'            => $slots,
-            'debugData'        => $debugData,
         ]);
     }
 
@@ -1168,16 +1138,10 @@ public function cancelReservedOrder(int $orderId): void
             }
         }
 
-        $debugData = [
-            'ordersCount' => count($orders),
-            'today'       => date('Y-m-d'),
-        ];
-
         view('client/orders', [
             'ordersAwaiting' => $awaiting,
             'orders'         => $rest,
             'userName'       => $_SESSION['name'] ?? null,
-            'debugData'      => $debugData,
         ]);
     }
 
@@ -1195,17 +1159,10 @@ public function cancelReservedOrder(int $orderId): void
         $addr->execute([$userId]);
         $address = $addr->fetchColumn() ?: '';
 
-        $debugData = [
-            'userInfo' => $user,
-            'address'  => $address,
-            'today'    => date('Y-m-d'),
-        ];
-
         view('client/profile', [
             'user'      => $user,
             'address'   => $address,
             'userName'  => $_SESSION['name'] ?? null,
-            'debugData' => $debugData,
         ]);
     }
 
@@ -1257,17 +1214,10 @@ public function cancelReservedOrder(int $orderId): void
         }
         unset($intent);
 
-        $debugData = [
-            'favoritesCount' => count($favorites),
-            'preorderCount'  => count($preorderIntents),
-            'today'          => date('Y-m-d'),
-        ];
-
         view('client/favorites', [
             'favorites' => $favorites,
             'preorderIntents' => $preorderIntents,
             'userName'  => $_SESSION['name'] ?? null,
-            'debugData' => $debugData,
         ]);
     }
     /** Настройки уведомлений */

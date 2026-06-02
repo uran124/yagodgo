@@ -115,13 +115,11 @@ class ClientCatalogServiceTest extends TestCase
         $this->assertSame(1, (int)$saleByAlias['sale-product']['has_planned_batch']);
     }
 
-    public function testCatalogDataReturnsProductsTypesAndDebugInfo(): void
+    public function testCatalogDataReturnsProductsAndTypes(): void
     {
         $data = $this->service->getCatalogData('2025-03-23');
 
         $this->assertCount(4, $data['products']);
-        $this->assertSame(4, $data['debugData']['productsCount']);
-        $this->assertSame('2025-03-23', $data['debugData']['today']);
         $this->assertSame('Клубника', $data['types'][0]['name']);
         $productsByAlias = array_column($data['products'], null, 'alias');
         $this->assertSame('sale', $productsByAlias['sale-product']['catalog_section']);

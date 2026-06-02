@@ -1010,15 +1010,14 @@ class UsersController
             }
             $target = $redirectUrl !== '' ? $redirectUrl : $basePath . '/edit?id=' . $id;
             $separator = strpos($target, '?') === false ? '?' : '&';
-            $debug = sprintf(
+            error_log(sprintf(
                 'delete_user_failed | user_id=%d | type=%s | code=%s | message=%s',
                 $id,
                 get_class($e),
                 (string)$e->getCode(),
                 $e->getMessage()
-            );
-            error_log($debug);
-            header('Location: ' . $target . $separator . 'error=' . urlencode('Не удалось удалить пользователя') . '&debug_delete=' . urlencode($debug));
+            ));
+            header('Location: ' . $target . $separator . 'error=' . urlencode('Не удалось удалить пользователя'));
             exit;
         }
 

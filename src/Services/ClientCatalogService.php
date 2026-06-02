@@ -109,10 +109,6 @@ class ClientCatalogService
         return [
             'products' => $products,
             'types' => $this->fetchActiveTypes(),
-            'debugData' => [
-                'productsCount' => count($products),
-                'today' => $today,
-            ],
         ];
     }
 

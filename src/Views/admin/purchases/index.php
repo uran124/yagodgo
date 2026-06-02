@@ -427,7 +427,6 @@
           .catch(function (err) {
             list.innerHTML = '<div class="p-3 text-sm text-red-500">Не удалось загрузить список броней. Обновите страницу или попробуйте позже.</div>';
             modal.classList.add('is-open');
-            console.error(err);
           });
       });
     });

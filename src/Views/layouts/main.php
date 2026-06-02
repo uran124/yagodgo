@@ -445,7 +445,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/service-worker.js')
-        .catch(e => console.error('Service worker registration failed:', e));
+        .catch(() => {});
     }
   </script>
 </head>
@@ -904,7 +904,6 @@
     });
 
     window.addEventListener('appinstalled', () => {
-      console.log('✅ Приложение установлено');
       showInstalled();
     });
 
@@ -914,9 +913,6 @@
       } else {
         showInstall();
       }
-
-
-
 
       installPromptClose?.addEventListener('click', () => {
         sessionStorage.setItem('installPromptClosed', '1');
@@ -928,10 +924,7 @@
           deferredPrompt.prompt();
           deferredPrompt.userChoice.then((choiceResult) => {
             if (choiceResult.outcome === 'accepted') {
-              console.log('✅ Пользователь установил приложение');
               showInstalled();
-            } else {
-              console.log('❌ Пользователь отказался от установки');
             }
             deferredPrompt = null;
           });
@@ -975,99 +968,6 @@
     });
   });
 </script>
-
-  
-  
-      
-      
-      
-      <!-- DEBUG OVERLAY (скрыт по умолчанию) 
-    <div id="debugOverlay" style="
-        position: fixed;
-        bottom: 10px;
-        right: 10px;
-        width: 320px;
-        max-height: 50vh;
-        overflow-y: auto;
-        background: rgba(0,0,0,0.8);
-        color: #fff;
-        font-family: monospace;
-        font-size: 12px;
-        line-height: 1.2;
-        padding: 8px;
-        border-radius: 6px;
-        z-index: 9999;
-        display: none;
-    ">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-        <strong>DEBUG INFO</strong>
-        <button id="debugToggle" style="
-            background: transparent;
-            border: none;
-            color: #fff;
-            font-weight: bold;
-            cursor: pointer;
-            font-size: 14px;
-        ">×</button>
-      </div>
-      <pre id="debugContent" style="white-space: pre-wrap;"></pre>
-    </div>
-
-    <button id="debugOpenBtn" style="
-        position: fixed;
-        bottom: 10px;
-        right: 10px;
-        background: #e53e3e;
-        color: #fff;
-        border: none;
-        border-radius: 4px;
-        padding: 6px 10px;
-        font-size: 12px;
-        cursor: pointer;
-        z-index: 9999;
-    ">Открыть DEBUG</button>
-
-    <script>
-      // Получаем переменную debugData из PHP, если она определена
-      const __DEBUG_DATA__ = <?= json_encode($debugData ?? [], JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT) ?>;
-
-      const overlay = document.getElementById('debugOverlay');
-      const content = document.getElementById('debugContent');
-      const btnOpen = document.getElementById('debugOpenBtn');
-      const btnClose = document.getElementById('debugToggle');
-
-      // Заполняем содержимое, если debugData есть
-      if (__DEBUG_DATA__ && Object.keys(__DEBUG_DATA__).length > 0) {
-        content.textContent = JSON.stringify(__DEBUG_DATA__, null, 2);
-      } else {
-        content.textContent = "Нет данных для отладки";
-      }
-
-      // Открыть оверлей
-      btnOpen.addEventListener('click', () => {
-        overlay.style.display = 'block';
-        btnOpen.style.display = 'none';
-      });
-
-      // Закрыть оверлей
-      btnClose.addEventListener('click', () => {
-        overlay.style.display = 'none';
-        btnOpen.style.display = 'block';
-      });
-    </script>
-      -->
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
 <!-- ====== МОДАЛЬНОЕ ОКНО «Клубнички» – ЯРКИЙ СТИЛЬ, ОПТИМИЗИРОВАННОЕ ДЛЯ МОБИЛЬНЫХ УСТРОЙСТВ ====== -->
 <div id="pointsPopupBackdrop" class="fixed inset-0 bg-black/50 z-50 hidden"></div>
 <div id="pointsPopup" class="fixed inset-0 flex items-center justify-center z-50 hidden px-4">

@@ -159,8 +159,7 @@ class OrdersController
     public function create(): void
     {
         $pageService = new AdminOrdersPageService($this->pdo);
-        $data = $pageService->buildCreateData($_SESSION);
-        unset($_SESSION['debug_order_data']);
+        $data = $pageService->buildCreateData();
 
         viewAdmin('orders/create', array_merge([
             'pageTitle' => 'Создать заказ',
@@ -188,13 +187,6 @@ class OrdersController
             }
             $pin   = trim($_POST['new_pin'] ?? '');
             if (!preg_match('/^7\d{10}$/', $phone) || !preg_match('/^\d{4}$/', $pin)) {
-                $_SESSION['debug_order_data'] = [
-                    'name'    => $name,
-                    'phone'   => $phone,
-                    'address' => $address,
-                    'pin'     => $pin,
-                    'raw'     => $_POST,
-                ];
                 header('Location: ' . $this->basePath() . '/create?error=' . urlencode('invalid user'));
                 exit;
             }
@@ -203,13 +195,6 @@ class OrdersController
             $stmt = $this->pdo->prepare('SELECT id FROM users WHERE phone = ?');
             $stmt->execute([$phone]);
             if ($stmt->fetchColumn()) {
-                $_SESSION['debug_order_data'] = [
-                    'name'    => $name,
-                    'phone'   => $phone,
-                    'address' => $address,
-                    'pin'     => $pin,
-                    'raw'     => $_POST,
-                ];
                 header('Location: ' . $this->basePath() . '/create?error=' . urlencode('phone_exists'));
                 exit;
             }
