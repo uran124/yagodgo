@@ -230,7 +230,7 @@ $nextSupplyDateText = $showNextSupplyBadge ? date('d.m.Y', strtotime($plannedDat
       <?php endif; ?>
 
       <!-- Кнопки действий -->
-      <?php if (in_array((string)($_SESSION['role'] ?? ''), ['client','partner','seller','admin']) && $active): ?>
+      <?php if (in_array((string)($_SESSION['role'] ?? ''), ['client','partner','manager','seller','admin']) && $active): ?>
 
         <form action="/cart/add" method="post"
               class="add-to-cart-form"

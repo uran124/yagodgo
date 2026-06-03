@@ -485,34 +485,22 @@
   </a>
 
   <div class="flex items-center space-x-3">
-    <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
-      <button id="adminToggle" class="material-icons-round text-2xl text-gray-600 hover:text-emerald-500 transition-colors p-2 hover:bg-emerald-50 rounded-xl">settings</button>
-    <?php elseif (($_SESSION['role'] ?? '') === 'manager'): ?>
-      <a href="/manager/users/edit" class="p-2 text-gray-600 hover:text-[#C86052]" title="Добавить пользователя">
-        <span class="material-icons-round">person_add</span>
-      </a>
-      <a href="/manager/orders/create" class="p-2 text-gray-600 hover:text-[#C86052]" title="Создать заказ">
-        <span class="material-icons-round">add_shopping_cart</span>
-      </a>
-      <a href="/manager/profile" class="p-2 text-gray-600 hover:text-[#C86052]" title="Дашборд">
-        <span class="material-icons-round">dashboard</span>
-      </a>
-    <?php elseif (($_SESSION['role'] ?? '') === 'partner'): ?>
-      <a href="/partner/users/edit" class="p-2 text-gray-600 hover:text-[#C86052]" title="Добавить пользователя">
-        <span class="material-icons-round">person_add</span>
-      </a>
-      <a href="/partner/orders/create" class="p-2 text-gray-600 hover:text-[#C86052]" title="Создать заказ">
-        <span class="material-icons-round">add_shopping_cart</span>
-      </a>
-      <a href="/partner/profile" class="p-2 text-gray-600 hover:text-[#C86052]" title="Дашборд">
-        <span class="material-icons-round">dashboard</span>
-      </a>
-    <?php elseif (($_SESSION['role'] ?? '') === 'seller'): ?>
-      <a href="/seller/products" class="p-2 text-gray-600 hover:text-[#C86052]" title="Товары">
-        <span class="material-icons-round">inventory_2</span>
-      </a>
-      <a href="/seller/dashboard" class="p-2 text-gray-600 hover:text-[#C86052]" title="Дашборд">
-        <span class="material-icons-round">dashboard</span>
+    <?php
+      $headerRole = (string)($_SESSION['role'] ?? '');
+      $adminSectionUrls = [
+        'admin' => '/admin/dashboard',
+        'manager' => '/manager/dashboard',
+        'partner' => '/partner/dashboard',
+        'seller' => '/seller/dashboard',
+      ];
+      $adminSectionUrl = $adminSectionUrls[$headerRole] ?? null;
+    ?>
+    <?php if ($adminSectionUrl !== null): ?>
+      <a href="<?= htmlspecialchars($adminSectionUrl) ?>"
+         class="p-2 text-gray-600 hover:text-[#C86052] transition-colors hover:bg-red-50 rounded-xl"
+         title="Перейти в админский раздел"
+         aria-label="Перейти в админский раздел">
+        <span class="material-icons-round">admin_panel_settings</span>
       </a>
     <?php endif; ?>
 
