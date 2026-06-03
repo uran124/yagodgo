@@ -2,7 +2,7 @@
 <div class="bg-white p-4 rounded shadow">
   <div class="flex items-center justify-between">
     <div>
-      <h2 class="text-lg font-semibold mb-1">Sitemap</h2>
+      <h2 class="text-lg font-semibold mb-1">Карта сайта</h2>
       <div class="text-sm text-gray-600">Последнее обновление:
         <?= $sitemap['last_generated'] ? htmlspecialchars($sitemap['last_generated']) : 'никогда' ?>
       </div>
@@ -14,7 +14,7 @@
       </label>
     </form>
   </div>
-  <a href="/admin/apps/sitemap" class="text-[#C86052] hover:underline mt-4 inline-block">Настройки</a>
+  <a href="/admin/apps/sitemap" class="text-[#C86052] hover:underline mt-4 inline-block">Открыть настройки карты сайта</a>
 </div>
 
 <div class="bg-white p-4 rounded shadow mt-6">

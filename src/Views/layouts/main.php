@@ -130,8 +130,8 @@
         }
       ],
       "sameAs": [
-        "https://t.me/klubnikovoe",
-        "https://t.me/klubnikovoe_bot"
+        "https://t.me/berryGo24",
+        "https://vk.com/berryGo_ru"
       ],
       "makesOffer": {
         "@type": "Offer",
@@ -797,54 +797,59 @@
   </nav>
 
   <footer class="hidden md:block glass-effect border-t border-white/20 mt-8">
-    <div class="max-w-screen-xl mx-auto py-8 px-6 grid grid-cols-2 lg:grid-cols-4 gap-8 text-sm text-gray-700">
-      <div>
-        <h3 class="font-semibold mb-2">О компании</h3>
-        <p class="mb-1">berryGo — доставка ягод и фруктов по Красноярску</p>
-        <p class="mb-1">Адрес: Красноярск, ул. 9 Мая, 73</p>
-        <p class="mb-1">Время работы: Пн–Вс 9:00–21:00</p>
-        <p class="mb-1">Телефон:
-          <a href="tel:+79029237794" class="text-red-500 hover:underline">+7 902 923‑77‑94</a>
-        </p>
-        <p>E-mail:
-          <a href="mailto:support@berrygo.ru" class="text-red-500 hover:underline">support@berrygo.ru</a>
-        </p>
+    <div class="max-w-screen-xl mx-auto py-10 px-6 text-sm text-gray-700">
+      <div class="mb-8 rounded-3xl bg-gradient-to-r from-red-50 via-white to-emerald-50 p-6 shadow-sm">
+        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-red-500">BerryGo.ru · свежие ягоды в Красноярске</p>
+        <h2 class="mt-2 text-2xl font-extrabold text-gray-900">Свежая клубника, ягоды и фрукты с доставкой и самовывозом</h2>
+        <p class="mt-3 max-w-3xl leading-6 text-gray-600">BerryGo помогает купить свежие ягоды в Красноярске онлайн: каталог, предзаказы, акции, кешбэк и полезные материалы о сезонных ягодах собраны на одном сайте.</p>
       </div>
-      <div>
-        <h3 class="font-semibold mb-2">Покупателям</h3>
-        <ul class="space-y-1">
-          <li><a href="#" class="hover:underline">Доставка и оплата</a></li>
-          <li><a href="#" class="hover:underline">Частые вопросы (FAQ)</a></li>
-          <li><a href="#" class="hover:underline">Оставить отзыв</a></li>
-          <li><a href="#" class="hover:underline">Политика конфиденциальности</a></li>
-          <li><a href="#" class="hover:underline">Обработка персональных данных</a></li>
-        </ul>
-      </div>
-      <div>
-        <h3 class="font-semibold mb-2">Мы в сети</h3>
-        <ul class="space-y-1">
-          <li>
-            <a href="https://t.me/klubnikovoe" target="_blank" rel="noopener" class="hover:underline">
-              Telegram-канал @klubnikovoe
-            </a>
-          </li>
-          <li>
-            <a href="https://t.me/klubnikovoe_bot" target="_blank" rel="noopener" class="hover:underline">
-              Бот для заказов @klubnikovoe_bot
-            </a>
-          </li>
-          <li><a href="#" class="hover:underline">VK / Instagram</a></li>
-          <li><a href="#" class="hover:underline">Стикеры Telegram</a></li>
-        </ul>
-      </div>
-      <div>
-        <h3 class="font-semibold mb-2">Информация</h3>
-        <ul class="space-y-1">
-          <li><a href="/sitemap.xml" class="hover:underline">Карта сайта</a></li>
-          <li><a href="#" class="hover:underline">Реквизиты (ИП, ИНН, ОГРНИП)</a></li>
-          <li>© berryGo, 2023–2025</li>
-          <li>Разработка: berryGo team</li>
-        </ul>
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-8">
+        <div>
+          <h3 class="font-semibold mb-2">О BerryGo</h3>
+          <p class="mb-1">Доставка ягод и фруктов по Красноярску</p>
+          <p class="mb-1">Сайт: <a href="https://berrygo.ru" class="text-red-500 hover:underline">https://berryGo.ru</a></p>
+          <p class="mb-1">Адрес: Красноярск, ул. 9 Мая, 73</p>
+          <p class="mb-1">Время работы: Пн–Вс 9:00–21:00</p>
+          <p class="mb-1">Телефон: <a href="tel:+79029237794" class="text-red-500 hover:underline">+7 902 923-77-94</a></p>
+          <p>E-mail: <a href="mailto:support@berrygo.ru" class="text-red-500 hover:underline">support@berrygo.ru</a></p>
+        </div>
+        <div>
+          <h3 class="font-semibold mb-2">Популярные разделы</h3>
+          <ul class="space-y-1">
+            <li><a href="/catalog" class="hover:underline">Каталог ягод и фруктов</a></li>
+            <li><a href="/catalog/klubnika" class="hover:underline">Клубника в Красноярске</a></li>
+            <li><a href="/catalog/chereshnya" class="hover:underline">Черешня с доставкой</a></li>
+            <li><a href="/favorites" class="hover:underline">Избранное и предзаказы</a></li>
+            <li><a href="/orders" class="hover:underline">История заказов</a></li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="font-semibold mb-2">Мы в сети</h3>
+          <ul class="space-y-1">
+            <li>
+              <a href="tg://resolve?domain=berryGo24" target="_blank" rel="noopener" class="hover:underline">
+                Telegram-канал @berryGo24
+              </a>
+            </li>
+            <li>
+              <a href="https://vk.com/berryGo_ru" target="_blank" rel="noopener" class="hover:underline">
+                VK berryGo_ru
+              </a>
+            </li>
+            <li><a href="https://berrygo.ru" class="hover:underline">Официальный сайт berryGo.ru</a></li>
+            <li><a href="/sitemap.xml" class="hover:underline">XML-карта сайта</a></li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="font-semibold mb-2">Информация</h3>
+          <ul class="space-y-1">
+            <li>Самовывоз: ул. 9 Мая, 73</li>
+            <li>Заказы онлайн 24/7</li>
+            <li>Свежие поставки и предзаказы</li>
+            <li>© berryGo, 2023–2026</li>
+            <li>Разработка: berryGo team</li>
+          </ul>
+        </div>
       </div>
     </div>
   </footer>

@@ -222,6 +222,7 @@ return [
             'GET /admin/apps/sitemap' => ['App\\Controllers\\AppsController', 'sitemapSettings'],
             'POST /admin/apps/sitemap/generate' => ['App\\Controllers\\AppsController', 'generateSitemap'],
             'POST /admin/apps/sitemap/toggle-item' => ['App\\Controllers\\AppsController', 'toggleItem'],
+            'POST /admin/apps/sitemap/toggle-page' => ['App\\Controllers\\AppsController', 'togglePage'],
             'GET /admin/apps/mailing' => ['App\\Controllers\\MailingController', 'index'],
             'POST /admin/apps/mailing/toggle' => ['App\\Controllers\\MailingController', 'toggle'],
             'POST /admin/apps/mailing/comment' => ['App\\Controllers\\MailingController', 'updateComment'],

@@ -46,11 +46,55 @@ class SettingsController
         }
         $_POST['ui_home_no_stock_message'] = $noStockMessage;
 
+        $_POST['robokassa_enabled'] = isset($_POST['robokassa_enabled']) ? '1' : '0';
+        $_POST['robokassa_is_test'] = isset($_POST['robokassa_is_test']) ? '1' : '0';
+
+        $robokassaHash = strtoupper(trim((string)($_POST['robokassa_hash_algorithm'] ?? 'MD5')));
+        if (!in_array($robokassaHash, ['MD5', 'SHA256', 'SHA384', 'SHA512'], true)) {
+            $robokassaHash = 'MD5';
+        }
+        $_POST['robokassa_hash_algorithm'] = $robokassaHash;
+
+        $robokassaCulture = trim((string)($_POST['robokassa_culture'] ?? 'ru'));
+        $_POST['robokassa_culture'] = in_array($robokassaCulture, ['ru', 'en'], true) ? $robokassaCulture : 'ru';
+
+        $robokassaExpiration = isset($_POST['robokassa_expiration_minutes']) ? (int)$_POST['robokassa_expiration_minutes'] : 60;
+        $_POST['robokassa_expiration_minutes'] = (string)max(0, min(10080, $robokassaExpiration));
+
+        $robokassaEncoding = strtoupper(trim((string)($_POST['robokassa_encoding'] ?? 'UTF-8')));
+        $_POST['robokassa_encoding'] = $robokassaEncoding !== '' ? $robokassaEncoding : 'UTF-8';
+
+        $robokassaDescription = trim((string)($_POST['robokassa_default_description'] ?? ''));
+        if ($robokassaDescription === '') {
+            $robokassaDescription = 'Оплата заказа BerryGo';
+        }
+        $_POST['robokassa_default_description'] = mb_substr($robokassaDescription, 0, 100);
+
+        $robokassaUrlDefaults = [
+            'robokassa_payment_url' => 'https://auth.robokassa.ru/Merchant/Index.aspx',
+            'robokassa_result_url'  => 'https://berrygo.ru/payments/robokassa/result',
+            'robokassa_success_url' => 'https://berrygo.ru/payments/robokassa/success',
+            'robokassa_fail_url'    => 'https://berrygo.ru/payments/robokassa/fail',
+        ];
+        foreach ($robokassaUrlDefaults as $key => $defaultUrl) {
+            $url = trim((string)($_POST[$key] ?? ''));
+            $_POST[$key] = filter_var($url, FILTER_VALIDATE_URL) ? $url : $defaultUrl;
+        }
+
+        foreach (['robokassa_password1', 'robokassa_password2'] as $passwordKey) {
+            if (trim((string)($_POST[$passwordKey] ?? '')) === '') {
+                unset($_POST[$passwordKey]);
+            }
+        }
+
         foreach ($_POST as $key => $value) {
+            if (!is_scalar($value)) {
+                continue;
+            }
             $stmt = $this->pdo->prepare(
               "REPLACE INTO settings (setting_key, setting_value) VALUES (?, ?)"
             );
-            $stmt->execute([$key, trim($value)]);
+            $stmt->execute([$key, trim((string)$value)]);
         }
         header('Location: /admin/settings');
         exit;
