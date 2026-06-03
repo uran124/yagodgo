@@ -114,7 +114,7 @@
             <link itemprop="availability" href="<?= $active ? 'http://schema.org/InStock' : 'http://schema.org/OutOfStock' ?>">
           </div>
 
-          <?php if (in_array((string)($_SESSION['role'] ?? ''), ['client','partner','seller','admin']) && $active): ?>
+          <?php if (in_array((string)($_SESSION['role'] ?? ''), ['client','partner','manager','seller','admin']) && $active): ?>
             <form action="/cart/add" method="post"
                   class="add-to-cart-form"
                   data-id="<?= $product['id'] ?>"

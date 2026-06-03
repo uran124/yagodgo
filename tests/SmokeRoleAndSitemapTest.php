@@ -33,6 +33,30 @@ class SmokeRoleAndSitemapTest extends TestCase
         $this->assertFalse($middleware->isAuthorized(['admin'], ['user_id' => 101, 'role' => 'client']));
     }
 
+
+    public function testManagerAndPartnerCanUseClientPurchaseControls(): void
+    {
+        $productView = (string)file_get_contents(__DIR__ . '/../src/Views/client/product.php');
+        $cardView = (string)file_get_contents(__DIR__ . '/../src/Views/client/_card.php');
+
+        foreach ([$productView, $cardView] as $view) {
+            $this->assertStringContainsString("'partner'", $view);
+            $this->assertStringContainsString("'manager'", $view);
+            $this->assertStringContainsString('action="/cart/add"', $view);
+        }
+    }
+
+    public function testHeaderUsesSingleAdminSectionShortcutForStaff(): void
+    {
+        $layout = (string)file_get_contents(__DIR__ . '/../src/Views/layouts/main.php');
+
+        $this->assertStringContainsString("'manager' => '/manager/dashboard'", $layout);
+        $this->assertStringContainsString("'partner' => '/partner/dashboard'", $layout);
+        $this->assertStringContainsString('admin_panel_settings', $layout);
+        $this->assertStringNotContainsString('person_add</span>', $layout);
+        $this->assertStringNotContainsString('add_shopping_cart</span>', $layout);
+    }
+
     public function testSitemapGenerationWorksInCliMode(): void
     {
         $pdo = new PDO('sqlite::memory:');
