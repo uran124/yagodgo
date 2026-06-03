@@ -81,9 +81,9 @@ class SmokeRoleAndSitemapTest extends TestCase
         $controller->generateSitemap();
 
         $generated = (string)file_get_contents($sitemapPath);
-        $this->assertStringContainsString('https://example.com/catalog', $generated);
-        $this->assertStringContainsString('https://example.com/content/news/spring', $generated);
-        $this->assertStringContainsString('https://example.com/catalog/berries/fresh-box', $generated);
+        $this->assertStringContainsString('https://berrygo.ru/catalog', $generated);
+        $this->assertStringContainsString('https://berrygo.ru/content/news/spring', $generated);
+        $this->assertStringContainsString('https://berrygo.ru/catalog/berries/fresh-box', $generated);
 
         if ($original !== null) {
             file_put_contents($sitemapPath, $original);
