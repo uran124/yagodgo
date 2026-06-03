@@ -62,6 +62,35 @@ return [
         (new $class($c['pdo']))->{$action}();
         return true;
     },
+
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('GET', '/manager/chats', $method, $uri)) return false;
+        requireManager(); (new App\Controllers\SupportChatController($c['pdo'], $c['telegramConfig']))->staffIndex(); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeRegex('GET', '#^/manager/chats/user/(\d+)$#', $method, $uri, $m)) return false;
+        requireManager(); (new App\Controllers\SupportChatController($c['pdo'], $c['telegramConfig']))->staffUserChats((int)$m[1]); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeRegex('GET', '#^/manager/chats/(\d+)$#', $method, $uri, $m)) return false;
+        requireManager(); (new App\Controllers\SupportChatController($c['pdo'], $c['telegramConfig']))->staffIndex((int)$m[1]); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeRegex('POST', '#^/manager/chats/(\d+)/messages$#', $method, $uri, $m)) return false;
+        requireManager(); (new App\Controllers\SupportChatController($c['pdo'], $c['telegramConfig']))->staffMessage((int)$m[1]); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeRegex('POST', '#^/manager/chats/(\d+)/note$#', $method, $uri, $m)) return false;
+        requireManager(); (new App\Controllers\SupportChatController($c['pdo'], $c['telegramConfig']))->saveNote((int)$m[1]); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeRegex('POST', '#^/manager/chats/(\d+)/messages/(\d+)/edit$#', $method, $uri, $m)) return false;
+        requireManager(); (new App\Controllers\SupportChatController($c['pdo'], $c['telegramConfig']))->editMessage((int)$m[1], (int)$m[2]); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeRegex('POST', '#^/manager/chats/(\d+)/messages/(\d+)/hide$#', $method, $uri, $m)) return false;
+        requireManager(); (new App\Controllers\SupportChatController($c['pdo'], $c['telegramConfig']))->hideMessage((int)$m[1], (int)$m[2]); return true;
+    },
     static function (string $method, string $uri, array $c): bool {
         if (!routeRegex('GET', '#^/manager/orders/(\d+)$#', $method, $uri, $m)) return false;
         requireManager(); (new App\Controllers\OrdersController($c['pdo']))->show((int)$m[1]); return true;
