@@ -1,5 +1,18 @@
 <?php
   $points = (int)($_SESSION['points_balance'] ?? 0);
+  $supportUnreadCount = 0;
+  if (!empty($_SESSION['user_id'])) {
+      try {
+          global $pdo;
+          if (isset($pdo) && $pdo instanceof PDO) {
+              $supportUnreadStmt = $pdo->prepare('SELECT COALESCE(SUM(client_unread_count),0) FROM support_chats WHERE user_id = ?');
+              $supportUnreadStmt->execute([$_SESSION['user_id']]);
+              $supportUnreadCount = (int)$supportUnreadStmt->fetchColumn();
+          }
+      } catch (Throwable $e) {
+          $supportUnreadCount = 0;
+      }
+  }
 
   /** Метаданные страницы */
   $pageMeta = $meta ?? [];
@@ -506,6 +519,15 @@
     <?php if (!empty($_SESSION['user_id'])): ?>
       <!-- Авторизованный пользователь -->
       <?php $points = (int)($_SESSION['points_balance'] ?? 0); ?>
+      <a href="/chat"
+         class="relative ml-2 flex items-center space-x-1 rounded-full bg-white/20 px-3 py-1 text-gray-800 shadow-lg backdrop-blur-sm transition-colors hover:bg-pink-100"
+         title="Чат поддержки">
+        <span class="material-icons-round text-lg text-[#C86052]">support_agent</span>
+        <span class="hidden text-sm font-semibold sm:inline">Чат</span>
+        <?php if ($supportUnreadCount > 0): ?>
+          <span class="absolute -right-1 -top-1 min-w-5 rounded-full bg-red-500 px-1.5 text-center text-[10px] font-bold text-white"><?= $supportUnreadCount ?></span>
+        <?php endif; ?>
+      </a>
       <button
         id="openPointsPopup"
         class=" shadow-lg ml-2 flex items-center space-x-1 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 hover:bg-red-100 transition-colors hover:shadow-xl transition-shadow duration-200"
@@ -526,6 +548,12 @@
     <?php else: ?>
       <!-- Гость -->
       <a href="/login"
+         class="relative ml-2 flex items-center space-x-1 rounded-full bg-white/20 px-3 py-1 text-gray-800 backdrop-blur-sm transition-colors hover:bg-pink-100"
+         title="Войти, чтобы открыть чат поддержки">
+        <span class="material-icons-round text-lg text-[#C86052]">support_agent</span>
+        <span class="hidden text-sm font-semibold sm:inline">Чат</span>
+      </a>
+      <a href="/login"
          class="ml-2 flex items-center space-x-1 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 hover:bg-white/30 transition-colors"
          title="Войти, чтобы собирать клубнички"
       >
@@ -544,6 +572,7 @@
     $adminMenuItems = [
       ['href' => '/admin/dashboard', 'icon' => 'dashboard', 'label' => 'Dashboard', 'hover' => 'hover:from-emerald-50 hover:to-teal-50'],
       ['href' => '/admin/orders', 'icon' => 'receipt_long', 'label' => 'Заказы', 'hover' => 'hover:from-blue-50 hover:to-indigo-50'],
+      ['href' => '/admin/chats', 'icon' => 'forum', 'label' => 'Чаты', 'hover' => 'hover:from-pink-50 hover:to-red-50'],
       ['href' => '/admin/purchases', 'icon' => 'local_shipping', 'label' => 'Закупки', 'hover' => 'hover:from-sky-50 hover:to-blue-50'],
       ['href' => '/admin/products', 'icon' => 'inventory_2', 'label' => 'Товары', 'hover' => 'hover:from-purple-50 hover:to-pink-50'],
       ['href' => '/admin/product-types', 'icon' => 'category', 'label' => 'Категории', 'hover' => 'hover:from-fuchsia-50 hover:to-purple-50'],

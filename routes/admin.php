@@ -3,6 +3,31 @@
 declare(strict_types=1);
 
 return [
+
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('GET', '/admin/chats', $method, $uri)) return false;
+        requireAdmin(); (new App\Controllers\SupportChatController($c['pdo'], $c['telegramConfig']))->staffIndex(); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeRegex('GET', '#^/admin/chats/(\d+)$#', $method, $uri, $m)) return false;
+        requireAdmin(); (new App\Controllers\SupportChatController($c['pdo'], $c['telegramConfig']))->staffIndex((int)$m[1]); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeRegex('POST', '#^/admin/chats/(\d+)/messages$#', $method, $uri, $m)) return false;
+        requireAdmin(); (new App\Controllers\SupportChatController($c['pdo'], $c['telegramConfig']))->staffMessage((int)$m[1]); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeRegex('POST', '#^/admin/chats/(\d+)/note$#', $method, $uri, $m)) return false;
+        requireAdmin(); (new App\Controllers\SupportChatController($c['pdo'], $c['telegramConfig']))->saveNote((int)$m[1]); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeRegex('POST', '#^/admin/chats/(\d+)/messages/(\d+)/edit$#', $method, $uri, $m)) return false;
+        requireAdmin(); (new App\Controllers\SupportChatController($c['pdo'], $c['telegramConfig']))->editMessage((int)$m[1], (int)$m[2]); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeRegex('POST', '#^/admin/chats/(\d+)/messages/(\d+)/hide$#', $method, $uri, $m)) return false;
+        requireAdmin(); (new App\Controllers\SupportChatController($c['pdo'], $c['telegramConfig']))->hideMessage((int)$m[1], (int)$m[2]); return true;
+    },
     static function (string $method, string $uri, array $c): bool {
         if (!routeExact('GET', '/admin/dashboard', $method, $uri)) return false;
         requireAdmin(); (new App\Controllers\AdminController($c['pdo']))->dashboard(); return true;
