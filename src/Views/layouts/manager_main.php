@@ -426,12 +426,17 @@ $isMobileNavActive = static function (string $href) use ($currentPath): bool {
         <a href="<?= $base ?>/profile" class="hover:underline">Профиль</a>
       </nav>
     </div>
-    <form action="/logout" method="post">
-      <?= csrf_field() ?>
-      <button type="submit" class="flex items-center text-red-500 hover:underline">
-        <span class="material-icons-round mr-1">logout</span> Выход
-      </button>
-    </form>
+    <div class="flex items-center gap-2 md:gap-3">
+      <a href="/" class="flex h-10 w-10 items-center justify-center rounded-full bg-[#C86052]/10 text-[#C86052] transition hover:bg-[#C86052]/20 focus:outline-none focus:ring-2 focus:ring-[#C86052]" aria-label="Перейти на клиентскую часть сайта" title="Клиентская часть сайта">
+        <span class="material-icons-round text-base" aria-hidden="true">storefront</span>
+      </a>
+      <form action="/logout" method="post">
+        <?= csrf_field() ?>
+        <button type="submit" class="flex items-center text-red-500 hover:underline">
+          <span class="material-icons-round mr-1">logout</span> Выход
+        </button>
+      </form>
+    </div>
   </header>
 
   <!-- Контент -->
