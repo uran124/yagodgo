@@ -550,21 +550,36 @@
       $supportStaffUnreadCount = 0;
     }
     $currentPath = strtok($_SERVER['REQUEST_URI'] ?? '', '?') ?: '/';
-    $menuItems = [
-      ['href' => '/admin/dashboard', 'icon' => 'dashboard', 'label' => 'Dashboard'],
-      ['href' => '/admin/orders', 'icon' => 'receipt_long', 'label' => 'Заказы'],
-      ['href' => '/admin/chats', 'icon' => 'forum', 'label' => 'Чаты'],
-      ['href' => '/admin/purchases', 'icon' => 'local_shipping', 'label' => 'Закупки'],
-      ['href' => '/admin/products', 'icon' => 'inventory_2', 'label' => 'Товары'],
-      ['href' => '/admin/product-types', 'icon' => 'category', 'label' => 'Категории'],
-      ['href' => '/admin/slots', 'icon' => 'calendar_today', 'label' => 'Слоты'],
-      ['href' => '/admin/coupons', 'icon' => 'local_offer', 'label' => 'Промокоды'],
-      ['href' => '/admin/content', 'icon' => 'article', 'label' => 'Контент'],
-      ['href' => '/admin/users', 'icon' => 'people', 'label' => 'Пользователи'],
-      ['href' => '/admin/sellers', 'icon' => 'storefront', 'label' => 'Селлеры'],
-      ['href' => '/admin/apps', 'icon' => 'apps', 'label' => 'Приложения'],
-      ['href' => '/admin/settings', 'icon' => 'settings', 'label' => 'Настройки'],
-    ];
+    $layoutRole = $_SESSION['role'] ?? '';
+    $adminLayoutBase = $layoutRole === 'manager' ? '/manager' : '/admin';
+    $adminLayoutTitle = $layoutRole === 'manager' ? 'BerryGo Manager' : 'BerryGo Admin';
+    if ($layoutRole === 'manager') {
+      $menuItems = [
+        ['href' => '/manager/dashboard', 'icon' => 'dashboard', 'label' => 'Dashboard'],
+        ['href' => '/manager/orders', 'icon' => 'receipt_long', 'label' => 'Заказы'],
+        ['href' => '/manager/chats', 'icon' => 'forum', 'label' => 'Чаты'],
+        ['href' => '/manager/purchases', 'icon' => 'local_shipping', 'label' => 'Закупки'],
+        ['href' => '/manager/products', 'icon' => 'inventory_2', 'label' => 'Товары'],
+        ['href' => '/manager/users', 'icon' => 'people', 'label' => 'Пользователи'],
+        ['href' => '/manager/profile', 'icon' => 'account_circle', 'label' => 'Профиль'],
+      ];
+    } else {
+      $menuItems = [
+        ['href' => '/admin/dashboard', 'icon' => 'dashboard', 'label' => 'Dashboard'],
+        ['href' => '/admin/orders', 'icon' => 'receipt_long', 'label' => 'Заказы'],
+        ['href' => '/admin/chats', 'icon' => 'forum', 'label' => 'Чаты'],
+        ['href' => '/admin/purchases', 'icon' => 'local_shipping', 'label' => 'Закупки'],
+        ['href' => '/admin/products', 'icon' => 'inventory_2', 'label' => 'Товары'],
+        ['href' => '/admin/product-types', 'icon' => 'category', 'label' => 'Категории'],
+        ['href' => '/admin/slots', 'icon' => 'calendar_today', 'label' => 'Слоты'],
+        ['href' => '/admin/coupons', 'icon' => 'local_offer', 'label' => 'Промокоды'],
+        ['href' => '/admin/content', 'icon' => 'article', 'label' => 'Контент'],
+        ['href' => '/admin/users', 'icon' => 'people', 'label' => 'Пользователи'],
+        ['href' => '/admin/sellers', 'icon' => 'storefront', 'label' => 'Селлеры'],
+        ['href' => '/admin/apps', 'icon' => 'apps', 'label' => 'Приложения'],
+        ['href' => '/admin/settings', 'icon' => 'settings', 'label' => 'Настройки'],
+      ];
+    }
   ?>
 
   <div class="flex h-screen overflow-hidden">
@@ -574,7 +589,7 @@
       <div class="flex items-center justify-between p-4 border-b border-gray-200 sidebar-header">
         <div class="flex items-center space-x-2 sidebar-logo">
           <span class="material-icons-round text-[#C86052] sidebar-logo-icon">local_florist</span>
-          <span class="font-bold text-xl text-[#C86052] sidebar-logo-text">BerryGo Admin</span>
+          <span class="font-bold text-xl text-[#C86052] sidebar-logo-text"><?= htmlspecialchars($adminLayoutTitle) ?></span>
         </div>
         <button id="sidebarCloseBtn" class="md:hidden p-2 text-gray-400 hover:text-white focus:outline-none" aria-label="Закрыть меню">
           <span class="material-icons-round">close</span>
@@ -591,7 +606,7 @@
           <a href="<?= $item['href'] ?>"
              class="menu-item flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors <?= $isActive ? 'bg-[#C86052]/20 text-[#C86052]' : 'text-gray-300 hover:text-white hover:bg-gray-700/30' ?>">
             <span class="material-icons-round text-lg mr-3"><?= $item['icon'] ?></span>
-            <span class="menu-text"><?= $item['label'] ?></span><?php if ($item['href'] === '/admin/chats' && $supportStaffUnreadCount > 0): ?><span class="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white"><?= $supportStaffUnreadCount ?></span><?php endif; ?>
+            <span class="menu-text"><?= $item['label'] ?></span><?php if (str_ends_with($item['href'], '/chats') && $supportStaffUnreadCount > 0): ?><span class="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white"><?= $supportStaffUnreadCount ?></span><?php endif; ?>
           </a>
         <?php endforeach; ?>
       </nav>
@@ -616,13 +631,10 @@
           <button id="sidebarToggle" class="p-2 rounded-full text-gray-600 hover:text-[#C86052] focus:outline-none focus:ring-2 focus:ring-[#C86052]" aria-label="Меню">
             <span class="material-icons-round">menu</span>
           </button>
-          <div class="font-bold text-xl text-[#C86052] md:hidden">BerryGo Admin</div>
+          <div class="font-bold text-xl text-[#C86052] md:hidden"><?= htmlspecialchars($adminLayoutTitle) ?></div>
         </div>
         <div class="flex items-center gap-3">
-          <a href="/" class="flex h-10 w-10 items-center justify-center rounded-full bg-[#C86052]/10 text-[#C86052] transition hover:bg-[#C86052]/20 focus:outline-none focus:ring-2 focus:ring-[#C86052]" aria-label="Перейти на клиентскую часть сайта" title="Клиентская часть сайта">
-            <span class="material-icons-round text-base" aria-hidden="true">storefront</span>
-          </a>
-          <a href="/admin/chats" class="relative flex items-center gap-1 rounded-full bg-[#C86052]/10 px-3 py-2 text-sm font-bold text-[#C86052]">
+          <a href="<?= htmlspecialchars($adminLayoutBase) ?>/chats" class="relative flex items-center gap-1 rounded-full bg-[#C86052]/10 px-3 py-2 text-sm font-bold text-[#C86052]">
             <span class="material-icons-round text-base">forum</span> Чат
             <?php if ($supportStaffUnreadCount > 0): ?><span class="absolute -right-1 -top-1 min-w-5 rounded-full bg-red-500 px-1.5 text-center text-[10px] font-bold text-white"><?= $supportStaffUnreadCount ?></span><?php endif; ?>
           </a>

@@ -117,6 +117,7 @@ class SupportChatController
 
         viewAdmin('support_chats', [
             'pageTitle' => 'Чаты поддержки',
+            'useAdminMainLayout' => true,
             'staffUsers' => $this->getStaffUsers(),
             'chats' => $this->getStaffChats(),
             'selectedChat' => $chatId ? $this->getStaffChat($chatId) : null,
@@ -139,6 +140,7 @@ class SupportChatController
 
         viewAdmin('support_chat_user_chats', [
             'pageTitle' => 'Чаты клиента',
+            'useAdminMainLayout' => true,
             'user' => $user,
             'chats' => $this->getStaffChatsForUser($userId),
             'basePath' => $this->staffBasePath(),
