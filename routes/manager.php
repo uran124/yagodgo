@@ -68,6 +68,10 @@ return [
         requireManager(); (new App\Controllers\SupportChatController($c['pdo'], $c['telegramConfig']))->staffIndex(); return true;
     },
     static function (string $method, string $uri, array $c): bool {
+        if (!routeRegex('GET', '#^/manager/chats/user/(\d+)$#', $method, $uri, $m)) return false;
+        requireManager(); (new App\Controllers\SupportChatController($c['pdo'], $c['telegramConfig']))->staffUserChats((int)$m[1]); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
         if (!routeRegex('GET', '#^/manager/chats/(\d+)$#', $method, $uri, $m)) return false;
         requireManager(); (new App\Controllers\SupportChatController($c['pdo'], $c['telegramConfig']))->staffIndex((int)$m[1]); return true;
     },

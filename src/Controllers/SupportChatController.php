@@ -117,11 +117,30 @@ class SupportChatController
 
         viewAdmin('support_chats', [
             'pageTitle' => 'Чаты поддержки',
+            'staffUsers' => $this->getStaffUsers(),
             'chats' => $this->getStaffChats(),
             'selectedChat' => $chatId ? $this->getStaffChat($chatId) : null,
             'messages' => $chatId ? $this->getMessages($chatId, $beforeMessageId) : [],
             'beforeMessageId' => $beforeMessageId,
             'attachmentsByMessage' => $chatId ? $this->getAttachmentsByMessage($chatId) : [],
+            'basePath' => $this->staffBasePath(),
+        ]);
+    }
+
+    public function staffUserChats(int $userId): void
+    {
+        requireManager();
+        $user = $this->getStaffUser($userId);
+        if (!$user) {
+            http_response_code(404);
+            echo 'Пользователь не найден';
+            return;
+        }
+
+        viewAdmin('support_chat_user_chats', [
+            'pageTitle' => 'Чаты клиента',
+            'user' => $user,
+            'chats' => $this->getStaffChatsForUser($userId),
             'basePath' => $this->staffBasePath(),
         ]);
     }
@@ -213,6 +232,54 @@ class SupportChatController
              LEFT JOIN orders o ON o.id = c.order_id
              WHERE c.user_id = ?
              ORDER BY COALESCE(c.last_message_at, c.created_at) DESC, c.id DESC"
+        );
+        $stmt->execute([$userId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    private function getStaffUsers(): array
+    {
+        $stmt = $this->pdo->query(
+            "SELECT u.id, u.name, u.phone,
+                    COUNT(c.id) AS chats_count,
+                    COALESCE(SUM(c.staff_unread_count), 0) AS unread_count,
+                    MAX(COALESCE(c.last_message_at, c.created_at)) AS last_message_at,
+                    SUBSTRING_INDEX(
+                        GROUP_CONCAT(COALESCE(last_message.body, 'Фото') ORDER BY COALESCE(c.last_message_at, c.created_at) DESC SEPARATOR '\n'),
+                        '\n',
+                        1
+                    ) AS last_body
+             FROM support_chats c
+             JOIN users u ON u.id = c.user_id
+             LEFT JOIN support_messages last_message ON last_message.id = (
+                SELECT m.id FROM support_messages m WHERE m.chat_id = c.id ORDER BY m.id DESC LIMIT 1
+             )
+             GROUP BY u.id, u.name, u.phone
+             ORDER BY unread_count DESC, last_message_at DESC, u.id DESC"
+        );
+        return $stmt ? ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
+    }
+
+    private function getStaffUser(int $userId): ?array
+    {
+        $stmt = $this->pdo->prepare('SELECT id, name, phone FROM users WHERE id = ? LIMIT 1');
+        $stmt->execute([$userId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
+    private function getStaffChatsForUser(int $userId): array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT c.*, u.name AS client_name, u.phone AS client_phone, o.status AS order_status, o.delivery_date,
+                    note_user.name AS note_user_name,
+                    (SELECT body FROM support_messages WHERE chat_id = c.id ORDER BY id DESC LIMIT 1) AS last_body
+             FROM support_chats c
+             JOIN users u ON u.id = c.user_id
+             LEFT JOIN orders o ON o.id = c.order_id
+             LEFT JOIN users note_user ON note_user.id = c.internal_note_updated_by
+             WHERE c.user_id = ?
+             ORDER BY c.staff_unread_count DESC, COALESCE(c.last_message_at, c.created_at) DESC, c.id DESC"
         );
         $stmt->execute([$userId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];

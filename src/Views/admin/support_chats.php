@@ -1,4 +1,5 @@
 <?php
+/** @var array<int,array<string,mixed>> $staffUsers */
 /** @var array<int,array<string,mixed>> $chats */
 /** @var array<string,mixed>|null $selectedChat */
 /** @var array<int,array<string,mixed>> $messages */
@@ -72,9 +73,54 @@ $shortTime = static function (?string $dateTime): string {
   .support-chat-note[open] summary { background: rgba(51, 65, 85, 0.9); }
 </style>
 
-<div class="support-telegram-shell h-[calc(100vh-9rem)] min-h-[620px] overflow-hidden rounded-2xl border border-slate-700/70 text-slate-100 shadow-2xl shadow-black/30">
+
+<?php if (!$selectedChat): ?>
+  <div class="support-telegram-shell lg:hidden min-h-[calc(100vh-9rem)] overflow-hidden rounded-2xl border border-slate-700/70 text-slate-100 shadow-2xl shadow-black/30">
+    <div class="flex h-16 items-center gap-3 border-b border-slate-800 bg-[#17212b] px-4">
+      <span class="material-icons-round text-pink-300">forum</span>
+      <div class="min-w-0 flex-1">
+        <div class="text-base font-bold text-white">Клиенты поддержки</div>
+        <div class="text-xs text-slate-400">Сначала выберите клиента</div>
+      </div>
+      <span class="rounded-full bg-sky-500/15 px-2.5 py-1 text-xs font-bold text-sky-200 ring-1 ring-sky-400/20"><?= count($staffUsers ?? []) ?></span>
+    </div>
+    <div class="p-3">
+      <label class="relative block">
+        <span class="material-icons-round pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-lg text-slate-500">search</span>
+        <input id="supportMobileUserSearch" type="search" class="support-chat-search h-11 w-full rounded-full border border-transparent bg-[#242f3d] pl-11 pr-4 text-sm text-slate-100 outline-none focus:border-sky-500/40" placeholder="Поиск клиента">
+      </label>
+    </div>
+    <div class="support-telegram-scroll max-h-[calc(100vh-14rem)] overflow-y-auto pb-3" id="supportMobileUserList">
+      <?php if (($staffUsers ?? []) === []): ?>
+        <div class="mx-3 rounded-2xl border border-slate-700 bg-slate-900/60 p-4 text-sm text-slate-400">Пока нет клиентов с обращениями.</div>
+      <?php endif; ?>
+      <?php foreach (($staffUsers ?? []) as $userRow): ?>
+        <?php
+          $clientName = (string)($userRow['name'] ?? 'Клиент');
+          $lastBody = trim((string)($userRow['last_body'] ?? '')) !== '' ? (string)$userRow['last_body'] : 'Фото';
+        ?>
+        <a href="<?= htmlspecialchars($basePath) ?>/chats/user/<?= (int)$userRow['id'] ?>" data-mobile-user-row data-search-text="<?= htmlspecialchars(mb_strtolower($clientName . ' ' . ($userRow['phone'] ?? '') . ' ' . $lastBody)) ?>" class="mx-2 flex gap-3 rounded-xl px-3 py-3 transition hover:bg-[#202b38]">
+          <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-cyan-500 text-sm font-black text-white shadow-lg shadow-black/20"><?= htmlspecialchars($initials($clientName)) ?></div>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-start justify-between gap-2">
+              <div class="truncate text-sm font-bold text-white"><?= htmlspecialchars($clientName) ?></div>
+              <div class="shrink-0 text-[11px] text-slate-500"><?= htmlspecialchars($shortTime((string)($userRow['last_message_at'] ?? ''))) ?></div>
+            </div>
+            <div class="mt-0.5 truncate text-xs text-slate-400"><?= !empty($userRow['phone']) ? htmlspecialchars((string)$userRow['phone']) . ' · ' : '' ?><?= (int)($userRow['chats_count'] ?? 0) ?> чат(а)</div>
+            <div class="mt-0.5 flex items-center justify-between gap-2">
+              <div class="truncate text-xs text-slate-300"><?= htmlspecialchars(mb_substr($lastBody, 0, 90)) ?></div>
+              <?php if ((int)($userRow['unread_count'] ?? 0) > 0): ?><span class="shrink-0 rounded-full bg-sky-500 px-2 py-0.5 text-[11px] font-black text-white"><?= (int)$userRow['unread_count'] ?></span><?php endif; ?>
+            </div>
+          </div>
+        </a>
+      <?php endforeach; ?>
+    </div>
+  </div>
+<?php endif; ?>
+
+<div class="<?= !$selectedChat ? 'hidden lg:block' : 'block' ?> support-telegram-shell h-[calc(100vh-9rem)] min-h-[620px] overflow-hidden rounded-2xl border border-slate-700/70 text-slate-100 shadow-2xl shadow-black/30">
   <div class="grid h-full min-w-0 grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)]">
-    <aside class="flex min-h-0 min-w-0 flex-col border-r border-slate-800/90 bg-[#17212b]">
+    <aside class="<?= $selectedChat ? 'hidden lg:flex' : 'flex' ?> min-h-0 min-w-0 flex-col border-r border-slate-800/90 bg-[#17212b]">
       <div class="flex h-16 shrink-0 items-center gap-3 border-b border-slate-800/80 px-4">
         <button type="button" class="flex h-10 w-10 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-700/70 hover:text-slate-100" aria-label="Меню">
           <span class="material-icons-round">menu</span>
@@ -138,6 +184,9 @@ $shortTime = static function (?string $dateTime): string {
       <?php else: ?>
         <header class="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-slate-800 bg-[#17212b] px-4">
           <div class="flex min-w-0 items-center gap-3">
+            <a href="<?= htmlspecialchars($basePath) ?>/chats/user/<?= (int)$selectedChat['user_id'] ?>" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-700/70 hover:text-slate-100 lg:hidden" title="К чатам клиента">
+              <span class="material-icons-round">arrow_back</span>
+            </a>
             <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-cyan-500 text-xs font-black text-white">
               <?= htmlspecialchars($initials((string)($selectedChat['client_name'] ?? 'Клиент'))) ?>
             </div>
@@ -253,15 +302,19 @@ $shortTime = static function (?string $dateTime): string {
 
 <script>
 (() => {
-  const input = document.getElementById('supportChatSearch');
-  if (!input) return;
-  const rows = Array.from(document.querySelectorAll('[data-chat-row]'));
-  input.addEventListener('input', () => {
-    const query = input.value.trim().toLowerCase();
-    rows.forEach((row) => {
-      const haystack = row.dataset.searchText || '';
-      row.classList.toggle('hidden', query !== '' && !haystack.includes(query));
+  const bindSearch = (inputId, rowSelector) => {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const rows = Array.from(document.querySelectorAll(rowSelector));
+    input.addEventListener('input', () => {
+      const query = input.value.trim().toLowerCase();
+      rows.forEach((row) => {
+        const haystack = row.dataset.searchText || '';
+        row.classList.toggle('hidden', query !== '' && !haystack.includes(query));
+      });
     });
-  });
+  };
+  bindSearch('supportChatSearch', '[data-chat-row]');
+  bindSearch('supportMobileUserSearch', '[data-mobile-user-row]');
 })();
 </script>

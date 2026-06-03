@@ -9,6 +9,10 @@ return [
         requireAdmin(); (new App\Controllers\SupportChatController($c['pdo'], $c['telegramConfig']))->staffIndex(); return true;
     },
     static function (string $method, string $uri, array $c): bool {
+        if (!routeRegex('GET', '#^/admin/chats/user/(\d+)$#', $method, $uri, $m)) return false;
+        requireAdmin(); (new App\Controllers\SupportChatController($c['pdo'], $c['telegramConfig']))->staffUserChats((int)$m[1]); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
         if (!routeRegex('GET', '#^/admin/chats/(\d+)$#', $method, $uri, $m)) return false;
         requireAdmin(); (new App\Controllers\SupportChatController($c['pdo'], $c['telegramConfig']))->staffIndex((int)$m[1]); return true;
     },
