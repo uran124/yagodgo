@@ -540,10 +540,20 @@
 </head>
 <body class="min-h-screen bg-gray-100 font-sans">
   <?php
+    $supportStaffUnreadCount = 0;
+    try {
+      global $pdo;
+      if (isset($pdo) && $pdo instanceof PDO) {
+        $supportStaffUnreadCount = (int)$pdo->query('SELECT COALESCE(SUM(staff_unread_count),0) FROM support_chats')->fetchColumn();
+      }
+    } catch (Throwable $e) {
+      $supportStaffUnreadCount = 0;
+    }
     $currentPath = strtok($_SERVER['REQUEST_URI'] ?? '', '?') ?: '/';
     $menuItems = [
       ['href' => '/admin/dashboard', 'icon' => 'dashboard', 'label' => 'Dashboard'],
       ['href' => '/admin/orders', 'icon' => 'receipt_long', 'label' => 'Заказы'],
+      ['href' => '/admin/chats', 'icon' => 'forum', 'label' => 'Чаты'],
       ['href' => '/admin/purchases', 'icon' => 'local_shipping', 'label' => 'Закупки'],
       ['href' => '/admin/products', 'icon' => 'inventory_2', 'label' => 'Товары'],
       ['href' => '/admin/product-types', 'icon' => 'category', 'label' => 'Категории'],
@@ -581,7 +591,7 @@
           <a href="<?= $item['href'] ?>"
              class="menu-item flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors <?= $isActive ? 'bg-[#C86052]/20 text-[#C86052]' : 'text-gray-300 hover:text-white hover:bg-gray-700/30' ?>">
             <span class="material-icons-round text-lg mr-3"><?= $item['icon'] ?></span>
-            <span class="menu-text"><?= $item['label'] ?></span>
+            <span class="menu-text"><?= $item['label'] ?></span><?php if ($item['href'] === '/admin/chats' && $supportStaffUnreadCount > 0): ?><span class="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white"><?= $supportStaffUnreadCount ?></span><?php endif; ?>
           </a>
         <?php endforeach; ?>
       </nav>
@@ -608,12 +618,18 @@
           </button>
           <div class="font-bold text-xl text-[#C86052] md:hidden">BerryGo Admin</div>
         </div>
+        <div class="flex items-center gap-3">
+          <a href="/admin/chats" class="relative flex items-center gap-1 rounded-full bg-[#C86052]/10 px-3 py-2 text-sm font-bold text-[#C86052]">
+            <span class="material-icons-round text-base">forum</span> Чат
+            <?php if ($supportStaffUnreadCount > 0): ?><span class="absolute -right-1 -top-1 min-w-5 rounded-full bg-red-500 px-1.5 text-center text-[10px] font-bold text-white"><?= $supportStaffUnreadCount ?></span><?php endif; ?>
+          </a>
         <form action="/logout" method="post" class="md:hidden">
             <?= csrf_field() ?>
           <button type="submit" class="flex items-center text-red-400 hover:text-red-300">
             <span class="material-icons-round mr-1">logout</span> Выход
           </button>
         </form>
+        </div>
       </header>
 
       <div class="flex-1 min-w-0 flex flex-col overflow-hidden">
