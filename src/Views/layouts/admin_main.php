@@ -619,6 +619,9 @@
           <div class="font-bold text-xl text-[#C86052] md:hidden">BerryGo Admin</div>
         </div>
         <div class="flex items-center gap-3">
+          <a href="/" class="flex h-10 w-10 items-center justify-center rounded-full bg-[#C86052]/10 text-[#C86052] transition hover:bg-[#C86052]/20 focus:outline-none focus:ring-2 focus:ring-[#C86052]" aria-label="Перейти на клиентскую часть сайта" title="Клиентская часть сайта">
+            <span class="material-icons-round text-base" aria-hidden="true">storefront</span>
+          </a>
           <a href="/admin/chats" class="relative flex items-center gap-1 rounded-full bg-[#C86052]/10 px-3 py-2 text-sm font-bold text-[#C86052]">
             <span class="material-icons-round text-base">forum</span> Чат
             <?php if ($supportStaffUnreadCount > 0): ?><span class="absolute -right-1 -top-1 min-w-5 rounded-full bg-red-500 px-1.5 text-center text-[10px] font-bold text-white"><?= $supportStaffUnreadCount ?></span><?php endif; ?>
