@@ -1,7 +1,9 @@
 <?php
 /** @var array $settings */
 /** @var array $themeColors */
+/** @var array $deliveryTariffZones */
 $themeColors = $themeColors ?? [];
+$deliveryTariffZones = $deliveryTariffZones ?? [];
 ?>
 <form action="/admin/settings" method="post" class="bg-white p-6 rounded shadow max-w-5xl space-y-4">
   <div>
@@ -189,6 +191,167 @@ $themeColors = $themeColors ?? [];
       <p class="mt-1">Если добавляются Receipt, StepByStep, ResultUrl2/SuccessUrl2/FailUrl2 или Shp_* параметры, их нужно включать в SignatureValue строго по правилам Robokassa.</p>
     </div>
   </fieldset>
+  <fieldset class="border border-gray-200 rounded-lg p-4 space-y-4">
+    <legend class="px-2 text-sm font-semibold text-gray-600">Доставка и расстояния</legend>
+    <div class="grid gap-3 sm:grid-cols-2">
+      <div>
+        <label class="block mb-1">Адрес магазина / точки старта</label>
+        <input name="delivery_store_address" type="text"
+               value="<?= htmlspecialchars($settings['delivery_store_address'] ?? 'Самовывоз: 9 мая, 73') ?>"
+               class="w-full border px-2 py-1 rounded">
+        <p class="mt-1 text-xs text-gray-500">Используется как человекочитаемая точка старта доставки и самовывоза.</p>
+      </div>
+      <div>
+        <label class="block mb-1">Стоимость доставки по умолчанию, ₽</label>
+        <input name="delivery_default_fee" type="number" min="0" max="100000" step="1"
+               value="<?= htmlspecialchars($settings['delivery_default_fee'] ?? '300') ?>"
+               class="w-full border px-2 py-1 rounded">
+        <p class="mt-1 text-xs text-gray-500">Fallback, если расстояние не рассчиталось или тарифная зона не найдена.</p>
+      </div>
+    </div>
+    <div class="grid gap-3 sm:grid-cols-2">
+      <div>
+        <label class="block mb-1">Широта магазина</label>
+        <input name="delivery_store_lat" type="number" min="-90" max="90" step="0.000001"
+               value="<?= htmlspecialchars($settings['delivery_store_lat'] ?? '') ?>"
+               class="w-full border px-2 py-1 rounded">
+      </div>
+      <div>
+        <label class="block mb-1">Долгота магазина</label>
+        <input name="delivery_store_lng" type="number" min="-180" max="180" step="0.000001"
+               value="<?= htmlspecialchars($settings['delivery_store_lng'] ?? '') ?>"
+               class="w-full border px-2 py-1 rounded">
+      </div>
+    </div>
+    <div class="grid gap-3 sm:grid-cols-2">
+      <div>
+        <label class="block mb-1">С какой дистанции считать по километражу, км</label>
+        <input name="delivery_per_km_from_km" type="number" min="0" max="1000" step="0.1"
+               value="<?= htmlspecialchars($settings['delivery_per_km_from_km'] ?? '6') ?>"
+               class="w-full border px-2 py-1 rounded">
+        <p class="mt-1 text-xs text-gray-500">Если адрес дальше этой границы и не попал в фиксированную зону, цена считается по ставке за км.</p>
+      </div>
+      <div>
+        <label class="block mb-1">Стоимость за километр после границы, ₽</label>
+        <input name="delivery_per_km_price" type="number" min="0" max="100000" step="1"
+               value="<?= htmlspecialchars($settings['delivery_per_km_price'] ?? '50') ?>"
+               class="w-full border px-2 py-1 rounded">
+      </div>
+    </div>
+    <div class="grid gap-3 sm:grid-cols-3">
+      <div>
+        <label class="block mb-1">OpenRouteService API key</label>
+        <input name="openrouteservice_api_key" type="password" autocomplete="new-password"
+               placeholder="<?= !empty($settings['openrouteservice_api_key']) ? 'Ключ сохранён' : 'Введите API key' ?>"
+               class="w-full border px-2 py-1 rounded">
+        <p class="mt-1 text-xs text-gray-500">Для маршрута по дороге через directions/driving-car. Пустое поле не перезаписывает сохранённый ключ.</p>
+      </div>
+      <div>
+        <label class="block mb-1">DaData API key</label>
+        <input name="dadata_api_key" type="password" autocomplete="new-password"
+               placeholder="<?= !empty($settings['dadata_api_key']) ? 'Ключ сохранён' : 'Введите API key' ?>"
+               class="w-full border px-2 py-1 rounded">
+        <p class="mt-1 text-xs text-gray-500">Для /clean/address и получения координат адреса доставки.</p>
+      </div>
+      <div>
+        <label class="block mb-1">DaData Secret key</label>
+        <input name="dadata_secret_key" type="password" autocomplete="new-password"
+               placeholder="<?= !empty($settings['dadata_secret_key']) ? 'Секрет сохранён' : 'Введите Secret key' ?>"
+               class="w-full border px-2 py-1 rounded">
+        <p class="mt-1 text-xs text-gray-500">Пустое поле не перезаписывает сохранённый секрет.</p>
+      </div>
+    </div>
+    <div class="rounded-lg border border-dashed border-gray-300 p-3 space-y-3">
+      <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-700">
+        <input name="delivery_taxi_courier_enabled" type="checkbox" value="1"
+               <?= ($settings['delivery_taxi_courier_enabled'] ?? '0') === '1' ? 'checked' : '' ?>
+               class="rounded border-gray-300 text-pink-600 focus:ring-pink-500">
+        Показывать последний вариант доставки: кнопка вызова такси-курьера
+      </label>
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label class="block mb-1">Текст кнопки</label>
+          <input name="delivery_taxi_courier_button_text" type="text"
+                 value="<?= htmlspecialchars($settings['delivery_taxi_courier_button_text'] ?? 'Вызову такси-курьера') ?>"
+                 class="w-full border px-2 py-1 rounded">
+        </div>
+        <div>
+          <label class="block mb-1">Подсказка для клиента</label>
+          <input name="delivery_taxi_courier_instructions" type="text"
+                 value="<?= htmlspecialchars($settings['delivery_taxi_courier_instructions'] ?? '') ?>"
+                 placeholder="Например: менеджер подтвердит адрес и поможет вызвать курьера"
+                 class="w-full border px-2 py-1 rounded">
+        </div>
+      </div>
+    </div>
+  </fieldset>
+
+  <fieldset class="border border-gray-200 rounded-lg p-4 space-y-4">
+    <legend class="px-2 text-sm font-semibold text-gray-600">Тарифные зоны доставки</legend>
+    <p class="text-xs text-gray-500">Диапазоны задаются в километрах по автомобильной дороге. Рекомендуем не пересекать зоны: например 0–4 км, 4–6 км, 6–8 км.</p>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="text-left text-gray-500">
+          <tr>
+            <th class="py-2 pr-2">Сорт.</th>
+            <th class="py-2 pr-2">От, км</th>
+            <th class="py-2 pr-2">До, км</th>
+            <th class="py-2 pr-2">Стоимость, ₽</th>
+            <th class="py-2 pr-2">Активна</th>
+            <th class="py-2 pr-2">Удалить</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          <?php
+            $zoneRows = $deliveryTariffZones;
+            $zoneRows[] = ['id' => '', 'min_km' => '', 'max_km' => '', 'price_rub' => '', 'sort_order' => count($zoneRows) + 1, 'is_active' => 1];
+          ?>
+          <?php foreach ($zoneRows as $idx => $zone): ?>
+            <tr>
+              <td class="py-2 pr-2">
+                <input type="hidden" name="delivery_tariff_zones[id][<?= $idx ?>]" value="<?= htmlspecialchars((string)($zone['id'] ?? '')) ?>">
+                <input name="delivery_tariff_zones[sort_order][<?= $idx ?>]" type="number" step="1"
+                       value="<?= htmlspecialchars((string)($zone['sort_order'] ?? ($idx + 1))) ?>"
+                       class="w-20 border px-2 py-1 rounded">
+              </td>
+              <td class="py-2 pr-2">
+                <input name="delivery_tariff_zones[min_km][<?= $idx ?>]" type="number" min="0" step="0.001"
+                       value="<?= htmlspecialchars((string)($zone['min_km'] ?? '')) ?>"
+                       class="w-28 border px-2 py-1 rounded">
+              </td>
+              <td class="py-2 pr-2">
+                <input name="delivery_tariff_zones[max_km][<?= $idx ?>]" type="number" min="0" step="0.001"
+                       value="<?= htmlspecialchars((string)($zone['max_km'] ?? '')) ?>"
+                       placeholder="без лимита"
+                       class="w-28 border px-2 py-1 rounded">
+              </td>
+              <td class="py-2 pr-2">
+                <input name="delivery_tariff_zones[price_rub][<?= $idx ?>]" type="number" min="0" step="1"
+                       value="<?= htmlspecialchars((string)($zone['price_rub'] ?? '')) ?>"
+                       class="w-28 border px-2 py-1 rounded">
+              </td>
+              <td class="py-2 pr-2">
+                <input name="delivery_tariff_zones[is_active][<?= $idx ?>]" type="checkbox" value="1"
+                       <?= (int)($zone['is_active'] ?? 1) === 1 ? 'checked' : '' ?>
+                       class="rounded border-gray-300 text-pink-600 focus:ring-pink-500">
+              </td>
+              <td class="py-2 pr-2">
+                <?php if (!empty($zone['id'])): ?>
+                  <label class="inline-flex items-center gap-1 text-xs text-red-600">
+                    <input name="delivery_tariff_zones[delete][<?= $idx ?>]" type="checkbox" value="1" class="rounded border-gray-300 text-red-600 focus:ring-red-500">
+                    удалить
+                  </label>
+                <?php else: ?>
+                  <span class="text-xs text-gray-400">новая</span>
+                <?php endif; ?>
+              </td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+  </fieldset>
+
   <?php if (!empty($themeColors)): ?>
     <fieldset class="border border-gray-200 rounded-lg p-4 space-y-3">
       <legend class="px-2 text-sm font-semibold text-gray-600">Цветовая тема</legend>
