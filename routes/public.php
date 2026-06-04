@@ -24,6 +24,30 @@ return [
         exit;
     },
     static function (string $method, string $uri, array $c): bool {
+        if (!in_array($method, ['GET', 'POST'], true) || !routeExact($method, '/payments/robokassa/result', $method, $uri)) {
+            return false;
+        }
+
+        (new App\Controllers\PaymentsController($c['pdo']))->robokassaResult();
+        return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
+        if (!in_array($method, ['GET', 'POST'], true) || !routeExact($method, '/payments/robokassa/success', $method, $uri)) {
+            return false;
+        }
+
+        (new App\Controllers\PaymentsController($c['pdo']))->robokassaSuccess();
+        return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
+        if (!in_array($method, ['GET', 'POST'], true) || !routeExact($method, '/payments/robokassa/fail', $method, $uri)) {
+            return false;
+        }
+
+        (new App\Controllers\PaymentsController($c['pdo']))->robokassaFail();
+        return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
         if (!routeExact('GET', '/', $method, $uri)) {
             return false;
         }

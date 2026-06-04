@@ -577,6 +577,7 @@
         ['href' => '/admin/users', 'icon' => 'people', 'label' => 'Пользователи'],
         ['href' => '/admin/sellers', 'icon' => 'storefront', 'label' => 'Селлеры'],
         ['href' => '/admin/apps', 'icon' => 'apps', 'label' => 'Приложения'],
+        ['href' => '/admin/apps/sitemap', 'icon' => 'map', 'label' => 'Карта сайта'],
         ['href' => '/admin/settings', 'icon' => 'settings', 'label' => 'Настройки'],
       ];
     }
