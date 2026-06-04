@@ -171,6 +171,14 @@ return [
         requireAdmin(); (new App\Controllers\OrdersController($c['pdo']))->show((int)$m[1]); return true;
     },
     static function (string $method, string $uri, array $c): bool {
+        if (!routeRegex('GET', '#^/admin/settings/(general|pricing|preorder|payments|delivery|theme)$#', $method, $uri, $m)) return false;
+        requireAdmin(); (new App\Controllers\SettingsController($c['pdo']))->index($m[1]); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeRegex('POST', '#^/admin/settings/(general|pricing|preorder|payments|delivery|theme)$#', $method, $uri, $m)) return false;
+        requireAdmin(); (new App\Controllers\SettingsController($c['pdo']))->save($m[1]); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
         $map = [
             '/admin/orders/assign' => 'assign',
             '/admin/orders/status' => 'updateStatus',
@@ -185,7 +193,6 @@ return [
         if ($method !== 'POST' || !isset($map[$uri])) return false;
         requireAdmin(); (new App\Controllers\OrdersController($c['pdo']))->{$map[$uri]}(); return true;
     },
-
     static function (string $method, string $uri, array $c): bool {
         $map = [
             'GET /admin/slots' => ['App\\Controllers\\SlotsController', 'index'],
