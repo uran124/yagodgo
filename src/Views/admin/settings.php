@@ -313,125 +313,109 @@ $sectionUrl = static fn(string $section): string => $section === 'general' ? '/a
     </div>
   </fieldset>
 
-  <fieldset class="overflow-hidden rounded-2xl border border-pink-100 bg-gradient-to-br from-white via-rose-50/40 to-orange-50/60 shadow-sm" data-delivery-tariffs>
-    <div class="flex flex-col gap-4 border-b border-pink-100 bg-white/70 p-5 sm:flex-row sm:items-start sm:justify-between">
-      <div>
-        <div class="inline-flex items-center gap-2 rounded-full bg-pink-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-pink-700">
-          <span class="material-icons-round text-sm">local_shipping</span>
-          Тарифы доставки
-        </div>
-        <h2 class="mt-3 text-xl font-bold text-gray-900">Варианты стоимости по зонам</h2>
-        <p class="mt-1 max-w-2xl text-sm text-gray-600">Добавляйте сколько угодно тарифов: фиксированные диапазоны, безлимитную последнюю зону и временно выключенные варианты. Все карточки сохраняются одной кнопкой «Сохранить раздел».</p>
-      </div>
+  <fieldset class="border border-gray-200 rounded-lg p-4 space-y-4" data-delivery-tariffs>
+    <legend class="px-2 text-sm font-semibold text-gray-600">Тарифные зоны доставки</legend>
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <p class="text-xs text-gray-500">Диапазоны задаются в километрах по автомобильной дороге. Рекомендуем не пересекать зоны: например 0–4 км, 4–6 км, 6–8 км.</p>
       <button type="button"
-              class="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#C86052] to-pink-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-pink-200 transition hover:-translate-y-0.5 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-offset-2"
+              class="bg-[#C86052] text-white px-4 py-2 rounded inline-flex items-center text-sm hover:bg-[#B44D47]"
               data-add-delivery-tariff>
-        <span class="material-icons-round text-base">add</span>
-        Добавить вариант
+        <span class="material-icons-round text-base mr-1">add</span> Добавить вариант
       </button>
     </div>
-
-    <div class="space-y-3 p-5" data-delivery-tariff-list>
-      <?php
-        $zoneRows = $deliveryTariffZones;
-        $zoneRows[] = ['id' => '', 'min_km' => '', 'max_km' => '', 'price_rub' => '', 'sort_order' => count($zoneRows) + 1, 'is_active' => 1];
-      ?>
-      <?php foreach ($zoneRows as $idx => $zone): ?>
-        <?php
-          $zoneId = (string)($zone['id'] ?? '');
-          $isNewZone = $zoneId === '';
-          $isActiveZone = (int)($zone['is_active'] ?? 1) === 1;
-        ?>
-        <article class="group rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-pink-200 hover:shadow-md" data-delivery-tariff-row>
-          <input type="hidden" name="delivery_tariff_zones[id][<?= $idx ?>]" value="<?= htmlspecialchars($zoneId) ?>">
-          <div class="flex flex-col gap-3 lg:flex-row lg:items-end">
-            <div class="grid flex-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <label class="block text-sm">
-                <span class="mb-1 flex items-center gap-1 font-medium text-gray-700"><span class="material-icons-round text-base text-gray-400">swap_vert</span>Сортировка</span>
+    <div class="overflow-x-auto">
+      <table class="min-w-full bg-white rounded shadow overflow-hidden text-sm">
+        <thead class="bg-gray-200 text-gray-700">
+          <tr>
+            <th class="p-3 text-left font-semibold">Сорт.</th>
+            <th class="p-3 text-left font-semibold">От, км</th>
+            <th class="p-3 text-left font-semibold">До, км</th>
+            <th class="p-3 text-left font-semibold">Стоимость, ₽</th>
+            <th class="p-3 text-center font-semibold">Активна</th>
+            <th class="p-3 text-center font-semibold">Действие</th>
+          </tr>
+        </thead>
+        <tbody data-delivery-tariff-list>
+          <?php
+            $zoneRows = $deliveryTariffZones;
+            $zoneRows[] = ['id' => '', 'min_km' => '', 'max_km' => '', 'price_rub' => '', 'sort_order' => count($zoneRows) + 1, 'is_active' => 1];
+          ?>
+          <?php foreach ($zoneRows as $idx => $zone): ?>
+            <?php
+              $zoneId = (string)($zone['id'] ?? '');
+              $isNewZone = $zoneId === '';
+              $isActiveZone = (int)($zone['is_active'] ?? 1) === 1;
+            ?>
+            <tr class="border-b hover:bg-gray-50 transition-all duration-200" data-delivery-tariff-row>
+              <td class="p-3">
+                <input type="hidden" name="delivery_tariff_zones[id][<?= $idx ?>]" value="<?= htmlspecialchars($zoneId) ?>">
                 <input name="delivery_tariff_zones[sort_order][<?= $idx ?>]" type="number" step="1"
                        value="<?= htmlspecialchars((string)($zone['sort_order'] ?? ($idx + 1))) ?>"
-                       class="w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2.5 text-sm shadow-inner transition focus:border-pink-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-pink-100">
-              </label>
-              <label class="block text-sm">
-                <span class="mb-1 flex items-center gap-1 font-medium text-gray-700"><span class="material-icons-round text-base text-gray-400">near_me</span>От, км</span>
+                       class="w-20 border px-2 py-1 rounded">
+              </td>
+              <td class="p-3">
                 <input name="delivery_tariff_zones[min_km][<?= $idx ?>]" type="number" min="0" step="0.001"
                        value="<?= htmlspecialchars((string)($zone['min_km'] ?? '')) ?>"
-                       placeholder="0"
-                       class="w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2.5 text-sm shadow-inner transition focus:border-pink-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-pink-100">
-              </label>
-              <label class="block text-sm">
-                <span class="mb-1 flex items-center gap-1 font-medium text-gray-700"><span class="material-icons-round text-base text-gray-400">flag</span>До, км</span>
+                       class="w-28 border px-2 py-1 rounded">
+              </td>
+              <td class="p-3">
                 <input name="delivery_tariff_zones[max_km][<?= $idx ?>]" type="number" min="0" step="0.001"
                        value="<?= htmlspecialchars((string)($zone['max_km'] ?? '')) ?>"
                        placeholder="без лимита"
-                       class="w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2.5 text-sm shadow-inner transition focus:border-pink-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-pink-100">
-              </label>
-              <label class="block text-sm">
-                <span class="mb-1 flex items-center gap-1 font-medium text-gray-700"><span class="material-icons-round text-base text-gray-400">payments</span>Стоимость, ₽</span>
+                       class="w-28 border px-2 py-1 rounded">
+              </td>
+              <td class="p-3">
                 <input name="delivery_tariff_zones[price_rub][<?= $idx ?>]" type="number" min="0" step="1"
                        value="<?= htmlspecialchars((string)($zone['price_rub'] ?? '')) ?>"
-                       placeholder="300"
-                       class="w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2.5 text-sm shadow-inner transition focus:border-pink-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-pink-100">
-              </label>
-            </div>
-            <div class="flex flex-wrap items-center gap-2 lg:pb-0.5">
-              <label class="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
+                       class="w-28 border px-2 py-1 rounded">
+              </td>
+              <td class="p-3 text-center">
                 <input name="delivery_tariff_zones[is_active][<?= $idx ?>]" type="checkbox" value="1"
                        <?= $isActiveZone ? 'checked' : '' ?>
-                       class="rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500">
-                Активна
-              </label>
-              <?php if (!$isNewZone): ?>
-                <label class="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm font-medium text-red-600">
-                  <input name="delivery_tariff_zones[delete][<?= $idx ?>]" type="checkbox" value="1" class="rounded border-red-300 text-red-600 focus:ring-red-500" data-delete-delivery-tariff>
-                  Удалить
-                </label>
-              <?php else: ?>
-                <button type="button" class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600" data-remove-delivery-tariff>
-                  <span class="material-icons-round text-base">close</span>
-                  Убрать
-                </button>
-              <?php endif; ?>
-            </div>
-          </div>
-        </article>
-      <?php endforeach; ?>
+                       class="rounded border-gray-300 text-pink-600 focus:ring-pink-500">
+              </td>
+              <td class="p-3 text-center">
+                <?php if (!$isNewZone): ?>
+                  <label class="inline-flex items-center gap-1 text-xs text-red-600">
+                    <input name="delivery_tariff_zones[delete][<?= $idx ?>]" type="checkbox" value="1" class="rounded border-gray-300 text-red-600 focus:ring-red-500" data-delete-delivery-tariff>
+                    удалить
+                  </label>
+                <?php else: ?>
+                  <button type="button" class="inline-flex items-center text-xs text-red-600 hover:underline" data-remove-delivery-tariff>
+                    <span class="material-icons-round text-sm mr-1">close</span> убрать
+                  </button>
+                <?php endif; ?>
+              </td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
     </div>
 
     <template data-delivery-tariff-template>
-      <article class="group rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-pink-200 hover:shadow-md" data-delivery-tariff-row>
-        <input type="hidden" name="delivery_tariff_zones[id][__INDEX__]" value="">
-        <div class="flex flex-col gap-3 lg:flex-row lg:items-end">
-          <div class="grid flex-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <label class="block text-sm">
-              <span class="mb-1 flex items-center gap-1 font-medium text-gray-700"><span class="material-icons-round text-base text-gray-400">swap_vert</span>Сортировка</span>
-              <input name="delivery_tariff_zones[sort_order][__INDEX__]" type="number" step="1" value="__SORT__" class="w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2.5 text-sm shadow-inner transition focus:border-pink-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-pink-100">
-            </label>
-            <label class="block text-sm">
-              <span class="mb-1 flex items-center gap-1 font-medium text-gray-700"><span class="material-icons-round text-base text-gray-400">near_me</span>От, км</span>
-              <input name="delivery_tariff_zones[min_km][__INDEX__]" type="number" min="0" step="0.001" placeholder="0" class="w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2.5 text-sm shadow-inner transition focus:border-pink-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-pink-100">
-            </label>
-            <label class="block text-sm">
-              <span class="mb-1 flex items-center gap-1 font-medium text-gray-700"><span class="material-icons-round text-base text-gray-400">flag</span>До, км</span>
-              <input name="delivery_tariff_zones[max_km][__INDEX__]" type="number" min="0" step="0.001" placeholder="без лимита" class="w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2.5 text-sm shadow-inner transition focus:border-pink-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-pink-100">
-            </label>
-            <label class="block text-sm">
-              <span class="mb-1 flex items-center gap-1 font-medium text-gray-700"><span class="material-icons-round text-base text-gray-400">payments</span>Стоимость, ₽</span>
-              <input name="delivery_tariff_zones[price_rub][__INDEX__]" type="number" min="0" step="1" placeholder="300" class="w-full rounded-xl border-gray-200 bg-gray-50 px-3 py-2.5 text-sm shadow-inner transition focus:border-pink-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-pink-100">
-            </label>
-          </div>
-          <div class="flex flex-wrap items-center gap-2 lg:pb-0.5">
-            <label class="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
-              <input name="delivery_tariff_zones[is_active][__INDEX__]" type="checkbox" value="1" checked class="rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500">
-              Активна
-            </label>
-            <button type="button" class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600" data-remove-delivery-tariff>
-              <span class="material-icons-round text-base">close</span>
-              Убрать
-            </button>
-          </div>
-        </div>
-      </article>
+      <tr class="border-b hover:bg-gray-50 transition-all duration-200" data-delivery-tariff-row>
+        <td class="p-3">
+          <input type="hidden" name="delivery_tariff_zones[id][__INDEX__]" value="">
+          <input name="delivery_tariff_zones[sort_order][__INDEX__]" type="number" step="1" value="__SORT__" class="w-20 border px-2 py-1 rounded">
+        </td>
+        <td class="p-3">
+          <input name="delivery_tariff_zones[min_km][__INDEX__]" type="number" min="0" step="0.001" class="w-28 border px-2 py-1 rounded">
+        </td>
+        <td class="p-3">
+          <input name="delivery_tariff_zones[max_km][__INDEX__]" type="number" min="0" step="0.001" placeholder="без лимита" class="w-28 border px-2 py-1 rounded">
+        </td>
+        <td class="p-3">
+          <input name="delivery_tariff_zones[price_rub][__INDEX__]" type="number" min="0" step="1" class="w-28 border px-2 py-1 rounded">
+        </td>
+        <td class="p-3 text-center">
+          <input name="delivery_tariff_zones[is_active][__INDEX__]" type="checkbox" value="1" checked class="rounded border-gray-300 text-pink-600 focus:ring-pink-500">
+        </td>
+        <td class="p-3 text-center">
+          <button type="button" class="inline-flex items-center text-xs text-red-600 hover:underline" data-remove-delivery-tariff>
+            <span class="material-icons-round text-sm mr-1">close</span> убрать
+          </button>
+        </td>
+      </tr>
     </template>
   </fieldset>
   <?php endif; ?>
@@ -495,7 +479,7 @@ $sectionUrl = static fn(string $section): string => $section === 'general' ? '/a
     if (!list || !template) return;
     const sortOrder = list.querySelectorAll('[data-delivery-tariff-row]').length + 1;
     const html = template.innerHTML.replaceAll('__INDEX__', String(nextIndex)).replaceAll('__SORT__', String(sortOrder));
-    const wrapper = document.createElement('div');
+    const wrapper = document.createElement('tbody');
     wrapper.innerHTML = html.trim();
     const row = wrapper.firstElementChild;
     if (!row) return;
@@ -524,8 +508,7 @@ $sectionUrl = static fn(string $section): string => $section === 'general' ? '/a
     const row = deleteCheckbox.closest('[data-delivery-tariff-row]');
     if (!row) return;
     row.classList.toggle('opacity-50', deleteCheckbox.checked);
-    row.classList.toggle('ring-2', deleteCheckbox.checked);
-    row.classList.toggle('ring-red-100', deleteCheckbox.checked);
+    row.classList.toggle('bg-red-50', deleteCheckbox.checked);
   });
 
 })();
