@@ -313,6 +313,23 @@ $sectionUrl = static fn(string $section): string => $section === 'general' ? '/a
     </div>
   </fieldset>
 
+  <fieldset class="border border-gray-200 rounded-lg p-4 space-y-3" data-delivery-test>
+    <legend class="px-2 text-sm font-semibold text-gray-600">Проверка стоимости по адресу</legend>
+    <p class="text-xs text-gray-500">Введите адрес клиента и проверьте, в какую сохранённую тарифную зону он попадает. Если DaData не настроена, можно ввести координаты: 56.010, 92.852.</p>
+    <div class="flex flex-col gap-2 sm:flex-row">
+      <input type="text"
+             class="flex-1 border px-3 py-2 rounded"
+             placeholder="Например: Красноярск, ул. 9 Мая, 73"
+             data-delivery-test-address>
+      <button type="button"
+              class="bg-[#C86052] text-white px-4 py-2 rounded inline-flex items-center justify-center text-sm hover:bg-[#B44D47]"
+              data-delivery-test-button>
+        <span class="material-icons-round text-base mr-1">search</span> Проверить
+      </button>
+    </div>
+    <div class="hidden rounded border px-3 py-2 text-sm" data-delivery-test-result></div>
+  </fieldset>
+
   <fieldset class="border border-gray-200 rounded-lg p-4 space-y-4" data-delivery-tariffs>
     <legend class="px-2 text-sm font-semibold text-gray-600">Тарифные зоны доставки</legend>
     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -469,7 +486,8 @@ $sectionUrl = static fn(string $section): string => $section === 'general' ? '/a
 <script>
 (function () {
   const root = document.querySelector('[data-delivery-tariffs]');
-  if (!root) return;
+  const testRoot = document.querySelector('[data-delivery-test]');
+  if (!root && !testRoot) return;
 
   const list = root.querySelector('[data-delivery-tariff-list]');
   const template = root.querySelector('[data-delivery-tariff-template]');
@@ -487,6 +505,79 @@ $sectionUrl = static fn(string $section): string => $section === 'general' ? '/a
     nextIndex += 1;
     const firstInput = row.querySelector('input[name*="[min_km]"]');
     if (firstInput) firstInput.focus();
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, function (char) {
+      return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'}[char];
+    });
+  }
+
+  function setTestResult(message, isError) {
+    if (!testRoot) return;
+    const result = testRoot.querySelector('[data-delivery-test-result]');
+    if (!result) return;
+    result.classList.remove('hidden', 'bg-green-50', 'border-green-200', 'text-green-800', 'bg-red-50', 'border-red-200', 'text-red-700');
+    result.classList.add(isError ? 'bg-red-50' : 'bg-green-50', isError ? 'border-red-200' : 'border-green-200', isError ? 'text-red-700' : 'text-green-800');
+    result.innerHTML = message;
+  }
+
+  async function testDeliveryAddress() {
+    if (!testRoot) return;
+    const input = testRoot.querySelector('[data-delivery-test-address]');
+    const button = testRoot.querySelector('[data-delivery-test-button]');
+    const address = input ? input.value.trim() : '';
+    if (!address) {
+      setTestResult('Введите адрес для проверки.', true);
+      return;
+    }
+
+    if (button) button.disabled = true;
+    setTestResult('Проверяем адрес и тариф…', false);
+
+    try {
+      const body = new URLSearchParams();
+      body.set('address', address);
+      const response = await fetch('/admin/settings/delivery/test-tariff', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'},
+        body: body.toString(),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        throw new Error(data.message || 'Не удалось проверить адрес.');
+      }
+
+      const zone = data.zone
+        ? `Зона: ${escapeHtml(data.zone.min_km)}–${escapeHtml(data.zone.max_km ?? '∞')} км.`
+        : 'Фиксированная зона не найдена.';
+      setTestResult(
+        `<strong>${escapeHtml(data.price_rub)} ₽</strong><br>` +
+        `${zone}<br>` +
+        `Расстояние: ${escapeHtml(data.distance_km)} км (${escapeHtml(data.distance_source)}).<br>` +
+        `${escapeHtml(data.message)}<br>` +
+        `<span class="text-xs">Адрес: ${escapeHtml(data.address)}. ${escapeHtml(data.distance_note)}</span>`,
+        false
+      );
+    } catch (error) {
+      setTestResult(escapeHtml(error.message || 'Не удалось проверить адрес.'), true);
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
+  if (testRoot) {
+    const button = testRoot.querySelector('[data-delivery-test-button]');
+    const input = testRoot.querySelector('[data-delivery-test-address]');
+    if (button) button.addEventListener('click', testDeliveryAddress);
+    if (input) {
+      input.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          testDeliveryAddress();
+        }
+      });
+    }
   }
 
   root.addEventListener('click', function (event) {

@@ -233,6 +233,51 @@ class SettingsController
         exit;
     }
 
+
+    public function testDeliveryTariff(): void
+    {
+        header('Content-Type: application/json; charset=UTF-8');
+
+        $address = trim((string)($_POST['address'] ?? ''));
+        if ($address === '') {
+            http_response_code(422);
+            echo json_encode(['ok' => false, 'message' => 'Введите адрес доставки.'], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        try {
+            $settings = $this->getSettingsMap();
+            $storeLat = $this->parseNullableFloat($settings['delivery_store_lat'] ?? '');
+            $storeLng = $this->parseNullableFloat($settings['delivery_store_lng'] ?? '');
+            if ($storeLat === null || $storeLng === null) {
+                http_response_code(422);
+                echo json_encode(['ok' => false, 'message' => 'Укажите широту и долготу магазина в настройках доставки и сохраните раздел.'], JSON_UNESCAPED_UNICODE);
+                return;
+            }
+
+            $destination = $this->resolveDeliveryAddress($address, $settings);
+            $distance = $this->calculateDeliveryDistanceKm($storeLat, $storeLng, $destination['lat'], $destination['lng'], $settings);
+            $pricing = $this->calculateDeliveryPriceForDistance($distance['km'], $settings);
+
+            echo json_encode([
+                'ok' => true,
+                'address' => $destination['address'],
+                'lat' => $this->formatDecimal($destination['lat']),
+                'lng' => $this->formatDecimal($destination['lng']),
+                'distance_km' => $this->formatDecimal($distance['km']),
+                'distance_source' => $distance['source'],
+                'distance_note' => $distance['note'],
+                'price_rub' => $pricing['price_rub'],
+                'pricing_source' => $pricing['source'],
+                'zone' => $pricing['zone'],
+                'message' => $pricing['message'],
+            ], JSON_UNESCAPED_UNICODE);
+        } catch (\Throwable $e) {
+            http_response_code(422);
+            echo json_encode(['ok' => false, 'message' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+        }
+    }
+
     private function sectionUrl(string $section): string
     {
         return $section === 'general' ? '/admin/settings' : '/admin/settings/' . $section;
@@ -346,6 +391,182 @@ class SettingsController
               KEY idx_delivery_tariff_zones_sort (sort_order, min_km)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
         );
+    }
+
+
+    /**
+     * @return array<string, string>
+     */
+    private function getSettingsMap(): array
+    {
+        $stmt = $this->pdo->query("SELECT setting_key, setting_value FROM settings");
+        return $stmt ? $stmt->fetchAll(PDO::FETCH_KEY_PAIR) : [];
+    }
+
+    /**
+     * @param array<string, string> $settings
+     * @return array{lat: float, lng: float, address: string}
+     */
+    private function resolveDeliveryAddress(string $address, array $settings): array
+    {
+        if (preg_match('/^\s*(-?\d+(?:[\.,]\d+)?)\s*[,; ]\s*(-?\d+(?:[\.,]\d+)?)\s*$/u', $address, $m)) {
+            $lat = (float)str_replace(',', '.', $m[1]);
+            $lng = (float)str_replace(',', '.', $m[2]);
+            if ($lat >= -90.0 && $lat <= 90.0 && $lng >= -180.0 && $lng <= 180.0) {
+                return ['lat' => $lat, 'lng' => $lng, 'address' => $address];
+            }
+        }
+
+        $apiKey = trim((string)($settings['dadata_api_key'] ?? ''));
+        $secretKey = trim((string)($settings['dadata_secret_key'] ?? ''));
+        if ($apiKey === '' || $secretKey === '') {
+            throw new \RuntimeException('Для проверки по адресу сохраните DaData API key и Secret key. Можно также ввести координаты в формате: 56.010, 92.852.');
+        }
+
+        $response = $this->postJson('https://cleaner.dadata.ru/api/v1/clean/address', [$address], [
+            'Authorization: Token ' . $apiKey,
+            'X-Secret: ' . $secretKey,
+        ]);
+        $item = is_array($response[0] ?? null) ? $response[0] : [];
+        $lat = $this->parseNullableFloat($item['geo_lat'] ?? '');
+        $lng = $this->parseNullableFloat($item['geo_lon'] ?? '');
+        if ($lat === null || $lng === null) {
+            throw new \RuntimeException('DaData не смогла определить координаты адреса. Уточните адрес и попробуйте ещё раз.');
+        }
+
+        return [
+            'lat' => $lat,
+            'lng' => $lng,
+            'address' => (string)($item['result'] ?? $address),
+        ];
+    }
+
+    /**
+     * @param array<string, string> $settings
+     * @return array{km: float, source: string, note: string}
+     */
+    private function calculateDeliveryDistanceKm(float $storeLat, float $storeLng, float $lat, float $lng, array $settings): array
+    {
+        $apiKey = trim((string)($settings['openrouteservice_api_key'] ?? ''));
+        if ($apiKey !== '') {
+            try {
+                $response = $this->postJson('https://api.openrouteservice.org/v2/directions/driving-car', [
+                    'coordinates' => [[$storeLng, $storeLat], [$lng, $lat]],
+                ], [
+                    'Authorization: ' . $apiKey,
+                ]);
+                $meters = $response['routes'][0]['summary']['distance'] ?? null;
+                if (is_numeric($meters) && (float)$meters > 0) {
+                    return [
+                        'km' => (float)$meters / 1000.0,
+                        'source' => 'openrouteservice',
+                        'note' => 'Расстояние рассчитано по автомобильному маршруту.',
+                    ];
+                }
+            } catch (\Throwable $e) {
+                // Ниже используем резервный расчёт по прямой, чтобы тест не был полностью заблокирован внешним API.
+            }
+        }
+
+        return [
+            'km' => $this->haversineKm($storeLat, $storeLng, $lat, $lng),
+            'source' => 'straight_line',
+            'note' => 'OpenRouteService недоступен или не настроен — показана дистанция по прямой для быстрой проверки зоны.',
+        ];
+    }
+
+    /**
+     * @param array<string, string> $settings
+     * @return array{price_rub: int, source: string, zone: ?array<string, mixed>, message: string}
+     */
+    private function calculateDeliveryPriceForDistance(float $distanceKm, array $settings): array
+    {
+        foreach ($this->getDeliveryTariffZones() as $zone) {
+            if ((int)($zone['is_active'] ?? 0) !== 1) {
+                continue;
+            }
+            $min = (float)$zone['min_km'];
+            $max = $zone['max_km'] !== null ? (float)$zone['max_km'] : null;
+            if ($distanceKm >= $min && ($max === null || $distanceKm <= $max)) {
+                return [
+                    'price_rub' => (int)$zone['price_rub'],
+                    'source' => 'tariff_zone',
+                    'zone' => $zone,
+                    'message' => sprintf('Попала в зону %.3g–%s км.', $min, $max !== null ? sprintf('%.3g', $max) : '∞'),
+                ];
+            }
+        }
+
+        $defaultFee = max(0, (int)($settings['delivery_default_fee'] ?? 300));
+        $fromKm = max(0.0, (float)str_replace(',', '.', (string)($settings['delivery_per_km_from_km'] ?? 6)));
+        $perKm = max(0, (int)($settings['delivery_per_km_price'] ?? 50));
+        if ($distanceKm > $fromKm && $perKm > 0) {
+            $extraKm = (int)ceil($distanceKm - $fromKm);
+            return [
+                'price_rub' => $defaultFee + ($extraKm * $perKm),
+                'source' => 'per_km',
+                'zone' => null,
+                'message' => sprintf('Фиксированная зона не найдена: %d ₽ + %d км × %d ₽.', $defaultFee, $extraKm, $perKm),
+            ];
+        }
+
+        return [
+            'price_rub' => $defaultFee,
+            'source' => 'default_fee',
+            'zone' => null,
+            'message' => 'Фиксированная зона не найдена — применена стоимость по умолчанию.',
+        ];
+    }
+
+    /**
+     * @param array<int, string> $headers
+     * @return mixed
+     */
+    private function postJson(string $url, array $payload, array $headers = [])
+    {
+        if (!function_exists('curl_init')) {
+            throw new \RuntimeException('На сервере недоступен curl для проверки адреса.');
+        }
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_HTTPHEADER => array_merge(['Content-Type: application/json', 'Accept: application/json'], $headers),
+            CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_UNICODE),
+            CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_TIMEOUT => 12,
+        ]);
+        $body = curl_exec($ch);
+        $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+
+        if ($body === false || $status >= 400) {
+            throw new \RuntimeException($error !== '' ? $error : 'Внешний сервис вернул ошибку HTTP ' . $status . '.');
+        }
+
+        $decoded = json_decode((string)$body, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new \RuntimeException('Внешний сервис вернул некорректный JSON.');
+        }
+
+        return $decoded;
+    }
+
+    private function parseNullableFloat($value): ?float
+    {
+        $value = str_replace(',', '.', trim((string)$value));
+        return $value !== '' && is_numeric($value) ? (float)$value : null;
+    }
+
+    private function haversineKm(float $lat1, float $lng1, float $lat2, float $lng2): float
+    {
+        $earthRadiusKm = 6371.0;
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLng = deg2rad($lng2 - $lng1);
+        $a = sin($dLat / 2) ** 2 + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
+        return $earthRadiusKm * 2 * atan2(sqrt($a), sqrt(1 - $a));
     }
 
     private function tableExists(string $table): bool
