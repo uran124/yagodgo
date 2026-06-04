@@ -4,8 +4,23 @@
 /** @var array $deliveryTariffZones */
 $themeColors = $themeColors ?? [];
 $deliveryTariffZones = $deliveryTariffZones ?? [];
+$settingsSections = $settingsSections ?? ['general' => 'Основные'];
+$activeSection = $activeSection ?? 'general';
+$sectionUrl = static fn(string $section): string => $section === 'general' ? '/admin/settings' : '/admin/settings/' . $section;
 ?>
-<form action="/admin/settings" method="post" class="bg-white p-6 rounded shadow max-w-5xl space-y-4">
+<div class="max-w-5xl space-y-4">
+  <nav class="flex flex-wrap gap-2 rounded bg-white p-3 shadow" aria-label="Разделы настроек">
+    <?php foreach ($settingsSections as $sectionKey => $sectionLabel): ?>
+      <?php $isActiveSection = $activeSection === $sectionKey; ?>
+      <a href="<?= htmlspecialchars($sectionUrl($sectionKey)) ?>"
+         class="rounded-lg px-3 py-2 text-sm font-medium transition <?= $isActiveSection ? 'bg-[#C86052] text-white shadow' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' ?>">
+        <?= htmlspecialchars($sectionLabel) ?>
+      </a>
+    <?php endforeach; ?>
+  </nav>
+
+<form action="<?= htmlspecialchars($sectionUrl($activeSection)) ?>" method="post" class="bg-white p-6 rounded shadow space-y-4">
+  <?php if ($activeSection === 'general'): ?>
   <div>
     <label class="block mb-1">Название компании</label>
     <input name="company_name" type="text"
@@ -18,6 +33,9 @@ $deliveryTariffZones = $deliveryTariffZones ?? [];
            value="<?= htmlspecialchars($settings['contact_phone'] ?? '') ?>"
            class="w-full border px-2 py-1 rounded">
   </div>
+  <?php endif; ?>
+
+  <?php if ($activeSection === 'pricing'): ?>
   <fieldset class="border border-gray-200 rounded-lg p-4 space-y-3">
     <legend class="px-2 text-sm font-semibold text-gray-600">Ценообразование закупок</legend>
     <div>
@@ -35,6 +53,9 @@ $deliveryTariffZones = $deliveryTariffZones ?? [];
       <p class="mt-1 text-xs text-gray-500">Цена в наличии и предзаказа округляются вниз до этого шага.</p>
     </div>
   </fieldset>
+  <?php endif; ?>
+
+  <?php if ($activeSection === 'preorder'): ?>
   <fieldset class="border border-gray-200 rounded-lg p-4 space-y-3">
     <legend class="px-2 text-sm font-semibold text-gray-600">Предзаказ (витрина и цены)</legend>
     <div>
@@ -56,6 +77,9 @@ $deliveryTariffZones = $deliveryTariffZones ?? [];
                 class="w-full border px-2 py-1 rounded"><?= htmlspecialchars($settings['ui_home_no_stock_message'] ?? 'На данный момент ягод нет в наличии. Воспользуйтесь нашим предложением предварительного заказа со скидкой 10% — это дополнительная скидка за оформление предварительного бронирования.') ?></textarea>
     </div>
   </fieldset>
+  <?php endif; ?>
+
+  <?php if ($activeSection === 'payments'): ?>
   <fieldset class="border border-gray-200 rounded-lg p-4 space-y-4">
     <legend class="px-2 text-sm font-semibold text-gray-600">Оплата Robokassa</legend>
     <div class="rounded-lg bg-blue-50 p-3 text-sm text-blue-900">
@@ -191,6 +215,9 @@ $deliveryTariffZones = $deliveryTariffZones ?? [];
       <p class="mt-1">Если добавляются Receipt, StepByStep, ResultUrl2/SuccessUrl2/FailUrl2 или Shp_* параметры, их нужно включать в SignatureValue строго по правилам Robokassa.</p>
     </div>
   </fieldset>
+  <?php endif; ?>
+
+  <?php if ($activeSection === 'delivery'): ?>
   <fieldset class="border border-gray-200 rounded-lg p-4 space-y-4">
     <legend class="px-2 text-sm font-semibold text-gray-600">Доставка и расстояния</legend>
     <div class="grid gap-3 sm:grid-cols-2">
@@ -352,7 +379,9 @@ $deliveryTariffZones = $deliveryTariffZones ?? [];
     </div>
   </fieldset>
 
-  <?php if (!empty($themeColors)): ?>
+  <?php endif; ?>
+
+  <?php if ($activeSection === 'theme' && !empty($themeColors)): ?>
     <fieldset class="border border-gray-200 rounded-lg p-4 space-y-3">
       <legend class="px-2 text-sm font-semibold text-gray-600">Цветовая тема</legend>
       <div class="grid gap-3 sm:grid-cols-2">
@@ -392,9 +421,9 @@ $deliveryTariffZones = $deliveryTariffZones ?? [];
       <p class="text-xs text-gray-500">Выбранный цвет применится к основным кнопкам, ссылкам и акцентам пользовательского интерфейса.</p>
     </fieldset>
   <?php endif; ?>
-  <!-- Добавьте другие поля по аналогии -->
   <button type="submit"
           class="accent-gradient text-white px-4 py-2 rounded accent-focus transition">
-    Сохранить настройки
+    Сохранить раздел
   </button>
 </form>
+</div>
