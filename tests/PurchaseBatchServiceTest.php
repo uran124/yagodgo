@@ -26,6 +26,9 @@ class PurchaseBatchServiceTest extends TestCase
             current_purchase_batch_id INTEGER,
             free_stock_boxes REAL DEFAULT 0,
             reserved_stock_boxes REAL DEFAULT 0,
+            discount_stock_boxes REAL DEFAULT 0,
+            sold_stock_boxes REAL DEFAULT 0,
+            written_off_stock_boxes REAL DEFAULT 0,
             preorder_price_per_box REAL DEFAULT 0,
             instant_price_per_box REAL DEFAULT 0,
             discount_price_per_box REAL DEFAULT 0,
@@ -43,7 +46,12 @@ class PurchaseBatchServiceTest extends TestCase
             boxes_total REAL,
             boxes_reserved REAL,
             boxes_free REAL,
+            boxes_discount REAL DEFAULT 0,
+            boxes_sold REAL DEFAULT 0,
+            boxes_written_off REAL DEFAULT 0,
             boxes_remaining REAL,
+            closed_at TEXT NULL,
+            close_reason TEXT NULL,
             purchase_price_per_box REAL,
             extra_cost_per_box REAL,
             cost_price_per_box REAL,
@@ -89,6 +97,7 @@ class PurchaseBatchServiceTest extends TestCase
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
             product_id INTEGER,
+            purchase_batch_id INTEGER NULL,
             requested_boxes REAL,
             status TEXT,
             offered_price_per_box REAL NULL,
@@ -322,6 +331,49 @@ class PurchaseBatchServiceTest extends TestCase
 
         $batchStatus = $this->pdo->query("SELECT status FROM purchase_batches WHERE id = " . (int)$batchId)->fetchColumn();
         $this->assertSame('arrived', $batchStatus);
+    }
+
+    public function testAutoCloseEligibleBatchesClosesLegacyActiveEmptyBatch(): void
+    {
+        $this->pdo->exec("INSERT INTO purchase_batches (
+            id, product_id, box_size_snapshot, box_unit_snapshot, boxes_total, boxes_reserved, boxes_free, boxes_discount, boxes_remaining,
+            purchase_price_per_box, extra_cost_per_box, cost_price_per_box, preorder_margin_percent, instant_margin_percent,
+            discount_markup_fixed, preorder_price_per_box, instant_price_per_box, discount_price_per_box,
+            preorder_unit_price, instant_unit_price, discount_unit_price, status
+        ) VALUES (
+            500, 1, 2.0, 'кг', 10, 0, 0, 0, 0,
+            1000, 0, 1000, 30, 50,
+            100, 1300, 1500, 1100,
+            650, 750, 550, 'active'
+        )");
+
+        $closed = $this->service->autoCloseEligibleBatches(500);
+
+        $this->assertSame(1, $closed);
+        $batch = $this->pdo->query("SELECT status, close_reason FROM purchase_batches WHERE id = 500")->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame('closed', $batch['status']);
+        $this->assertSame('Автозакрытие: нет активных остатков и обязательств', $batch['close_reason']);
+    }
+
+    public function testAutoCloseEligibleBatchesKeepsLegacyActiveBatchWithFreeStockOpen(): void
+    {
+        $this->pdo->exec("INSERT INTO purchase_batches (
+            id, product_id, box_size_snapshot, box_unit_snapshot, boxes_total, boxes_reserved, boxes_free, boxes_discount, boxes_remaining,
+            purchase_price_per_box, extra_cost_per_box, cost_price_per_box, preorder_margin_percent, instant_margin_percent,
+            discount_markup_fixed, preorder_price_per_box, instant_price_per_box, discount_price_per_box,
+            preorder_unit_price, instant_unit_price, discount_unit_price, status
+        ) VALUES (
+            501, 1, 2.0, 'кг', 10, 0, 1, 0, 1,
+            1000, 0, 1000, 30, 50,
+            100, 1300, 1500, 1100,
+            650, 750, 550, 'active'
+        )");
+
+        $closed = $this->service->autoCloseEligibleBatches(501);
+
+        $this->assertSame(0, $closed);
+        $status = $this->pdo->query("SELECT status FROM purchase_batches WHERE id = 501")->fetchColumn();
+        $this->assertSame('active', $status);
     }
 
 }

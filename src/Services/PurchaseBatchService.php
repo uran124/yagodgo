@@ -12,6 +12,7 @@ class PurchaseBatchService
         'planned' => ['purchased', 'closed'],
         'purchased' => ['arrived', 'closed'],
         'arrived' => ['closed'],
+        'active' => ['closed'],
         'closed' => [],
     ];
 
@@ -323,26 +324,26 @@ class PurchaseBatchService
      */
     public function autoCloseEligibleBatches(?int $batchId = null): int
     {
-        $where = "pb.status IN ('planned','purchased','arrived')
-              AND COALESCE(pb.boxes_free, 0) <= 0
-              AND COALESCE(pb.boxes_discount, 0) <= 0
+        $where = "status IN ('planned','active','purchased','arrived')
+              AND COALESCE(boxes_free, 0) <= 0
+              AND COALESCE(boxes_discount, 0) <= 0
               AND NOT EXISTS (
                 SELECT 1 FROM preorder_intents pi
-                WHERE pi.purchase_batch_id = pb.id
+                WHERE pi.purchase_batch_id = purchase_batches.id
                   AND pi.status IN ('linked_to_batch','awaiting_price_confirmation','confirmed','offer_sent')
               )
               AND NOT EXISTS (
                 SELECT 1 FROM order_items oi
                 JOIN orders o ON o.id = oi.order_id
-                WHERE oi.purchase_batch_id = pb.id
+                WHERE oi.purchase_batch_id = purchase_batches.id
                   AND o.status NOT IN ('completed','cancelled','delivered')
               )";
         $params = [];
         if ($batchId !== null && $batchId > 0) {
-            $where .= ' AND pb.id = ?';
+            $where .= ' AND id = ?';
             $params[] = $batchId;
         }
-        $stmt = $this->pdo->prepare("UPDATE purchase_batches pb SET pb.status = 'closed', pb.closed_at = NOW(), pb.close_reason = COALESCE(pb.close_reason, 'Автозакрытие: нет активных остатков и обязательств') WHERE {$where}");
+        $stmt = $this->pdo->prepare("UPDATE purchase_batches SET status = 'closed', closed_at = CURRENT_TIMESTAMP, close_reason = COALESCE(close_reason, 'Автозакрытие: нет активных остатков и обязательств') WHERE {$where}");
         $stmt->execute($params);
         return $stmt->rowCount();
     }

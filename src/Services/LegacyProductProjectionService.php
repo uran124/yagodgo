@@ -29,7 +29,7 @@ class LegacyProductProjectionService
                 COALESCE(SUM(boxes_sold), 0) AS sold_boxes,
                 COALESCE(SUM(boxes_written_off), 0) AS written_off_boxes
              FROM purchase_batches
-             WHERE product_id = ? AND status IN ("arrived", "purchased")'
+             WHERE product_id = ? AND status IN ("active", "arrived", "purchased")'
         );
         $stmt->execute([$productId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
