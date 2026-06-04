@@ -16,9 +16,10 @@ class SettingsController
         $all = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
         viewAdmin('settings', [
-          'pageTitle'   => 'Настройки',
-          'settings'    => $all,
-          'themeColors' => \get_theme_palette(),
+          'pageTitle'           => 'Настройки',
+          'settings'            => $all,
+          'themeColors'         => \get_theme_palette(),
+          'deliveryTariffZones' => $this->getDeliveryTariffZones(),
         ]);
     }
 
@@ -48,6 +49,7 @@ class SettingsController
 
         $_POST['robokassa_enabled'] = isset($_POST['robokassa_enabled']) ? '1' : '0';
         $_POST['robokassa_is_test'] = isset($_POST['robokassa_is_test']) ? '1' : '0';
+        $_POST['delivery_taxi_courier_enabled'] = isset($_POST['delivery_taxi_courier_enabled']) ? '1' : '0';
 
         $robokassaHash = strtoupper(trim((string)($_POST['robokassa_hash_algorithm'] ?? 'MD5')));
         if (!in_array($robokassaHash, ['MD5', 'SHA256', 'SHA384', 'SHA512'], true)) {
@@ -81,22 +83,171 @@ class SettingsController
             $_POST[$key] = filter_var($url, FILTER_VALIDATE_URL) ? $url : $defaultUrl;
         }
 
-        foreach (['robokassa_password1', 'robokassa_password2'] as $passwordKey) {
+        $deliveryDefaults = [
+            'delivery_store_address' => 'Самовывоз: 9 мая, 73',
+            'delivery_default_fee' => '300',
+            'delivery_per_km_from_km' => '6',
+            'delivery_per_km_price' => '50',
+            'delivery_taxi_courier_button_text' => 'Вызову такси-курьера',
+        ];
+        foreach ($deliveryDefaults as $key => $defaultValue) {
+            $value = trim((string)($_POST[$key] ?? ''));
+            $_POST[$key] = $value !== '' ? $value : $defaultValue;
+        }
+
+        foreach (['delivery_default_fee', 'delivery_per_km_price'] as $moneyKey) {
+            $value = isset($_POST[$moneyKey]) ? (int)$_POST[$moneyKey] : 0;
+            $_POST[$moneyKey] = (string)max(0, min(100000, $value));
+        }
+
+        foreach (['delivery_store_lat', 'delivery_store_lng', 'delivery_per_km_from_km'] as $floatKey) {
+            $value = str_replace(',', '.', trim((string)($_POST[$floatKey] ?? '')));
+            if ($value === '' || !is_numeric($value)) {
+                $_POST[$floatKey] = $floatKey === 'delivery_per_km_from_km' ? '6' : '';
+                continue;
+            }
+            $number = (float)$value;
+            if ($floatKey === 'delivery_store_lat') {
+                $number = max(-90.0, min(90.0, $number));
+            } elseif ($floatKey === 'delivery_store_lng') {
+                $number = max(-180.0, min(180.0, $number));
+            } else {
+                $number = max(0.0, min(1000.0, $number));
+            }
+            $_POST[$floatKey] = rtrim(rtrim(number_format($number, 6, '.', ''), '0'), '.');
+        }
+
+        $_POST['delivery_taxi_courier_instructions'] = trim((string)($_POST['delivery_taxi_courier_instructions'] ?? ''));
+
+        foreach (['robokassa_password1', 'robokassa_password2', 'openrouteservice_api_key', 'dadata_api_key', 'dadata_secret_key'] as $passwordKey) {
             if (trim((string)($_POST[$passwordKey] ?? '')) === '') {
                 unset($_POST[$passwordKey]);
             }
         }
 
-        foreach ($_POST as $key => $value) {
-            if (!is_scalar($value)) {
-                continue;
+        $deliveryTariffZones = is_array($_POST['delivery_tariff_zones'] ?? null) ? $_POST['delivery_tariff_zones'] : [];
+        unset($_POST['delivery_tariff_zones']);
+
+        $this->pdo->beginTransaction();
+        try {
+            $this->saveDeliveryTariffZones($deliveryTariffZones);
+
+            foreach ($_POST as $key => $value) {
+                if (!is_scalar($value)) {
+                    continue;
+                }
+                $stmt = $this->pdo->prepare(
+                  "REPLACE INTO settings (setting_key, setting_value) VALUES (?, ?)"
+                );
+                $stmt->execute([$key, trim((string)$value)]);
             }
-            $stmt = $this->pdo->prepare(
-              "REPLACE INTO settings (setting_key, setting_value) VALUES (?, ?)"
-            );
-            $stmt->execute([$key, trim((string)$value)]);
+            $this->pdo->commit();
+        } catch (\Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
         }
+
         header('Location: /admin/settings');
         exit;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function getDeliveryTariffZones(): array
+    {
+        if (!$this->tableExists('delivery_tariff_zones')) {
+            return [];
+        }
+
+        $stmt = $this->pdo->query(
+            "SELECT id, min_km, max_km, price_rub, sort_order, is_active
+             FROM delivery_tariff_zones
+             ORDER BY sort_order ASC, min_km ASC, id ASC"
+        );
+
+        return $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+    }
+
+    /**
+     * @param array<string, mixed> $zones
+     */
+    private function saveDeliveryTariffZones(array $zones): void
+    {
+        if (!$this->tableExists('delivery_tariff_zones')) {
+            return;
+        }
+
+        $ids = $zones['id'] ?? [];
+        $mins = $zones['min_km'] ?? [];
+        $maxes = $zones['max_km'] ?? [];
+        $prices = $zones['price_rub'] ?? [];
+        $orders = $zones['sort_order'] ?? [];
+        $actives = $zones['is_active'] ?? [];
+        $deletes = $zones['delete'] ?? [];
+
+        $count = max(count((array)$mins), count((array)$maxes), count((array)$prices), count((array)$ids));
+        $upsert = $this->pdo->prepare(
+            "INSERT INTO delivery_tariff_zones (id, min_km, max_km, price_rub, sort_order, is_active)
+             VALUES (?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE
+               min_km = VALUES(min_km),
+               max_km = VALUES(max_km),
+               price_rub = VALUES(price_rub),
+               sort_order = VALUES(sort_order),
+               is_active = VALUES(is_active)"
+        );
+        $delete = $this->pdo->prepare("DELETE FROM delivery_tariff_zones WHERE id = ?");
+
+        for ($i = 0; $i < $count; $i++) {
+            $id = (int)($ids[$i] ?? 0);
+            if ($id > 0 && isset($deletes[$i])) {
+                $delete->execute([$id]);
+                continue;
+            }
+
+            $minRaw = str_replace(',', '.', trim((string)($mins[$i] ?? '')));
+            $maxRaw = str_replace(',', '.', trim((string)($maxes[$i] ?? '')));
+            $price = (int)($prices[$i] ?? 0);
+            if ($minRaw === '' && $maxRaw === '' && $price <= 0) {
+                continue;
+            }
+            if ($minRaw === '' || !is_numeric($minRaw) || $price <= 0) {
+                continue;
+            }
+
+            $min = max(0.0, (float)$minRaw);
+            $max = ($maxRaw !== '' && is_numeric($maxRaw)) ? max(0.0, (float)$maxRaw) : null;
+            if ($max !== null && $max <= $min) {
+                continue;
+            }
+
+            $sortOrder = (int)($orders[$i] ?? ($i + 1));
+            $isActive = isset($actives[$i]) ? 1 : 0;
+            $upsert->execute([
+                $id > 0 ? $id : null,
+                $this->formatDecimal($min),
+                $max !== null ? $this->formatDecimal($max) : null,
+                max(0, min(100000, $price)),
+                $sortOrder,
+                $isActive,
+            ]);
+        }
+    }
+
+    private function tableExists(string $table): bool
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?"
+        );
+        $stmt->execute([$table]);
+        return (int)$stmt->fetchColumn() > 0;
+    }
+
+    private function formatDecimal(float $value): string
+    {
+        return rtrim(rtrim(number_format($value, 3, '.', ''), '0'), '.');
     }
 }
