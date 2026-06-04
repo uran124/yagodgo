@@ -243,6 +243,7 @@ class SettingsController
      */
     private function getDeliveryTariffZones(): array
     {
+        $this->ensureDeliveryTariffZonesTable();
         if (!$this->tableExists('delivery_tariff_zones')) {
             return [];
         }
@@ -261,6 +262,7 @@ class SettingsController
      */
     private function saveDeliveryTariffZones(array $zones): void
     {
+        $this->ensureDeliveryTariffZonesTable();
         if (!$this->tableExists('delivery_tariff_zones')) {
             return;
         }
@@ -320,6 +322,30 @@ class SettingsController
                 $isActive,
             ]);
         }
+    }
+
+
+    private function ensureDeliveryTariffZonesTable(): void
+    {
+        if ($this->tableExists('delivery_tariff_zones')) {
+            return;
+        }
+
+        $this->pdo->exec(
+            "CREATE TABLE IF NOT EXISTS delivery_tariff_zones (
+              id int UNSIGNED NOT NULL AUTO_INCREMENT,
+              min_km decimal(8,3) NOT NULL,
+              max_km decimal(8,3) DEFAULT NULL,
+              price_rub int UNSIGNED NOT NULL,
+              sort_order int NOT NULL DEFAULT 0,
+              is_active tinyint(1) NOT NULL DEFAULT 1,
+              created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+              PRIMARY KEY (id),
+              KEY idx_delivery_tariff_zones_active_range (is_active, min_km, max_km),
+              KEY idx_delivery_tariff_zones_sort (sort_order, min_km)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+        );
     }
 
     private function tableExists(string $table): bool
