@@ -313,63 +313,94 @@ $sectionUrl = static fn(string $section): string => $section === 'general' ? '/a
     </div>
   </fieldset>
 
-  <fieldset class="border border-gray-200 rounded-lg p-4 space-y-4">
+  <fieldset class="border border-gray-200 rounded-lg p-4 space-y-3" data-delivery-test>
+    <legend class="px-2 text-sm font-semibold text-gray-600">Проверка стоимости по адресу</legend>
+    <p class="text-xs text-gray-500">Введите адрес клиента и проверьте, в какую сохранённую тарифную зону он попадает. Если DaData не настроена, можно ввести координаты: 56.010, 92.852.</p>
+    <div class="flex flex-col gap-2 sm:flex-row">
+      <input type="text"
+             class="flex-1 border px-3 py-2 rounded"
+             placeholder="Например: Красноярск, ул. 9 Мая, 73"
+             data-delivery-test-address>
+      <button type="button"
+              class="bg-[#C86052] text-white px-4 py-2 rounded inline-flex items-center justify-center text-sm hover:bg-[#B44D47]"
+              data-delivery-test-button>
+        <span class="material-icons-round text-base mr-1">search</span> Проверить
+      </button>
+    </div>
+    <div class="hidden rounded border px-3 py-2 text-sm" data-delivery-test-result></div>
+  </fieldset>
+
+  <fieldset class="border border-gray-200 rounded-lg p-4 space-y-4" data-delivery-tariffs>
     <legend class="px-2 text-sm font-semibold text-gray-600">Тарифные зоны доставки</legend>
-    <p class="text-xs text-gray-500">Диапазоны задаются в километрах по автомобильной дороге. Рекомендуем не пересекать зоны: например 0–4 км, 4–6 км, 6–8 км.</p>
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <p class="text-xs text-gray-500">Диапазоны задаются в километрах по автомобильной дороге. Рекомендуем не пересекать зоны: например 0–4 км, 4–6 км, 6–8 км.</p>
+      <button type="button"
+              class="bg-[#C86052] text-white px-4 py-2 rounded inline-flex items-center text-sm hover:bg-[#B44D47]"
+              data-add-delivery-tariff>
+        <span class="material-icons-round text-base mr-1">add</span> Добавить вариант
+      </button>
+    </div>
     <div class="overflow-x-auto">
-      <table class="min-w-full text-sm">
-        <thead class="text-left text-gray-500">
+      <table class="min-w-full bg-white rounded shadow overflow-hidden text-sm">
+        <thead class="bg-gray-200 text-gray-700">
           <tr>
-            <th class="py-2 pr-2">Сорт.</th>
-            <th class="py-2 pr-2">От, км</th>
-            <th class="py-2 pr-2">До, км</th>
-            <th class="py-2 pr-2">Стоимость, ₽</th>
-            <th class="py-2 pr-2">Активна</th>
-            <th class="py-2 pr-2">Удалить</th>
+            <th class="p-3 text-left font-semibold">Сорт.</th>
+            <th class="p-3 text-left font-semibold">От, км</th>
+            <th class="p-3 text-left font-semibold">До, км</th>
+            <th class="p-3 text-left font-semibold">Стоимость, ₽</th>
+            <th class="p-3 text-center font-semibold">Активна</th>
+            <th class="p-3 text-center font-semibold">Действие</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-100">
+        <tbody data-delivery-tariff-list>
           <?php
             $zoneRows = $deliveryTariffZones;
             $zoneRows[] = ['id' => '', 'min_km' => '', 'max_km' => '', 'price_rub' => '', 'sort_order' => count($zoneRows) + 1, 'is_active' => 1];
           ?>
           <?php foreach ($zoneRows as $idx => $zone): ?>
-            <tr>
-              <td class="py-2 pr-2">
-                <input type="hidden" name="delivery_tariff_zones[id][<?= $idx ?>]" value="<?= htmlspecialchars((string)($zone['id'] ?? '')) ?>">
+            <?php
+              $zoneId = (string)($zone['id'] ?? '');
+              $isNewZone = $zoneId === '';
+              $isActiveZone = (int)($zone['is_active'] ?? 1) === 1;
+            ?>
+            <tr class="border-b hover:bg-gray-50 transition-all duration-200" data-delivery-tariff-row>
+              <td class="p-3">
+                <input type="hidden" name="delivery_tariff_zones[id][<?= $idx ?>]" value="<?= htmlspecialchars($zoneId) ?>">
                 <input name="delivery_tariff_zones[sort_order][<?= $idx ?>]" type="number" step="1"
                        value="<?= htmlspecialchars((string)($zone['sort_order'] ?? ($idx + 1))) ?>"
                        class="w-20 border px-2 py-1 rounded">
               </td>
-              <td class="py-2 pr-2">
+              <td class="p-3">
                 <input name="delivery_tariff_zones[min_km][<?= $idx ?>]" type="number" min="0" step="0.001"
                        value="<?= htmlspecialchars((string)($zone['min_km'] ?? '')) ?>"
                        class="w-28 border px-2 py-1 rounded">
               </td>
-              <td class="py-2 pr-2">
+              <td class="p-3">
                 <input name="delivery_tariff_zones[max_km][<?= $idx ?>]" type="number" min="0" step="0.001"
                        value="<?= htmlspecialchars((string)($zone['max_km'] ?? '')) ?>"
                        placeholder="без лимита"
                        class="w-28 border px-2 py-1 rounded">
               </td>
-              <td class="py-2 pr-2">
+              <td class="p-3">
                 <input name="delivery_tariff_zones[price_rub][<?= $idx ?>]" type="number" min="0" step="1"
                        value="<?= htmlspecialchars((string)($zone['price_rub'] ?? '')) ?>"
                        class="w-28 border px-2 py-1 rounded">
               </td>
-              <td class="py-2 pr-2">
+              <td class="p-3 text-center">
                 <input name="delivery_tariff_zones[is_active][<?= $idx ?>]" type="checkbox" value="1"
-                       <?= (int)($zone['is_active'] ?? 1) === 1 ? 'checked' : '' ?>
+                       <?= $isActiveZone ? 'checked' : '' ?>
                        class="rounded border-gray-300 text-pink-600 focus:ring-pink-500">
               </td>
-              <td class="py-2 pr-2">
-                <?php if (!empty($zone['id'])): ?>
+              <td class="p-3 text-center">
+                <?php if (!$isNewZone): ?>
                   <label class="inline-flex items-center gap-1 text-xs text-red-600">
-                    <input name="delivery_tariff_zones[delete][<?= $idx ?>]" type="checkbox" value="1" class="rounded border-gray-300 text-red-600 focus:ring-red-500">
+                    <input name="delivery_tariff_zones[delete][<?= $idx ?>]" type="checkbox" value="1" class="rounded border-gray-300 text-red-600 focus:ring-red-500" data-delete-delivery-tariff>
                     удалить
                   </label>
                 <?php else: ?>
-                  <span class="text-xs text-gray-400">новая</span>
+                  <button type="button" class="inline-flex items-center text-xs text-red-600 hover:underline" data-remove-delivery-tariff>
+                    <span class="material-icons-round text-sm mr-1">close</span> убрать
+                  </button>
                 <?php endif; ?>
               </td>
             </tr>
@@ -377,8 +408,33 @@ $sectionUrl = static fn(string $section): string => $section === 'general' ? '/a
         </tbody>
       </table>
     </div>
-  </fieldset>
 
+    <template data-delivery-tariff-template>
+      <tr class="border-b hover:bg-gray-50 transition-all duration-200" data-delivery-tariff-row>
+        <td class="p-3">
+          <input type="hidden" name="delivery_tariff_zones[id][__INDEX__]" value="">
+          <input name="delivery_tariff_zones[sort_order][__INDEX__]" type="number" step="1" value="__SORT__" class="w-20 border px-2 py-1 rounded">
+        </td>
+        <td class="p-3">
+          <input name="delivery_tariff_zones[min_km][__INDEX__]" type="number" min="0" step="0.001" class="w-28 border px-2 py-1 rounded">
+        </td>
+        <td class="p-3">
+          <input name="delivery_tariff_zones[max_km][__INDEX__]" type="number" min="0" step="0.001" placeholder="без лимита" class="w-28 border px-2 py-1 rounded">
+        </td>
+        <td class="p-3">
+          <input name="delivery_tariff_zones[price_rub][__INDEX__]" type="number" min="0" step="1" class="w-28 border px-2 py-1 rounded">
+        </td>
+        <td class="p-3 text-center">
+          <input name="delivery_tariff_zones[is_active][__INDEX__]" type="checkbox" value="1" checked class="rounded border-gray-300 text-pink-600 focus:ring-pink-500">
+        </td>
+        <td class="p-3 text-center">
+          <button type="button" class="inline-flex items-center text-xs text-red-600 hover:underline" data-remove-delivery-tariff>
+            <span class="material-icons-round text-sm mr-1">close</span> убрать
+          </button>
+        </td>
+      </tr>
+    </template>
+  </fieldset>
   <?php endif; ?>
 
   <?php if ($activeSection === 'theme' && !empty($themeColors)): ?>
@@ -426,4 +482,128 @@ $sectionUrl = static fn(string $section): string => $section === 'general' ? '/a
     Сохранить раздел
   </button>
 </form>
+<?php if ($activeSection === 'delivery'): ?>
+<script>
+(function () {
+  const root = document.querySelector('[data-delivery-tariffs]');
+  const testRoot = document.querySelector('[data-delivery-test]');
+  if (!root && !testRoot) return;
+
+  const list = root.querySelector('[data-delivery-tariff-list]');
+  const template = root.querySelector('[data-delivery-tariff-template]');
+  let nextIndex = list ? list.querySelectorAll('[data-delivery-tariff-row]').length : 0;
+
+  function addRow() {
+    if (!list || !template) return;
+    const sortOrder = list.querySelectorAll('[data-delivery-tariff-row]').length + 1;
+    const html = template.innerHTML.replaceAll('__INDEX__', String(nextIndex)).replaceAll('__SORT__', String(sortOrder));
+    const wrapper = document.createElement('tbody');
+    wrapper.innerHTML = html.trim();
+    const row = wrapper.firstElementChild;
+    if (!row) return;
+    list.appendChild(row);
+    nextIndex += 1;
+    const firstInput = row.querySelector('input[name*="[min_km]"]');
+    if (firstInput) firstInput.focus();
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, function (char) {
+      return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'}[char];
+    });
+  }
+
+  function setTestResult(message, isError) {
+    if (!testRoot) return;
+    const result = testRoot.querySelector('[data-delivery-test-result]');
+    if (!result) return;
+    result.classList.remove('hidden', 'bg-green-50', 'border-green-200', 'text-green-800', 'bg-red-50', 'border-red-200', 'text-red-700');
+    result.classList.add(isError ? 'bg-red-50' : 'bg-green-50', isError ? 'border-red-200' : 'border-green-200', isError ? 'text-red-700' : 'text-green-800');
+    result.innerHTML = message;
+  }
+
+  async function testDeliveryAddress() {
+    if (!testRoot) return;
+    const input = testRoot.querySelector('[data-delivery-test-address]');
+    const button = testRoot.querySelector('[data-delivery-test-button]');
+    const address = input ? input.value.trim() : '';
+    if (!address) {
+      setTestResult('Введите адрес для проверки.', true);
+      return;
+    }
+
+    if (button) button.disabled = true;
+    setTestResult('Проверяем адрес и тариф…', false);
+
+    try {
+      const body = new URLSearchParams();
+      body.set('address', address);
+      const response = await fetch('/admin/settings/delivery/test-tariff', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'},
+        body: body.toString(),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        throw new Error(data.message || 'Не удалось проверить адрес.');
+      }
+
+      const zone = data.zone
+        ? `Зона: ${escapeHtml(data.zone.min_km)}–${escapeHtml(data.zone.max_km ?? '∞')} км.`
+        : 'Фиксированная зона не найдена.';
+      setTestResult(
+        `<strong>${escapeHtml(data.price_rub)} ₽</strong><br>` +
+        `${zone}<br>` +
+        `Расстояние: ${escapeHtml(data.distance_km)} км (${escapeHtml(data.distance_source)}).<br>` +
+        `${escapeHtml(data.message)}<br>` +
+        `<span class="text-xs">Адрес: ${escapeHtml(data.address)}. ${escapeHtml(data.distance_note)}</span>`,
+        false
+      );
+    } catch (error) {
+      setTestResult(escapeHtml(error.message || 'Не удалось проверить адрес.'), true);
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
+  if (testRoot) {
+    const button = testRoot.querySelector('[data-delivery-test-button]');
+    const input = testRoot.querySelector('[data-delivery-test-address]');
+    if (button) button.addEventListener('click', testDeliveryAddress);
+    if (input) {
+      input.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          testDeliveryAddress();
+        }
+      });
+    }
+  }
+
+  root.addEventListener('click', function (event) {
+    const removeButton = event.target.closest('[data-remove-delivery-tariff]');
+    if (removeButton) {
+      const row = removeButton.closest('[data-delivery-tariff-row]');
+      if (row) row.remove();
+      return;
+    }
+
+    if (event.target.closest('[data-add-delivery-tariff]')) {
+      addRow();
+    }
+  });
+
+  root.addEventListener('change', function (event) {
+    const deleteCheckbox = event.target.closest('[data-delete-delivery-tariff]');
+    if (!deleteCheckbox) return;
+    const row = deleteCheckbox.closest('[data-delivery-tariff-row]');
+    if (!row) return;
+    row.classList.toggle('opacity-50', deleteCheckbox.checked);
+    row.classList.toggle('bg-red-50', deleteCheckbox.checked);
+  });
+
+})();
+</script>
+<?php endif; ?>
+
 </div>
