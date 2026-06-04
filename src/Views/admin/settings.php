@@ -59,6 +59,7 @@ $themeColors = $themeColors ?? [];
     <div class="rounded-lg bg-blue-50 p-3 text-sm text-blue-900">
       <p class="font-semibold">Интерфейс оплаты</p>
       <p class="mt-1">Покупатель уходит на страницу Robokassa по адресу <code>https://auth.robokassa.ru/Merchant/Index.aspx</code>, а магазин после уведомления на ResultURL сам обновляет статус заказа.</p>
+      <p class="mt-1">В кабинете Robokassa укажите методы: <strong>ResultURL — POST</strong>, <strong>SuccessURL — GET</strong>, <strong>FailURL — GET</strong>.</p>
     </div>
     <div class="grid gap-3 sm:grid-cols-2">
       <label class="flex items-center gap-2 rounded border border-gray-200 p-3">
