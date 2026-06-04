@@ -36,6 +36,11 @@ class PurchaseBatchesController
           . '       TIMESTAMPDIFF(DAY, pb.purchased_at, NOW()) AS age_days,
 '
           . "       CASE WHEN pb.status = 'closed' THEN 1 ELSE 0 END AS is_closed,\n"
+          . "       CASE\n"
+          . "         WHEN pb.status = 'planned' THEN CASE WHEN (COALESCE(NULLIF(pb.boxes_total, 0), pb.boxes_free + pb.boxes_reserved) - pb.boxes_reserved) > 0 THEN 1 ELSE 0 END\n"
+          . "         WHEN pb.status IN ('active','purchased','arrived') THEN CASE WHEN (COALESCE(pb.boxes_free, 0) + COALESCE(pb.boxes_discount, 0)) > 0 THEN 1 ELSE 0 END\n"
+          . "         ELSE 0\n"
+          . "       END AS is_active_for_list,\n"
           . '       photo.image_path AS preview_photo,
 '
           . "       COALESCE(sm_writeoff.comments_count, 0) AS writeoff_comments_count,\n"
@@ -113,7 +118,7 @@ ORDER BY is_closed ASC, pb.id DESC';
 '
           . '  COUNT(*) AS total_batches,
 '
-          . '  COALESCE(SUM(CASE WHEN status IN ("planned","arrived","purchased") THEN boxes_remaining ELSE 0 END), 0) AS remaining_boxes,
+          . '  COALESCE(SUM(CASE WHEN status IN ("planned","active","arrived","purchased") THEN boxes_remaining ELSE 0 END), 0) AS remaining_boxes,
 '
           . '  COALESCE(SUM(boxes_written_off), 0) AS written_off_boxes,
 '

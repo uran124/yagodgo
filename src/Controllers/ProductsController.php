@@ -40,7 +40,7 @@ class ProductsController
                  SELECT 1
                  FROM purchase_batches pb
                  WHERE pb.product_id = p.id
-                   AND pb.status IN ('arrived', 'purchased')
+                   AND pb.status IN ('active', 'arrived', 'purchased')
                    AND (pb.boxes_free > 0 OR pb.boxes_discount > 0)
                )"
         );

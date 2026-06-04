@@ -235,7 +235,8 @@
 
 <div class="purchase-list" id="purchase-list">
     <?php foreach ($batches as $batch): ?>
-      <div class="purchase-item <?= ((int)($batch['is_closed'] ?? 0) === 1) ? 'bg-gray-50 text-gray-400' : '' ?>" data-is-closed="<?= (int)($batch['is_closed'] ?? 0) ?>">
+      <?php $isListActive = (int)($batch['is_active_for_list'] ?? 0) === 1; ?>
+      <div class="purchase-item <?= (!$isListActive) ? 'bg-gray-50 text-gray-400' : '' ?>" data-is-active="<?= $isListActive ? 1 : 0 ?>">
         <div class="purchase-item-top">
           <div class="purchase-mobile-photo">
           <?php if (!empty($batch['preview_photo'])): ?>
@@ -252,8 +253,8 @@
                 <span><?= htmlspecialchars((string)($batch['buyer_name'] ?? '—')) ?></span>
               </div>
               <div>
-                <?php if ((int)($batch['is_closed'] ?? 0) === 0): ?>
-                  <span class="purchase-status-dot <?= (($batch['status'] ?? '') === 'planned') ? 'purchase-status-dot--planned' : '' ?>" title="<?= (($batch['status'] ?? '') === 'planned') ? 'Запланирована' : 'Активная' ?>"></span>
+                <?php if ($isListActive): ?>
+                  <span class="purchase-status-dot <?= (($batch['status'] ?? '') === 'planned') ? 'purchase-status-dot--planned' : '' ?>" title="<?= (($batch['status'] ?? '') === 'planned') ? 'Есть свободный плановый объём' : 'Есть свободные ящики' ?>"></span>
                 <?php endif; ?>
               </div>
             </div>
@@ -316,8 +317,8 @@
       if (!purchaseList || !activeOnlyToggle) return;
       var activeOnly = activeOnlyToggle.checked;
       purchaseList.querySelectorAll('.purchase-item').forEach(function (item) {
-        var isClosed = item.getAttribute('data-is-closed') === '1';
-        item.style.display = (activeOnly && isClosed) ? 'none' : '';
+        var isActive = item.getAttribute('data-is-active') === '1';
+        item.style.display = (activeOnly && !isActive) ? 'none' : '';
       });
     }
     if (activeOnlyToggle) {

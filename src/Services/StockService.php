@@ -36,7 +36,7 @@ class StockService
                 "SELECT COALESCE(SUM({$column}), 0) AS available
                  FROM purchase_batches
                  WHERE product_id = ?
-                   AND status IN ('arrived', 'purchased')"
+                   AND status IN ('active', 'arrived', 'purchased')"
             );
         }
         $stmt->execute([$productId]);

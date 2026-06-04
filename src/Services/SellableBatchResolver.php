@@ -48,7 +48,7 @@ class SellableBatchResolver
             "SELECT id, {$priceColumn} AS price_per_box, {$stockColumn} AS boxes_available
              FROM purchase_batches
              WHERE product_id = ?
-               AND status IN ('purchased', 'arrived')
+               AND status IN ('active', 'purchased', 'arrived')
                AND {$stockColumn} > 0
              ORDER BY purchased_at ASC, id ASC
              LIMIT 1"
