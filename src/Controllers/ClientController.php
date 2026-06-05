@@ -7,6 +7,7 @@ use App\Services\StockService;
 use App\Services\OrderStockOrchestrator;
 use App\Services\ClientCatalogService;
 use App\Services\SellableBatchResolver;
+use App\Services\DeliveryPricingService;
 
 class ClientController
 {
@@ -441,7 +442,7 @@ public function cart(): void
     
         // 8) Берём текущий адрес пользователя
         $addrStmt = $this->pdo->prepare(
-            "SELECT id, street, recipient_name, recipient_phone, is_primary FROM addresses WHERE user_id = ? ORDER BY is_primary DESC, created_at ASC"
+            "SELECT id, street, recipient_name, recipient_phone, is_primary, last_checkout_comment FROM addresses WHERE user_id = ? ORDER BY is_primary DESC, created_at ASC"
         );
         $addrStmt->execute([$userId]);
         $addresses = $addrStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -630,26 +631,45 @@ public function cart(): void
         $discountsByDate[$firstKey] = min($pointsTotal, $allTotal);
     }
 
-    // 8) Обрабатываем адреса: для каждой даты либо свой, либо default
-    $postedAddresses = $_POST['address_id'] ?? [];
+    // 8) Обрабатываем адреса, комментарии и предварительный расчёт доставки по каждой дате.
+    $postedAddresses = is_array($_POST['address_id'] ?? null) ? $_POST['address_id'] : [];
     $defaultAddress  = $postedAddresses['default'] ?? '';
-    $newStreet       = trim($_POST['new_address'] ?? '');
+    $postedNewAddresses = $_POST['new_address'] ?? '';
+    $postedComments = is_array($_POST['delivery_comment'] ?? null) ? $_POST['delivery_comment'] : [];
+    $postedSelectedAddresses = is_array($_POST['new_address_normalized'] ?? null) ? $_POST['new_address_normalized'] : [];
+    $postedSelectedLats = is_array($_POST['new_address_lat'] ?? null) ? $_POST['new_address_lat'] : [];
+    $postedSelectedLngs = is_array($_POST['new_address_lng'] ?? null) ? $_POST['new_address_lng'] : [];
     $recipientName   = trim($_POST['recipient_name'] ?? ($_SESSION['name'] ?? ''));
     $recipientPhone  = PhoneNormalizer::normalize($_POST['recipient_phone'] ?? '');
 
-    $addressIds   = [];
+    $deliveryPricing = new DeliveryPricingService($this->pdo);
+    $addressIds = [];
+    $streetByDate = [];
+    $addrInputByDate = [];
+    $deliveryCommentByDate = [];
+    $deliveryByDate = [];
+
     foreach ($itemsByDate as $dateKey => $_) {
-        $addrInput = $postedAddresses[$dateKey] ?? $defaultAddress;
+        $addrInput = (string)($postedAddresses[$dateKey] ?? $defaultAddress);
+        $addrInputByDate[$dateKey] = $addrInput;
+        $comment = trim((string)($postedComments[$dateKey] ?? ''));
+        $deliveryCommentByDate[$dateKey] = $comment;
         $streetVal = '';
+
         if ($addrInput === 'pickup') {
             $streetVal = 'Самовывоз: 9 мая, 73';
-            $addressIds[$dateKey] = $this->ensureAddress(
-                $userId,
-                $streetVal,
-                $recipientName,
-                $recipientPhone
-            );
-        } elseif ($addrInput === 'new' && $newStreet !== '') {
+            $addressIds[$dateKey] = $this->ensureAddress($userId, $streetVal, '', '');
+        } elseif ($addrInput === 'new') {
+            $newStreet = is_array($postedNewAddresses)
+                ? trim((string)($postedNewAddresses[$dateKey] ?? ''))
+                : trim((string)$postedNewAddresses);
+            if ($newStreet === '') {
+                if ($this->pdo->inTransaction()) {
+                    $this->pdo->rollBack();
+                }
+                header('Location: /checkout?coupon_error=' . urlencode('Введите новый адрес доставки'));
+                exit;
+            }
             $addressIds[$dateKey] = $this->ensureAddress($userId, $newStreet, $recipientName, $recipientPhone);
             $streetVal = $newStreet;
         } elseif (is_numeric($addrInput)) {
@@ -666,10 +686,76 @@ public function cart(): void
             }
             $streetVal = (string)$street;
         } else {
-            $addressIds[$dateKey] = $this->ensureAddress($userId, $addrInput, $recipientName, $recipientPhone);
-            $streetVal = $addrInput;
+            $streetVal = trim($addrInput);
+            $addressIds[$dateKey] = $this->ensureAddress($userId, $streetVal, $recipientName, $recipientPhone);
         }
-        // сохраняем адрес как обычный, скидка за самовывоз не применяется
+
+        $streetByDate[$dateKey] = $streetVal;
+
+        if ($addrInput === 'pickup') {
+            $deliveryByDate[$dateKey] = [
+                'delivery_fee' => 0,
+                'distance_km' => null,
+                'distance_m' => null,
+                'delivery_tariff_zone_id' => null,
+                'delivery_pricing_source' => 'pickup',
+            ];
+            continue;
+        }
+
+        try {
+            $selected = [
+                'selected_lat' => $postedSelectedLats[$dateKey] ?? '',
+                'selected_lng' => $postedSelectedLngs[$dateKey] ?? '',
+                'selected_address' => $postedSelectedAddresses[$dateKey] ?? '',
+            ];
+            $deliveryCalc = $deliveryPricing->calculateForAddress($streetVal, null, $selected);
+            $deliveryByDate[$dateKey] = [
+                'delivery_fee' => (int)($deliveryCalc['delivery_fee'] ?? $deliveryCalc['price_rub'] ?? 300),
+                'distance_km' => isset($deliveryCalc['distance_km']) && $deliveryCalc['distance_km'] !== '' ? (float)$deliveryCalc['distance_km'] : null,
+                'distance_m' => isset($deliveryCalc['distance_m']) && $deliveryCalc['distance_m'] !== '' ? (int)round((float)$deliveryCalc['distance_m']) : null,
+                'delivery_tariff_zone_id' => $deliveryCalc['delivery_tariff_zone_id'] ?? null,
+                'delivery_pricing_source' => (string)($deliveryCalc['delivery_pricing_source'] ?? $deliveryCalc['pricing_source'] ?? ''),
+                'lat' => $deliveryCalc['lat'] ?? null,
+                'lng' => $deliveryCalc['lng'] ?? null,
+                'normalized_address' => $deliveryCalc['normalized_address'] ?? $deliveryCalc['address'] ?? $streetVal,
+            ];
+        } catch (\Throwable $e) {
+            $deliveryByDate[$dateKey] = [
+                'delivery_fee' => 300,
+                'distance_km' => null,
+                'distance_m' => null,
+                'delivery_tariff_zone_id' => null,
+                'delivery_pricing_source' => 'pending_review',
+                'delivery_distance_error' => $e->getMessage(),
+            ];
+        }
+
+        $deliveryRow = $deliveryByDate[$dateKey];
+        $this->pdo->prepare(
+            "UPDATE addresses
+             SET last_checkout_comment = ?,
+                 delivery_distance_km = ?,
+                 delivery_distance_m = ?,
+                 delivery_lat = ?,
+                 delivery_lng = ?,
+                 delivery_normalized_address = ?,
+                 delivery_distance_provider = ?,
+                 delivery_distance_calculated_at = NOW(),
+                 delivery_distance_error = ?
+             WHERE id = ? AND user_id = ?"
+        )->execute([
+            $comment,
+            $deliveryRow['distance_km'] ?? null,
+            $deliveryRow['distance_m'] ?? null,
+            $deliveryRow['lat'] ?? null,
+            $deliveryRow['lng'] ?? null,
+            $deliveryRow['normalized_address'] ?? $streetVal,
+            $deliveryRow['delivery_pricing_source'] ?? null,
+            $deliveryRow['delivery_distance_error'] ?? null,
+            $addressIds[$dateKey],
+            $userId,
+        ]);
     }
 
     // 9) СОЗДАЁМ ЗАКАЗЫ ПО КАЖДОЙ ДАТЕ, учитываем дату и слот
@@ -687,8 +773,9 @@ public function cart(): void
         if ($discountPercent > 0) {
             $couponDiscount = (int) floor(($subAfterPickup - $pointsDiscount) * ($discountPercent / 100));
         }
-        $addrInput = $postedAddresses[$dateKey] ?? $defaultAddress;
-        $shippingFee = ($addrInput === 'pickup') ? 0 : 300;
+        $addrInput = $addrInputByDate[$dateKey] ?? ($postedAddresses[$dateKey] ?? $defaultAddress);
+        $deliveryRow = $deliveryByDate[$dateKey] ?? ['delivery_fee' => 300];
+        $shippingFee = (int)($deliveryRow['delivery_fee'] ?? 300);
         $finalSum = $subAfterPickup - $pointsDiscount - $couponDiscount + $shippingFee;
         if ($isReservedOrder) {
             $finalSum = 0;
@@ -702,8 +789,10 @@ public function cart(): void
             "INSERT INTO orders
                (user_id, address_id, slot_id, status, total_amount,
                 discount_applied, points_used, points_accrued, coupon_code,
-                delivery_date, created_at, order_mode, bonuses_allowed, coupons_allowed, reserved_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?)"
+                delivery_date, delivery_fee, delivery_distance_km, delivery_tariff_zone_id,
+                delivery_pricing_source, delivery_comment,
+                created_at, order_mode, bonuses_allowed, coupons_allowed, reserved_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?)"
         );
         $pointsAccrued = 0; // пока 0, начислим ниже, если надо
         $orderDeliveryDate = $isReservedOrder ? date('Y-m-d') : $dateKey;
@@ -723,6 +812,11 @@ public function cart(): void
             $pointsAccrued,   // points_accrued = пока 0
             $couponsAllowed ? $couponCode : '',
             $orderDeliveryDate,
+            $shippingFee,
+            $deliveryRow['distance_km'] ?? null,
+            $deliveryRow['delivery_tariff_zone_id'] ?? null,
+            $deliveryRow['delivery_pricing_source'] ?? null,
+            $deliveryCommentByDate[$dateKey] ?? '',
             $orderMode,
             $bonusesAllowed,
             $couponsAllowed,
