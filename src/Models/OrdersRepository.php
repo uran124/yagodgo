@@ -21,6 +21,7 @@ class OrdersRepository
     {
         $sql = "SELECT o.id, o.user_id, o.status, o.total_amount, o.delivery_date,\n" .
                "       o.points_used, o.coupon_code, o.discount_applied,\n" .
+               "       o.delivery_fee, o.delivery_distance_km, o.delivery_pricing_source, o.delivery_comment,\n" .
                "       o.slot_id, d.time_from AS slot_from, d.time_to AS slot_to,\n" .
                "       u.name AS client_name, u.phone, a.street AS address,\n" .
                "       o.created_by_user_id, au.name AS author_name, au.role AS author_role,\n" .
