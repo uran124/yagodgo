@@ -265,13 +265,20 @@ $sectionUrl = static fn(string $section): string => $section === 'general' ? '/a
                class="w-full border px-2 py-1 rounded">
       </div>
     </div>
-    <div class="grid gap-3 sm:grid-cols-3">
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <div>
         <label class="block mb-1">OpenRouteService API key</label>
         <input name="openrouteservice_api_key" type="password" autocomplete="new-password"
                placeholder="<?= !empty($settings['openrouteservice_api_key']) ? 'Ключ сохранён' : 'Введите API key' ?>"
                class="w-full border px-2 py-1 rounded">
         <p class="mt-1 text-xs text-gray-500">Для маршрута по дороге через directions/driving-car. Пустое поле не перезаписывает сохранённый ключ.</p>
+      </div>
+      <div>
+        <label class="block mb-1">ORS радиус привязки, м</label>
+        <input name="openrouteservice_snap_radius_m" type="number" min="1" max="50000" step="1"
+               value="<?= htmlspecialchars($settings['openrouteservice_snap_radius_m'] ?? '2000') ?>"
+               class="w-full border px-2 py-1 rounded">
+        <p class="mt-1 text-xs text-gray-500">Если ORS пишет «within a radius of 350m», увеличиваем поиск ближайшей автомобильной дороги.</p>
       </div>
       <div>
         <label class="block mb-1">DaData API key</label>
@@ -286,6 +293,38 @@ $sectionUrl = static fn(string $section): string => $section === 'general' ? '/a
                placeholder="<?= !empty($settings['dadata_secret_key']) ? 'Секрет сохранён' : 'Введите Secret key' ?>"
                class="w-full border px-2 py-1 rounded">
         <p class="mt-1 text-xs text-gray-500">Пустое поле не перезаписывает сохранённый секрет.</p>
+      </div>
+    </div>
+    <div class="rounded-lg border border-slate-700 bg-slate-950/40 p-3 space-y-3">
+      <div>
+        <p class="text-sm font-semibold text-slate-100">Ограничение подсказок DaData</p>
+        <p class="mt-1 text-xs text-slate-400">Адреса ищем в круге около Красноярска, чтобы «Ленина, 10» не выбирался молча из другого города. Как на первом сайте: центр + радиус 60 км.</p>
+      </div>
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div>
+          <label class="block mb-1">Центр поиска DaData: широта</label>
+          <input name="delivery_dadata_center_lat" type="number" min="-90" max="90" step="0.000001"
+                 value="<?= htmlspecialchars($settings['delivery_dadata_center_lat'] ?? '56.233717') ?>"
+                 class="w-full border px-2 py-1 rounded">
+        </div>
+        <div>
+          <label class="block mb-1">Центр поиска DaData: долгота</label>
+          <input name="delivery_dadata_center_lng" type="number" min="-180" max="180" step="0.000001"
+                 value="<?= htmlspecialchars($settings['delivery_dadata_center_lng'] ?? '92.842600') ?>"
+                 class="w-full border px-2 py-1 rounded">
+        </div>
+        <div>
+          <label class="block mb-1">Радиус поиска, м</label>
+          <input name="delivery_dadata_radius_m" type="number" min="1000" max="300000" step="1000"
+                 value="<?= htmlspecialchars($settings['delivery_dadata_radius_m'] ?? '60000') ?>"
+                 class="w-full border px-2 py-1 rounded">
+        </div>
+        <div>
+          <label class="block mb-1">Сколько вариантов показывать</label>
+          <input name="delivery_dadata_suggestion_count" type="number" min="1" max="20" step="1"
+                 value="<?= htmlspecialchars($settings['delivery_dadata_suggestion_count'] ?? '8') ?>"
+                 class="w-full border px-2 py-1 rounded">
+        </div>
       </div>
     </div>
     <div class="rounded-lg border border-dashed border-gray-300 p-3 space-y-3">
@@ -313,21 +352,28 @@ $sectionUrl = static fn(string $section): string => $section === 'general' ? '/a
     </div>
   </fieldset>
 
-  <fieldset class="border border-gray-200 rounded-lg p-4 space-y-3" data-delivery-test>
-    <legend class="px-2 text-sm font-semibold text-gray-600">Проверка стоимости по адресу</legend>
-    <p class="text-xs text-gray-500">Введите адрес клиента и проверьте, в какую сохранённую тарифную зону он попадает. Если DaData не настроена, можно ввести координаты: 56.010, 92.852.</p>
+  <fieldset class="delivery-test-panel border rounded-lg p-4 space-y-3" data-delivery-test>
+    <legend class="delivery-test-legend px-2 text-sm font-semibold">Проверка стоимости по адресу</legend>
+    <p class="delivery-test-muted text-xs">Введите адрес клиента и проверьте, в какую сохранённую тарифную зону он попадает. Если DaData не настроена, можно ввести координаты: 56.010, 92.852.</p>
     <div class="flex flex-col gap-2 sm:flex-row">
-      <input type="text"
-             class="flex-1 border px-3 py-2 rounded"
-             placeholder="Например: Красноярск, ул. 9 Мая, 73"
-             data-delivery-test-address>
+      <div class="relative flex-1">
+        <input type="text"
+               class="delivery-test-input w-full border px-3 py-2 rounded"
+               placeholder="Например: Ленина 10 или Красноярск, ул. 9 Мая, 73"
+               autocomplete="off"
+               data-delivery-test-address>
+        <input type="hidden" data-delivery-test-selected-address>
+        <input type="hidden" data-delivery-test-selected-lat>
+        <input type="hidden" data-delivery-test-selected-lng>
+        <div class="delivery-suggestion-list hidden absolute z-30 mt-1 max-h-72 w-full overflow-auto rounded-lg border border-slate-700 bg-slate-950 shadow-2xl" data-delivery-suggestion-list></div>
+      </div>
       <button type="button"
-              class="bg-[#C86052] text-white px-4 py-2 rounded inline-flex items-center justify-center text-sm hover:bg-[#B44D47]"
+              class="delivery-test-button px-4 py-2 rounded inline-flex items-center justify-center text-sm"
               data-delivery-test-button>
         <span class="material-icons-round text-base mr-1">search</span> Проверить
       </button>
     </div>
-    <div class="hidden rounded border px-3 py-2 text-sm" data-delivery-test-result></div>
+    <div class="delivery-test-result hidden rounded border px-3 py-2 text-sm" data-delivery-test-result></div>
   </fieldset>
 
   <fieldset class="border border-gray-200 rounded-lg p-4 space-y-4" data-delivery-tariffs>
@@ -483,14 +529,137 @@ $sectionUrl = static fn(string $section): string => $section === 'general' ? '/a
   </button>
 </form>
 <?php if ($activeSection === 'delivery'): ?>
+
+<style>
+  [data-delivery-test].delivery-test-panel {
+    background: #111827;
+    border-color: #374151;
+    color: #e5e7eb;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, .25);
+  }
+  [data-delivery-test] .delivery-test-legend {
+    color: #f9fafb;
+    background: #111827;
+  }
+  [data-delivery-test] .delivery-test-muted {
+    color: #9ca3af;
+  }
+  [data-delivery-test] .delivery-test-input {
+    background: #0b1220;
+    border-color: #4b5563;
+    color: #f9fafb;
+    outline: none;
+  }
+  [data-delivery-test] .delivery-test-input::placeholder {
+    color: #6b7280;
+  }
+  [data-delivery-test] .delivery-test-input:focus {
+    border-color: #fb7185;
+    box-shadow: 0 0 0 3px rgba(251, 113, 133, .16);
+  }
+  [data-delivery-test] .delivery-test-button {
+    background: linear-gradient(135deg, #fb7185, #c86052);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, .08);
+  }
+  [data-delivery-test] .delivery-test-button:hover {
+    filter: brightness(1.07);
+  }
+  [data-delivery-test] .delivery-test-button:disabled {
+    opacity: .65;
+    cursor: wait;
+  }
+  [data-delivery-test] .delivery-test-result {
+    background: #0b1220;
+    border-color: #374151;
+    color: #e5e7eb;
+  }
+  [data-delivery-test] .delivery-test-result--ok {
+    border-color: rgba(34, 197, 94, .45);
+    box-shadow: inset 4px 0 0 rgba(34, 197, 94, .75);
+  }
+  [data-delivery-test] .delivery-test-result--error {
+    border-color: rgba(248, 113, 113, .55);
+    box-shadow: inset 4px 0 0 rgba(248, 113, 113, .9);
+  }
+  [data-delivery-test] .delivery-test-price {
+    color: #ffffff;
+    font-size: 1.35rem;
+    line-height: 1.2;
+  }
+  [data-delivery-test] .delivery-test-warning {
+    margin-top: .6rem;
+    padding: .65rem .75rem;
+    border-radius: .65rem;
+    border: 1px solid rgba(251, 191, 36, .35);
+    background: rgba(251, 191, 36, .10);
+    color: #fde68a;
+  }
+  [data-delivery-test] .delivery-test-details {
+    border-color: #374151;
+    background: rgba(15, 23, 42, .72);
+  }
+  [data-delivery-test] .delivery-test-summary {
+    color: #f3f4f6;
+  }
+  [data-delivery-test] .delivery-test-diagnostics-table th,
+  [data-delivery-test] .delivery-test-diagnostics-table td {
+    border-bottom: 1px solid rgba(75, 85, 99, .65);
+    padding: .45rem .35rem;
+    vertical-align: top;
+  }
+  [data-delivery-test] .delivery-test-diagnostics-table th {
+    color: #9ca3af;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  [data-delivery-test] .delivery-test-diagnostics-table td {
+    color: #e5e7eb;
+  }
+  [data-delivery-test] pre {
+    background: #020617;
+    color: #d1d5db;
+    border: 1px solid #1f2937;
+    border-radius: .5rem;
+    padding: .75rem;
+  }
+  [data-delivery-test] .delivery-suggestion-item {
+    display: flex;
+    width: 100%;
+    gap: .6rem;
+    padding: .7rem .85rem;
+    border: 0;
+    border-bottom: 1px solid rgba(51, 65, 85, .85);
+    background: transparent;
+    color: #e5e7eb;
+    text-align: left;
+    cursor: pointer;
+  }
+  [data-delivery-test] .delivery-suggestion-item:hover,
+  [data-delivery-test] .delivery-suggestion-item:focus {
+    background: rgba(190, 91, 77, .18);
+    outline: none;
+  }
+  [data-delivery-test] .delivery-suggestion-main {
+    display: block;
+    font-weight: 700;
+  }
+  [data-delivery-test] .delivery-suggestion-meta {
+    display: block;
+    margin-top: .18rem;
+    color: #94a3b8;
+    font-size: .78rem;
+    line-height: 1.25;
+  }
+</style>
 <script>
 (function () {
   const root = document.querySelector('[data-delivery-tariffs]');
   const testRoot = document.querySelector('[data-delivery-test]');
   if (!root && !testRoot) return;
 
-  const list = root.querySelector('[data-delivery-tariff-list]');
-  const template = root.querySelector('[data-delivery-tariff-template]');
+  const list = root ? root.querySelector('[data-delivery-tariff-list]') : null;
+  const template = root ? root.querySelector('[data-delivery-tariff-template]') : null;
   let nextIndex = list ? list.querySelectorAll('[data-delivery-tariff-row]').length : 0;
 
   function addRow() {
@@ -517,9 +686,169 @@ $sectionUrl = static fn(string $section): string => $section === 'general' ? '/a
     if (!testRoot) return;
     const result = testRoot.querySelector('[data-delivery-test-result]');
     if (!result) return;
-    result.classList.remove('hidden', 'bg-green-50', 'border-green-200', 'text-green-800', 'bg-red-50', 'border-red-200', 'text-red-700');
-    result.classList.add(isError ? 'bg-red-50' : 'bg-green-50', isError ? 'border-red-200' : 'border-green-200', isError ? 'text-red-700' : 'text-green-800');
+    result.classList.remove('hidden', 'delivery-test-result--ok', 'delivery-test-result--error');
+    result.classList.add(isError ? 'delivery-test-result--error' : 'delivery-test-result--ok');
     result.innerHTML = message;
+  }
+
+  function getSuggestionElements() {
+    if (!testRoot) return {};
+    return {
+      input: testRoot.querySelector('[data-delivery-test-address]'),
+      list: testRoot.querySelector('[data-delivery-suggestion-list]'),
+      selectedAddress: testRoot.querySelector('[data-delivery-test-selected-address]'),
+      selectedLat: testRoot.querySelector('[data-delivery-test-selected-lat]'),
+      selectedLng: testRoot.querySelector('[data-delivery-test-selected-lng]'),
+    };
+  }
+
+  function clearSelectedSuggestion() {
+    const els = getSuggestionElements();
+    if (els.selectedAddress) els.selectedAddress.value = '';
+    if (els.selectedLat) els.selectedLat.value = '';
+    if (els.selectedLng) els.selectedLng.value = '';
+  }
+
+  function hideAddressSuggestions() {
+    const {list} = getSuggestionElements();
+    if (!list) return;
+    list.innerHTML = '';
+    list.classList.add('hidden');
+  }
+
+  function renderAddressSuggestions(items, message) {
+    const {input, list, selectedAddress, selectedLat, selectedLng} = getSuggestionElements();
+    if (!input || !list) return;
+
+    list.innerHTML = '';
+    if (!items.length) {
+      if (message) {
+        const empty = document.createElement('div');
+        empty.className = 'px-3 py-2 text-xs text-slate-400';
+        empty.textContent = message;
+        list.appendChild(empty);
+        list.classList.remove('hidden');
+      } else {
+        list.classList.add('hidden');
+      }
+      return;
+    }
+
+    items.forEach((item) => {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'delivery-suggestion-item';
+      const meta = [
+        item.city || '',
+        item.district || '',
+        item.qc_geo !== undefined && item.qc_geo !== null ? `qc_geo=${item.qc_geo}` : '',
+        item.distance_from_center_km ? `${item.distance_from_center_km} км от центра поиска` : '',
+      ].filter(Boolean).join(' · ');
+      row.innerHTML = `
+        <span class="material-icons-round text-base text-[#C86052]">location_on</span>
+        <span class="flex-1">
+          <span class="delivery-suggestion-main">${escapeHtml(item.label || item.value || '')}</span>
+          <span class="delivery-suggestion-meta">${escapeHtml(meta)}</span>
+        </span>
+      `;
+      row.addEventListener('click', () => {
+        const chosenAddress = item.value || item.label || item.unrestricted_value || '';
+        input.value = chosenAddress;
+        if (selectedAddress) selectedAddress.value = chosenAddress;
+        if (selectedLat) selectedLat.value = item.lat || '';
+        if (selectedLng) selectedLng.value = item.lng || '';
+        hideAddressSuggestions();
+        setTestResult(`Адрес выбран: ${escapeHtml(chosenAddress)}. Теперь можно проверить тариф.`, false);
+      });
+      list.appendChild(row);
+    });
+    list.classList.remove('hidden');
+  }
+
+  async function fetchAddressSuggestions(query) {
+    if (!query || query.trim().length < 3) return [];
+    const url = '/admin/settings/delivery/address-suggestions?query=' + encodeURIComponent(query.trim());
+    const response = await fetch(url, {credentials: 'same-origin', headers: {'X-Requested-With': 'XMLHttpRequest'}});
+    const text = await response.text();
+    let data = null;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      throw new Error('Сервер подсказок вернул не JSON: ' + text.slice(0, 160));
+    }
+    if (!response.ok || !data.ok) {
+      throw new Error(data.message || 'Не удалось получить подсказки адреса.');
+    }
+    return data.suggestions || [];
+  }
+
+  function formatDiagnosticValue(value) {
+    if (value === null || value === undefined || value === '') return '—';
+    if (Array.isArray(value)) return '[' + value.map(formatDiagnosticValue).join(', ') + ']';
+    if (typeof value === 'object') return JSON.stringify(value, null, 2);
+    if (typeof value === 'boolean') return value ? 'да' : 'нет';
+    return String(value);
+  }
+
+  function diagnosticRow(label, value) {
+    return `<tr class="border-b border-gray-200 align-top"><td class="py-1 pr-3 font-medium text-gray-600 whitespace-nowrap">${escapeHtml(label)}</td><td class="py-1 text-gray-800"><code class="break-all whitespace-pre-wrap">${escapeHtml(formatDiagnosticValue(value))}</code></td></tr>`;
+  }
+
+  function serviceStatusLine(title, item) {
+    if (!item) return diagnosticRow(title, 'нет данных');
+    if (item.attempted === false) {
+      return diagnosticRow(title, item.skipped_reason || 'не запускался');
+    }
+    const ok = item.ok === true ? 'OK' : 'ОШИБКА';
+    const http = item.http_code ? `HTTP ${item.http_code}` : 'HTTP —';
+    const time = item.total_time_ms ? `${item.total_time_ms} мс` : 'время —';
+    const details = [ok, http, time, item.decoded_error || item.curl_error || item.json_error || ''].filter(Boolean).join(' | ');
+    return diagnosticRow(title, details);
+  }
+
+  function buildDeliveryDiagnostics(data) {
+    const d = data.diagnostics || {};
+    const dadata = d.dadata || {};
+    const ors = d.openrouteservice || {};
+    const rows = [];
+
+    rows.push(diagnosticRow('Исходный адрес', data.requested_address || ''));
+    rows.push(diagnosticRow('Нормализованный адрес', data.address || ''));
+    rows.push(diagnosticRow('Координаты магазина', data.store ? `${data.store.lat}, ${data.store.lng}` : ''));
+    rows.push(diagnosticRow('Координаты клиента', data.destination ? `${data.destination.lat}, ${data.destination.lng}` : `${data.lat}, ${data.lng}`));
+    rows.push(diagnosticRow('Порядок координат ORS', ors.coordinate_order || '[longitude, latitude]'));
+    rows.push(diagnosticRow('ORS радиус привязки', ors.snap_radius_m ? `${ors.snap_radius_m} м` : ''));
+    rows.push(diagnosticRow('Координаты, отправленные в ORS', ors.request_payload ? ors.request_payload.coordinates : ''));
+    rows.push(diagnosticRow('ORS radiuses payload', ors.request_payload ? ors.request_payload.radiuses : ''));
+    rows.push(diagnosticRow('ORS подсказка', ors.routing_hint || ''));
+    rows.push(diagnosticRow('Источник DaData', dadata.source || ''));
+    rows.push(serviceStatusLine('DaData clean/address', dadata.clean));
+    rows.push(diagnosticRow('DaData clean qc_geo', dadata.clean ? dadata.clean.qc_geo : ''));
+    rows.push(diagnosticRow('DaData clean адрес', dadata.clean ? dadata.clean.result_address : ''));
+    rows.push(serviceStatusLine('DaData suggest/address', dadata.suggest));
+    rows.push(diagnosticRow('DaData suggest qc_geo', dadata.suggest ? dadata.suggest.qc_geo : ''));
+    rows.push(diagnosticRow('DaData suggest адрес', dadata.suggest ? (dadata.suggest.value || dadata.suggest.unrestricted_value) : ''));
+    rows.push(diagnosticRow('ORS endpoint', ors.endpoint || ''));
+    rows.push(diagnosticRow('ORS profile/format', [ors.profile || '', ors.format || ''].filter(Boolean).join('/')));
+    rows.push(serviceStatusLine('OpenRouteService', ors));
+    rows.push(diagnosticRow('ORS decoded_error', ors.decoded_error || ''));
+    rows.push(diagnosticRow('ORS body_preview', ors.body_preview || ''));
+    rows.push(diagnosticRow('Fallback', ors.fallback ? `${ors.fallback.used ? 'использован' : 'не использован'}: ${ors.fallback.reason || ''}` : ''));
+    rows.push(diagnosticRow('Источник цены', data.pricing_source || ''));
+
+    const rawJson = JSON.stringify(d, null, 2);
+    return `
+      <details class="delivery-test-details mt-3 rounded border p-2" open>
+        <summary class="delivery-test-summary cursor-pointer font-semibold">Диагностика по шагам</summary>
+        <div class="mt-2 overflow-x-auto">
+          <table class="delivery-test-diagnostics-table min-w-full text-xs">${rows.join('')}</table>
+        </div>
+      </details>
+      <details class="delivery-test-details mt-2 rounded border p-2">
+        <summary class="delivery-test-summary cursor-pointer font-semibold">Полный diagnostics JSON</summary>
+        <pre class="mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-words text-xs">${escapeHtml(rawJson)}</pre>
+      </details>
+    `;
   }
 
   async function testDeliveryAddress() {
@@ -536,14 +865,39 @@ $sectionUrl = static fn(string $section): string => $section === 'general' ? '/a
     setTestResult('Проверяем адрес и тариф…', false);
 
     try {
+      const selectedAddress = testRoot.querySelector('[data-delivery-test-selected-address]');
+      const selectedLat = testRoot.querySelector('[data-delivery-test-selected-lat]');
+      const selectedLng = testRoot.querySelector('[data-delivery-test-selected-lng]');
+      const looksLikeCoords = /^\s*-?\d+(?:[\.,]\d+)?\s*[,; ]\s*-?\d+(?:[\.,]\d+)?\s*$/.test(address);
+      if (!looksLikeCoords && (!selectedAddress?.value || !selectedLat?.value || !selectedLng?.value)) {
+        const suggestions = await fetchAddressSuggestions(address);
+        renderAddressSuggestions(suggestions, 'DaData не вернула подходящих адресов в заданном радиусе.');
+        if (suggestions.length > 0) {
+          setTestResult(`Найдено вариантов: ${suggestions.length}. Выберите точный адрес из списка, чтобы не подставить первый попавшийся.`, true);
+          return;
+        }
+      }
+
       const body = new URLSearchParams();
       body.set('address', address);
+      if (selectedAddress?.value && selectedLat?.value && selectedLng?.value) {
+        body.set('selected_address', selectedAddress.value);
+        body.set('selected_lat', selectedLat.value);
+        body.set('selected_lng', selectedLng.value);
+      }
       const response = await fetch('/admin/settings/delivery/test-tariff', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'},
+        credentials: 'same-origin',
         body: body.toString(),
       });
-      const data = await response.json();
+      const text = await response.text();
+      let data = null;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        throw new Error('Сервер вернул не JSON. Проверьте маршрут /admin/settings/delivery/test-tariff. Ответ: ' + text.slice(0, 160));
+      }
       if (!response.ok || !data.ok) {
         throw new Error(data.message || 'Не удалось проверить адрес.');
       }
@@ -551,12 +905,16 @@ $sectionUrl = static fn(string $section): string => $section === 'general' ? '/a
       const zone = data.zone
         ? `Зона: ${escapeHtml(data.zone.min_km)}–${escapeHtml(data.zone.max_km ?? '∞')} км.`
         : 'Фиксированная зона не найдена.';
+      const distanceExtra = data.duration_min
+        ? `, время: ${escapeHtml(data.duration_min)} мин.`
+        : '';
       setTestResult(
         `<strong>${escapeHtml(data.price_rub)} ₽</strong><br>` +
         `${zone}<br>` +
-        `Расстояние: ${escapeHtml(data.distance_km)} км (${escapeHtml(data.distance_source)}).<br>` +
+        `Расстояние: ${escapeHtml(data.distance_km)} км (${escapeHtml(data.distance_source)}${distanceExtra}).<br>` +
         `${escapeHtml(data.message)}<br>` +
-        `<span class="text-xs">Адрес: ${escapeHtml(data.address)}. ${escapeHtml(data.distance_note)}</span>`,
+        `<span class="text-xs">Адрес: ${escapeHtml(data.address)}. ${escapeHtml(data.distance_note)}</span>` +
+        buildDeliveryDiagnostics(data),
         false
       );
     } catch (error) {
@@ -571,36 +929,67 @@ $sectionUrl = static fn(string $section): string => $section === 'general' ? '/a
     const input = testRoot.querySelector('[data-delivery-test-address]');
     if (button) button.addEventListener('click', testDeliveryAddress);
     if (input) {
+      let timer = null;
+      let requestId = 0;
+      input.addEventListener('input', function () {
+        clearSelectedSuggestion();
+        clearTimeout(timer);
+        const query = input.value.trim();
+        if (query.length < 3) {
+          hideAddressSuggestions();
+          return;
+        }
+        const currentRequest = ++requestId;
+        timer = setTimeout(async function () {
+          try {
+            const suggestions = await fetchAddressSuggestions(query);
+            if (currentRequest === requestId) {
+              renderAddressSuggestions(suggestions, suggestions.length ? '' : 'Нет адресов в радиусе поиска.');
+            }
+          } catch (error) {
+            if (currentRequest === requestId) {
+              renderAddressSuggestions([], error.message || 'Не удалось получить подсказки.');
+            }
+          }
+        }, 250);
+      });
       input.addEventListener('keydown', function (event) {
         if (event.key === 'Enter') {
           event.preventDefault();
           testDeliveryAddress();
         }
       });
+      document.addEventListener('click', function (event) {
+        if (!testRoot.contains(event.target)) {
+          hideAddressSuggestions();
+        }
+      });
     }
   }
 
-  root.addEventListener('click', function (event) {
-    const removeButton = event.target.closest('[data-remove-delivery-tariff]');
-    if (removeButton) {
-      const row = removeButton.closest('[data-delivery-tariff-row]');
-      if (row) row.remove();
-      return;
-    }
+  if (root) {
+    root.addEventListener('click', function (event) {
+      const removeButton = event.target.closest('[data-remove-delivery-tariff]');
+      if (removeButton) {
+        const row = removeButton.closest('[data-delivery-tariff-row]');
+        if (row) row.remove();
+        return;
+      }
 
-    if (event.target.closest('[data-add-delivery-tariff]')) {
-      addRow();
-    }
-  });
+      if (event.target.closest('[data-add-delivery-tariff]')) {
+        addRow();
+      }
+    });
 
-  root.addEventListener('change', function (event) {
-    const deleteCheckbox = event.target.closest('[data-delete-delivery-tariff]');
-    if (!deleteCheckbox) return;
-    const row = deleteCheckbox.closest('[data-delivery-tariff-row]');
-    if (!row) return;
-    row.classList.toggle('opacity-50', deleteCheckbox.checked);
-    row.classList.toggle('bg-red-50', deleteCheckbox.checked);
-  });
+    root.addEventListener('change', function (event) {
+      const deleteCheckbox = event.target.closest('[data-delete-delivery-tariff]');
+      if (!deleteCheckbox) return;
+      const row = deleteCheckbox.closest('[data-delivery-tariff-row]');
+      if (!row) return;
+      row.classList.toggle('opacity-50', deleteCheckbox.checked);
+      row.classList.toggle('bg-red-50', deleteCheckbox.checked);
+    });
+  }
 
 })();
 </script>
