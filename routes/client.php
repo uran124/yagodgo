@@ -181,6 +181,15 @@ return [
     },
 
     static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('GET', '/delivery/address-suggestions', $method, $uri)) {
+            return false;
+        }
+
+        requireClient();
+        (new App\Controllers\SettingsController($c['pdo']))->suggestDeliveryAddresses();
+        return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
         if (!routeExact('GET', '/checkout', $method, $uri)) {
             return false;
         }
