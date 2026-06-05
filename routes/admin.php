@@ -179,6 +179,10 @@ return [
         requireAdmin(); (new App\Controllers\SettingsController($c['pdo']))->testDeliveryTariff(); return true;
     },
     static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('POST', '/admin/delivery/calculate', $method, $uri)) return false;
+        requireAdmin(); (new App\Controllers\DeliveryController($c['pdo']))->calculate(); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
         if (!routeRegex('GET', '#^/admin/settings/(general|pricing|preorder|payments|delivery|theme)$#', $method, $uri, $m)) return false;
         requireAdmin(); (new App\Controllers\SettingsController($c['pdo']))->index($m[1]); return true;
     },
