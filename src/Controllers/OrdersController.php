@@ -581,6 +581,10 @@ class OrdersController
     {
         $orderId = (int)($_POST['order_id'] ?? 0);
         if ($orderId) {
+            $stmtOrder = $this->pdo->prepare('SELECT id, status, total_amount, delivery_fee, user_id FROM orders WHERE id = ?');
+            $stmtOrder->execute([$orderId]);
+            $order = $stmtOrder->fetch(PDO::FETCH_ASSOC) ?: null;
+
             $addressRaw = $_POST['address_id'] ?? null;
             if ($addressRaw === 'pickup') {
                 $addressId = null;
@@ -596,10 +600,119 @@ class OrdersController
                 $slotId = null;
             }
 
-            $stmt = $this->pdo->prepare(
-                "UPDATE orders SET address_id = ?, delivery_date = ?, slot_id = ? WHERE id = ?"
-            );
-            $stmt->execute([$addressId, $deliveryDate, $slotId, $orderId]);
+            $deliveryComment = trim((string)($_POST['delivery_comment'] ?? ''));
+            $manualDistanceRaw = str_replace(',', '.', trim((string)($_POST['delivery_distance_km_manual'] ?? '')));
+            $canReprice = $order && !in_array((string)($order['status'] ?? ''), ['delivered', 'cancelled'], true);
+
+            $deliveryFee = max(0, (int)($order['delivery_fee'] ?? 0));
+            $deliveryDistanceKm = null;
+            $deliveryTariffZoneId = null;
+            $deliveryPricingSource = $addressId === null ? 'pickup' : 'pending_review';
+            $deliveryDistanceM = null;
+            $deliveryLat = null;
+            $deliveryLng = null;
+            $deliveryNormalizedAddress = null;
+            $deliveryDistanceError = null;
+
+            if ($canReprice) {
+                if ($addressId === null) {
+                    $deliveryFee = 0;
+                    $deliveryPricingSource = 'pickup';
+                } else {
+                    $addressForDelivery = '';
+                    if ($addressId > 0) {
+                        $stmtAddress = $this->pdo->prepare('SELECT street FROM addresses WHERE id = ? AND user_id = ?');
+                        $stmtAddress->execute([$addressId, (int)($order['user_id'] ?? 0)]);
+                        $addressForDelivery = (string)($stmtAddress->fetchColumn() ?: '');
+                    }
+
+                    try {
+                        $deliveryPricing = new DeliveryPricingService($this->pdo);
+                        if ($manualDistanceRaw !== '' && is_numeric($manualDistanceRaw)) {
+                            $deliveryDistanceKm = max(0.0, (float)$manualDistanceRaw);
+                            $deliveryDistanceM = (int)round($deliveryDistanceKm * 1000);
+                            $pricing = $deliveryPricing->calculatePriceForDistance($deliveryDistanceKm);
+                            $deliveryFee = (int)($pricing['price_rub'] ?? 300);
+                            $deliveryTariffZoneId = is_array($pricing['zone'] ?? null) && isset($pricing['zone']['id']) ? (int)$pricing['zone']['id'] : null;
+                            $deliveryPricingSource = 'manual';
+                            $deliveryNormalizedAddress = $addressForDelivery;
+                        } elseif ($addressForDelivery !== '') {
+                            $deliveryCalc = $deliveryPricing->calculateForAddress($addressForDelivery);
+                            $deliveryFee = (int)($deliveryCalc['delivery_fee'] ?? $deliveryCalc['price_rub'] ?? 300);
+                            $deliveryDistanceKm = isset($deliveryCalc['distance_km']) && $deliveryCalc['distance_km'] !== '' ? (float)$deliveryCalc['distance_km'] : null;
+                            $deliveryDistanceM = isset($deliveryCalc['distance_m']) && $deliveryCalc['distance_m'] !== '' ? (int)round((float)$deliveryCalc['distance_m']) : null;
+                            $deliveryTariffZoneId = $deliveryCalc['delivery_tariff_zone_id'] ?? null;
+                            $deliveryPricingSource = (string)($deliveryCalc['delivery_pricing_source'] ?? $deliveryCalc['pricing_source'] ?? 'pending_review');
+                            $deliveryLat = $deliveryCalc['lat'] ?? null;
+                            $deliveryLng = $deliveryCalc['lng'] ?? null;
+                            $deliveryNormalizedAddress = $deliveryCalc['normalized_address'] ?? $deliveryCalc['address'] ?? $addressForDelivery;
+                        } else {
+                            $deliveryFee = 300;
+                            $deliveryPricingSource = 'pending_review';
+                        }
+                    } catch (\Throwable $e) {
+                        $deliveryFee = 300;
+                        $deliveryPricingSource = 'pending_review';
+                        $deliveryDistanceError = $e->getMessage();
+                    }
+                }
+            }
+
+            $setParts = ['address_id = ?', 'delivery_date = ?', 'slot_id = ?'];
+            $values = [$addressId, $deliveryDate, $slotId];
+
+            if ($canReprice) {
+                $oldDeliveryFee = max(0, (int)($order['delivery_fee'] ?? 0));
+                $newTotalAmount = max(0, (int)($order['total_amount'] ?? 0) - $oldDeliveryFee + $deliveryFee);
+                $setParts[] = 'total_amount = ?';
+                $values[] = $newTotalAmount;
+
+                foreach ([
+                    'delivery_fee' => $deliveryFee,
+                    'delivery_distance_km' => $deliveryDistanceKm,
+                    'delivery_tariff_zone_id' => $deliveryTariffZoneId,
+                    'delivery_pricing_source' => $deliveryPricingSource,
+                    'delivery_comment' => $deliveryComment,
+                ] as $column => $value) {
+                    if ($this->columnExists('orders', $column)) {
+                        $setParts[] = $column . ' = ?';
+                        $values[] = $value;
+                    }
+                }
+            } elseif ($this->columnExists('orders', 'delivery_comment')) {
+                $setParts[] = 'delivery_comment = ?';
+                $values[] = $deliveryComment;
+            }
+
+            $values[] = $orderId;
+            $stmt = $this->pdo->prepare('UPDATE orders SET ' . implode(', ', $setParts) . ' WHERE id = ?');
+            $stmt->execute($values);
+
+            if ($canReprice && $addressId !== null) {
+                $addressSet = [];
+                $addressValues = [];
+                foreach ([
+                    'last_checkout_comment' => $deliveryComment,
+                    'delivery_distance_km' => $deliveryDistanceKm,
+                    'delivery_distance_m' => $deliveryDistanceM,
+                    'delivery_lat' => $deliveryLat,
+                    'delivery_lng' => $deliveryLng,
+                    'delivery_normalized_address' => $deliveryNormalizedAddress,
+                    'delivery_distance_provider' => $deliveryPricingSource,
+                    'delivery_distance_calculated_at' => date('Y-m-d H:i:s'),
+                    'delivery_distance_error' => $deliveryDistanceError,
+                ] as $column => $value) {
+                    if ($this->columnExists('addresses', $column)) {
+                        $addressSet[] = $column . ' = ?';
+                        $addressValues[] = $value;
+                    }
+                }
+                if ($addressSet) {
+                    $addressValues[] = $addressId;
+                    $stmtAddressUpdate = $this->pdo->prepare('UPDATE addresses SET ' . implode(', ', $addressSet) . ' WHERE id = ?');
+                    $stmtAddressUpdate->execute($addressValues);
+                }
+            }
         }
         header('Location: ' . $this->basePath() . '/' . $orderId);
         exit;
@@ -613,7 +726,7 @@ class OrdersController
         if ($orderId && in_array($status, ['reserved','new','processing','assigned','delivered','cancelled'], true)) {
             // Получаем текущий статус и данные заказа
             $stmt = $this->pdo->prepare(
-                "SELECT status, user_id, total_amount, points_accrued, manager_points_accrued, points_used FROM orders WHERE id = ?"
+                "SELECT status, user_id, total_amount, delivery_fee, points_accrued, manager_points_accrued, points_used FROM orders WHERE id = ?"
             );
             $stmt->execute([$orderId]);
             $order = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -622,7 +735,8 @@ class OrdersController
                 // Если переводим в delivered впервые — начисляем бонусы
                 if ($status === 'delivered' && $order['status'] !== 'delivered') {
                     $userId = (int)$order['user_id'];
-                    $sum    = (int)$order['total_amount'];
+                    // Доставка уже входит в total_amount, но баллы начисляются только на товарную часть.
+                    $sum    = max(0, (int)$order['total_amount'] - max(0, (int)($order['delivery_fee'] ?? 0)));
 
                     // 5% личный бонус
                     $personal = (int) floor($sum * 0.05);
@@ -1198,11 +1312,12 @@ class OrdersController
         $rawTotal = (float)$stmt->fetchColumn();
 
         $oStmt = $this->pdo->prepare(
-            "SELECT user_id, points_used, coupon_code, address_id FROM orders WHERE id = ?"
+            "SELECT user_id, points_used, coupon_code, address_id, delivery_fee FROM orders WHERE id = ?"
         );
         $oStmt->execute([$orderId]);
         $oRow = $oStmt->fetch(PDO::FETCH_ASSOC);
         $pointsUsed = (int)($oRow['points_used'] ?? 0);
+        $deliveryFee = max(0, (int)($oRow['delivery_fee'] ?? 0));
         $userId    = (int)($oRow['user_id'] ?? 0);
         $hasUsedReferral = 0;
         if ($userId) {
@@ -1234,7 +1349,7 @@ class OrdersController
             }
         }
 
-        $finalTotal = $subAfterPickup - $pointsUsed - $discountApplied;
+        $finalTotal = max(0, $subAfterPickup - $pointsUsed - $discountApplied) + $deliveryFee;
 
         $this->pdo->prepare(
             "UPDATE orders SET total_amount = ?, discount_applied = ? WHERE id = ?"

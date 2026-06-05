@@ -260,6 +260,19 @@
           <?php endforeach; ?>
         </select>
       </label>
+      <label>
+        <span class="mr-1">Км вручную:</span>
+        <input type="number" name="delivery_distance_km_manual" min="0" step="0.001" value="<?= htmlspecialchars((string)($order['delivery_distance_km'] ?? '')) ?>" placeholder="Например: 8.22" class="border px-2 py-1 rounded w-32">
+      </label>
+      <label class="flex-1 min-w-[220px]">
+        <span class="mr-1">Комментарий доставки:</span>
+        <textarea name="delivery_comment" rows="1" placeholder="Получатель, телефон, подъезд, пожелания" class="border px-2 py-1 rounded w-full align-middle"><?= htmlspecialchars((string)($order['delivery_comment'] ?? '')) ?></textarea>
+      </label>
+      <?php if (in_array((string)($order['status'] ?? ''), ['delivered', 'cancelled'], true)): ?>
+        <div class="basis-full text-xs text-amber-700">Заказ уже завершён/отменён: адрес, дату и комментарий можно сохранить, стоимость доставки не пересчитывается.</div>
+      <?php else: ?>
+        <div class="basis-full text-xs text-gray-500">При смене адреса или километража стоимость доставки пересчитается, итог заказа изменится на разницу доставки.</div>
+      <?php endif; ?>
     </div>
   </form>
 
