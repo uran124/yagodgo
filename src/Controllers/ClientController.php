@@ -1208,7 +1208,7 @@ public function cancelReservedOrder(int $orderId): void
         requireClient();
         $userId = $_SESSION['user_id'];
         $stmt = $this->pdo->prepare(
-            "SELECT o.id, o.status, o.total_amount, o.created_at, o.delivery_date,\n       d.time_from AS slot_from, d.time_to AS slot_to, a.street AS address\nFROM orders o\nLEFT JOIN addresses a ON a.id = o.address_id\nLEFT JOIN delivery_slots d ON d.id = o.slot_id\nWHERE o.user_id = ?\nORDER BY o.id DESC"
+            "SELECT o.id, o.status, o.total_amount, o.created_at, o.delivery_date,\n       o.delivery_fee, o.delivery_distance_km, o.delivery_pricing_source, o.delivery_comment,\n       d.time_from AS slot_from, d.time_to AS slot_to, a.street AS address\nFROM orders o\nLEFT JOIN addresses a ON a.id = o.address_id\nLEFT JOIN delivery_slots d ON d.id = o.slot_id\nWHERE o.user_id = ?\nORDER BY o.id DESC"
         );
         $stmt->execute([$userId]);
         $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);

@@ -23,9 +23,10 @@ $rawSum = 0;
 foreach ($items as $it) {
     $rawSum += ($it['quantity'] * $it['unit_price']);
 }
-// Сумма скидки в рублях
-$shippingCost = (stripos($order['address'] ?? '', 'Самовывоз') === false) ? 300 : 0;
-$discount = max(0, $rawSum - $order['total_amount'] + $shippingCost);
+// Сумма скидки в рублях: доставка хранится отдельно и не считается скидкой/баллами
+$shippingCost = max(0, (int)($order['delivery_fee'] ?? 0));
+$itemsPaidTotal = max(0, (int)($order['total_amount'] ?? 0) - $shippingCost);
+$discount = max(0, $rawSum - $itemsPaidTotal);
 ?>
 
 <main class="bg-gradient-to-br from-orange-50 via-white to-pink-50 min-h-screen pb-24">
@@ -149,9 +150,20 @@ $discount = max(0, $rawSum - $order['total_amount'] + $shippingCost);
         <?php endif; ?>
       </div>
 
-      <div class="flex justify-between items-center pt-4 border-t border-gray-200 mt-4">
-        <span class="font-semibold text-gray-800">Доставка:</span>
-        <span class="font-semibold text-gray-800"><?= $shippingCost > 0 ? '300 ₽' : '0 ₽' ?></span>
+      <div class="space-y-1 pt-4 border-t border-gray-200 mt-4">
+        <div class="flex justify-between items-center">
+          <span class="font-semibold text-gray-800">Доставка:</span>
+          <span class="font-semibold text-gray-800"><?= number_format($shippingCost, 0, '.', ' ') ?> ₽</span>
+        </div>
+        <?php if (!empty($order['delivery_distance_km'])): ?>
+          <div class="text-sm text-gray-500">Расстояние: <?= htmlspecialchars((string)$order['delivery_distance_km']) ?> км</div>
+        <?php endif; ?>
+        <?php if (!empty($order['delivery_pricing_source']) && $order['delivery_pricing_source'] !== 'openrouteservice'): ?>
+          <div class="text-xs text-amber-700">Расчёт доставки: <?= htmlspecialchars((string)$order['delivery_pricing_source']) ?></div>
+        <?php endif; ?>
+        <?php if (!empty($order['delivery_comment'])): ?>
+          <div class="text-sm text-gray-600">Комментарий: <?= nl2br(htmlspecialchars((string)$order['delivery_comment'])) ?></div>
+        <?php endif; ?>
       </div>
       <!-- Окончательная сумма -->
       <div class="flex justify-between items-center pt-2">

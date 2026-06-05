@@ -171,6 +171,13 @@
         <?php if (!empty($o['comment'])): ?>
           <div class="text-sm text-gray-700 mt-1"><?= nl2br(htmlspecialchars($o['comment'])) ?></div>
         <?php endif; ?>
+        <?php $deliveryFee = max(0, (int)($o['delivery_fee'] ?? 0)); ?>
+        <?php if ($deliveryFee > 0): ?>
+          <div class="flex justify-between text-sm text-gray-700 border-t mt-1 pt-1">
+            <span>Доставка<?php if (!empty($o['delivery_distance_km'])): ?> · <?= htmlspecialchars((string)$o['delivery_distance_km']) ?> км<?php endif; ?></span>
+            <span><?= number_format($deliveryFee, 0, '.', ' ') ?> ₽</span>
+          </div>
+        <?php endif; ?>
         <?php if (($o['points_from_balance'] ?? 0) > 0): ?>
           <div class="flex justify-between text-sm text-pink-600 border-t mt-1 pt-1">
             <span>Списано баллов:</span>

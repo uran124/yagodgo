@@ -1128,7 +1128,7 @@ class UsersController
             }
         }
         $stmt = $this->pdo->prepare(
-            "SELECT id, street FROM addresses WHERE user_id = ? ORDER BY is_primary DESC, created_at ASC"
+            "SELECT id, street, last_checkout_comment, delivery_distance_km, delivery_distance_m, delivery_distance_provider FROM addresses WHERE user_id = ? ORDER BY is_primary DESC, created_at ASC"
         );
         $stmt->execute([$uid]);
         $res = $stmt->fetchAll(PDO::FETCH_ASSOC);

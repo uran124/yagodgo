@@ -47,6 +47,30 @@ class DeliveryController
             return;
         }
 
+        $manualDistanceRaw = str_replace(',', '.', trim((string)($_POST['delivery_distance_km_manual'] ?? '')));
+        if ($manualDistanceRaw !== '' && is_numeric($manualDistanceRaw)) {
+            $manualDistanceKm = max(0.0, (float)$manualDistanceRaw);
+            $pricing = $this->deliveryPricing->calculatePriceForDistance($manualDistanceKm);
+            echo json_encode([
+                'ok' => true,
+                'method' => 'delivery',
+                'requested_address' => $address,
+                'address' => $address,
+                'distance_km' => rtrim(rtrim(number_format($manualDistanceKm, 3, '.', ''), '0'), '.'),
+                'distance_m' => (string)(int)round($manualDistanceKm * 1000),
+                'price_rub' => (int)$pricing['price_rub'],
+                'delivery_fee' => (int)$pricing['price_rub'],
+                'pricing_source' => 'manual',
+                'delivery_pricing_source' => 'manual',
+                'zone' => $pricing['zone'],
+                'delivery_tariff_zone_id' => is_array($pricing['zone']) && isset($pricing['zone']['id']) ? (int)$pricing['zone']['id'] : null,
+                'is_preliminary' => false,
+                'warning' => null,
+                'message' => 'Стоимость рассчитана по вручную указанному километражу. ' . (string)$pricing['message'],
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
         try {
             $result = $this->deliveryPricing->calculateForAddress($address, null, [
                 'selected_lat' => $_POST['selected_lat'] ?? $_POST['lat'] ?? '',

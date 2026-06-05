@@ -190,6 +190,27 @@
       </div>
     <?php endif; ?>
 
+    <?php
+      $deliveryFee = max(0, (int)($order['delivery_fee'] ?? 0));
+      $deliveryDistance = $order['delivery_distance_km'] ?? null;
+      $deliverySource = (string)($order['delivery_pricing_source'] ?? '');
+      $deliveryComment = trim((string)($order['delivery_comment'] ?? ''));
+    ?>
+    <?php if ($deliveryFee > 0 || $deliveryDistance !== null || $deliveryComment !== ''): ?>
+      <div class="border-t py-2 space-y-1 text-sm">
+        <div class="flex justify-between">
+          <span>Доставка<?php if ($deliveryDistance !== null && $deliveryDistance !== ''): ?> · <?= htmlspecialchars((string)$deliveryDistance) ?> км<?php endif; ?></span>
+          <span><?= number_format($deliveryFee, 0, '.', ' ') ?> ₽</span>
+        </div>
+        <?php if ($deliverySource !== ''): ?>
+          <div class="text-xs text-gray-500">Источник расчёта: <?= htmlspecialchars($deliverySource) ?></div>
+        <?php endif; ?>
+        <?php if ($deliveryComment !== ''): ?>
+          <div class="text-xs text-gray-600">Комментарий доставки: <?= nl2br(htmlspecialchars($deliveryComment)) ?></div>
+        <?php endif; ?>
+      </div>
+    <?php endif; ?>
+
     <div class="flex justify-between font-bold border-t pt-2">
       <span>Итого:</span>
       <span><?= $order['total_amount'] ?> ₽</span>

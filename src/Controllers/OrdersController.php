@@ -10,6 +10,7 @@ use App\Models\OrdersRepository;
 use App\Services\AdminOrdersPageService;
 use App\Services\OrderStockOrchestrator;
 use App\Services\StockService;
+use App\Services\DeliveryPricingService;
 
 class OrdersController
 {
@@ -393,8 +394,92 @@ class OrdersController
             $total -= $pointsUsed;
         }
 
-        $shippingFee = $isPickup ? 0 : 300;
+        $deliveryComment = trim((string)($_POST['delivery_comment'] ?? ''));
+        $deliveryDistanceManualRaw = str_replace(',', '.', trim((string)($_POST['delivery_distance_km_manual'] ?? '')));
+        $deliveryFee = 300;
+        $deliveryDistanceKm = null;
+        $deliveryDistanceM = null;
+        $deliveryTariffZoneId = null;
+        $deliveryPricingSource = 'pending_review';
+        $deliveryLat = null;
+        $deliveryLng = null;
+        $deliveryNormalizedAddress = null;
+        $deliveryDistanceError = null;
+
+        if ($isPickup) {
+            $deliveryFee = 0;
+            $deliveryPricingSource = 'pickup';
+        } else {
+            $addressForDelivery = '';
+            if ($isNew) {
+                $addressForDelivery = $address;
+            } elseif (($addrInput ?? null) === 'new') {
+                $addressForDelivery = $newStreet ?? '';
+            } elseif (!empty($addressId)) {
+                $stmtAddress = $this->pdo->prepare('SELECT street FROM addresses WHERE id = ? AND user_id = ?');
+                $stmtAddress->execute([$addressId, $userId]);
+                $addressForDelivery = (string)($stmtAddress->fetchColumn() ?: '');
+            }
+
+            try {
+                $deliveryPricing = new DeliveryPricingService($this->pdo);
+                if ($deliveryDistanceManualRaw !== '' && is_numeric($deliveryDistanceManualRaw)) {
+                    $deliveryDistanceKm = max(0.0, (float)$deliveryDistanceManualRaw);
+                    $deliveryDistanceM = (int)round($deliveryDistanceKm * 1000);
+                    $pricing = $deliveryPricing->calculatePriceForDistance($deliveryDistanceKm);
+                    $deliveryFee = (int)$pricing['price_rub'];
+                    $deliveryTariffZoneId = is_array($pricing['zone']) && isset($pricing['zone']['id']) ? (int)$pricing['zone']['id'] : null;
+                    $deliveryPricingSource = 'manual';
+                    $deliveryNormalizedAddress = $addressForDelivery;
+                } elseif ($addressForDelivery !== '') {
+                    $deliveryCalc = $deliveryPricing->calculateForAddress($addressForDelivery);
+                    $deliveryFee = (int)($deliveryCalc['delivery_fee'] ?? $deliveryCalc['price_rub'] ?? 300);
+                    $deliveryDistanceKm = isset($deliveryCalc['distance_km']) && $deliveryCalc['distance_km'] !== '' ? (float)$deliveryCalc['distance_km'] : null;
+                    $deliveryDistanceM = isset($deliveryCalc['distance_m']) && $deliveryCalc['distance_m'] !== '' ? (int)round((float)$deliveryCalc['distance_m']) : null;
+                    $deliveryTariffZoneId = $deliveryCalc['delivery_tariff_zone_id'] ?? null;
+                    $deliveryPricingSource = (string)($deliveryCalc['delivery_pricing_source'] ?? $deliveryCalc['pricing_source'] ?? '');
+                    $deliveryLat = $deliveryCalc['lat'] ?? null;
+                    $deliveryLng = $deliveryCalc['lng'] ?? null;
+                    $deliveryNormalizedAddress = $deliveryCalc['normalized_address'] ?? $deliveryCalc['address'] ?? $addressForDelivery;
+                }
+            } catch (\Throwable $e) {
+                $deliveryFee = 300;
+                $deliveryPricingSource = 'pending_review';
+                $deliveryDistanceError = $e->getMessage();
+            }
+        }
+
+        $shippingFee = $deliveryFee;
         $total += $shippingFee;
+
+        if (!empty($addressId) && !$isPickup) {
+            $addressSet = [];
+            $addressValues = [];
+            foreach ([
+                'last_checkout_comment' => $deliveryComment,
+                'delivery_distance_km' => $deliveryDistanceKm,
+                'delivery_distance_m' => $deliveryDistanceM,
+                'delivery_lat' => $deliveryLat,
+                'delivery_lng' => $deliveryLng,
+                'delivery_normalized_address' => $deliveryNormalizedAddress,
+                'delivery_distance_provider' => $deliveryPricingSource,
+                'delivery_distance_error' => $deliveryDistanceError,
+            ] as $column => $value) {
+                if ($this->columnExists('addresses', $column)) {
+                    $addressSet[] = $column . ' = ?';
+                    $addressValues[] = $value;
+                }
+            }
+            if ($this->columnExists('addresses', 'delivery_distance_calculated_at')) {
+                $addressSet[] = 'delivery_distance_calculated_at = NOW()';
+            }
+            if ($addressSet) {
+                $addressValues[] = $addressId;
+                $addressValues[] = $userId;
+                $this->pdo->prepare('UPDATE addresses SET ' . implode(', ', $addressSet) . ' WHERE id = ? AND user_id = ?')
+                    ->execute($addressValues);
+            }
+        }
 
         $createdByUserId = (int)($_SESSION['user_id'] ?? 0);
         $orderStatus = $selectedMode === 'preorder' ? 'reserved' : 'new';
@@ -415,6 +500,19 @@ class OrdersController
                 $orderColumns[] = 'purchase_batch_id';
                 $orderValues[] = $orderBatchId;
                 $orderPlaceholders[] = '?';
+            }
+            foreach ([
+                'delivery_fee' => $deliveryFee,
+                'delivery_distance_km' => $deliveryDistanceKm,
+                'delivery_tariff_zone_id' => $deliveryTariffZoneId,
+                'delivery_pricing_source' => $deliveryPricingSource,
+                'delivery_comment' => $deliveryComment,
+            ] as $column => $value) {
+                if ($this->columnExists('orders', $column)) {
+                    $orderColumns[] = $column;
+                    $orderValues[] = $value;
+                    $orderPlaceholders[] = '?';
+                }
             }
 
             $stmt = $this->pdo->prepare(
