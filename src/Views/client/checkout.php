@@ -187,7 +187,14 @@ $slots           = $slots           ?? [];
               <option value="pickup">Самовывоз: 9 мая 73</option>
             </select>
             <div id="newAddressBlock" class="space-y-2 hidden">
-              <input type="text" name="new_address" placeholder="Адрес" class="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none">
+              <div class="relative" data-checkout-address-suggest>
+                <input type="text" name="new_address" placeholder="Адрес" autocomplete="off" class="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none" data-checkout-address-input>
+                <input type="hidden" name="new_address_normalized" data-checkout-address-selected-address>
+                <input type="hidden" name="new_address_lat" data-checkout-address-selected-lat>
+                <input type="hidden" name="new_address_lng" data-checkout-address-selected-lng>
+                <div class="hidden absolute z-30 mt-1 max-h-72 w-full overflow-auto rounded-2xl border border-gray-200 bg-white shadow-2xl" data-checkout-address-list></div>
+                <p class="mt-1 text-xs text-gray-500">Начните вводить адрес и выберите точный вариант из списка — так «Ленина, 10» не попадёт в другой город.</p>
+              </div>
               <input type="text" name="recipient_name" value="<?= htmlspecialchars($userName) ?>" placeholder="Имя получателя" class="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none">
               <input type="tel" name="recipient_phone" value="<?= htmlspecialchars($addresses[0]['recipient_phone'] ?? '') ?>" placeholder="Телефон" class="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none">
             </div>
@@ -374,6 +381,137 @@ $slots           = $slots           ?? [];
     }
 
     updateTotal();
+  }
+
+  function escapeHtmlCheckout(value) {
+    return String(value ?? '').replace(/[&<>"']/g, function (char) {
+      return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'}[char];
+    });
+  }
+
+  const addressSuggestRoot = document.querySelector('[data-checkout-address-suggest]');
+  const checkoutAddressInput = addressSuggestRoot ? addressSuggestRoot.querySelector('[data-checkout-address-input]') : null;
+  const checkoutAddressList = addressSuggestRoot ? addressSuggestRoot.querySelector('[data-checkout-address-list]') : null;
+  const checkoutSelectedAddress = addressSuggestRoot ? addressSuggestRoot.querySelector('[data-checkout-address-selected-address]') : null;
+  const checkoutSelectedLat = addressSuggestRoot ? addressSuggestRoot.querySelector('[data-checkout-address-selected-lat]') : null;
+  const checkoutSelectedLng = addressSuggestRoot ? addressSuggestRoot.querySelector('[data-checkout-address-selected-lng]') : null;
+
+  function clearCheckoutSelectedAddress() {
+    if (checkoutSelectedAddress) checkoutSelectedAddress.value = '';
+    if (checkoutSelectedLat) checkoutSelectedLat.value = '';
+    if (checkoutSelectedLng) checkoutSelectedLng.value = '';
+  }
+
+  function hideCheckoutAddressSuggestions() {
+    if (!checkoutAddressList) return;
+    checkoutAddressList.innerHTML = '';
+    checkoutAddressList.classList.add('hidden');
+  }
+
+  function renderCheckoutAddressSuggestions(items, message) {
+    if (!checkoutAddressInput || !checkoutAddressList) return;
+    checkoutAddressList.innerHTML = '';
+
+    if (!items.length) {
+      if (message) {
+        checkoutAddressList.innerHTML = `<div class="px-4 py-3 text-sm text-gray-500">${escapeHtmlCheckout(message)}</div>`;
+        checkoutAddressList.classList.remove('hidden');
+      } else {
+        checkoutAddressList.classList.add('hidden');
+      }
+      return;
+    }
+
+    items.forEach((item) => {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'flex w-full items-start gap-2 border-b border-gray-100 px-4 py-3 text-left text-sm hover:bg-rose-50 focus:bg-rose-50 focus:outline-none';
+      const meta = [item.city || '', item.district || '', item.distance_from_center_km ? `${item.distance_from_center_km} км от центра` : ''].filter(Boolean).join(' · ');
+      row.innerHTML = `
+        <span class="material-icons-round text-base text-red-500">location_on</span>
+        <span class="flex-1">
+          <span class="block font-semibold text-gray-800">${escapeHtmlCheckout(item.label || item.value || '')}</span>
+          <span class="mt-0.5 block text-xs text-gray-500">${escapeHtmlCheckout(meta)}</span>
+        </span>
+      `;
+      row.addEventListener('click', function () {
+        const chosenAddress = item.value || item.label || item.unrestricted_value || '';
+        checkoutAddressInput.value = chosenAddress;
+        if (checkoutSelectedAddress) checkoutSelectedAddress.value = chosenAddress;
+        if (checkoutSelectedLat) checkoutSelectedLat.value = item.lat || '';
+        if (checkoutSelectedLng) checkoutSelectedLng.value = item.lng || '';
+        hideCheckoutAddressSuggestions();
+      });
+      checkoutAddressList.appendChild(row);
+    });
+
+    checkoutAddressList.classList.remove('hidden');
+  }
+
+  async function fetchCheckoutAddressSuggestions(query) {
+    if (!query || query.trim().length < 3) return [];
+    const response = await fetch('/delivery/address-suggestions?query=' + encodeURIComponent(query.trim()), {
+      credentials: 'same-origin',
+      headers: {'X-Requested-With': 'XMLHttpRequest'}
+    });
+    const text = await response.text();
+    let data = null;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      throw new Error('Сервер вернул не JSON');
+    }
+    if (!response.ok || !data.ok) {
+      throw new Error(data.message || 'Не удалось получить подсказки адреса');
+    }
+    return data.suggestions || [];
+  }
+
+  if (checkoutAddressInput) {
+    let addressTimer = null;
+    let requestId = 0;
+    checkoutAddressInput.addEventListener('input', function () {
+      clearCheckoutSelectedAddress();
+      clearTimeout(addressTimer);
+      const query = checkoutAddressInput.value.trim();
+      if (query.length < 3) {
+        hideCheckoutAddressSuggestions();
+        return;
+      }
+      const currentRequest = ++requestId;
+      addressTimer = setTimeout(async function () {
+        try {
+          const suggestions = await fetchCheckoutAddressSuggestions(query);
+          if (currentRequest === requestId) {
+            renderCheckoutAddressSuggestions(suggestions, suggestions.length ? '' : 'Не нашли адрес в радиусе доставки. Уточните населённый пункт, улицу и дом.');
+          }
+        } catch (error) {
+          if (currentRequest === requestId) {
+            renderCheckoutAddressSuggestions([], error.message || 'Не удалось получить подсказки адреса.');
+          }
+        }
+      }, 250);
+    });
+
+    document.addEventListener('click', function (event) {
+      if (addressSuggestRoot && !addressSuggestRoot.contains(event.target)) {
+        hideCheckoutAddressSuggestions();
+      }
+    });
+  }
+
+  const checkoutForm = select ? select.closest('form') : document.querySelector('form[action="/checkout"]');
+  if (checkoutForm) {
+    checkoutForm.addEventListener('submit', function (event) {
+      if (!select || select.value !== 'new' || !checkoutAddressInput) return;
+      const value = checkoutAddressInput.value.trim();
+      const looksLikeCoords = /^\s*-?\d+(?:[\.,]\d+)?\s*[,; ]\s*-?\d+(?:[\.,]\d+)?\s*$/.test(value);
+      if (value.length >= 3 && !looksLikeCoords && (!checkoutSelectedAddress?.value || !checkoutSelectedLat?.value || !checkoutSelectedLng?.value)) {
+        event.preventDefault();
+        renderCheckoutAddressSuggestions([], 'Выберите адрес из подсказки DaData. Это нужно, чтобы не перепутать город или посёлок.');
+        checkoutAddressInput.focus();
+      }
+    });
   }
 
   if (select) {
