@@ -401,23 +401,38 @@ $pickupAddress   = 'Самовывоз: 9 мая, 73';
     updateTotal();
   }
 
-  async function fetchAddressSuggestions(query) {
-    if (!query || query.trim().length < 3) return [];
-    const response = await fetch('/delivery/address-suggestions?query=' + encodeURIComponent(query.trim()), {
+  const addressSuggestionCache = new Map();
+
+  async function fetchAddressSuggestions(query, signal) {
+    const normalizedQuery = (query || '').trim();
+    if (normalizedQuery.length < 3) return [];
+
+    const cacheKey = normalizedQuery.toLowerCase();
+    if (addressSuggestionCache.has(cacheKey)) {
+      return addressSuggestionCache.get(cacheKey);
+    }
+
+    const response = await fetch('/delivery/address-suggestions?query=' + encodeURIComponent(normalizedQuery), {
       credentials: 'same-origin',
-      headers: {'X-Requested-With': 'XMLHttpRequest'}
+      signal,
+      headers: {'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json'}
     });
     const text = await response.text();
     let data = null;
     try {
       data = JSON.parse(text);
     } catch (e) {
-      throw new Error('Сервер вернул не JSON');
+      throw new Error('Сервер вернул не JSON: ' + text.slice(0, 120));
     }
     if (!response.ok || !data.ok) {
       throw new Error(data.message || 'Не удалось получить подсказки адреса');
     }
-    return data.suggestions || [];
+    const suggestions = data.suggestions || [];
+    addressSuggestionCache.set(cacheKey, suggestions);
+    if (addressSuggestionCache.size > 40) {
+      addressSuggestionCache.delete(addressSuggestionCache.keys().next().value);
+    }
+    return suggestions;
   }
 
   async function calculateDelivery(order) {
@@ -518,6 +533,7 @@ $pickupAddress   = 'Самовывоз: 9 мая, 73';
     const selectedLng = root.querySelector('[data-checkout-address-selected-lng]');
     let timer = null;
     let requestId = 0;
+    let activeSuggestionController = null;
 
     function clearSelected() {
       if (selectedAddress) selectedAddress.value = '';
@@ -573,6 +589,10 @@ $pickupAddress   = 'Самовывоз: 9 мая, 73';
     input.addEventListener('input', function () {
       clearSelected();
       clearTimeout(timer);
+      if (activeSuggestionController) {
+        activeSuggestionController.abort();
+        activeSuggestionController = null;
+      }
       const query = input.value.trim();
       if (query.length < 3) {
         hideSuggestions();
@@ -581,17 +601,27 @@ $pickupAddress   = 'Самовывоз: 9 мая, 73';
       }
       const currentRequest = ++requestId;
       timer = setTimeout(async function () {
+        activeSuggestionController = new AbortController();
+        const timeout = setTimeout(function () {
+          if (activeSuggestionController) activeSuggestionController.abort();
+        }, 7000);
         try {
-          const suggestions = await fetchAddressSuggestions(query);
+          const suggestions = await fetchAddressSuggestions(query, activeSuggestionController.signal);
           if (currentRequest === requestId) {
             renderSuggestions(suggestions, suggestions.length ? '' : 'Не нашли адрес в радиусе доставки. Уточните населённый пункт, улицу и дом.');
           }
         } catch (error) {
+          if (error && error.name === 'AbortError') return;
           if (currentRequest === requestId) {
             renderSuggestions([], error.message || 'Не удалось получить подсказки адреса.');
           }
+        } finally {
+          clearTimeout(timeout);
+          if (currentRequest === requestId) {
+            activeSuggestionController = null;
+          }
         }
-      }, 250);
+      }, 500);
     });
 
     document.addEventListener('click', function (event) {
