@@ -424,19 +424,113 @@ $pickupAddress   = 'Самовывоз: 9 мая, 73';
     if (!query || query.trim().length < 3) return [];
     const response = await fetch('/delivery/address-suggestions?query=' + encodeURIComponent(query.trim()), {
       credentials: 'same-origin',
-      headers: {'X-Requested-With': 'XMLHttpRequest'}
+      signal,
+      headers: {'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json'}
     });
     const text = await response.text();
     let data = null;
     try {
       data = JSON.parse(text);
     } catch (e) {
-      throw new Error('Сервер вернул не JSON');
+      throw new Error('Сервер вернул не JSON: ' + text.slice(0, 120));
     }
     if (!response.ok || !data.ok) {
       throw new Error(data.message || 'Не удалось получить подсказки адреса');
     }
-    return data.suggestions || [];
+    const suggestions = data.suggestions || [];
+    addressSuggestionCache.set(cacheKey, suggestions);
+    if (addressSuggestionCache.size > 40) {
+      addressSuggestionCache.delete(addressSuggestionCache.keys().next().value);
+    }
+    return suggestions;
+  }
+
+  async function calculateDelivery(order) {
+    const select = order.querySelector('[data-address-select]');
+    const feeEl = order.querySelector('[data-delivery-fee]');
+    const noteEl = order.querySelector('[data-delivery-note]');
+    const feeInput = order.querySelector('[data-delivery-fee-input]');
+    const distanceInput = order.querySelector('[data-delivery-distance-input]');
+    const sourceInput = order.querySelector('[data-delivery-source-input]');
+    if (!select) return;
+
+    const selected = select.options[select.selectedIndex];
+    const isPickup = select.value === 'pickup';
+    const isNew = select.value === 'new';
+    const newBlock = order.querySelector('[data-new-address-block]');
+    const commentBlock = order.querySelector('[data-delivery-comment-block]');
+    if (newBlock) newBlock.classList.toggle('hidden', !isNew);
+    if (commentBlock) commentBlock.classList.toggle('hidden', isPickup);
+
+    if (isPickup) {
+      order.dataset.deliveryFee = '0';
+      if (feeEl) feeEl.textContent = '0 ₽';
+      if (noteEl) noteEl.textContent = 'Самовывоз — доставка 0 ₽.';
+      if (feeInput) feeInput.value = '0';
+      if (distanceInput) distanceInput.value = '';
+      if (sourceInput) sourceInput.value = 'pickup';
+      updateTotal();
+      return;
+    }
+
+    let address = selected ? (selected.dataset.street || '') : '';
+    const selectedLat = order.querySelector('[data-checkout-address-selected-lat]')?.value || '';
+    const selectedLng = order.querySelector('[data-checkout-address-selected-lng]')?.value || '';
+    const selectedAddress = order.querySelector('[data-checkout-address-selected-address]')?.value || '';
+    if (isNew) {
+      address = order.querySelector('[data-checkout-address-input]')?.value.trim() || '';
+    }
+
+    if (!address) {
+      order.dataset.deliveryFee = '300';
+      if (feeEl) feeEl.textContent = '300 ₽';
+      if (noteEl) noteEl.textContent = 'Введите адрес — менеджер уточнит стоимость перед подтверждением.';
+      if (feeInput) feeInput.value = '300';
+      if (distanceInput) distanceInput.value = '';
+      if (sourceInput) sourceInput.value = 'pending_review';
+      updateTotal();
+      return;
+    }
+
+    if (feeEl) feeEl.textContent = 'считаем…';
+    if (noteEl) noteEl.textContent = 'Считаем расстояние и тариф доставки.';
+
+    const body = new URLSearchParams();
+    body.set('address', address);
+    if (selectedLat) body.set('selected_lat', selectedLat);
+    if (selectedLng) body.set('selected_lng', selectedLng);
+    if (selectedAddress) body.set('selected_address', selectedAddress);
+
+    try {
+      const response = await fetch('/delivery/calculate', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest'},
+        body
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        throw new Error(data.message || 'Не удалось рассчитать доставку');
+      }
+      const fee = Number(data.delivery_fee ?? data.price_rub ?? 300);
+      order.dataset.deliveryFee = String(fee);
+      if (feeEl) feeEl.textContent = format(fee) + ' ₽';
+      const distanceText = data.distance_km ? `${data.distance_km} км` : 'расстояние уточняется';
+      const warning = data.warning ? ` ${data.warning}` : '';
+      if (noteEl) noteEl.textContent = `Расстояние: ${distanceText}. ${data.message || ''}${warning}`.trim();
+      if (feeInput) feeInput.value = String(fee);
+      if (distanceInput) distanceInput.value = data.distance_km || '';
+      if (sourceInput) sourceInput.value = data.delivery_pricing_source || data.pricing_source || '';
+    } catch (error) {
+      order.dataset.deliveryFee = '300';
+      if (feeEl) feeEl.textContent = 'от 300 ₽';
+      if (noteEl) noteEl.textContent = (error.message || 'Не удалось рассчитать доставку') + '. Точную стоимость подтвердит менеджер.';
+      if (feeInput) feeInput.value = '300';
+      if (distanceInput) distanceInput.value = '';
+      if (sourceInput) sourceInput.value = 'pending_review';
+    }
+
+    updateTotal();
   }
 
   async function calculateDelivery(order) {
@@ -606,11 +700,17 @@ $pickupAddress   = 'Самовывоз: 9 мая, 73';
             renderSuggestions(suggestions, suggestions.length ? '' : 'Не нашли адрес в радиусе доставки. Уточните населённый пункт, улицу и дом.');
           }
         } catch (error) {
+          if (error && error.name === 'AbortError') return;
+          if (currentRequest === requestId) {
+            renderSuggestions([], error.message || 'Не удалось получить подсказки адреса.');
+          }
+        } finally {
+          clearTimeout(timeout);
           if (currentRequest === requestId) {
             renderSuggestions([], error.message || 'Не удалось получить подсказки адреса.');
           }
         }
-      }, 250);
+      }, 500);
     });
 
     document.addEventListener('click', function (event) {

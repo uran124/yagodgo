@@ -308,6 +308,12 @@ class SettingsController
     public function suggestDeliveryAddresses(): void
     {
         header('Content-Type: application/json; charset=UTF-8');
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(8);
+        }
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
 
         $query = trim((string)($_GET['query'] ?? $_POST['query'] ?? ''));
         if (function_exists('mb_strlen')) {

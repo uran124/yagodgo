@@ -186,7 +186,16 @@ return [
         }
 
         requireClient();
-        (new App\Controllers\SettingsController($c['pdo']))->suggestDeliveryAddresses();
+        (new App\Controllers\DeliveryController($c['pdo']))->addressSuggestions();
+        return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('POST', '/delivery/calculate', $method, $uri)) {
+            return false;
+        }
+
+        requireClient();
+        (new App\Controllers\DeliveryController($c['pdo']))->calculate();
         return true;
     },
     static function (string $method, string $uri, array $c): bool {
