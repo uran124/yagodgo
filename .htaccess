@@ -9,6 +9,10 @@ AddDefaultCharset UTF-8
   RewriteCond %{HTTP:X-Forwarded-Proto} !https
   RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
+  # Статику не отправляем в PHP-роутер.
+  # Если файла нет в /assets или /uploads, сервер должен быстро отдать 404, а не гонять index.php.
+  RewriteRule ^(assets|uploads)/ - [L]
+
   # Если запрашиваемый ресурс реально существует как файл или папка — отдать его напрямую
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
