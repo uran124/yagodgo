@@ -199,7 +199,52 @@ class ClientCatalogService
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($products as &$product) {
+            $this->normalizeProductImagePaths($product);
+        }
+        unset($product);
+
+        return $products;
+    }
+
+    /**
+     * @param array<string, mixed> $product
+     */
+    private function normalizeProductImagePaths(array &$product): void
+    {
+        $batchImage = $this->normalizeExistingPublicFile((string)($product['batch_image_path'] ?? ''));
+        $productImage = $this->normalizeExistingPublicFile((string)($product['product_image_path'] ?? ''));
+
+        $product['batch_image_path'] = $batchImage;
+        $product['product_image_path'] = $productImage;
+        $product['image_path'] = $batchImage !== '' ? $batchImage : $productImage;
+    }
+
+    private function normalizeExistingPublicFile(string $path): string
+    {
+        $path = trim($path);
+        if ($path === '') {
+            return '';
+        }
+
+        if (preg_match('~^https?://~i', $path) === 1) {
+            return $path;
+        }
+
+        if ($path[0] !== '/') {
+            $path = '/' . $path;
+        }
+
+        if (str_starts_with($path, '/uploads/') || str_starts_with($path, '/assets/')) {
+            $absolutePath = dirname(__DIR__, 2) . $path;
+            if (!is_file($absolutePath)) {
+                return '';
+            }
+        }
+
+        return $path;
     }
 
     /**
