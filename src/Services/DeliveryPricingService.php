@@ -99,7 +99,9 @@ class DeliveryPricingService
                     'radius_meters' => $radiusMeters,
                 ]],
             ],
-            ['Authorization: Token ' . $apiKey]
+            ['Authorization: Token ' . $apiKey],
+            2,
+            4
         );
 
         if (!$suggest['ok']) {
@@ -569,7 +571,7 @@ class DeliveryPricingService
      * @param array<int, string> $headers
      * @return array<string, mixed>
      */
-    private function postJsonDetailed(string $url, array $payload, array $headers = []): array
+    private function postJsonDetailed(string $url, array $payload, array $headers = [], int $connectTimeout = 5, int $timeout = 12): array
     {
         if (!function_exists('curl_init')) {
             throw new \RuntimeException('На сервере недоступен curl для проверки адреса.');
@@ -587,8 +589,10 @@ class DeliveryPricingService
             CURLOPT_POST => true,
             CURLOPT_HTTPHEADER => array_merge(['Content-Type: application/json', 'Accept: application/json'], $headers),
             CURLOPT_POSTFIELDS => $encodedPayload,
-            CURLOPT_CONNECTTIMEOUT => 5,
-            CURLOPT_TIMEOUT => 12,
+            CURLOPT_CONNECTTIMEOUT => max(1, $connectTimeout),
+            CURLOPT_TIMEOUT => max(2, $timeout),
+            CURLOPT_NOSIGNAL => true,
+            CURLOPT_IPRESOLVE => defined('CURL_IPRESOLVE_V4') ? CURL_IPRESOLVE_V4 : 1,
         ]);
         $body = curl_exec($ch);
         $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
