@@ -47,6 +47,25 @@ $batches = $purchaseBatches ?? [];
         <select name="address_id" id="addressSelect" class="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-white placeholder:text-slate-500"></select>
         <input type="text" name="address_new" id="addressNew" placeholder="Новый адрес" class="hidden w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-white placeholder:text-slate-500">
       </div>
+      <div id="deliveryCalcBlock" class="hidden space-y-2 rounded-xl border border-slate-700 bg-slate-900/70 p-3">
+        <div class="flex items-center justify-between gap-2">
+          <div>
+            <div class="text-xs font-semibold uppercase tracking-wide text-slate-400">Доставка</div>
+            <div id="deliveryCalcText" class="text-sm font-semibold text-slate-100">Стоимость будет рассчитана по адресу</div>
+            <div id="deliveryCalcNote" class="text-xs text-slate-400">Выберите адрес или самовывоз.</div>
+          </div>
+          <button type="button" id="deliveryRecalcBtn" class="rounded-lg border border-slate-600 px-3 py-2 text-xs font-semibold text-slate-100">Пересчитать</button>
+        </div>
+        <div id="deliveryCommentWrapper" class="space-y-1">
+          <label class="block text-xs font-medium text-slate-200">Комментарий к получению</label>
+          <textarea name="delivery_comment" id="deliveryComment" rows="2" placeholder="Например: получатель Марина +7..., подъезд 2" class="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-white placeholder:text-slate-500"></textarea>
+        </div>
+        <label class="block text-xs font-medium text-slate-200">Километраж вручную (если нужно скорректировать)</label>
+        <input type="number" name="delivery_distance_km_manual" id="deliveryDistanceManual" min="0" step="0.001" placeholder="Например: 8.22" class="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-white placeholder:text-slate-500">
+        <input type="hidden" name="delivery_fee_preview" id="deliveryFeePreview" value="300">
+        <input type="hidden" name="delivery_distance_km_preview" id="deliveryDistancePreview" value="">
+        <input type="hidden" name="delivery_pricing_source_preview" id="deliverySourcePreview" value="pending_review">
+      </div>
       <div id="userInfo" class="hidden rounded-xl bg-slate-900/70 p-3 text-xs text-slate-200"></div>
     </div>
 
@@ -55,7 +74,7 @@ $batches = $purchaseBatches ?? [];
       <input type="text" name="new_name" placeholder="Имя" class="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-white placeholder:text-slate-500">
       <input type="hidden" name="new_phone" id="newPhoneHidden">
       <input type="password" name="new_pin" placeholder="PIN, 4 цифры" maxlength="4" inputmode="numeric" class="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-white placeholder:text-slate-500">
-      <input type="text" name="new_address" placeholder="Адрес, пусто = самовывоз" class="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-white placeholder:text-slate-500">
+      <input type="text" name="new_address" id="newClientAddress" placeholder="Адрес, пусто = самовывоз" class="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-white placeholder:text-slate-500">
     </div>
 
     <div class="order-step-actions fixed inset-x-0 bottom-0 z-50 grid grid-cols-2 gap-2 border-t border-slate-700 bg-slate-800/95 p-2 backdrop-blur sm:static sm:mx-0 sm:mt-4 sm:border-0 sm:bg-transparent sm:p-0"><a href="<?= $base ?>/orders" class="rounded-xl border border-slate-600 bg-slate-900 px-4 py-3 font-semibold text-slate-100 text-center">Назад</a><button type="button" data-next="step2" class="next-step rounded-xl bg-[#F04483] px-4 py-3 font-semibold text-white shadow-sm shadow-pink-950/30">Далее</button></div>
@@ -141,7 +160,7 @@ $batches = $purchaseBatches ?? [];
   const batches = <?= json_encode($batches, JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK) ?>;
   const basePath = '<?= $base ?>';
   const today = '<?= htmlspecialchars($today) ?>';
-  const state = { mode: 'instant', group: 'in_stock', batchKey: null, selectedClientCanReferral: true };
+  const state = { mode: 'instant', group: 'in_stock', batchKey: null, selectedClientCanReferral: true, deliveryFee: 300 };
   const steps = ['step1','step2','step3','step4','step5','step6'];
   const batchList = document.getElementById('batchList');
   const productsList = document.getElementById('productsList');
@@ -411,7 +430,7 @@ $batches = $purchaseBatches ?? [];
       pointsRow.classList.remove('flex');
     }
 
-    const shipping = isPickup() ? 0 : 300;
+    const shipping = isPickup() ? 0 : Number(state.deliveryFee || 300);
     shippingEl.textContent = shipping.toFixed(0) + ' ₽';
     shippingRow.classList.toggle('hidden', shipping === 0);
     total += shipping;
@@ -427,6 +446,17 @@ $batches = $purchaseBatches ?? [];
   const addressNew = document.getElementById('addressNew');
   const newBlock = document.getElementById('newBlock');
   const newPhoneHidden = document.getElementById('newPhoneHidden');
+  const newClientAddress = document.getElementById('newClientAddress');
+  const deliveryCalcBlock = document.getElementById('deliveryCalcBlock');
+  const deliveryCalcText = document.getElementById('deliveryCalcText');
+  const deliveryCalcNote = document.getElementById('deliveryCalcNote');
+  const deliveryRecalcBtn = document.getElementById('deliveryRecalcBtn');
+  const deliveryCommentWrapper = document.getElementById('deliveryCommentWrapper');
+  const deliveryComment = document.getElementById('deliveryComment');
+  const deliveryDistanceManual = document.getElementById('deliveryDistanceManual');
+  const deliveryFeePreview = document.getElementById('deliveryFeePreview');
+  const deliveryDistancePreview = document.getElementById('deliveryDistancePreview');
+  const deliverySourcePreview = document.getElementById('deliverySourcePreview');
   searchPhone.value = '';
 
   searchPhone.addEventListener('input', () => {
@@ -482,11 +512,13 @@ $batches = $purchaseBatches ?? [];
     newPhoneHidden.value = phone;
     newBlock.classList.remove('hidden');
     addressWrapper.classList.add('hidden');
+    if (deliveryCalcBlock) deliveryCalcBlock.classList.remove('hidden');
     pointsBlock.classList.add('hidden');
     userInfo.classList.add('hidden');
     state.selectedClientCanReferral = true;
     prepareReferralToggle();
     sugg.classList.add('hidden');
+    calculateDelivery();
     updateSummary();
   }
 
@@ -499,6 +531,10 @@ $batches = $purchaseBatches ?? [];
           const opt = document.createElement('option');
           opt.value = a.id;
           opt.textContent = a.street;
+          opt.dataset.street = a.street || '';
+          opt.dataset.comment = a.last_checkout_comment || '';
+          opt.dataset.distanceKm = a.delivery_distance_km || '';
+          opt.dataset.provider = a.delivery_distance_provider || '';
           addressSelect.appendChild(opt);
         });
         const optNew = document.createElement('option');
@@ -510,15 +546,100 @@ $batches = $purchaseBatches ?? [];
         optPickup.textContent = 'Самовывоз 9 мая 73';
         addressSelect.appendChild(optPickup);
         addressWrapper.classList.remove('hidden');
+        if (deliveryCalcBlock) deliveryCalcBlock.classList.remove('hidden');
+        calculateDelivery();
         updateSummary();
       });
   }
 
+  function currentDeliveryAddress() {
+    if (!newBlock.classList.contains('hidden')) {
+      return (newClientAddress && newClientAddress.value.trim()) || '';
+    }
+    if (!addressSelect) return '';
+    if (addressSelect.value === 'pickup') return 'Самовывоз';
+    if (addressSelect.value === 'new') return addressNew.value.trim();
+    const selected = addressSelect.options[addressSelect.selectedIndex];
+    return selected ? (selected.dataset.street || selected.textContent || '').trim() : '';
+  }
+
+  async function calculateDelivery() {
+    const pickup = isPickup();
+    if (deliveryCalcBlock) deliveryCalcBlock.classList.toggle('hidden', false);
+    if (deliveryCommentWrapper) deliveryCommentWrapper.classList.toggle('hidden', pickup);
+    if (pickup) {
+      state.deliveryFee = 0;
+      if (deliveryCalcText) deliveryCalcText.textContent = '0 ₽';
+      if (deliveryCalcNote) deliveryCalcNote.textContent = 'Самовывоз — доставка 0 ₽.';
+      if (deliveryFeePreview) deliveryFeePreview.value = '0';
+      if (deliveryDistancePreview) deliveryDistancePreview.value = '';
+      if (deliverySourcePreview) deliverySourcePreview.value = 'pickup';
+      updateSummary();
+      return;
+    }
+
+    const address = currentDeliveryAddress();
+    if (!address) {
+      state.deliveryFee = 300;
+      if (deliveryCalcText) deliveryCalcText.textContent = 'от 300 ₽';
+      if (deliveryCalcNote) deliveryCalcNote.textContent = 'Адрес не указан — точную стоимость проверит менеджер.';
+      if (deliveryFeePreview) deliveryFeePreview.value = '300';
+      if (deliveryDistancePreview) deliveryDistancePreview.value = '';
+      if (deliverySourcePreview) deliverySourcePreview.value = 'pending_review';
+      updateSummary();
+      return;
+    }
+
+    if (deliveryCalcText) deliveryCalcText.textContent = 'считаем…';
+    if (deliveryCalcNote) deliveryCalcNote.textContent = 'Считаем километраж и тариф доставки.';
+
+    const body = new URLSearchParams();
+    body.set('address', address);
+    if (deliveryDistanceManual && deliveryDistanceManual.value.trim() !== '') {
+      body.set('delivery_distance_km_manual', deliveryDistanceManual.value.trim());
+    }
+
+    try {
+      const response = await fetch(basePath + '/delivery/calculate', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest'},
+        body
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.message || 'Не удалось рассчитать доставку');
+      const fee = Number(data.delivery_fee || data.price_rub || 300);
+      state.deliveryFee = fee;
+      if (deliveryCalcText) deliveryCalcText.textContent = fee.toFixed(0) + ' ₽';
+      const distance = data.distance_km ? data.distance_km + ' км' : 'километраж уточняется';
+      const warning = data.warning ? ' ' + data.warning : '';
+      if (deliveryCalcNote) deliveryCalcNote.textContent = 'Расстояние: ' + distance + '. ' + (data.message || '') + warning;
+      if (deliveryFeePreview) deliveryFeePreview.value = String(fee);
+      if (deliveryDistancePreview) deliveryDistancePreview.value = data.distance_km || '';
+      if (deliverySourcePreview) deliverySourcePreview.value = data.delivery_pricing_source || data.pricing_source || '';
+    } catch (error) {
+      state.deliveryFee = 300;
+      if (deliveryCalcText) deliveryCalcText.textContent = 'от 300 ₽';
+      if (deliveryCalcNote) deliveryCalcNote.textContent = (error.message || 'Не удалось рассчитать доставку') + '. Точную стоимость подтвердит менеджер.';
+      if (deliveryFeePreview) deliveryFeePreview.value = '300';
+      if (deliveryDistancePreview) deliveryDistancePreview.value = '';
+      if (deliverySourcePreview) deliverySourcePreview.value = 'pending_review';
+    }
+    updateSummary();
+  }
+
   addressSelect.addEventListener('change', () => {
     addressNew.classList.toggle('hidden', addressSelect.value !== 'new');
+    const selected = addressSelect.options[addressSelect.selectedIndex];
+    if (deliveryComment && selected && selected.dataset.comment !== undefined) deliveryComment.value = selected.dataset.comment || '';
+    if (deliveryDistanceManual) deliveryDistanceManual.value = selected && selected.dataset.distanceKm ? selected.dataset.distanceKm : '';
+    calculateDelivery();
     updateSummary();
   });
-  document.querySelector('input[name="new_address"]').addEventListener('input', updateSummary);
+  if (addressNew) addressNew.addEventListener('input', () => { calculateDelivery(); updateSummary(); });
+  if (newClientAddress) newClientAddress.addEventListener('input', () => { calculateDelivery(); updateSummary(); });
+  if (deliveryRecalcBtn) deliveryRecalcBtn.addEventListener('click', calculateDelivery);
+  if (deliveryDistanceManual) deliveryDistanceManual.addEventListener('input', calculateDelivery);
   if (referralToggle) referralToggle.addEventListener('change', updateSummary);
   if (usePointsToggle) usePointsToggle.addEventListener('change', updateSummary);
   if (pointsInput) pointsInput.addEventListener('input', updateSummary);

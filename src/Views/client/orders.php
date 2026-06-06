@@ -75,8 +75,16 @@ function resolve_order_display_status(array $order): string {
               foreach ($order['items'] as $tmp) {
                 $rawSum += $tmp['quantity'] * $tmp['unit_price'];
               }
-              $discount = max(0, $rawSum - $order['total_amount']);
+              $shippingCost = max(0, (int)($order['delivery_fee'] ?? 0));
+              $itemsPaidTotal = max(0, (int)($order['total_amount'] ?? 0) - $shippingCost);
+              $discount = max(0, $rawSum - $itemsPaidTotal);
             ?>
+            <?php if ($shippingCost > 0): ?>
+              <div class="flex justify-between items-center pt-1 text-sm text-gray-600">
+                <span>Доставка<?php if (!empty($order['delivery_distance_km'])): ?> · <?= htmlspecialchars((string)$order['delivery_distance_km']) ?> км<?php endif; ?></span>
+                <span><?= number_format($shippingCost, 0, '.', ' ') ?> ₽</span>
+              </div>
+            <?php endif; ?>
             <div class="flex justify-between items-center pt-1 border-t border-gray-200 mt-1 font-semibold">
               <?php if ($displayStatus === 'reserved' && (int)($order['total_amount'] ?? 0) <= 0): ?>
                 <span>Стоимость заказа:</span>
@@ -129,8 +137,16 @@ function resolve_order_display_status(array $order): string {
               foreach ($order['items'] as $tmp) {
                 $rawSum += $tmp['quantity'] * $tmp['unit_price'];
               }
-              $discount = max(0, $rawSum - $order['total_amount']);
+              $shippingCost = max(0, (int)($order['delivery_fee'] ?? 0));
+              $itemsPaidTotal = max(0, (int)($order['total_amount'] ?? 0) - $shippingCost);
+              $discount = max(0, $rawSum - $itemsPaidTotal);
             ?>
+            <?php if ($shippingCost > 0): ?>
+              <div class="flex justify-between items-center pt-1 text-sm text-gray-600">
+                <span>Доставка<?php if (!empty($order['delivery_distance_km'])): ?> · <?= htmlspecialchars((string)$order['delivery_distance_km']) ?> км<?php endif; ?></span>
+                <span><?= number_format($shippingCost, 0, '.', ' ') ?> ₽</span>
+              </div>
+            <?php endif; ?>
             <div class="flex justify-between items-center pt-1 border-t border-gray-200 mt-1 font-semibold">
               <?php if ($displayStatus === 'reserved' && (int)($order['total_amount'] ?? 0) <= 0): ?>
                 <span>Стоимость заказа:</span>

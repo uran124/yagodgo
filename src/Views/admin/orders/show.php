@@ -190,6 +190,27 @@
       </div>
     <?php endif; ?>
 
+    <?php
+      $deliveryFee = max(0, (int)($order['delivery_fee'] ?? 0));
+      $deliveryDistance = $order['delivery_distance_km'] ?? null;
+      $deliverySource = (string)($order['delivery_pricing_source'] ?? '');
+      $deliveryComment = trim((string)($order['delivery_comment'] ?? ''));
+    ?>
+    <?php if ($deliveryFee > 0 || $deliveryDistance !== null || $deliveryComment !== ''): ?>
+      <div class="border-t py-2 space-y-1 text-sm">
+        <div class="flex justify-between">
+          <span>Доставка<?php if ($deliveryDistance !== null && $deliveryDistance !== ''): ?> · <?= htmlspecialchars((string)$deliveryDistance) ?> км<?php endif; ?></span>
+          <span><?= number_format($deliveryFee, 0, '.', ' ') ?> ₽</span>
+        </div>
+        <?php if ($deliverySource !== ''): ?>
+          <div class="text-xs text-gray-500">Источник расчёта: <?= htmlspecialchars($deliverySource) ?></div>
+        <?php endif; ?>
+        <?php if ($deliveryComment !== ''): ?>
+          <div class="text-xs text-gray-600">Комментарий доставки: <?= nl2br(htmlspecialchars($deliveryComment)) ?></div>
+        <?php endif; ?>
+      </div>
+    <?php endif; ?>
+
     <div class="flex justify-between font-bold border-t pt-2">
       <span>Итого:</span>
       <span><?= $order['total_amount'] ?> ₽</span>
@@ -239,6 +260,19 @@
           <?php endforeach; ?>
         </select>
       </label>
+      <label>
+        <span class="mr-1">Км вручную:</span>
+        <input type="number" name="delivery_distance_km_manual" min="0" step="0.001" value="<?= htmlspecialchars((string)($order['delivery_distance_km'] ?? '')) ?>" placeholder="Например: 8.22" class="border px-2 py-1 rounded w-32">
+      </label>
+      <label class="flex-1 min-w-[220px]">
+        <span class="mr-1">Комментарий доставки:</span>
+        <textarea name="delivery_comment" rows="1" placeholder="Получатель, телефон, подъезд, пожелания" class="border px-2 py-1 rounded w-full align-middle"><?= htmlspecialchars((string)($order['delivery_comment'] ?? '')) ?></textarea>
+      </label>
+      <?php if (in_array((string)($order['status'] ?? ''), ['delivered', 'cancelled'], true)): ?>
+        <div class="basis-full text-xs text-amber-700">Заказ уже завершён/отменён: адрес, дату и комментарий можно сохранить, стоимость доставки не пересчитывается.</div>
+      <?php else: ?>
+        <div class="basis-full text-xs text-gray-500">При смене адреса или километража стоимость доставки пересчитается, итог заказа изменится на разницу доставки.</div>
+      <?php endif; ?>
     </div>
   </form>
 

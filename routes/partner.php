@@ -11,6 +11,7 @@ return [
             'GET /partner/orders' => ['App\\Controllers\\OrdersController', 'index'],
             'GET /partner/orders/create' => ['App\\Controllers\\OrdersController', 'create'],
             'POST /partner/orders/create' => ['App\\Controllers\\OrdersController', 'storeManual'],
+            'POST /partner/delivery/calculate' => ['App\\Controllers\\DeliveryController', 'calculate'],
             'POST /partner/orders/assign' => ['App\\Controllers\\OrdersController', 'assign'],
             'POST /partner/orders/status' => ['App\\Controllers\\OrdersController', 'updateStatus'],
             'POST /partner/orders/update-item' => ['App\\Controllers\\OrdersController', 'updateItem'],
@@ -34,6 +35,7 @@ return [
             'POST /partner/users/save' => ['App\\Controllers\\UsersController', 'save'],
             'POST /partner/users/toggle-block' => ['App\\Controllers\\UsersController', 'toggleBlock'],
             'POST /partner/users/add-address' => ['App\\Controllers\\UsersController', 'addAddressAdmin'],
+            'POST /partner/users/update-address-delivery' => ['App\\Controllers\\UsersController', 'updateAddressDeliveryAdmin'],
             'POST /partner/users/delete-address' => ['App\\Controllers\\UsersController', 'deleteAddressAdmin'],
         ];
 

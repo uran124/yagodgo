@@ -149,15 +149,28 @@ $redirectPath = $currentPath ? (parse_url($currentPath, PHP_URL_PATH) ?: '') : '
   <?php else: ?>
     <ul class="space-y-2 mb-4">
       <?php foreach ($addresses as $addr): ?>
-        <li class="flex justify-between items-start">
-          <div>
-            <div><?= htmlspecialchars($addr['street']) ?></div>
-            <div class="text-sm text-gray-500"><?= htmlspecialchars($addr['recipient_name']) ?> <?= htmlspecialchars($addr['recipient_phone']) ?></div>
+        <li class="rounded border border-gray-100 p-3">
+          <div class="flex justify-between items-start gap-3">
+            <div>
+              <div><?= htmlspecialchars($addr['street']) ?></div>
+              <div class="text-sm text-gray-500"><?= htmlspecialchars($addr['recipient_name']) ?> <?= htmlspecialchars($addr['recipient_phone']) ?></div>
+              <div class="text-xs text-gray-500 mt-1">
+                Км: <?= $addr['delivery_distance_km'] !== null && $addr['delivery_distance_km'] !== '' ? htmlspecialchars((string)$addr['delivery_distance_km']) : 'не задано' ?>
+                <?php if (!empty($addr['delivery_distance_provider'])): ?> · <?= htmlspecialchars((string)$addr['delivery_distance_provider']) ?><?php endif; ?>
+              </div>
+            </div>
+            <form action="<?= $base ?>/users/delete-address" method="post" onsubmit="return confirm('Удалить адрес?');">
+              <input type="hidden" name="id" value="<?= $addr['id'] ?>">
+              <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+              <button type="submit" class="text-red-600">🗑️</button>
+            </form>
           </div>
-          <form action="<?= $base ?>/users/delete-address" method="post" onsubmit="return confirm('Удалить адрес?');">
+          <form action="<?= $base ?>/users/update-address-delivery" method="post" class="mt-2 grid gap-2 md:grid-cols-[140px_1fr_auto]">
             <input type="hidden" name="id" value="<?= $addr['id'] ?>">
             <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
-            <button type="submit" class="text-red-600">🗑️</button>
+            <input name="delivery_distance_km_manual" type="number" min="0" step="0.001" value="<?= htmlspecialchars((string)($addr['delivery_distance_km'] ?? '')) ?>" class="border px-2 py-1 rounded" placeholder="Км вручную">
+            <input name="last_checkout_comment" value="<?= htmlspecialchars((string)($addr['last_checkout_comment'] ?? '')) ?>" class="border px-2 py-1 rounded" placeholder="Комментарий/получатель по адресу">
+            <button type="submit" class="bg-gray-800 text-white px-3 py-1 rounded">Сохранить</button>
           </form>
         </li>
       <?php endforeach; ?>
@@ -168,6 +181,8 @@ $redirectPath = $currentPath ? (parse_url($currentPath, PHP_URL_PATH) ?: '') : '
     <input name="address" class="w-full border px-2 py-1 rounded" placeholder="Новый адрес">
     <input name="recipient_name" class="w-full border px-2 py-1 rounded" placeholder="Имя получателя">
     <input name="recipient_phone" class="w-full border px-2 py-1 rounded" placeholder="Телефон получателя">
+    <input name="delivery_distance_km_manual" type="number" min="0" step="0.001" class="w-full border px-2 py-1 rounded" placeholder="Км вручную, если уже известен">
+    <input name="last_checkout_comment" class="w-full border px-2 py-1 rounded" placeholder="Комментарий/получатель по адресу">
     <button type="submit" class="bg-[#C86052] text-white px-4 py-1 rounded">Добавить адрес доставки</button>
   </form>
 </div>

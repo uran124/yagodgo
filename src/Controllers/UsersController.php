@@ -6,6 +6,7 @@ use PDO;
 use App\Helpers\Auth;
 use App\Helpers\ReferralHelper;
 use App\Helpers\PhoneNormalizer;
+use App\Services\DeliveryPricingService;
 
 class UsersController
 {
@@ -27,6 +28,32 @@ class UsersController
             'partner' => '/partner/users',
             default   => '/admin/users',
         };
+    }
+
+    private function columnExists(string $table, string $column): bool
+    {
+        static $cache = [];
+        $key = spl_object_id($this->pdo) . '.' . $table . '.' . $column;
+        if (array_key_exists($key, $cache)) {
+            return $cache[$key];
+        }
+
+        $driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+        if ($driver === 'sqlite') {
+            $stmt = $this->pdo->query("PRAGMA table_info({$table})");
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                if (($row['name'] ?? '') === $column) {
+                    return $cache[$key] = true;
+                }
+            }
+            return $cache[$key] = false;
+        }
+
+        $stmt = $this->pdo->prepare(
+            'SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?'
+        );
+        $stmt->execute([$table, $column]);
+        return $cache[$key] = ((int)$stmt->fetchColumn() > 0);
     }
 
 
@@ -614,7 +641,7 @@ class UsersController
         }
 
         $addrStmt = $this->pdo->prepare(
-            "SELECT id, street, recipient_name, recipient_phone
+            "SELECT id, street, recipient_name, recipient_phone, last_checkout_comment, delivery_distance_km, delivery_distance_m, delivery_distance_provider
              FROM addresses
              WHERE user_id = ?
              ORDER BY created_at ASC"
@@ -1034,6 +1061,8 @@ class UsersController
         $address = trim($_POST['address'] ?? '');
         $name    = trim($_POST['recipient_name'] ?? '');
         $phone   = trim($_POST['recipient_phone'] ?? '');
+        $manualDistanceRaw = str_replace(',', '.', trim((string)($_POST['delivery_distance_km_manual'] ?? '')));
+        $manualDistanceKm = ($manualDistanceRaw !== '' && is_numeric($manualDistanceRaw)) ? max(0.0, (float)$manualDistanceRaw) : null;
 
         if ($userId && $address !== '') {
             if ($auth && in_array($auth['role'], ['manager', 'partner'], true) && $auth['id'] !== $userId) {
@@ -1045,12 +1074,100 @@ class UsersController
                     exit;
                 }
             }
+            $columns = ['user_id', 'street', 'recipient_name', 'recipient_phone', 'is_primary', 'created_at'];
+            $values = [$userId, $address, $name, $phone, 0];
+            $placeholders = ['?', '?', '?', '?', '?', 'NOW()'];
+
+            if ($manualDistanceKm !== null) {
+                (new DeliveryPricingService($this->pdo))->calculatePriceForDistance($manualDistanceKm);
+                foreach ([
+                    'delivery_distance_km' => $manualDistanceKm,
+                    'delivery_distance_m' => (int)round($manualDistanceKm * 1000),
+                    'delivery_distance_provider' => 'manual',
+                    'delivery_distance_calculated_at' => date('Y-m-d H:i:s'),
+                    'delivery_distance_error' => null,
+                    'last_checkout_comment' => trim((string)($_POST['last_checkout_comment'] ?? '')),
+                ] as $column => $value) {
+                    if ($this->columnExists('addresses', $column)) {
+                        $columns[] = $column;
+                        $values[] = $value;
+                        $placeholders[] = '?';
+                    }
+                }
+            } elseif ($this->columnExists('addresses', 'last_checkout_comment')) {
+                $columns[] = 'last_checkout_comment';
+                $values[] = trim((string)($_POST['last_checkout_comment'] ?? ''));
+                $placeholders[] = '?';
+            }
+
             $stmt = $this->pdo->prepare(
-                "INSERT INTO addresses (user_id, street, recipient_name, recipient_phone, is_primary, created_at)
-                 VALUES (?, ?, ?, ?, 0, NOW())"
+                'INSERT INTO addresses (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $placeholders) . ')'
             );
-            $stmt->execute([$userId, $address, $name, $phone]);
+            $stmt->execute($values);
         }
+        header('Location: ' . $this->basePath() . '/' . $userId);
+        exit;
+    }
+
+    public function updateAddressDeliveryAdmin(): void
+    {
+        $auth   = Auth::user();
+        $id     = (int)($_POST['id'] ?? 0);
+        $userId = (int)($_POST['user_id'] ?? 0);
+
+        if ($id && $userId) {
+            if ($auth && in_array($auth['role'], ['manager', 'partner'], true) && $auth['id'] !== $userId) {
+                $stmt = $this->pdo->prepare("SELECT role FROM users WHERE id = ?");
+                $stmt->execute([$userId]);
+                $targetRole = $stmt->fetchColumn();
+                if (in_array($targetRole, ['manager', 'partner'], true)) {
+                    header('Location: ' . $this->basePath());
+                    exit;
+                }
+            }
+
+            $distanceRaw = str_replace(',', '.', trim((string)($_POST['delivery_distance_km_manual'] ?? '')));
+            $comment = trim((string)($_POST['last_checkout_comment'] ?? ''));
+            $set = [];
+            $values = [];
+
+            if ($distanceRaw !== '' && is_numeric($distanceRaw)) {
+                $distanceKm = max(0.0, (float)$distanceRaw);
+                // Validate the configured tariff zones/per-km settings now; the calculated fee is shown later during order pricing.
+                (new DeliveryPricingService($this->pdo))->calculatePriceForDistance($distanceKm);
+                foreach ([
+                    'delivery_distance_km' => $distanceKm,
+                    'delivery_distance_m' => (int)round($distanceKm * 1000),
+                    'delivery_distance_provider' => 'manual',
+                    'delivery_distance_calculated_at' => date('Y-m-d H:i:s'),
+                    'delivery_distance_error' => null,
+                ] as $column => $value) {
+                    if ($this->columnExists('addresses', $column)) {
+                        $set[] = $column . ' = ?';
+                        $values[] = $value;
+                    }
+                }
+            } else {
+                foreach (['delivery_distance_km', 'delivery_distance_m', 'delivery_distance_provider', 'delivery_distance_calculated_at', 'delivery_distance_error'] as $column) {
+                    if ($this->columnExists('addresses', $column)) {
+                        $set[] = $column . ' = NULL';
+                    }
+                }
+            }
+
+            if ($this->columnExists('addresses', 'last_checkout_comment')) {
+                $set[] = 'last_checkout_comment = ?';
+                $values[] = $comment;
+            }
+
+            if ($set) {
+                $values[] = $id;
+                $values[] = $userId;
+                $stmt = $this->pdo->prepare('UPDATE addresses SET ' . implode(', ', $set) . ' WHERE id = ? AND user_id = ?');
+                $stmt->execute($values);
+            }
+        }
+
         header('Location: ' . $this->basePath() . '/' . $userId);
         exit;
     }
@@ -1128,7 +1245,7 @@ class UsersController
             }
         }
         $stmt = $this->pdo->prepare(
-            "SELECT id, street FROM addresses WHERE user_id = ? ORDER BY is_primary DESC, created_at ASC"
+            "SELECT id, street, last_checkout_comment, delivery_distance_km, delivery_distance_m, delivery_distance_provider FROM addresses WHERE user_id = ? ORDER BY is_primary DESC, created_at ASC"
         );
         $stmt->execute([$uid]);
         $res = $stmt->fetchAll(PDO::FETCH_ASSOC);
