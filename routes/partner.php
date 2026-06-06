@@ -35,6 +35,7 @@ return [
             'POST /partner/users/save' => ['App\\Controllers\\UsersController', 'save'],
             'POST /partner/users/toggle-block' => ['App\\Controllers\\UsersController', 'toggleBlock'],
             'POST /partner/users/add-address' => ['App\\Controllers\\UsersController', 'addAddressAdmin'],
+            'POST /partner/users/update-address-delivery' => ['App\\Controllers\\UsersController', 'updateAddressDeliveryAdmin'],
             'POST /partner/users/delete-address' => ['App\\Controllers\\UsersController', 'deleteAddressAdmin'],
         ];
 

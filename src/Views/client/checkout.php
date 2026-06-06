@@ -424,53 +424,14 @@ $pickupAddress   = 'Самовывоз: 9 мая, 73';
     if (!query || query.trim().length < 3) return [];
     const response = await fetch('/delivery/address-suggestions?query=' + encodeURIComponent(query.trim()), {
       credentials: 'same-origin',
-      signal,
-      headers: {'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json'}
+      headers: {'X-Requested-With': 'XMLHttpRequest'}
     });
     const text = await response.text();
     let data = null;
     try {
       data = JSON.parse(text);
     } catch (e) {
-      throw new Error('Сервер вернул не JSON: ' + text.slice(0, 120));
-    }
-    if (!response.ok || !data.ok) {
-      throw new Error(data.message || 'Не удалось получить подсказки адреса');
-    }
-    const suggestions = data.suggestions || [];
-    addressSuggestionCache.set(cacheKey, suggestions);
-    if (addressSuggestionCache.size > 40) {
-      addressSuggestionCache.delete(addressSuggestionCache.keys().next().value);
-    }
-    return suggestions;
-  }
-
-  async function calculateDelivery(order) {
-    const select = order.querySelector('[data-address-select]');
-    const feeEl = order.querySelector('[data-delivery-fee]');
-    const noteEl = order.querySelector('[data-delivery-note]');
-    const feeInput = order.querySelector('[data-delivery-fee-input]');
-    const distanceInput = order.querySelector('[data-delivery-distance-input]');
-    const sourceInput = order.querySelector('[data-delivery-source-input]');
-    if (!select) return;
-
-    const selected = select.options[select.selectedIndex];
-    const isPickup = select.value === 'pickup';
-    const isNew = select.value === 'new';
-    const newBlock = order.querySelector('[data-new-address-block]');
-    const commentBlock = order.querySelector('[data-delivery-comment-block]');
-    if (newBlock) newBlock.classList.toggle('hidden', !isNew);
-    if (commentBlock) commentBlock.classList.toggle('hidden', isPickup);
-
-    if (isPickup) {
-      order.dataset.deliveryFee = '0';
-      if (feeEl) feeEl.textContent = '0 ₽';
-      if (noteEl) noteEl.textContent = 'Самовывоз — доставка 0 ₽.';
-      if (feeInput) feeInput.value = '0';
-      if (distanceInput) distanceInput.value = '';
-      if (sourceInput) sourceInput.value = 'pickup';
-      updateTotal();
-      return;
+      throw new Error('Сервер вернул не JSON');
     }
 
     let address = selected ? (selected.dataset.street || '') : '';
@@ -701,11 +662,6 @@ $pickupAddress   = 'Самовывоз: 9 мая, 73';
           }
         } catch (error) {
           if (error && error.name === 'AbortError') return;
-          if (currentRequest === requestId) {
-            renderSuggestions([], error.message || 'Не удалось получить подсказки адреса.');
-          }
-        } finally {
-          clearTimeout(timeout);
           if (currentRequest === requestId) {
             renderSuggestions([], error.message || 'Не удалось получить подсказки адреса.');
           }

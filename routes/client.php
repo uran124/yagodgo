@@ -208,6 +208,15 @@ return [
         return true;
     },
     static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('POST', '/delivery/calculate', $method, $uri)) {
+            return false;
+        }
+
+        requireClient();
+        (new App\Controllers\DeliveryController($c['pdo']))->calculate();
+        return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
         if (!routeExact('GET', '/checkout', $method, $uri)) {
             return false;
         }

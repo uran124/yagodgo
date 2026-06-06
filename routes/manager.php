@@ -37,6 +37,7 @@ return [
             'POST /manager/users/save' => ['App\\Controllers\\UsersController', 'save'],
             'POST /manager/users/toggle-block' => ['App\\Controllers\\UsersController', 'toggleBlock'],
             'POST /manager/users/add-address' => ['App\\Controllers\\UsersController', 'addAddressAdmin'],
+            'POST /manager/users/update-address-delivery' => ['App\\Controllers\\UsersController', 'updateAddressDeliveryAdmin'],
             'POST /manager/users/delete-address' => ['App\\Controllers\\UsersController', 'deleteAddressAdmin'],
             'GET /manager/purchases' => ['App\\Controllers\\PurchaseBatchesController', 'index'],
             'GET /manager/purchases/create' => ['App\\Controllers\\PurchaseBatchesController', 'create'],

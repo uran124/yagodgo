@@ -232,6 +232,7 @@ return [
             'POST /admin/users/toggle-block' => ['App\\Controllers\\UsersController', 'toggleBlock'],
             'POST /admin/users/reset-balance' => ['App\\Controllers\\UsersController', 'resetRubBalance'],
             'POST /admin/users/add-address' => ['App\\Controllers\\UsersController', 'addAddressAdmin'],
+            'POST /admin/users/update-address-delivery' => ['App\\Controllers\\UsersController', 'updateAddressDeliveryAdmin'],
             'POST /admin/users/delete-address' => ['App\\Controllers\\UsersController', 'deleteAddressAdmin'],
             'GET /admin/sellers' => ['App\\Controllers\\SellersController', 'index'],
             'GET /admin/sellers/edit' => ['App\\Controllers\\SellersController', 'edit'],
