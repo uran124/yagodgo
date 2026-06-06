@@ -1,12 +1,24 @@
 <?php
 namespace App\Controllers;
 
+use App\Services\DeliveryPricingService;
 use PDO;
 
 class SettingsController
 {
     private PDO $pdo;
+    private ?DeliveryPricingService $deliveryPricingService = null;
+
     public function __construct(PDO $pdo) { $this->pdo = $pdo; }
+
+    private function deliveryPricing(): DeliveryPricingService
+    {
+        if ($this->deliveryPricingService === null) {
+            $this->deliveryPricingService = new DeliveryPricingService($this->pdo);
+        }
+
+        return $this->deliveryPricingService;
+    }
 
     /**
      * @return array<string, string>
@@ -280,53 +292,13 @@ class SettingsController
 
         try {
             $settings = $this->getSettingsMap();
-            $storeLat = $this->parseNullableFloat($settings['delivery_store_lat'] ?? '');
-            $storeLng = $this->parseNullableFloat($settings['delivery_store_lng'] ?? '');
-            if ($storeLat === null || $storeLng === null) {
-                http_response_code(422);
-                echo json_encode(['ok' => false, 'message' => 'Укажите широту и долготу магазина в настройках доставки и сохраните раздел.'], JSON_UNESCAPED_UNICODE);
-                return;
-            }
+            $result = $this->deliveryPricing()->calculateForAddress($address, $settings, [
+                'selected_lat' => $_POST['selected_lat'] ?? '',
+                'selected_lng' => $_POST['selected_lng'] ?? '',
+                'selected_address' => $_POST['selected_address'] ?? '',
+            ]);
 
-            $destination = $this->resolvePostedOrTypedDeliveryAddress($address, $settings);
-            $distance = $this->calculateDeliveryDistanceKm($storeLat, $storeLng, $destination['lat'], $destination['lng'], $settings);
-            $pricing = $this->calculateDeliveryPriceForDistance($distance['km'], $settings);
-
-            echo json_encode([
-                'ok' => true,
-                'requested_address' => $address,
-                'address' => $destination['address'],
-                'lat' => $this->formatDecimal($destination['lat']),
-                'lng' => $this->formatDecimal($destination['lng']),
-                'store' => [
-                    'lat' => $this->formatDecimal($storeLat),
-                    'lng' => $this->formatDecimal($storeLng),
-                    'openrouteservice_coordinate' => [$this->formatDecimal($storeLng), $this->formatDecimal($storeLat)],
-                ],
-                'destination' => [
-                    'lat' => $this->formatDecimal($destination['lat']),
-                    'lng' => $this->formatDecimal($destination['lng']),
-                    'openrouteservice_coordinate' => [$this->formatDecimal($destination['lng']), $this->formatDecimal($destination['lat'])],
-                ],
-                'distance_km' => $this->formatDecimal($distance['km']),
-                'distance_m' => isset($distance['meters']) && $distance['meters'] !== null ? $this->formatDecimal((float)$distance['meters']) : null,
-                'duration_min' => isset($distance['duration_sec']) && $distance['duration_sec'] !== null ? $this->formatDecimal(((float)$distance['duration_sec']) / 60.0) : null,
-                'distance_source' => $distance['source'],
-                'distance_note' => $distance['note'],
-                'price_rub' => $pricing['price_rub'],
-                'pricing_source' => $pricing['source'],
-                'zone' => $pricing['zone'],
-                'message' => $pricing['message'],
-                'diagnostics' => [
-                    'dadata' => $destination['diagnostics'] ?? [],
-                    'openrouteservice' => $distance['diagnostics'] ?? [],
-                    'pricing' => [
-                        'source' => $pricing['source'],
-                        'zone' => $pricing['zone'],
-                        'message' => $pricing['message'],
-                    ],
-                ],
-            ], JSON_UNESCAPED_UNICODE);
+            echo json_encode($result, JSON_UNESCAPED_UNICODE);
         } catch (\Throwable $e) {
             http_response_code(422);
             echo json_encode(['ok' => false, 'message' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
@@ -351,13 +323,13 @@ class SettingsController
 
         try {
             $settings = $this->getSettingsMap();
-            $suggestions = $this->getDeliveryAddressSuggestions($query, $settings);
+            $suggestions = $this->deliveryPricing()->suggestAddresses($query, $settings);
             echo json_encode([
                 'ok' => true,
                 'query' => $query,
                 'suggestions' => $suggestions,
-                'center' => $this->getDadataGeoCenter($settings),
-                'radius_meters' => $this->getDadataRadiusMeters($settings),
+                'center' => $this->deliveryPricing()->getDadataGeoCenter($settings),
+                'radius_meters' => $this->deliveryPricing()->getDadataRadiusMeters($settings),
             ], JSON_UNESCAPED_UNICODE);
         } catch (\Throwable $e) {
             http_response_code(422);
