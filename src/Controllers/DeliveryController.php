@@ -90,42 +90,4 @@ class DeliveryController
             ], JSON_UNESCAPED_UNICODE);
         }
     }
-
-    public function addressSuggestions(): void
-    {
-        header('Content-Type: application/json; charset=UTF-8');
-        if (function_exists('set_time_limit')) {
-            @set_time_limit(8);
-        }
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            session_write_close();
-        }
-
-        $query = trim((string)($_GET['query'] ?? $_POST['query'] ?? ''));
-        $queryLength = function_exists('mb_strlen') ? mb_strlen($query, 'UTF-8') : strlen($query);
-        if ($queryLength < 3) {
-            echo json_encode(['ok' => true, 'suggestions' => [], 'message' => 'Введите минимум 3 символа.'], JSON_UNESCAPED_UNICODE);
-            return;
-        }
-
-        try {
-            $settings = $this->deliveryPricing->getSettingsMap();
-            $suggestions = $this->deliveryPricing->suggestAddresses($query, $settings);
-            echo json_encode([
-                'ok' => true,
-                'query' => $query,
-                'suggestions' => $suggestions,
-                'center' => $this->deliveryPricing->getDadataGeoCenter($settings),
-                'radius_meters' => $this->deliveryPricing->getDadataRadiusMeters($settings),
-            ], JSON_UNESCAPED_UNICODE);
-        } catch (\Throwable $e) {
-            http_response_code(422);
-            echo json_encode([
-                'ok' => false,
-                'message' => $e->getMessage(),
-                'suggestions' => [],
-            ], JSON_UNESCAPED_UNICODE);
-        }
-    }
-
 }

@@ -62,6 +62,7 @@ $pickupAddress   = 'Самовывоз: 9 мая, 73';
       ?>
 
       <form action="/checkout" method="post" class="space-y-6" data-checkout-form>
+        <input type="hidden" name="selected_orders_present" value="1">
         <?php foreach ($groups as $dateKey => $block): ?>
           <?php
             if ($dateKey === 'on_demand' || $dateKey === (defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15')) {
@@ -90,14 +91,24 @@ $pickupAddress   = 'Самовывоз: 9 мая, 73';
             }
           ?>
 
-          <section class="bg-white rounded-3xl shadow-lg overflow-hidden" data-checkout-order data-order-subtotal="<?= (int)$orderSum ?>" data-delivery-fee="300">
+          <section class="bg-white rounded-3xl shadow-lg overflow-hidden" data-checkout-order data-order-subtotal="<?= (int)$orderSum ?>" data-delivery-fee="300" data-order-selected="1">
             <div class="bg-gradient-to-r from-emerald-50 to-teal-50 p-6 border-b border-emerald-100">
               <div class="flex items-start justify-between gap-3">
-                <div>
-                  <h3 class="text-lg font-semibold text-gray-800">
-                    <?= $emoji ?> Заказ (<?= htmlspecialchars($label) ?>)
-                  </h3>
-                  <p class="mt-1 text-xs text-gray-500">У этой даты свой способ получения, адрес и стоимость доставки.</p>
+                <div class="flex items-start gap-3">
+                  <label class="mt-1 inline-flex items-center" title="Оформить этот заказ">
+                    <input type="checkbox"
+                           name="selected_orders[<?= htmlspecialchars($dateKey) ?>]"
+                           value="1"
+                           checked
+                           class="h-5 w-5 rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500"
+                           data-order-select-checkbox>
+                  </label>
+                  <div>
+                    <h3 class="text-lg font-semibold text-gray-800">
+                      <?= $emoji ?> Заказ (<?= htmlspecialchars($label) ?>)
+                    </h3>
+                    <p class="mt-1 text-xs text-gray-500">Галочка включает этот блок в оформление. У каждой даты свой способ получения, адрес и доставка.</p>
+                  </div>
                 </div>
                 <div class="rounded-2xl bg-white/80 px-3 py-2 text-right shadow-sm">
                   <div class="text-xs text-gray-500">Товары</div>
@@ -255,7 +266,7 @@ $pickupAddress   = 'Самовывоз: 9 мая, 73';
                     </div>
                   </div>
                   <div class="text-right">
-                    <div class="font-semibold text-pink-600">-<?= htmlspecialchars($pointsToUse) ?> 🍓</div>
+                    <div class="font-semibold text-pink-600" data-points-discount-display>-<?= htmlspecialchars($pointsToUse) ?> 🍓</div>
                     <div class="text-sm text-gray-500">списано с товаров</div>
                   </div>
                 </div>
@@ -349,31 +360,39 @@ $pickupAddress   = 'Самовывоз: 9 мая, 73';
     const finalEl = document.getElementById('finalTotal');
     if (!finalEl) return;
 
-    const subtotal = parseFloat(finalEl.dataset.subtotal || '0');
     const points = parseFloat(finalEl.dataset.pointstouse || '0');
     const couponPts = parseFloat(finalEl.dataset.couponpoints || '0');
     const discountPercent = parseFloat(finalEl.dataset.discountpercent || '0');
-    const shipping = checkoutOrders.reduce((sum, order) => sum + Number(order.dataset.deliveryFee || 0), 0);
+    const selectedOrders = checkoutOrders.filter(order => order.dataset.orderSelected !== '0');
+    const selectedSubtotal = selectedOrders.reduce((sum, order) => sum + Number(order.dataset.orderSubtotal || 0), 0);
+    const shipping = selectedOrders.reduce((sum, order) => sum + Number(order.dataset.deliveryFee || 0), 0);
 
-    const pointsDiscount = Math.min(points + couponPts, subtotal);
-    const afterPoints = subtotal - pointsDiscount;
+    const pointsDiscount = Math.min(points + couponPts, selectedSubtotal);
+    const afterPoints = selectedSubtotal - pointsDiscount;
     const couponDiscount = discountPercent > 0 ? Math.floor(afterPoints * (discountPercent / 100)) : 0;
     const final = afterPoints - couponDiscount + shipping;
 
     finalEl.textContent = format(final) + ' ₽';
+    const pointsDisplay = document.querySelector('[data-points-discount-display]');
+    if (pointsDisplay) pointsDisplay.textContent = '-' + format(pointsDiscount) + ' 🍓';
 
     checkoutOrders.forEach(order => {
       const orderSubtotal = Number(order.dataset.orderSubtotal || 0);
-      const fee = Number(order.dataset.deliveryFee || 0);
+      const isSelected = order.dataset.orderSelected !== '0';
+      const fee = isSelected ? Number(order.dataset.deliveryFee || 0) : 0;
       const deliveryTotal = order.querySelector('[data-order-delivery-total]');
       const orderTotal = order.querySelector('[data-order-total]');
-      if (deliveryTotal) deliveryTotal.textContent = format(fee) + ' ₽';
-      if (orderTotal) orderTotal.textContent = format(orderSubtotal + fee) + ' ₽';
+      if (deliveryTotal) deliveryTotal.textContent = isSelected ? format(fee) + ' ₽' : 'не оформляется';
+      if (orderTotal) orderTotal.textContent = isSelected ? format(orderSubtotal + fee) + ' ₽' : 'не выбран';
+      order.classList.toggle('opacity-60', !isSelected);
     });
   }
 
   function updateDiscountStockState() {
-    const hasDiscountStock = Array.from(modeSelects).some(input => input.value === 'discount_stock');
+    const hasDiscountStock = Array.from(modeSelects).some(input => {
+      const order = input.closest('[data-checkout-order]');
+      return (!order || order.dataset.orderSelected !== '0') && input.value === 'discount_stock';
+    });
     const notice = document.getElementById('discountStockNotice');
     if (notice) notice.classList.toggle('hidden', !hasDiscountStock);
 
@@ -401,18 +420,9 @@ $pickupAddress   = 'Самовывоз: 9 мая, 73';
     updateTotal();
   }
 
-  const addressSuggestionCache = new Map();
-
-  async function fetchAddressSuggestions(query, signal) {
-    const normalizedQuery = (query || '').trim();
-    if (normalizedQuery.length < 3) return [];
-
-    const cacheKey = normalizedQuery.toLowerCase();
-    if (addressSuggestionCache.has(cacheKey)) {
-      return addressSuggestionCache.get(cacheKey);
-    }
-
-    const response = await fetch('/delivery/address-suggestions?query=' + encodeURIComponent(normalizedQuery), {
+  async function fetchAddressSuggestions(query) {
+    if (!query || query.trim().length < 3) return [];
+    const response = await fetch('/delivery/address-suggestions?query=' + encodeURIComponent(query.trim()), {
       credentials: 'same-origin',
       signal,
       headers: {'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json'}
@@ -523,6 +533,94 @@ $pickupAddress   = 'Самовывоз: 9 мая, 73';
     updateTotal();
   }
 
+  async function calculateDelivery(order) {
+    const select = order.querySelector('[data-address-select]');
+    const feeEl = order.querySelector('[data-delivery-fee]');
+    const noteEl = order.querySelector('[data-delivery-note]');
+    const feeInput = order.querySelector('[data-delivery-fee-input]');
+    const distanceInput = order.querySelector('[data-delivery-distance-input]');
+    const sourceInput = order.querySelector('[data-delivery-source-input]');
+    if (!select) return;
+
+    const selected = select.options[select.selectedIndex];
+    const isPickup = select.value === 'pickup';
+    const isNew = select.value === 'new';
+    const newBlock = order.querySelector('[data-new-address-block]');
+    const commentBlock = order.querySelector('[data-delivery-comment-block]');
+    if (newBlock) newBlock.classList.toggle('hidden', !isNew);
+    if (commentBlock) commentBlock.classList.toggle('hidden', isPickup);
+
+    if (isPickup) {
+      order.dataset.deliveryFee = '0';
+      if (feeEl) feeEl.textContent = '0 ₽';
+      if (noteEl) noteEl.textContent = 'Самовывоз — доставка 0 ₽.';
+      if (feeInput) feeInput.value = '0';
+      if (distanceInput) distanceInput.value = '';
+      if (sourceInput) sourceInput.value = 'pickup';
+      updateTotal();
+      return;
+    }
+
+    let address = selected ? (selected.dataset.street || '') : '';
+    const selectedLat = order.querySelector('[data-checkout-address-selected-lat]')?.value || '';
+    const selectedLng = order.querySelector('[data-checkout-address-selected-lng]')?.value || '';
+    const selectedAddress = order.querySelector('[data-checkout-address-selected-address]')?.value || '';
+    if (isNew) {
+      address = order.querySelector('[data-checkout-address-input]')?.value.trim() || '';
+    }
+
+    if (!address) {
+      order.dataset.deliveryFee = '300';
+      if (feeEl) feeEl.textContent = '300 ₽';
+      if (noteEl) noteEl.textContent = 'Введите адрес — менеджер уточнит стоимость перед подтверждением.';
+      if (feeInput) feeInput.value = '300';
+      if (distanceInput) distanceInput.value = '';
+      if (sourceInput) sourceInput.value = 'pending_review';
+      updateTotal();
+      return;
+    }
+
+    if (feeEl) feeEl.textContent = 'считаем…';
+    if (noteEl) noteEl.textContent = 'Считаем расстояние и тариф доставки.';
+
+    const body = new URLSearchParams();
+    body.set('address', address);
+    if (selectedLat) body.set('selected_lat', selectedLat);
+    if (selectedLng) body.set('selected_lng', selectedLng);
+    if (selectedAddress) body.set('selected_address', selectedAddress);
+
+    try {
+      const response = await fetch('/delivery/calculate', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest'},
+        body
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        throw new Error(data.message || 'Не удалось рассчитать доставку');
+      }
+      const fee = Number(data.delivery_fee ?? data.price_rub ?? 300);
+      order.dataset.deliveryFee = String(fee);
+      if (feeEl) feeEl.textContent = format(fee) + ' ₽';
+      const distanceText = data.distance_km ? `${data.distance_km} км` : 'расстояние уточняется';
+      const warning = data.warning ? ` ${data.warning}` : '';
+      if (noteEl) noteEl.textContent = `Расстояние: ${distanceText}. ${data.message || ''}${warning}`.trim();
+      if (feeInput) feeInput.value = String(fee);
+      if (distanceInput) distanceInput.value = data.distance_km || '';
+      if (sourceInput) sourceInput.value = data.delivery_pricing_source || data.pricing_source || '';
+    } catch (error) {
+      order.dataset.deliveryFee = '300';
+      if (feeEl) feeEl.textContent = 'от 300 ₽';
+      if (noteEl) noteEl.textContent = (error.message || 'Не удалось рассчитать доставку') + '. Точную стоимость подтвердит менеджер.';
+      if (feeInput) feeInput.value = '300';
+      if (distanceInput) distanceInput.value = '';
+      if (sourceInput) sourceInput.value = 'pending_review';
+    }
+
+    updateTotal();
+  }
+
   function initAddressSuggestions(order) {
     const root = order.querySelector('[data-checkout-address-suggest]');
     if (!root) return;
@@ -533,7 +631,6 @@ $pickupAddress   = 'Самовывоз: 9 мая, 73';
     const selectedLng = root.querySelector('[data-checkout-address-selected-lng]');
     let timer = null;
     let requestId = 0;
-    let activeSuggestionController = null;
 
     function clearSelected() {
       if (selectedAddress) selectedAddress.value = '';
@@ -589,10 +686,6 @@ $pickupAddress   = 'Самовывоз: 9 мая, 73';
     input.addEventListener('input', function () {
       clearSelected();
       clearTimeout(timer);
-      if (activeSuggestionController) {
-        activeSuggestionController.abort();
-        activeSuggestionController = null;
-      }
       const query = input.value.trim();
       if (query.length < 3) {
         hideSuggestions();
@@ -601,12 +694,8 @@ $pickupAddress   = 'Самовывоз: 9 мая, 73';
       }
       const currentRequest = ++requestId;
       timer = setTimeout(async function () {
-        activeSuggestionController = new AbortController();
-        const timeout = setTimeout(function () {
-          if (activeSuggestionController) activeSuggestionController.abort();
-        }, 7000);
         try {
-          const suggestions = await fetchAddressSuggestions(query, activeSuggestionController.signal);
+          const suggestions = await fetchAddressSuggestions(query);
           if (currentRequest === requestId) {
             renderSuggestions(suggestions, suggestions.length ? '' : 'Не нашли адрес в радиусе доставки. Уточните населённый пункт, улицу и дом.');
           }
@@ -618,7 +707,7 @@ $pickupAddress   = 'Самовывоз: 9 мая, 73';
         } finally {
           clearTimeout(timeout);
           if (currentRequest === requestId) {
-            activeSuggestionController = null;
+            renderSuggestions([], error.message || 'Не удалось получить подсказки адреса.');
           }
         }
       }, 500);
@@ -630,8 +719,17 @@ $pickupAddress   = 'Самовывоз: 9 мая, 73';
   }
 
   checkoutOrders.forEach(order => {
+    const checkbox = order.querySelector('[data-order-select-checkbox]');
     const select = order.querySelector('[data-address-select]');
     const comment = order.querySelector('[data-delivery-comment]');
+    if (checkbox) {
+      const syncSelected = function () {
+        order.dataset.orderSelected = checkbox.checked ? '1' : '0';
+        updateDiscountStockState();
+      };
+      checkbox.addEventListener('change', syncSelected);
+      syncSelected();
+    }
     initAddressSuggestions(order);
     if (select) {
       select.addEventListener('change', function () {
@@ -648,7 +746,13 @@ $pickupAddress   = 'Самовывоз: 9 мая, 73';
   const checkoutForm = document.querySelector('[data-checkout-form]');
   if (checkoutForm) {
     checkoutForm.addEventListener('submit', function (event) {
-      for (const order of checkoutOrders) {
+      const selectedOrders = checkoutOrders.filter(order => order.dataset.orderSelected !== '0');
+      if (!selectedOrders.length) {
+        event.preventDefault();
+        alert('Выберите хотя бы один заказ для оформления.');
+        return;
+      }
+      for (const order of selectedOrders) {
         const select = order.querySelector('[data-address-select]');
         if (!select || select.value !== 'new') continue;
         const input = order.querySelector('[data-checkout-address-input]');

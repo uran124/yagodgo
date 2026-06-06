@@ -515,6 +515,30 @@ public function cart(): void
         ];
     }
 
+    if (isset($_POST['selected_orders_present'])) {
+        $postedSelectedOrders = is_array($_POST['selected_orders'] ?? null) ? $_POST['selected_orders'] : [];
+        $itemsByDate = array_filter(
+            $itemsByDate,
+            static fn($dateKey): bool => !empty($postedSelectedOrders[$dateKey]),
+            ARRAY_FILTER_USE_KEY
+        );
+        if (!$itemsByDate) {
+            header('Location: /checkout?coupon_error=' . urlencode('Выберите хотя бы один заказ для оформления'));
+            exit;
+        }
+
+        $selectedProductIdsForCheckout = [];
+        foreach ($itemsByDate as $block) {
+            foreach (array_keys($block) as $productId) {
+                $selectedProductIdsForCheckout[(int)$productId] = true;
+            }
+        }
+        $rawItems = array_values(array_filter(
+            $rawItems,
+            static fn(array $item): bool => isset($selectedProductIdsForCheckout[(int)($item['product_id'] ?? 0)])
+        ));
+    }
+
         $postedOrderModes = is_array($_POST['order_mode'] ?? null) ? $_POST['order_mode'] : [];
     $orderModeByDate = $this->resolveOrderModesFromCart($itemsByDate, $rawItems, $postedOrderModes);
     foreach ($itemsByDate as $dateKey => $block) {
@@ -894,13 +918,32 @@ public function cart(): void
 
     }
 
-    // 10) Очищаем корзину
-    $this->pdo->prepare("DELETE FROM cart_items WHERE user_id = ?")->execute([$userId]);
-    $_SESSION['delivery_date'] = [];
+    // 10) Очищаем из корзины только выбранные для оформления блоки.
+    $selectedProductIds = [];
+    foreach ($itemsByDate as $block) {
+        foreach (array_keys($block) as $productId) {
+            $selectedProductIds[] = (int)$productId;
+        }
+    }
+    $selectedProductIds = array_values(array_unique($selectedProductIds));
+    if ($selectedProductIds) {
+        $placeholders = implode(',', array_fill(0, count($selectedProductIds), '?'));
+        $deleteParams = array_merge([$userId], $selectedProductIds);
+        $this->pdo->prepare("DELETE FROM cart_items WHERE user_id = ? AND product_id IN ($placeholders)")->execute($deleteParams);
+        foreach ($selectedProductIds as $productId) {
+            unset($_SESSION['delivery_date'][$productId]);
+        }
+    }
+    if (empty($_SESSION['delivery_date'])) {
+        $_SESSION['delivery_date'] = [];
+    }
+    $remainingStmt = $this->pdo->prepare('SELECT COUNT(*) FROM cart_items WHERE user_id = ?');
+    $remainingStmt->execute([$userId]);
+    $hasRemainingCartItems = ((int)$remainingStmt->fetchColumn() > 0);
     $this->refreshCartTotal();
 
         $preorderIntentId = (int)($_SESSION['preorder_checkout_intent_id'] ?? 0);
-    if ($preorderIntentId > 0) {
+    if ($preorderIntentId > 0 && !$hasRemainingCartItems) {
         $this->pdo->prepare(
             "UPDATE preorder_intents SET status = 'completed', updated_at = NOW() WHERE id = ? AND user_id = ? AND status IN ('confirmed','moved_to_cart')"
         )->execute([$preorderIntentId, $userId]);
@@ -940,7 +983,9 @@ public function cart(): void
     foreach ($createdOrderIds as $oid) {
         $ordersController->notifyAdmins($oid);
     }
-    unset($_SESSION['preorder_checkout_intent_id']);
+    if (empty($hasRemainingCartItems)) {
+        unset($_SESSION['preorder_checkout_intent_id']);
+    }
 
     header('Location: /orders');
     exit;
