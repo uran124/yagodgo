@@ -78,12 +78,10 @@
         <?php else: ?>
           <?php foreach ($activeOrders as $ao): ?>
             <?php
-            $status = $ao['status'];
-            $cfg = [
-              'new' => ['bg-red-100','text-red-800','Новый заказ'],
-              'processing' => ['bg-yellow-100','text-yellow-800','Принят'],
-              'assigned' => ['bg-green-100','text-green-800','В работе'],
-            ][$status] ?? ['bg-gray-100','text-gray-800',$status];
+            $status = (string)$ao['status'];
+            $info = order_status_info($status);
+            $badgeClasses = explode(' ', $info['badge']);
+            $cfg = [$badgeClasses[0] ?? 'bg-gray-100', $badgeClasses[1] ?? 'text-gray-800', $info['label']];
             ?>
             <div class="p-4 rounded-2xl border flex items-center justify-between">
               <div>

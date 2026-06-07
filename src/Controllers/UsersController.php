@@ -105,11 +105,11 @@ class UsersController
         $stmt->execute([$user['id']]);
         $transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // 4) Активные заказы пользователя (new, processing, assigned)
+        // 4) Активные заказы пользователя (reserved, new, confirmed, shipped)
         $stmt = $this->pdo->prepare(
             "SELECT id, status, total_amount, created_at
              FROM orders
-             WHERE user_id = ? AND status IN ('new','processing','assigned')
+             WHERE user_id = ? AND status IN ('reserved','new','confirmed','shipped')
              ORDER BY created_at DESC"
         );
         $stmt->execute([$user['id']]);
@@ -126,7 +126,7 @@ class UsersController
             "SELECT COUNT(*)
              FROM orders o
              JOIN users u ON u.id = o.user_id
-             WHERE u.referred_by = ? AND o.status = 'delivered'"
+             WHERE u.referred_by = ? AND o.status = 'completed'"
         );
         $stmt->execute([$user['id']]);
         $refOrders = (int)$stmt->fetchColumn();
@@ -136,7 +136,7 @@ class UsersController
             "SELECT SUM(o.points_accrued)
              FROM orders o
              JOIN users u ON u.id = o.user_id
-             WHERE u.referred_by = ? AND o.status = 'delivered'"
+             WHERE u.referred_by = ? AND o.status = 'completed'"
         );
         $stmt->execute([$user['id']]);
         $refPoints = (int)($stmt->fetchColumn() ?: 0);
@@ -211,7 +211,7 @@ class UsersController
         if ($allClientIds) {
             $placeholders = implode(',', array_fill(0, count($allClientIds), '?'));
             $stmt = $this->pdo->prepare(
-                "SELECT COUNT(*) FROM orders WHERE user_id IN ($placeholders) AND status = 'delivered'"
+                "SELECT COUNT(*) FROM orders WHERE user_id IN ($placeholders) AND status = 'completed'"
             );
             $stmt->execute($allClientIds);
             $orderCount = (int)$stmt->fetchColumn();
@@ -222,7 +222,7 @@ class UsersController
         if ($directClientIds) {
             $ph = implode(',', array_fill(0, count($directClientIds), '?'));
             $stmt = $this->pdo->prepare(
-                "SELECT SUM(points_accrued) FROM orders WHERE user_id IN ($ph) AND status='delivered'"
+                "SELECT SUM(points_accrued) FROM orders WHERE user_id IN ($ph) AND status='completed'"
             );
             $stmt->execute($directClientIds);
             $directBonus = (int)($stmt->fetchColumn() ?: 0);
@@ -232,7 +232,7 @@ class UsersController
         if ($secondClientIds) {
             $ph = implode(',', array_fill(0, count($secondClientIds), '?'));
             $stmt = $this->pdo->prepare(
-                "SELECT SUM(manager_points_accrued) FROM orders WHERE user_id IN ($ph) AND status='delivered'"
+                "SELECT SUM(manager_points_accrued) FROM orders WHERE user_id IN ($ph) AND status='completed'"
             );
             $stmt->execute($secondClientIds);
             $secondBonus = (int)($stmt->fetchColumn() ?: 0);
@@ -269,7 +269,7 @@ class UsersController
             $revenue = 0;
             if ($clientIds) {
                 $ph = implode(',', array_fill(0, count($clientIds), '?'));
-                $oStmt = $this->pdo->prepare("SELECT COUNT(*) AS cnt, SUM(total_amount) AS sum FROM orders WHERE user_id IN ($ph) AND status='delivered'");
+                $oStmt = $this->pdo->prepare("SELECT COUNT(*) AS cnt, SUM(total_amount) AS sum FROM orders WHERE user_id IN ($ph) AND status='completed'");
                 $oStmt->execute($clientIds);
                 $row = $oStmt->fetch(PDO::FETCH_ASSOC) ?: [];
                 $orders = (int)($row['cnt'] ?? 0);
@@ -352,7 +352,7 @@ class UsersController
         $revenue = 0;
         if ($clientIds) {
             $placeholders = implode(',', array_fill(0, count($clientIds), '?'));
-            $oStmt = $this->pdo->prepare("SELECT COUNT(*) AS cnt, SUM(total_amount) AS sum FROM orders WHERE user_id IN ($placeholders) AND status='delivered'");
+            $oStmt = $this->pdo->prepare("SELECT COUNT(*) AS cnt, SUM(total_amount) AS sum FROM orders WHERE user_id IN ($placeholders) AND status='completed'");
             $oStmt->execute($clientIds);
             $row = $oStmt->fetch(PDO::FETCH_ASSOC) ?: [];
             $ordersCount = (int)($row['cnt'] ?? 0);
@@ -399,7 +399,7 @@ class UsersController
             $oStmt = $this->pdo->prepare(
                 "SELECT DATE_FORMAT(created_at, '%Y-%m') AS ym, COUNT(*) AS cnt, SUM(total_amount) AS sum
                  FROM orders
-                 WHERE user_id IN ($placeholders) AND status='delivered' AND created_at >= ?
+                 WHERE user_id IN ($placeholders) AND status='completed' AND created_at >= ?
                  GROUP BY ym"
             );
             $params = $clientIds;

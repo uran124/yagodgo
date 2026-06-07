@@ -57,42 +57,6 @@ if (!function_exists('viewAuth')) {
 if (!function_exists('order_status_info')) {
     function order_status_info(string $status): array
     {
-        return match($status) {
-            'new' => [
-                'label'  => 'Новый заказ',
-                'badge'  => 'bg-red-100 text-red-800',
-                'bg'     => 'bg-red-50',
-            ],
-            'processing' => [
-                'label' => 'Принят',
-                'badge' => 'bg-yellow-100 text-yellow-800',
-                'bg'    => 'bg-yellow-50',
-            ],
-            'assigned' => [
-                'label' => 'В работе',
-                'badge' => 'bg-green-100 text-green-800',
-                'bg'    => 'bg-green-50',
-            ],
-            'delivered' => [
-                'label' => 'Выполнен',
-                'badge' => 'bg-blue-100 text-blue-800',
-                'bg'    => 'bg-blue-50',
-            ],
-            'cancelled' => [
-                'label' => 'Отменен',
-                'badge' => 'bg-gray-100 text-gray-800',
-                'bg'    => 'bg-gray-50',
-            ],
-            'reserved' => [
-                'label' => 'Бронь',
-                'badge' => 'bg-purple-100 text-purple-800',
-                'bg'    => 'bg-purple-50',
-            ],
-            default => [
-                'label' => $status,
-                'badge' => 'bg-gray-100 text-gray-800',
-                'bg'    => '',
-            ],
-        };
+        return \App\Support\OrderStatuses::info($status);
     }
 }

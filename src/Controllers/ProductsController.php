@@ -210,7 +210,7 @@ class ProductsController
                                OR EXISTS (
                                   SELECT 1 FROM order_items oi JOIN orders o ON o.id = oi.order_id
                                   WHERE oi.purchase_batch_id = pb.id
-                                    AND o.status NOT IN ('completed','cancelled','delivered')
+                                    AND o.status NOT IN ('completed','cancelled','returned')
                                )
                            )
                          ORDER BY FIELD(pb.status, 'planned', 'purchased', 'arrived', 'active'), pb.purchased_at ASC, pb.id ASC";
