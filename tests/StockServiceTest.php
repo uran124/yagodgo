@@ -76,6 +76,20 @@ class StockServiceTest extends TestCase
         $this->assertSame(-3.0, (float)$movement['boxes_delta']);
     }
 
+
+    public function testInstantReserveCanCreateNegativeFreeStockForDeficit(): void
+    {
+        $this->service->reserve(1, 1, 12, 123, 'instant');
+
+        $batch = $this->pdo->query('SELECT boxes_free, boxes_reserved FROM purchase_batches WHERE id = 1')->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame(-2.0, (float)$batch['boxes_free']);
+        $this->assertSame(12.0, (float)$batch['boxes_reserved']);
+
+        $product = $this->pdo->query('SELECT free_stock_boxes, reserved_stock_boxes FROM products WHERE id = 1')->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame(-2.0, (float)$product['free_stock_boxes']);
+        $this->assertSame(12.0, (float)$product['reserved_stock_boxes']);
+    }
+
     public function testSellMovesFromReservedToSold(): void
     {
         $this->service->reserve(1, 1, 5, 42, 'instant');

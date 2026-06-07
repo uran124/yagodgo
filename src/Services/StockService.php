@@ -270,7 +270,8 @@ class StockService
             }
             $updates = ['boxes_reserved' => $requested];
         } else {
-            if (((float)$batch[$column] + $delta) < 0) {
+            $allowDeficitReservation = $mode === 'instant' && $movementType === 'reserve';
+            if (!$allowDeficitReservation && ((float)$batch[$column] + $delta) < 0) {
                 throw new RuntimeException('Not enough stock in selected mode.');
             }
             $updates = [$column => $delta];
@@ -372,7 +373,6 @@ class StockService
         $nonNegativeColumns = [
             'boxes_total',
             'boxes_reserved',
-            'boxes_free',
             'boxes_discount',
             'boxes_sold',
             'boxes_written_off',
