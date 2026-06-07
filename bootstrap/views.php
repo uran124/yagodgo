@@ -60,3 +60,17 @@ if (!function_exists('order_status_info')) {
         return \App\Support\OrderStatuses::info($status);
     }
 }
+
+if (!function_exists('payment_status_info')) {
+    function payment_status_info(?string $status): array
+    {
+        return \App\Support\PaymentStatuses::info($status);
+    }
+}
+
+if (!function_exists('payment_method_label')) {
+    function payment_method_label(?string $method): string
+    {
+        return \App\Support\PaymentMethods::label($method);
+    }
+}

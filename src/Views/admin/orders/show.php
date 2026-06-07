@@ -97,11 +97,15 @@
       <span><?= htmlspecialchars($order['client_name']) ?></span>
       <span><?= htmlspecialchars($order['phone']) ?></span>
     </div>
-    <div class="flex items-start">
+    <div class="flex flex-wrap items-start gap-2">
       <?php $info = order_status_info($order['status']); ?>
       <button type="button" class="status-open-btn inline-flex items-center px-2 py-0.5 rounded-full text-sm font-medium <?= $info['badge'] ?>" data-open-status-modal="true" title="Изменить статус">
         <?= $info['label'] ?>
       </button>
+      <?php $paymentInfo = payment_status_info($order['payment_status'] ?? null); ?>
+      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-medium <?= $paymentInfo['badge'] ?>" title="Способ оплаты: <?= htmlspecialchars(payment_method_label($order['payment_method'] ?? null)) ?>">
+        <?= htmlspecialchars($paymentInfo['label']) ?>
+      </span>
     </div>
   </div>
 

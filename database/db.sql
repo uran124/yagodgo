@@ -593,7 +593,16 @@ CREATE TABLE `orders` (
   `reserved_at` datetime DEFAULT NULL,
   `fulfilled_from_stock_at` datetime DEFAULT NULL,
   `bonuses_allowed` tinyint(1) NOT NULL DEFAULT '1',
-  `coupons_allowed` tinyint(1) NOT NULL DEFAULT '1'
+  `coupons_allowed` tinyint(1) NOT NULL DEFAULT '1',
+  `payment_status` varchar(32) NOT NULL DEFAULT 'unpaid',
+  `payment_method` varchar(32) DEFAULT NULL,
+  `payment_provider` varchar(32) DEFAULT NULL,
+  `payment_invoice_id` bigint UNSIGNED DEFAULT NULL,
+  `payment_amount` decimal(10,2) DEFAULT NULL,
+  `paid_at` datetime DEFAULT NULL,
+  `refunded_at` datetime DEFAULT NULL,
+  `refund_comment` text,
+  `payment_raw_response` text
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
@@ -2319,7 +2328,12 @@ INSERT INTO `settings` (`setting_key`, `setting_value`, `updated_at`) VALUES
 ('pricing_preorder_margin_percent', '35', '2026-05-28 07:03:00'),
 ('pricing_rounding_step', '10', '2026-05-11 07:04:21'),
 ('theme_dark_primary', 'raspberry', '2026-05-06 13:46:09'),
-('theme_light_primary', 'raspberry', '2026-05-06 13:46:09');
+('theme_light_primary', 'raspberry', '2026-05-06 13:46:09'),
+('payment_method_online_robokassa_enabled', '1', '2026-06-07 00:00:00'),
+('payment_method_cash_on_delivery_enabled', '1', '2026-06-07 00:00:00'),
+('payment_method_cash_pickup_enabled', '1', '2026-06-07 00:00:00'),
+('payment_method_card_on_delivery_enabled', '0', '2026-06-07 00:00:00'),
+('payment_method_card_pickup_enabled', '0', '2026-06-07 00:00:00');
 
 -- --------------------------------------------------------
 

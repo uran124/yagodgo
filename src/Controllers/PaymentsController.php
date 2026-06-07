@@ -3,6 +3,8 @@ namespace App\Controllers;
 
 use PDO;
 use PDOException;
+use App\Support\PaymentMethods;
+use App\Support\PaymentStatuses;
 
 class PaymentsController
 {
@@ -171,11 +173,15 @@ class PaymentsController
 
         if ($this->columnExists('orders', 'payment_status')) {
             $set[] = 'payment_status = ?';
-            $params[] = 'paid';
+            $params[] = PaymentStatuses::PAID;
         }
         if ($this->columnExists('orders', 'payment_provider')) {
             $set[] = 'payment_provider = ?';
             $params[] = 'robokassa';
+        }
+        if ($this->columnExists('orders', 'payment_method')) {
+            $set[] = 'payment_method = ?';
+            $params[] = PaymentMethods::ONLINE_ROBOKASSA;
         }
         if ($this->columnExists('orders', 'payment_invoice_id')) {
             $set[] = 'payment_invoice_id = ?';
@@ -210,7 +216,7 @@ class PaymentsController
             return;
         }
 
-        $paymentStatus = $returnStatus === 'success' ? 'pending' : 'failed';
+        $paymentStatus = $returnStatus === 'success' ? PaymentStatuses::PENDING : PaymentStatuses::FAILED;
         $stmt = $this->pdo->prepare(
             "UPDATE orders
                 SET payment_status = CASE WHEN payment_status = 'paid' THEN payment_status ELSE ? END,
