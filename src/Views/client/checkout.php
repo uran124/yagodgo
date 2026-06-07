@@ -65,8 +65,9 @@ $pickupAddress   = 'Самовывоз: 9 мая, 73';
         <input type="hidden" name="selected_orders_present" value="1">
         <?php foreach ($groups as $dateKey => $block): ?>
           <?php
-            if ($dateKey === 'on_demand' || $dateKey === (defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15')) {
-              $label = 'Ближайшая возможная дата';
+            $isPreorderGroup = ($dateKey === 'on_demand' || $dateKey === (defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15'));
+            if ($isPreorderGroup) {
+              $label = 'После выкупа закупки';
               $emoji = '📦';
             } elseif ($dateKey === $today) {
               $label = 'Сегодня';
@@ -108,6 +109,9 @@ $pickupAddress   = 'Самовывоз: 9 мая, 73';
                       <?= $emoji ?> Заказ (<?= htmlspecialchars($label) ?>)
                     </h3>
                     <p class="mt-1 text-xs text-gray-500">Галочка включает этот блок в оформление. У каждой даты свой способ получения, адрес и доставка.</p>
+                    <?php if ($isPreorderGroup): ?>
+                      <p class="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">Цена предварительная. Точная цена будет после выкупа; заказ останется в статусе «Бронь» до подтверждения.</p>
+                    <?php endif; ?>
                   </div>
                 </div>
                 <div class="rounded-2xl bg-white/80 px-3 py-2 text-right shadow-sm">
@@ -161,6 +165,9 @@ $pickupAddress   = 'Самовывоз: 9 мая, 73';
                           <?php endif; ?>
                         </div>
                         <div class="text-sm text-gray-500 mt-1">Количество: <?= htmlspecialchars($it['quantity']) ?></div>
+                        <?php if ($isPreorderGroup): ?>
+                          <div class="mt-1 text-xs text-amber-600">Предварительная цена, точная цена будет после выкупа.</div>
+                        <?php endif; ?>
                       </div>
                       <div class="text-right font-semibold text-gray-800"><?= number_format($lineCost, 0, '.', ' ') ?> ₽</div>
 
