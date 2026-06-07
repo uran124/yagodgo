@@ -268,7 +268,7 @@
         <span class="mr-1">Комментарий доставки:</span>
         <textarea name="delivery_comment" rows="1" placeholder="Получатель, телефон, подъезд, пожелания" class="border px-2 py-1 rounded w-full align-middle"><?= htmlspecialchars((string)($order['delivery_comment'] ?? '')) ?></textarea>
       </label>
-      <?php if (in_array((string)($order['status'] ?? ''), ['delivered', 'cancelled'], true)): ?>
+      <?php if (in_array((string)($order['status'] ?? ''), ['completed', 'cancelled', 'returned'], true)): ?>
         <div class="basis-full text-xs text-amber-700">Заказ уже завершён/отменён: адрес, дату и комментарий можно сохранить, стоимость доставки не пересчитывается.</div>
       <?php else: ?>
         <div class="basis-full text-xs text-gray-500">При смене адреса или километража стоимость доставки пересчитается, итог заказа изменится на разницу доставки.</div>
@@ -277,9 +277,9 @@
   </form>
 
   <?php $btnClasses = [
-      'processing' => 'bg-yellow-700 hover:bg-yellow-800',
-      'assigned'   => 'bg-green-700 hover:bg-green-800',
-      'delivered'  => 'bg-gray-700 hover:bg-gray-800',
+      'confirmed' => 'bg-yellow-700 hover:bg-yellow-800',
+      'shipped'    => 'bg-green-700 hover:bg-green-800',
+      'completed'  => 'bg-gray-700 hover:bg-gray-800',
       'cancelled'  => 'bg-gray-600 hover:bg-gray-700',
   ]; ?>
   <dialog class="status-dialog" data-status-dialog>
@@ -290,10 +290,10 @@
       </div>
       <div class="status-modal-buttons">
         <?php foreach ([
-            'processing' => 'Принят',
-            'assigned'   => 'В работе',
-            'delivered'  => 'Выполнен',
-            'cancelled'  => 'Отменен'
+            'confirmed' => 'Подтверждён',
+            'shipped'    => 'В пути',
+            'completed'  => 'Выполнен',
+            'cancelled'  => 'Отменён'
           ] as $st => $label): ?>
           <form action="<?= $base ?>/orders/status" method="post">
             <input type="hidden" name="order_id" value="<?= $order['id'] ?>">

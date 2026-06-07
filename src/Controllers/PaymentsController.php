@@ -193,11 +193,7 @@ class PaymentsController
             $params[] = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '';
         }
 
-        $order = $this->findOrder($orderId);
-        if ($order && in_array((string)$order['status'], ['new', 'reserved'], true)) {
-            $set[] = 'status = ?';
-            $params[] = 'processing';
-        }
+        // Order status is no longer promoted by payment callbacks; payment is available only after confirmation.
 
         if ($set === []) {
             return;
@@ -214,7 +210,7 @@ class PaymentsController
             return;
         }
 
-        $paymentStatus = $returnStatus === 'success' ? 'returned_success' : 'failed';
+        $paymentStatus = $returnStatus === 'success' ? 'pending' : 'failed';
         $stmt = $this->pdo->prepare(
             "UPDATE orders
                 SET payment_status = CASE WHEN payment_status = 'paid' THEN payment_status ELSE ? END,

@@ -2,6 +2,7 @@
 namespace App\Controllers;
 
 use PDO;
+use App\Services\OrderStatusHistoryService;
 
 class SellerController
 {
@@ -86,7 +87,7 @@ class SellerController
     {
         $sellerId = (int)($_SESSION['user_id'] ?? 0);
         $statusFilter = trim((string)($_GET['status'] ?? ''));
-        $allowedFilters = ['new', 'processing', 'assigned', 'delivered', 'cancelled'];
+        $allowedFilters = ['new', 'confirmed', 'shipped', 'completed', 'cancelled', 'returned'];
         if (!in_array($statusFilter, $allowedFilters, true)) {
             $statusFilter = '';
         }
@@ -169,7 +170,7 @@ class SellerController
         $sellerId = (int)($_SESSION['user_id'] ?? 0);
         $orderId = (int)($_POST['order_id'] ?? 0);
         $status = trim((string)($_POST['status'] ?? ''));
-        $allowedStatuses = ['processing', 'assigned', 'cancelled'];
+        $allowedStatuses = ['confirmed', 'shipped', 'cancelled'];
 
         if ($orderId <= 0 || !in_array($status, $allowedStatuses, true)) {
             header('Location: /seller/orders?error=invalid_status');
@@ -191,9 +192,9 @@ class SellerController
         $currentStatusStmt->execute([$orderId]);
         $currentStatus = (string)($currentStatusStmt->fetchColumn() ?: '');
         $allowedTransitions = [
-            'new' => ['processing', 'cancelled'],
-            'processing' => ['assigned', 'cancelled'],
-            'assigned' => ['assigned'],
+            'new' => ['confirmed', 'cancelled'],
+            'confirmed' => ['shipped', 'cancelled'],
+            'shipped' => ['shipped'],
         ];
 
         if (!isset($allowedTransitions[$currentStatus]) || !in_array($status, $allowedTransitions[$currentStatus], true)) {
@@ -203,6 +204,14 @@ class SellerController
 
         $updateStmt = $this->pdo->prepare("UPDATE orders SET status = ? WHERE id = ?");
         $updateStmt->execute([$status, $orderId]);
+
+        (new OrderStatusHistoryService($this->pdo))->record(
+            $orderId,
+            $currentStatus,
+            $status,
+            $sellerId > 0 ? $sellerId : null,
+            isset($_SESSION['role']) ? (string)$_SESSION['role'] : 'seller'
+        );
 
         header('Location: /seller/orders?updated=1');
         exit;
