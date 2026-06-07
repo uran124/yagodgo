@@ -107,6 +107,27 @@ $sectionUrl = static fn(string $section): string => $section === 'general' ? '/a
         </span>
       </label>
     </div>
+    <fieldset class="rounded-lg border border-gray-200 p-3">
+      <legend class="px-2 text-sm font-semibold text-gray-600">Доступные способы оплаты</legend>
+      <p class="mb-3 text-xs text-gray-500">Оплата открывается только после статуса «Подтверждён». Здесь включаются способы, которые можно показывать клиенту.</p>
+      <div class="grid gap-2 sm:grid-cols-2">
+        <?php foreach ([
+          'payment_method_online_robokassa_enabled' => 'Онлайн Robokassa',
+          'payment_method_cash_on_delivery_enabled' => 'Наличными при доставке',
+          'payment_method_cash_pickup_enabled' => 'Наличными при самовывозе',
+          'payment_method_card_on_delivery_enabled' => 'Картой при доставке',
+          'payment_method_card_pickup_enabled' => 'Картой при самовывозе',
+        ] as $paymentSettingKey => $paymentSettingLabel): ?>
+          <?php $paymentDefault = $paymentSettingKey === 'payment_method_online_robokassa_enabled' || $paymentSettingKey === 'payment_method_cash_on_delivery_enabled' || $paymentSettingKey === 'payment_method_cash_pickup_enabled' ? '1' : '0'; ?>
+          <label class="flex items-center gap-2 rounded border border-gray-200 p-2 text-sm">
+            <input type="checkbox" name="<?= htmlspecialchars($paymentSettingKey) ?>" value="1"
+                   <?= (($settings[$paymentSettingKey] ?? $paymentDefault) === '1') ? 'checked' : '' ?>
+                   class="h-4 w-4 rounded border-gray-300 text-[#C86052] focus:ring-[#C86052]">
+            <span><?= htmlspecialchars($paymentSettingLabel) ?></span>
+          </label>
+        <?php endforeach; ?>
+      </div>
+    </fieldset>
     <div class="grid gap-3 sm:grid-cols-2">
       <div>
         <label class="block mb-1">MerchantLogin</label>

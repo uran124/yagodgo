@@ -83,6 +83,11 @@ class SettingsController
                 'robokassa_result_url',
                 'robokassa_success_url',
                 'robokassa_fail_url',
+                'payment_method_online_robokassa_enabled',
+                'payment_method_cash_on_delivery_enabled',
+                'payment_method_cash_pickup_enabled',
+                'payment_method_card_on_delivery_enabled',
+                'payment_method_card_pickup_enabled',
             ],
             'delivery' => [
                 'delivery_store_address',
@@ -134,6 +139,15 @@ class SettingsController
         if ($activeSection === 'payments') {
             $_POST['robokassa_enabled'] = isset($_POST['robokassa_enabled']) ? '1' : '0';
             $_POST['robokassa_is_test'] = isset($_POST['robokassa_is_test']) ? '1' : '0';
+            foreach ([
+                'payment_method_online_robokassa_enabled',
+                'payment_method_cash_on_delivery_enabled',
+                'payment_method_cash_pickup_enabled',
+                'payment_method_card_on_delivery_enabled',
+                'payment_method_card_pickup_enabled',
+            ] as $paymentMethodKey) {
+                $_POST[$paymentMethodKey] = isset($_POST[$paymentMethodKey]) ? '1' : '0';
+            }
 
             $robokassaHash = strtoupper(trim((string)($_POST['robokassa_hash_algorithm'] ?? 'MD5')));
             if (!in_array($robokassaHash, ['MD5', 'SHA256', 'SHA384', 'SHA512'], true)) {

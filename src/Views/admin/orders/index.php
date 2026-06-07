@@ -106,12 +106,13 @@
   <a href="<?= $base ?>/orders/create" class="px-2 py-1 bg-[#C86052] text-white rounded text-xs md:text-sm whitespace-nowrap shrink-0">Создать новый</a>
   <select id="statusFilter" class="border rounded px-2 py-1 text-sm shrink-0">
     <option value="">Все статусы</option>
-    <option value="new">Новые</option>
-    <option value="processing">Принятые</option>
-    <option value="assigned">В работе</option>
-    <option value="delivered">Выполненные</option>
-    <option value="cancelled">Отмененные</option>
+    <option value="new">Ожидают подтверждения</option>
+    <option value="confirmed">Подтверждённые</option>
+    <option value="shipped">В пути</option>
+    <option value="completed">Выполненные</option>
+    <option value="cancelled">Отменённые</option>
     <option value="reserved">Бронь</option>
+    <option value="returned">Возврат</option>
   </select>
   <?php if ($role === 'manager' || !empty($managers)): ?>
     <select id="managerFilter" class="border rounded px-2 py-1 text-sm shrink-0">
@@ -133,7 +134,7 @@
 <div id="ordersCards" class="space-y-3">
     <?php foreach ($orders as $o): ?>
       <?php
-        $bg = in_array($o['status'], ['new','processing'], true) ? 'bg-gray-200' : '';
+        $bg = in_array($o['status'], ['new','confirmed'], true) ? 'bg-gray-200' : '';
         $dateAttr = $o['delivery_date'] ? date('Y-m-d', strtotime($o['delivery_date'])) : '';
         $createdAttr = date('Y-m-d H:i', strtotime($o['created_at']));
         $deliveryAttr = $o['delivery_date'] ? date('Y-m-d', strtotime($o['delivery_date'])) : '';
@@ -263,9 +264,9 @@
           const tomorrow = t.toISOString().slice(0,10);
           if (!d || d !== tomorrow) visible = false;
         } else if (dateFilter === 'active') {
-          if (!['new','processing','assigned','reserved'].includes(st)) visible = false;
+          if (!['reserved','new','confirmed','shipped'].includes(st)) visible = false;
         } else if (dateFilter === 'completed') {
-          if (st !== 'delivered') {
+          if (st !== 'completed') {
             visible = false;
           } else {
             const end = new Date();
