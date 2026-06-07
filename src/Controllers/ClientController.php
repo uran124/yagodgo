@@ -8,6 +8,7 @@ use App\Services\OrderStockOrchestrator;
 use App\Services\ClientCatalogService;
 use App\Services\SellableBatchResolver;
 use App\Services\DeliveryPricingService;
+use App\Services\OrderStatusHistoryService;
 
 class ClientController
 {
@@ -860,19 +861,30 @@ public function cart(): void
                 ? $data['unit_price'] / $data['box_size']
                 : $data['unit_price'];
 
-            $orderStock->persistOrderItemWithStock(
-                $stmtItem,
-                $orderId,
-                (int)$prodId,
-                [
-                    'quantity' => (float)$data['quantity'],
-                    'box_size' => (float)$data['box_size'],
-                    'unit_price' => (float)$data['unit_price'],
-                    'purchase_batch_id' => isset($data['purchase_batch_id']) ? (int)$data['purchase_batch_id'] : null,
-                ],
-                $orderMode,
-                $isReservedOrder
-            );
+            $itemPayload = [
+                'quantity' => (float)$data['quantity'],
+                'box_size' => (float)$data['box_size'],
+                'unit_price' => (float)$data['unit_price'],
+                'purchase_batch_id' => isset($data['purchase_batch_id']) ? (int)$data['purchase_batch_id'] : null,
+            ];
+            if ($isReservedOrder) {
+                $orderStock->persistOrderItemWithStock(
+                    $stmtItem,
+                    $orderId,
+                    (int)$prodId,
+                    $itemPayload,
+                    $orderMode,
+                    true
+                );
+            } else {
+                $orderStock->persistOrderItemOnly(
+                    $stmtItem,
+                    $orderId,
+                    (int)$prodId,
+                    $itemPayload,
+                    $orderMode
+                );
+            }
         }
 
         // (7.4) Создаём записи выплат для селлеров
@@ -1170,7 +1182,8 @@ public function confirmReservedOrder(int $orderId): void
         exit;
     }
 
-    $this->pdo->prepare("UPDATE orders SET status = 'new' WHERE id = ?")->execute([$orderId]);
+    $this->pdo->prepare("UPDATE orders SET status = 'confirmed' WHERE id = ?")->execute([$orderId]);
+    (new OrderStatusHistoryService($this->pdo))->record($orderId, 'reserved', 'confirmed', $userId, 'client', 'Клиент подтвердил бронь');
     header('Location: /orders/' . $orderId . '?msg=' . urlencode('Заказ подтвержден'));
     exit;
 }

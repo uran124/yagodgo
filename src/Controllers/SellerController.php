@@ -3,6 +3,8 @@ namespace App\Controllers;
 
 use PDO;
 use App\Services\OrderStatusHistoryService;
+use App\Services\OrderStockOrchestrator;
+use App\Services\StockService;
 
 class SellerController
 {
@@ -200,6 +202,10 @@ class SellerController
         if (!isset($allowedTransitions[$currentStatus]) || !in_array($status, $allowedTransitions[$currentStatus], true)) {
             header('Location: /seller/orders?error=transition');
             exit;
+        }
+
+        if (in_array($status, ['confirmed', 'shipped'], true) && $currentStatus === 'new') {
+            (new OrderStockOrchestrator($this->pdo, new StockService($this->pdo)))->applyStockForOrderId($orderId);
         }
 
         $updateStmt = $this->pdo->prepare("UPDATE orders SET status = ? WHERE id = ?");

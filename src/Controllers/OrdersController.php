@@ -527,19 +527,30 @@ class OrdersController
             );
             $orderStock = new OrderStockOrchestrator($this->pdo, new StockService($this->pdo));
             foreach ($itemsPrepared as $data) {
-                $orderStock->persistOrderItemWithStock(
-                    $stmtItem,
-                    $orderId,
-                    $data['product_id'],
-                    [
-                        'quantity' => $data['boxes'],
-                        'box_size' => $data['box_size'],
-                        'unit_price' => $data['price_per_box'],
-                        'purchase_batch_id' => $data['purchase_batch_id'],
-                    ],
-                    $data['stock_mode'],
-                    $selectedMode === 'preorder'
-                );
+                $itemPayload = [
+                    'quantity' => $data['boxes'],
+                    'box_size' => $data['box_size'],
+                    'unit_price' => $data['price_per_box'],
+                    'purchase_batch_id' => $data['purchase_batch_id'],
+                ];
+                if ($selectedMode === 'preorder') {
+                    $orderStock->persistOrderItemWithStock(
+                        $stmtItem,
+                        $orderId,
+                        $data['product_id'],
+                        $itemPayload,
+                        $data['stock_mode'],
+                        true
+                    );
+                } else {
+                    $orderStock->persistOrderItemOnly(
+                        $stmtItem,
+                        $orderId,
+                        $data['product_id'],
+                        $itemPayload,
+                        $data['stock_mode']
+                    );
+                }
             }
             $this->pdo->commit();
         } catch (\Throwable $e) {
@@ -746,6 +757,15 @@ class OrdersController
             $order = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($order) {
+                $stockService = new StockService($this->pdo);
+                $orderStock = new OrderStockOrchestrator($this->pdo, $stockService);
+                if (in_array($status, ['confirmed', 'shipped', 'completed'], true) && (string)$order['status'] === 'new') {
+                    $orderStock->applyStockForOrderId($orderId);
+                }
+                if ($status === 'completed' && $order['status'] !== 'completed') {
+                    $orderStock->commitReservedStockByOrderId($orderId);
+                }
+
                 // Если переводим в completed впервые — начисляем бонусы
                 if ($status === 'completed' && $order['status'] !== 'completed') {
                     $userId = (int)$order['user_id'];
@@ -854,8 +874,6 @@ class OrdersController
 
                 if ($status === 'cancelled') {
                     if ($order['status'] !== 'cancelled') {
-                        $stockService = new StockService($this->pdo);
-                        $orderStock = new OrderStockOrchestrator($this->pdo, $stockService);
                         $orderStock->rollbackReservationByOrderId($orderId);
                     }
 
@@ -1007,7 +1025,7 @@ class OrdersController
                     throw new \RuntimeException('Для позиции корзины не определена партия отгрузки.');
                 }
 
-                $orderStock->persistOrderItemWithStock(
+                $orderStock->persistOrderItemOnly(
                     $stmtItem,
                     $orderId,
                     (int)$ci['product_id'],
@@ -1017,8 +1035,7 @@ class OrdersController
                         'unit_price' => (float)$ci['unit_price'],
                         'purchase_batch_id' => $batchId > 0 ? $batchId : null,
                     ],
-                    $mode,
-                    false
+                    $mode
                 );
             }
 

@@ -95,5 +95,68 @@ class OrderStockOrchestratorTest extends TestCase
         $this->assertSame('sale', $movements[0]['movement_type']);
         $this->assertSame('instant', $movements[0]['stock_mode']);
     }
+    public function testPersistOrderItemOnlyDoesNotCreateStockMovements(): void
+    {
+        $stmt = $this->pdo->prepare(
+            "INSERT INTO order_items (order_id, product_id, quantity, boxes, unit_price, stock_mode, purchase_batch_id) VALUES (?, ?, ?, ?, ?, ?, ?)"
+        );
+
+        $this->service->persistOrderItemOnly($stmt, 101, 1, [
+            'quantity' => 3.0,
+            'box_size' => 1.0,
+            'unit_price' => 1500.0,
+            'purchase_batch_id' => 11,
+        ], 'instant');
+
+        $batch11 = $this->pdo->query('SELECT boxes_free, boxes_reserved, boxes_sold FROM purchase_batches WHERE id = 11')->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame(8.0, (float)$batch11['boxes_free']);
+        $this->assertSame(0.0, (float)$batch11['boxes_reserved']);
+        $this->assertSame(0.0, (float)$batch11['boxes_sold']);
+        $this->assertSame(0, (int)$this->pdo->query('SELECT COUNT(*) FROM stock_movements WHERE order_id = 101')->fetchColumn());
+    }
+
+    public function testApplyStockForOrderReservesOnConfirmationAndCompletedCommitsSale(): void
+    {
+        $stmt = $this->pdo->prepare(
+            "INSERT INTO order_items (order_id, product_id, quantity, boxes, unit_price, stock_mode, purchase_batch_id) VALUES (?, ?, ?, ?, ?, ?, ?)"
+        );
+        $this->service->persistOrderItemOnly($stmt, 102, 1, [
+            'quantity' => 2.0,
+            'box_size' => 1.0,
+            'unit_price' => 1500.0,
+            'purchase_batch_id' => 11,
+        ], 'instant');
+
+        $this->service->applyStockForOrderId(102);
+        $batch11 = $this->pdo->query('SELECT boxes_free, boxes_reserved, boxes_sold FROM purchase_batches WHERE id = 11')->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame(6.0, (float)$batch11['boxes_free']);
+        $this->assertSame(2.0, (float)$batch11['boxes_reserved']);
+        $this->assertSame(0.0, (float)$batch11['boxes_sold']);
+
+        $this->service->commitReservedStockByOrderId(102);
+        $batch11 = $this->pdo->query('SELECT boxes_free, boxes_reserved, boxes_sold FROM purchase_batches WHERE id = 11')->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame(6.0, (float)$batch11['boxes_free']);
+        $this->assertSame(0.0, (float)$batch11['boxes_reserved']);
+        $this->assertSame(2.0, (float)$batch11['boxes_sold']);
+    }
+
+    public function testApplyStockAllowsInstantDeficitOnExplicitBatch(): void
+    {
+        $stmt = $this->pdo->prepare(
+            "INSERT INTO order_items (order_id, product_id, quantity, boxes, unit_price, stock_mode, purchase_batch_id) VALUES (?, ?, ?, ?, ?, ?, ?)"
+        );
+        $this->service->persistOrderItemOnly($stmt, 103, 1, [
+            'quantity' => 10.0,
+            'box_size' => 1.0,
+            'unit_price' => 1500.0,
+            'purchase_batch_id' => 10,
+        ], 'instant');
+
+        $this->service->applyStockForOrderId(103);
+        $batch10 = $this->pdo->query('SELECT boxes_free, boxes_reserved FROM purchase_batches WHERE id = 10')->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame(-8.0, (float)$batch10['boxes_free']);
+        $this->assertSame(10.0, (float)$batch10['boxes_reserved']);
+    }
+
 }
 
