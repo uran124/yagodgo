@@ -35,4 +35,16 @@ class OrderTest extends TestCase
         $this->assertSame(10, \App\Models\Order::calculateReferralBonus(100, true, true));
         $this->assertSame(3, \App\Models\Order::calculateReferralBonus(100, true, false));
     }
+
+    public function testCalculateProjectManagerBonus(): void
+    {
+        $this->assertSame(3, \App\Models\Order::calculateProjectManagerBonus(100));
+        $this->assertSame(0, \App\Models\Order::calculateProjectManagerBonus(5));
+    }
+
+    public function testCalculateManagerReferralBonus(): void
+    {
+        $this->assertSame(3, \App\Models\Order::calculateManagerReferralBonus(100));
+        $this->assertSame(0, \App\Models\Order::calculateManagerReferralBonus(5));
+    }
 }
