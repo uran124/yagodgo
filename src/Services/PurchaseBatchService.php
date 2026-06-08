@@ -314,7 +314,7 @@ class PurchaseBatchService
     {
         $batch = $this->loadBatch($batchId);
         $this->updateBatchStatus($batchId, 'closed');
-        $stmt = $this->pdo->prepare('UPDATE purchase_batches SET closed_at = NOW(), close_reason = ? WHERE id = ? LIMIT 1');
+        $stmt = $this->pdo->prepare('UPDATE purchase_batches SET closed_at = CURRENT_TIMESTAMP, close_reason = ? WHERE id = ? LIMIT 1');
         $stmt->execute([$reason, $batchId]);
         $this->legacyProjection->syncAggregatesFromBatches((int)$batch['product_id']);
     }
@@ -385,7 +385,7 @@ class PurchaseBatchService
         $ids = array_keys($affectedOrderIds);
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
         $params = array_merge(['cancelled'], $ids);
-        $upd = $this->pdo->prepare("UPDATE orders SET status = ?, updated_at = NOW() WHERE id IN ({$placeholders}) AND status = 'reserved'");
+        $upd = $this->pdo->prepare("UPDATE orders SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN ({$placeholders}) AND status = 'reserved'");
         $upd->execute($params);
 
         return count($ids);
@@ -397,10 +397,12 @@ class PurchaseBatchService
         if ($batchId <= 0 || $productId <= 0) {
             return;
         }
+        $batch = $this->loadBatch($batchId);
+        $coveredDates = $this->coveredDeliveryDatesForBatch($batch);
         $limitByCapacity = $reservedCapacity > 0;
         $remaining = $reservedCapacity;
         $select = $this->pdo->prepare(
-            "SELECT id, requested_boxes
+            "SELECT id, requested_boxes, desired_delivery_date
              FROM preorder_intents
              WHERE product_id = ?
                AND status IN ('waiting_batch','intent_created')
@@ -411,10 +413,14 @@ class PurchaseBatchService
         $items = $select->fetchAll(PDO::FETCH_ASSOC);
         $update = $this->pdo->prepare(
             "UPDATE preorder_intents
-             SET purchase_batch_id = ?, status = 'linked_to_batch', updated_at = NOW()
+             SET purchase_batch_id = ?, status = 'linked_to_batch', updated_at = CURRENT_TIMESTAMP
              WHERE id = ?"
         );
         foreach ($items as $item) {
+            $desiredDate = $this->normalizeDateString($item['desired_delivery_date'] ?? null);
+            if ($desiredDate !== null && $coveredDates !== [] && !in_array($desiredDate, $coveredDates, true)) {
+                continue;
+            }
             $need = (float)($item['requested_boxes'] ?? 0);
             if ($need <= 0) {
                 continue;
@@ -425,6 +431,8 @@ class PurchaseBatchService
             $update->execute([$batchId, (int)$item['id']]);
             $this->logPreorderEvent((int)$item['id'], 'linked_to_batch', null, 'linked_to_batch', [
                 'purchase_batch_id' => $batchId,
+                'desired_delivery_date' => $desiredDate,
+                'covered_delivery_dates' => $coveredDates,
             ]);
             if ($limitByCapacity) {
                 $remaining -= $need;
@@ -432,12 +440,43 @@ class PurchaseBatchService
         }
     }
 
+    /**
+     * @param array<string,mixed> $batch
+     * @return array<int,string>
+     */
+    private function coveredDeliveryDatesForBatch(array $batch): array
+    {
+        $date = $this->normalizeDateString($batch['purchased_at'] ?? null);
+        if ($date === null) {
+            return [];
+        }
+        $start = new \DateTimeImmutable($date);
+        return [
+            $start->format('Y-m-d'),
+            $start->modify('+1 day')->format('Y-m-d'),
+            $start->modify('+2 day')->format('Y-m-d'),
+        ];
+    }
+
+    private function normalizeDateString(mixed $value): ?string
+    {
+        $raw = trim((string)($value ?? ''));
+        if ($raw === '') {
+            return null;
+        }
+        $ts = strtotime($raw);
+        if ($ts === false) {
+            return null;
+        }
+        return date('Y-m-d', $ts);
+    }
+
     private function logPreorderEvent(int $intentId, string $eventType, ?string $fromStatus, ?string $toStatus, ?array $meta = null): void
     {
         try {
             $this->pdo->prepare(
                 "INSERT INTO preorder_intent_events (preorder_intent_id, event_type, from_status, to_status, meta_json, created_at)
-                 VALUES (?, ?, ?, ?, ?, NOW())"
+                 VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)"
             )->execute([
                 $intentId,
                 $eventType,
@@ -555,7 +594,7 @@ class PurchaseBatchService
         }
 
         $select = $this->pdo->prepare(
-            "SELECT id, requested_boxes, status
+            "SELECT id, requested_boxes, status, desired_delivery_date
              FROM preorder_intents
              WHERE product_id = ?
                AND (purchase_batch_id = ? OR purchase_batch_id IS NULL OR purchase_batch_id = 0)
@@ -564,16 +603,21 @@ class PurchaseBatchService
         );
         $select->execute([$productId, $batchId]);
         $items = $select->fetchAll(PDO::FETCH_ASSOC);
+        $coveredDates = $this->coveredDeliveryDatesForBatch($batch);
 
         $offered = 0;
         $allocated = 0.0;
         $update = $this->pdo->prepare(
             "UPDATE preorder_intents
              SET purchase_batch_id = ?, status = 'awaiting_price_confirmation',
-                 offered_price_per_box = ?, offer_expires_at = ?, updated_at = NOW()
+                 offered_price_per_box = ?, offer_expires_at = ?, updated_at = CURRENT_TIMESTAMP
              WHERE id = ?"
         );
         foreach ($items as $item) {
+            $desiredDate = $this->normalizeDateString($item['desired_delivery_date'] ?? null);
+            if ($desiredDate !== null && $coveredDates !== [] && !in_array($desiredDate, $coveredDates, true)) {
+                continue;
+            }
             $need = (float)($item['requested_boxes'] ?? 0);
             if ($need <= 0 || ($allocated + $need) > $capacity) {
                 continue;
@@ -584,6 +628,8 @@ class PurchaseBatchService
                 'purchase_batch_id' => $batchId,
                 'offered_price_per_box' => $pricePerBox,
                 'offer_expires_at' => $expiresAt,
+                'desired_delivery_date' => $desiredDate,
+                'covered_delivery_dates' => $coveredDates,
             ]);
             $allocated += $need;
             $offered++;
@@ -610,11 +656,11 @@ class PurchaseBatchService
 
         $this->pdo->prepare(
             "UPDATE preorder_intents
-             SET status = 'expired', updated_at = NOW()
+             SET status = 'expired', updated_at = CURRENT_TIMESTAMP
              WHERE product_id = ?
                AND status = 'offer_sent'
                AND offer_expires_at IS NOT NULL
-               AND offer_expires_at < NOW()"
+               AND offer_expires_at < CURRENT_TIMESTAMP"
         )->execute([$productId]);
 
         // Arrived means the batch is physically ready for pickup/delivery.
