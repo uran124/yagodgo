@@ -88,8 +88,8 @@ function resolve_order_display_status(array $order): string {
             <?php endif; ?>
             <div class="flex justify-between items-center pt-1 border-t border-gray-200 mt-1 font-semibold">
               <?php if ($displayStatus === 'reserved' && (int)($order['total_amount'] ?? 0) <= 0): ?>
-                <span>Стоимость заказа:</span>
-                <span>Цена уточняется</span>
+                <span>Предварительная стоимость:</span>
+                <span class="text-right">≈ <?= number_format($rawSum + $shippingCost, 0, '.', ' ') ?> ₽<br><span class="text-xs text-amber-600">Точная цена будет после выкупа</span></span>
               <?php elseif ($discount > 0): ?>
                 <span>Скидка: -<?= number_format($discount, 0, '.', ' ') ?> 🍓</span>
               <?php else: ?>
@@ -150,8 +150,8 @@ function resolve_order_display_status(array $order): string {
             <?php endif; ?>
             <div class="flex justify-between items-center pt-1 border-t border-gray-200 mt-1 font-semibold">
               <?php if ($displayStatus === 'reserved' && (int)($order['total_amount'] ?? 0) <= 0): ?>
-                <span>Стоимость заказа:</span>
-                <span>Цена уточняется</span>
+                <span>Предварительная стоимость:</span>
+                <span class="text-right">≈ <?= number_format($rawSum + $shippingCost, 0, '.', ' ') ?> ₽<br><span class="text-xs text-amber-600">Точная цена будет после выкупа</span></span>
               <?php elseif ($discount > 0): ?>
                 <span>Скидка: -<?= number_format($discount, 0, '.', ' ') ?> 🍓</span>
               <?php else: ?>

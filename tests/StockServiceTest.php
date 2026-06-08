@@ -149,6 +149,18 @@ class StockServiceTest extends TestCase
         $this->assertSame(-2.0, (float)$movement['boxes_delta']);
     }
 
+
+    public function testPreorderReserveMayExceedPlannedQuantity(): void
+    {
+        $this->pdo->exec('UPDATE purchase_batches SET status = "planned", boxes_total = 0, boxes_free = 0, boxes_reserved = 3 WHERE id = 1');
+
+        $this->service->reserve(1, 1, 5, 78, 'preorder');
+
+        $batch = $this->pdo->query('SELECT boxes_free, boxes_reserved FROM purchase_batches WHERE id = 1')->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame(0.0, (float)$batch['boxes_free']);
+        $this->assertSame(8.0, (float)$batch['boxes_reserved']);
+    }
+
     public function testUnreserveRestoresModeStockAndDecreasesReserved(): void
     {
         $this->service->reserve(1, 1, 4, 55, 'instant');

@@ -27,6 +27,11 @@ class SellableBatchResolverTest extends TestCase
             discount_price_per_box REAL DEFAULT 0,
             purchased_at TEXT
         )');
+        $this->pdo->exec('CREATE TABLE products (
+            id INTEGER PRIMARY KEY,
+            preorder_price_per_box REAL DEFAULT 0,
+            price REAL DEFAULT 0
+        )');
 
         $this->resolver = new SellableBatchResolver($this->pdo);
     }
@@ -55,5 +60,17 @@ class SellableBatchResolverTest extends TestCase
         $this->assertSame(990.0, (float)$row['price_per_box']);
         $this->assertSame(2.0, (float)$row['boxes_available']);
     }
-}
 
+    public function testResolvePreorderAllowsPlannedBatchWithoutDeclaredQuantity(): void
+    {
+        $this->pdo->exec("INSERT INTO products (id, preorder_price_per_box, price) VALUES (12, 1500, 1700)");
+        $this->pdo->exec("INSERT INTO purchase_batches (id, product_id, status, boxes_total, boxes_free, boxes_reserved, preorder_price_per_box, purchased_at) VALUES
+            (7, 12, 'planned', 0, 0, 5, 1400, '2026-05-02 10:00:00')");
+
+        $row = $this->resolver->resolveForProduct(12, 'preorder');
+
+        $this->assertNotNull($row);
+        $this->assertSame(7, (int)$row['id']);
+        $this->assertSame(1400.0, (float)$row['price_per_box']);
+    }
+}

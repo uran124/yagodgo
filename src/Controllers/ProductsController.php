@@ -732,7 +732,7 @@ class ProductsController
     }
 
     /**
-     * Переводит бронь-заказы в обычные, когда для товара появляется дата поставки.
+     * Фиксирует дату/цену reserved-заказов после выкупа, не переводя их в обычный new.
      */
     private function activateReservedOrdersByProduct(int $productId, string $deliveryDate): void
     {
@@ -756,7 +756,7 @@ class ProductsController
         );
         $updStmt = $this->pdo->prepare(
             "UPDATE orders
-             SET delivery_date = ?, total_amount = ?, status = 'new'
+             SET delivery_date = ?, total_amount = ?
              WHERE id = ?"
         );
         foreach ($orderIds as $orderId) {

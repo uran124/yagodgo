@@ -180,7 +180,10 @@ $discount = max(0, $rawSum - $itemsPaidTotal);
       <div class="flex justify-between items-center pt-2">
         <span class="font-semibold text-gray-800 text-lg">Стоимость заказа:</span>
         <?php if ($isReservedOrder && (int)($order['total_amount'] ?? 0) <= 0): ?>
-          <span class="font-bold text-2xl text-gray-800">Цена уточняется</span>
+          <span class="text-right">
+            <span class="block font-bold text-2xl text-gray-800">≈ <?= number_format($rawSum + $shippingCost, 0, '.', ' ') ?> ₽</span>
+            <span class="block text-xs font-medium text-amber-600">Предварительно. Точная цена будет после выкупа</span>
+          </span>
         <?php else: ?>
           <span class="font-bold text-2xl text-gray-800">
             <?= number_format($order['total_amount'], 0, '.', ' ') ?> ₽

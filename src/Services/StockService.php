@@ -259,16 +259,8 @@ class StockService
 
         $updates = [];
         if ($mode === 'preorder' && $movementType === 'reserve') {
-            $requested = abs($delta);
-            $plannedLimit = (float)($batch['boxes_total'] ?? 0);
-            if ($plannedLimit <= 0) {
-                $plannedLimit = (float)($batch['boxes_free'] ?? 0) + (float)($batch['boxes_reserved'] ?? 0);
-            }
-            $alreadyReserved = max(0.0, (float)($batch['boxes_reserved'] ?? 0));
-            if (($alreadyReserved + $requested) > $plannedLimit) {
-                throw new RuntimeException('Not enough stock in selected mode.');
-            }
-            $updates = ['boxes_reserved' => $requested];
+            // Planned закупки не имеют жёсткого количества: бронь уходит в дефицит через boxes_reserved.
+            $updates = ['boxes_reserved' => abs($delta)];
         } else {
             $allowDeficitReservation = $mode === 'instant' && $movementType === 'reserve';
             if (!$allowDeficitReservation && ((float)$batch[$column] + $delta) < 0) {

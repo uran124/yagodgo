@@ -194,7 +194,7 @@
         <div class="flex justify-between font-semibold border-t pt-1 mt-1">
           <span>Стоимость заказа:</span>
           <?php if (($o['status'] ?? '') === 'reserved' && (int)($o['total_amount'] ?? 0) <= 0): ?>
-            <span>Цена уточняется</span>
+            <span>Точная цена будет после выкупа</span>
           <?php else: ?>
             <span><?= number_format($o['total_amount'], 0, '.', ' ') ?> ₽</span>
           <?php endif; ?>

@@ -47,7 +47,8 @@
         $options = [];
         $d = $it['delivery_date']; // может быть null или строка 'YYYY-MM-DD'
         $placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
-        if ($d === null || $d === $placeholder) {
+        $isPreorderItem = (($it['stock_mode'] ?? '') === 'preorder') || $d === null || $d === $placeholder;
+        if ($isPreorderItem) {
           // Под заказ: select станет disabled
           $options = [];
         } else {
@@ -83,8 +84,11 @@
               (<?= htmlspecialchars($it['box_size'] . ' ' . $it['box_unit']) ?>)
             <?php endif; ?>
           </div>
-          <div class="font-semibold text-gray-800">
-            <?= number_format($unitPriceToUse, 0, '.', ' ') ?> ₽
+          <div class="text-right">
+            <div class="font-semibold text-gray-800"><?= number_format($unitPriceToUse, 0, '.', ' ') ?> ₽</div>
+            <?php if ($isPreorderItem): ?>
+              <div class="text-[11px] font-medium text-amber-600">предварительная цена</div>
+            <?php endif; ?>
           </div>
         </div>
 
@@ -120,6 +124,9 @@
 
         <div>
           <label class="block text-sm text-gray-600 font-bold mb-1">Выберите дату получения</label>
+          <?php if ($isPreorderItem): ?>
+            <input type="hidden" name="delivery_date[<?= $it['product_id'] ?>]" value="<?= htmlspecialchars($placeholder) ?>" form="checkoutForm">
+          <?php endif; ?>
           <select name="delivery_date[<?= $it['product_id'] ?>]"
                   form="checkoutForm"
                   <?= empty($options) ? 'disabled' : 'required' ?>
@@ -131,9 +138,12 @@
                 </option>
               <?php endforeach; ?>
             <?php else: ?>
-              <option>Ближайшая возможная дата</option>
+              <option>После выкупа закупки</option>
             <?php endif; ?>
           </select>
+          <?php if ($isPreorderItem): ?>
+            <p class="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-700">Цена предварительная. Точная цена будет после выкупа.</p>
+          <?php endif; ?>
         </div>
       </div>
       <?php endforeach; ?>

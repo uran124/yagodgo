@@ -75,6 +75,7 @@ public function cart(): void
             ci.purchase_batch_id,
             ci.quantity,
             ci.unit_price,
+            ci.stock_mode,
             p.variety,
             t.name AS product,
             p.box_size,
@@ -118,6 +119,7 @@ public function cart(): void
             'image_path'    => $row['image_path'],
             'unit_price'    => $row['unit_price'],
             'quantity'      => $row['quantity'],
+            'stock_mode'    => $row['stock_mode'] ?? 'instant',
             'purchase_batch_id' => $row['purchase_batch_id'],
             'delivery_date' => $deliveryDate,
             'sale_price'    => $row['sale_price'],
@@ -313,6 +315,7 @@ public function cart(): void
                 ci.product_id,
                 ci.quantity,
                 ci.unit_price,
+                ci.stock_mode,
                 p.variety,
                 p.alias,
                 t.name AS product,
@@ -803,6 +806,8 @@ public function cart(): void
         $shippingFee = (int)($deliveryRow['delivery_fee'] ?? 300);
         $finalSum = $subAfterPickup - $pointsDiscount - $couponDiscount + $shippingFee;
         if ($isReservedOrder) {
+            // В корзине показываем предварительную цену, но сумма reserved-заказа становится точной
+            // только после выкупа закупки и пересчёта order_items.
             $finalSum = 0;
         }
 
@@ -1510,7 +1515,7 @@ public function cancelReservedOrder(int $orderId): void
                       FROM purchase_batches pb2
                       WHERE pb2.product_id = p.id
                         AND ((pb2.status IN ('purchased', 'arrived') AND (pb2.boxes_free > 0 OR pb2.boxes_discount > 0))
-                             OR (pb2.status = 'planned' AND (COALESCE(NULLIF(pb2.boxes_total, 0), pb2.boxes_free + pb2.boxes_reserved) - pb2.boxes_reserved) > 0 AND COALESCE(NULLIF(pb2.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) > 0))
+                             OR (pb2.status = 'planned' AND COALESCE(NULLIF(pb2.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) > 0))
                       ORDER BY CASE WHEN pb2.status IN ('purchased', 'arrived') AND pb2.boxes_free > 0 THEN 1 WHEN pb2.status IN ('purchased', 'arrived') AND pb2.boxes_discount > 0 THEN 2 WHEN pb2.status = 'planned' THEN 3 ELSE 9 END, pb2.purchased_at ASC, pb2.id ASC
                       LIMIT 1
                   )
@@ -1592,7 +1597,7 @@ public function cancelReservedOrder(int $orderId): void
                  FROM purchase_batches pb2
                  WHERE pb2.product_id = p.id
                    AND ((pb2.status IN ('purchased', 'arrived') AND (pb2.boxes_free > 0 OR pb2.boxes_discount > 0))
-                        OR (pb2.status = 'planned' AND (COALESCE(NULLIF(pb2.boxes_total, 0), pb2.boxes_free + pb2.boxes_reserved) - pb2.boxes_reserved) > 0 AND COALESCE(NULLIF(pb2.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) > 0))
+                        OR (pb2.status = 'planned' AND COALESCE(NULLIF(pb2.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) > 0))
                  ORDER BY CASE WHEN pb2.status IN ('purchased', 'arrived') AND pb2.boxes_free > 0 THEN 1 WHEN pb2.status IN ('purchased', 'arrived') AND pb2.boxes_discount > 0 THEN 2 WHEN pb2.status = 'planned' THEN 3 ELSE 9 END, pb2.purchased_at ASC, pb2.id ASC
                  LIMIT 1
              )
@@ -1750,14 +1755,53 @@ public function cancelReservedOrder(int $orderId): void
             }
         }
 
+        if ($targetBatchId === null || $autoOfferPrice <= 0) {
+            http_response_code(409);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'ok' => false,
+                'error' => 'Для товара пока нет запланированной закупки с предварительной ценой.',
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        $modeCheckStmt = $this->pdo->prepare(
+            "SELECT stock_mode FROM cart_items WHERE user_id = ? AND product_id = ? LIMIT 1"
+        );
+        $modeCheckStmt->execute([$userId, $productId]);
+        $existingCartMode = $modeCheckStmt->fetchColumn();
+        if ($existingCartMode !== false && (string)$existingCartMode !== 'preorder') {
+            http_response_code(409);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'ok' => false,
+                'error' => 'Этот товар уже есть в корзине в другом режиме. Сначала удалите его из корзины.',
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        $_SESSION['delivery_date'][$productId] = PLACEHOLDER_DATE;
+        $this->pdo->prepare(
+            "INSERT INTO cart_items (user_id, product_id, quantity, unit_price, stock_mode, purchase_batch_id, boxes, sale_price_per_box)" .
+            " VALUES (?, ?, ?, ?, 'preorder', ?, ?, ?)" .
+            " ON DUPLICATE KEY UPDATE quantity = VALUES(quantity)," .
+            " unit_price = VALUES(unit_price)," .
+            " stock_mode = 'preorder'," .
+            " purchase_batch_id = VALUES(purchase_batch_id)," .
+            " boxes = VALUES(boxes)," .
+            " sale_price_per_box = VALUES(sale_price_per_box)"
+        )->execute([$userId, $productId, $requestedBoxes, $autoOfferPrice, $targetBatchId, $requestedBoxes, $autoOfferPrice]);
+        $this->refreshCartTotal();
+
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode([
             'ok' => true,
             'intent_id' => $intentId,
-            'status' => $targetStatus,
-            'status_label' => $this->preorderIntentStatusLabel($targetStatus),
+            'status' => 'in_cart',
+            'status_label' => 'В корзине',
             'eta_delivery_date' => $etaDateValue,
-            'message' => 'Предзаказ сохранён: ' . $etaText . '. Мы уведомим вас после поступления партии.',
+            'cart_url' => '/cart',
+            'message' => 'Предзаказ добавлен в корзину: ' . $etaText . '. Цена предварительная. Точная цена будет после выкупа.',
         ], JSON_UNESCAPED_UNICODE);
     }
 

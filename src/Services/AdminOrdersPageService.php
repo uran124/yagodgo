@@ -202,7 +202,7 @@ class AdminOrdersPageService
             "           WHERE pb.product_id = p.id\n" .
             "             AND (\n" .
             "               (pb.status IN ('purchased', 'arrived') AND pb.boxes_free > 0 AND pb.instant_price_per_box > 0)\n" .
-            "               OR (pb.status = 'planned' AND (COALESCE(NULLIF(pb.boxes_total, 0), pb.boxes_free + pb.boxes_reserved) - pb.boxes_reserved) > 0)\n" .
+            "               OR pb.status = 'planned'\n" .
             "             )\n" .
             "           ORDER BY CASE WHEN pb.status IN ('purchased', 'arrived') THEN 1 ELSE 2 END, pb.purchased_at ASC, pb.id ASC\n" .
             "           LIMIT 1\n" .
@@ -222,7 +222,7 @@ class AdminOrdersPageService
     private function fetchCreateFormPurchaseBatches(): array
     {
         $plannedAvailableExpr = "(COALESCE(NULLIF(pb.boxes_total, 0), pb.boxes_free + pb.boxes_reserved) - pb.boxes_reserved)";
-        $availableExpr = "CASE WHEN pb.status = 'planned' THEN CASE WHEN {$plannedAvailableExpr} > 0 THEN {$plannedAvailableExpr} ELSE 0 END ELSE pb.boxes_free END";
+        $availableExpr = "CASE WHEN pb.status = 'planned' THEN {$plannedAvailableExpr} ELSE pb.boxes_free END";
 
         $stmt = $this->pdo->query(
             "SELECT pb.id AS purchase_batch_id, pb.product_id, pb.status, pb.purchased_at,\n" .
@@ -237,7 +237,7 @@ class AdminOrdersPageService
             "WHERE p.is_active = 1\n" .
             "  AND (\n" .
             "    (pb.status IN ('purchased', 'arrived') AND pb.boxes_free > 0 AND pb.instant_price_per_box > 0)\n" .
-            "    OR (pb.status = 'planned' AND {$plannedAvailableExpr} > 0)\n" .
+            "    OR pb.status = 'planned'\n" .
             "  )\n" .
             "ORDER BY pb.purchased_at ASC, pb.status ASC, t.name ASC, p.variety ASC"
         );
