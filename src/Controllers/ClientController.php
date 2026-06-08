@@ -1694,8 +1694,22 @@ public function cancelReservedOrder(int $orderId): void
         $desiredDeliveryDate = null;
         if ($desiredDeliveryDateRaw !== '' && $desiredDeliveryDateRaw !== 'any') {
             $tsDesired = strtotime($desiredDeliveryDateRaw);
-            if ($tsDesired !== false) {
-                $desiredDeliveryDate = date('Y-m-d', $tsDesired);
+            if ($tsDesired === false) {
+                http_response_code(422);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['ok' => false, 'error' => 'Некорректная дата получения предзаказа'], JSON_UNESCAPED_UNICODE);
+                return;
+            }
+            $desiredDeliveryDate = date('Y-m-d', $tsDesired);
+            $minPreorderDate = date('Y-m-d', strtotime('+2 day'));
+            if ($desiredDeliveryDate < $minPreorderDate) {
+                http_response_code(422);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode([
+                    'ok' => false,
+                    'error' => 'Предзаказ можно оформить не раньше ' . date('d.m.Y', strtotime($minPreorderDate)) . '. Если ягода нужна раньше, оформите обычную покупку по текущей цене.',
+                ], JSON_UNESCAPED_UNICODE);
+                return;
             }
         }
         $expectedPriceStored = $expectedPricePerBox > 0 ? $expectedPricePerBox : null;
@@ -1758,11 +1772,14 @@ public function cancelReservedOrder(int $orderId): void
         }
 
         if ($targetBatchId === null || $autoOfferPrice <= 0) {
-            http_response_code(409);
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode([
-                'ok' => false,
-                'error' => 'Для товара пока нет запланированной закупки с предварительной ценой.',
+                'ok' => true,
+                'intent_id' => $intentId,
+                'status' => $targetStatus,
+                'status_label' => 'Ждёт закупку',
+                'eta_delivery_date' => $etaDateValue,
+                'message' => 'Предзаказ сохранён' . ($desiredDeliveryDate ? ' на ' . date('d.m.Y', strtotime($desiredDeliveryDate)) : ' на ближайшую возможную дату') . '. Мы подтвердим его после назначения поставки и финальной цены.',
             ], JSON_UNESCAPED_UNICODE);
             return;
         }
@@ -1782,7 +1799,7 @@ public function cancelReservedOrder(int $orderId): void
             return;
         }
 
-        $_SESSION['delivery_date'][$productId] = PLACEHOLDER_DATE;
+        $_SESSION['delivery_date'][$productId] = $desiredDeliveryDate ?: PLACEHOLDER_DATE;
         $this->pdo->prepare(
             "INSERT INTO cart_items (user_id, product_id, quantity, unit_price, stock_mode, purchase_batch_id, boxes, sale_price_per_box)" .
             " VALUES (?, ?, ?, ?, 'preorder', ?, ?, ?)" .
@@ -1803,7 +1820,7 @@ public function cancelReservedOrder(int $orderId): void
             'status_label' => 'В корзине',
             'eta_delivery_date' => $etaDateValue,
             'cart_url' => '/cart',
-            'message' => 'Предзаказ добавлен в корзину: ' . $etaText . '. Цена предварительная. Точная цена будет после выкупа.',
+            'message' => 'Предзаказ добавлен в корзину' . ($desiredDeliveryDate ? ' на ' . date('d.m.Y', strtotime($desiredDeliveryDate)) : ': ' . $etaText) . '. Цена предварительная. Точная цена будет после выкупа.',
         ], JSON_UNESCAPED_UNICODE);
     }
 

@@ -77,6 +77,9 @@
         $placeholderDate = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
         $preorderDateKnown = ($deliveryDate !== '' && $deliveryDate !== $placeholderDate);
         $preorderDateText = $preorderDateKnown ? date('d.m.Y', strtotime($deliveryDate)) : '';
+        $minPreorderDate = date('Y-m-d', strtotime('+2 day'));
+        $defaultPreorderDate = $preorderDateKnown && $deliveryDate >= $minPreorderDate ? $deliveryDate : $minPreorderDate;
+        $canPreorder = $active === 1;
         ?>
 
         <!-- Блок цены + кнопок (floating над навбаром на мобиле, встроенный на md+) -->
@@ -154,13 +157,21 @@
             </form>
 
             <!-- Предзаказ — вторичное действие -->
+            <div class="mb-2">
+              <label for="preorderDesiredDate" class="block text-xs font-medium text-gray-500 mb-1">Дата получения предзаказа</label>
+              <input id="preorderDesiredDate"
+                     type="date"
+                     min="<?= htmlspecialchars($minPreorderDate) ?>"
+                     value="<?= htmlspecialchars($defaultPreorderDate) ?>"
+                     class="w-full h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-200">
+            </div>
             <button id="preorderBtn" type="button"
-                    <?= $preorderDateKnown ? '' : 'disabled' ?>
-                    class="w-full h-10 flex items-center justify-center gap-1.5 border font-medium text-sm rounded-xl transition-colors mb-1 <?= $preorderDateKnown ? 'border-emerald-500 text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100' : 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed' ?>">
+                    <?= $canPreorder ? '' : 'disabled' ?>
+                    class="w-full h-10 flex items-center justify-center gap-1.5 border font-medium text-sm rounded-xl transition-colors mb-1 <?= $canPreorder ? 'border-emerald-500 text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100' : 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed' ?>">
               <span class="material-icons-round text-base leading-none">schedule</span>
-              <?= $preorderDateKnown ? ('Предзаказ −10% · ' . $preorderDateText) : 'Предзаказ −10%' ?>
+              Предзаказ −10%
             </button>
-            <p class="text-xs text-gray-400 text-center mb-1"><?= $preorderDateKnown ? ('Следующая поставка: ' . htmlspecialchars($preorderDateText)) : 'Дата следующей поставки уточняется' ?></p>
+            <p class="text-xs text-gray-400 text-center mb-1">Выберите день получения. Если нужна ягода сегодня — оформите обычную покупку по текущей цене.</p>
             <p id="preorderHint" class="text-xs text-gray-400 text-center hidden"></p>
 
             <script>
@@ -168,8 +179,12 @@
                 const qtyInput = document.getElementById('buyNowQty');
                 const qty = qtyInput ? parseFloat(qtyInput.value || '1') : 1;
                 const payload = new URLSearchParams();
+                const desiredDateInput = document.getElementById('preorderDesiredDate');
                 payload.set('product_id', '<?= (int)$product['id'] ?>');
                 payload.set('requested_boxes', String(qty > 0 ? qty : 1));
+                if (desiredDateInput && desiredDateInput.value) {
+                  payload.set('desired_delivery_date', desiredDateInput.value);
+                }
                 const res = await fetch('/preorder-intents', {
                   method: 'POST',
                   headers: {'Content-Type': 'application/x-www-form-urlencoded'},
