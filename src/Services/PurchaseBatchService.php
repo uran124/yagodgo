@@ -594,7 +594,7 @@ class PurchaseBatchService
         }
 
         $select = $this->pdo->prepare(
-            "SELECT id, requested_boxes, status, desired_delivery_date
+            "SELECT id, requested_boxes, status, desired_delivery_date, expected_price_per_box, discount_percent_snapshot
              FROM preorder_intents
              WHERE product_id = ?
                AND (purchase_batch_id = ? OR purchase_batch_id IS NULL OR purchase_batch_id = 0)
@@ -623,10 +623,15 @@ class PurchaseBatchService
                 continue;
             }
             $from = (string)($item['status'] ?? 'linked_to_batch');
+            $expectedPrice = isset($item['expected_price_per_box']) ? (float)$item['expected_price_per_box'] : 0.0;
+            $priceDelta = $expectedPrice > 0 ? round($pricePerBox - $expectedPrice, 2) : null;
             $update->execute([$batchId, $pricePerBox, $expiresAt, (int)$item['id']]);
             $this->logPreorderEvent((int)$item['id'], 'price_confirmation_requested', $from, 'awaiting_price_confirmation', [
                 'purchase_batch_id' => $batchId,
+                'expected_price_per_box' => $expectedPrice > 0 ? $expectedPrice : null,
                 'offered_price_per_box' => $pricePerBox,
+                'price_delta_per_box' => $priceDelta,
+                'discount_percent_snapshot' => isset($item['discount_percent_snapshot']) ? (float)$item['discount_percent_snapshot'] : null,
                 'offer_expires_at' => $expiresAt,
                 'desired_delivery_date' => $desiredDate,
                 'covered_delivery_dates' => $coveredDates,

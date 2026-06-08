@@ -102,6 +102,8 @@ class PurchaseBatchServiceTest extends TestCase
             desired_delivery_date TEXT NULL,
             status TEXT,
             offered_price_per_box REAL NULL,
+            expected_price_per_box REAL NULL,
+            discount_percent_snapshot REAL NULL,
             offer_expires_at TEXT NULL,
             checkout_token TEXT NULL,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
