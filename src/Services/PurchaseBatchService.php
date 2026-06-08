@@ -50,17 +50,17 @@ class PurchaseBatchService
         if ($productId <= 0) {
             throw new RuntimeException('Invalid product_id for purchase batch.');
         }
-        if ($boxesTotal <= 0) {
-            throw new RuntimeException('boxes_total must be greater than zero.');
-        }
-        if ($boxesFree < 0 || $boxesReserved < 0 || $purchasePricePerBox < 0 || $extraCostPerBox < 0) {
-            throw new RuntimeException('Batch values can not be negative.');
-        }
-        if (($boxesFree + $boxesReserved) > $boxesTotal) {
-            throw new RuntimeException('Allocated boxes exceed boxes_total.');
-        }
         if (!in_array($status, self::ALLOWED_BATCH_STATUSES, true)) {
             throw new RuntimeException('Unsupported purchase batch status.');
+        }
+        if ($status !== 'planned' && $boxesTotal <= 0) {
+            throw new RuntimeException('boxes_total must be greater than zero.');
+        }
+        if ($boxesTotal < 0 || $boxesFree < 0 || $boxesReserved < 0 || $purchasePricePerBox < 0 || $extraCostPerBox < 0) {
+            throw new RuntimeException('Batch values can not be negative.');
+        }
+        if ($status !== 'planned' && ($boxesFree + $boxesReserved) > $boxesTotal) {
+            throw new RuntimeException('Allocated boxes exceed boxes_total.');
         }
 
         $product = $this->loadProduct($productId);

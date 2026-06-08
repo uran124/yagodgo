@@ -585,6 +585,12 @@ class OrdersController
             $currentStatusStmt->execute([$orderId]);
             $fromStatus = $currentStatusStmt->fetchColumn();
 
+            if ((string)$fromStatus === 'new') {
+                $stockService = new StockService($this->pdo);
+                (new OrderStockOrchestrator($this->pdo, $stockService))->applyStockForOrderId($orderId);
+                (new StockDeficitService($this->pdo))->notifyAdminsIfChanged('назначен курьер на заказ №' . $orderId);
+            }
+
             $stmt = $this->pdo->prepare(
                 "UPDATE orders SET assigned_to = ?, status = 'shipped' WHERE id = ?"
             );
@@ -770,15 +776,38 @@ class OrdersController
                 if (in_array($status, ['confirmed', 'shipped', 'completed'], true)) {
                     (new StockDeficitService($this->pdo))->notifyAdminsIfChanged('заказ №' . $orderId . ' → ' . $status);
                 }
+                if ($status === 'cancelled' && (string)$order['status'] === 'completed') {
+                    header('Location: ' . $this->basePath() . '/' . $orderId);
+                    exit;
+                }
                 if ($status === 'returned') {
                     if ((string)$order['status'] !== 'completed') {
                         header('Location: ' . $this->basePath() . '/' . $orderId);
                         exit;
                     }
-                    (new OrderReturnService($this->pdo, $stockService))->returnCompletedOrder(
-                        $orderId,
-                        isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null
-                    );
+                    $this->pdo->beginTransaction();
+                    try {
+                        (new OrderReturnService($this->pdo, $stockService))->returnCompletedOrder(
+                            $orderId,
+                            isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null
+                        );
+                        $this->pdo->prepare("UPDATE orders SET status = ? WHERE id = ?")->execute([$status, $orderId]);
+                        (new OrderStatusHistoryService($this->pdo))->record(
+                            $orderId,
+                            (string)$order['status'],
+                            $status,
+                            isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null,
+                            isset($_SESSION['role']) ? (string)$_SESSION['role'] : null
+                        );
+                        $this->pdo->commit();
+                    } catch (\Throwable $e) {
+                        if ($this->pdo->inTransaction()) {
+                            $this->pdo->rollBack();
+                        }
+                        throw $e;
+                    }
+                    header('Location: ' . $this->basePath() . '/' . $orderId);
+                    exit;
                 }
 
                 // Если переводим в completed впервые — начисляем бонусы

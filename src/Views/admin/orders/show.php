@@ -294,13 +294,19 @@
         <button type="button" class="px-2 py-1 rounded border status-dialog-close" data-close-status-modal>✕</button>
       </div>
       <div class="status-modal-buttons">
-        <?php foreach ([
+        <?php
+          $statusOptions = [
             'confirmed' => 'Подтверждён',
             'shipped'    => 'В пути',
             'completed'  => 'Выполнен',
             'cancelled'  => 'Отменён',
-            'returned'   => 'Возврат'
-          ] as $st => $label): ?>
+            'returned'   => 'Возврат',
+          ];
+          if ((string)($order['status'] ?? '') === 'completed') {
+            $statusOptions = ['returned' => 'Возврат'];
+          }
+        ?>
+        <?php foreach ($statusOptions as $st => $label): ?>
           <form action="<?= $base ?>/orders/status" method="post">
             <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
             <input type="hidden" name="status" value="<?= $st ?>">
