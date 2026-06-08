@@ -206,6 +206,41 @@ class StockService
         }
     }
 
+    public function writeOffSoldSale(int $productId, int $batchId, float $boxes, int $orderId, ?int $userId, string $comment): void
+    {
+        if ($boxes <= 0) {
+            throw new RuntimeException('Write off sold boxes must be greater than zero.');
+        }
+
+        $batch = $this->loadBatch($batchId);
+        if (((float)$batch['boxes_sold'] - $boxes) < 0) {
+            throw new RuntimeException('Not enough sold stock to write off.');
+        }
+
+        $ownsTransaction = !$this->pdo->inTransaction();
+
+        try {
+            if ($ownsTransaction) {
+                $this->pdo->beginTransaction();
+            }
+            $this->appendMovement($batchId, $productId, $orderId, $userId, 'writeoff', 'internal', -$boxes, $comment);
+            $this->updateBatchCounters($batchId, [
+                'boxes_sold' => -$boxes,
+                'boxes_written_off' => $boxes,
+            ]);
+            $this->assertBatchInvariants($batchId);
+            $this->legacyProjection->syncAggregatesFromBatches($productId);
+            if ($ownsTransaction) {
+                $this->pdo->commit();
+            }
+        } catch (Throwable $e) {
+            if ($ownsTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
     public function writeOff(int $batchId, float $boxes, int $userId, string $comment): void
     {
         if ($boxes <= 0) {
@@ -259,18 +294,11 @@ class StockService
 
         $updates = [];
         if ($mode === 'preorder' && $movementType === 'reserve') {
-            $requested = abs($delta);
-            $plannedLimit = (float)($batch['boxes_total'] ?? 0);
-            if ($plannedLimit <= 0) {
-                $plannedLimit = (float)($batch['boxes_free'] ?? 0) + (float)($batch['boxes_reserved'] ?? 0);
-            }
-            $alreadyReserved = max(0.0, (float)($batch['boxes_reserved'] ?? 0));
-            if (($alreadyReserved + $requested) > $plannedLimit) {
-                throw new RuntimeException('Not enough stock in selected mode.');
-            }
-            $updates = ['boxes_reserved' => $requested];
+            // Planned закупки не имеют жёсткого количества: бронь уходит в дефицит через boxes_reserved.
+            $updates = ['boxes_reserved' => abs($delta)];
         } else {
-            if (((float)$batch[$column] + $delta) < 0) {
+            $allowDeficitReservation = $mode === 'instant' && $movementType === 'reserve';
+            if (!$allowDeficitReservation && ((float)$batch[$column] + $delta) < 0) {
                 throw new RuntimeException('Not enough stock in selected mode.');
             }
             $updates = [$column => $delta];
@@ -372,7 +400,6 @@ class StockService
         $nonNegativeColumns = [
             'boxes_total',
             'boxes_reserved',
-            'boxes_free',
             'boxes_discount',
             'boxes_sold',
             'boxes_written_off',

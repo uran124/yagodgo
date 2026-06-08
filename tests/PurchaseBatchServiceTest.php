@@ -160,6 +160,26 @@ class PurchaseBatchServiceTest extends TestCase
         $this->assertSame('in_stock', $product['stock_status']);
     }
 
+
+    public function testCreatePlannedBatchAllowsZeroTotalAndReservedDemand(): void
+    {
+        $batchId = $this->service->createBatch([
+            'product_id' => 1,
+            'boxes_total' => 0,
+            'boxes_reserved' => 4,
+            'boxes_free' => 0,
+            'purchase_price_per_box' => 1000,
+            'status' => 'planned',
+        ]);
+
+        $batch = $this->pdo->query('SELECT boxes_total, boxes_reserved, boxes_free, boxes_remaining, status FROM purchase_batches WHERE id = ' . (int)$batchId)->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame(0.0, (float)$batch['boxes_total']);
+        $this->assertSame(4.0, (float)$batch['boxes_reserved']);
+        $this->assertSame(0.0, (float)$batch['boxes_free']);
+        $this->assertSame(0.0, (float)$batch['boxes_remaining']);
+        $this->assertSame('planned', (string)$batch['status']);
+    }
+
     public function testCreateBatchRejectsInvalidAllocation(): void
     {
         $this->expectException(RuntimeException::class);
@@ -169,6 +189,7 @@ class PurchaseBatchServiceTest extends TestCase
             'boxes_reserved' => 4,
             'boxes_free' => 3,
             'purchase_price_per_box' => 1000,
+            'status' => 'purchased',
         ]);
     }
 

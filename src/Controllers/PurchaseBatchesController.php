@@ -5,6 +5,7 @@ use App\Services\PurchaseBatchService;
 use App\Services\PreorderIntentService;
 use App\Services\LegacyProductProjectionService;
 use App\Services\PricingService;
+use App\Services\StockDeficitService;
 use PDO;
 use RuntimeException;
 
@@ -128,6 +129,8 @@ ORDER BY is_closed ASC, pb.id DESC';
         );
         $summary = $summaryStmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
+        $stockDeficitSummary = (new StockDeficitService($this->pdo))->getSummary();
+
         $preorderDemandStmt = $this->pdo->query(
             "SELECT
 "
@@ -179,6 +182,8 @@ ORDER BY is_closed ASC, pb.id DESC';
             'summary' => $summary,
             'preorderDemand' => $preorderDemand,
             'preorderDemandTotals' => $preorderDemandTotals,
+            'stockDeficitRows' => $stockDeficitSummary['rows'],
+            'stockDeficitTotals' => $stockDeficitSummary,
             'basePath' => $this->basePath(),
             'flash' => $this->pullFlash(),
         ]);
@@ -332,25 +337,19 @@ ORDER BY is_closed ASC, pb.id DESC';
         $preorderCountStmt = $this->pdo->prepare(
             "SELECT COALESCE(SUM(requested_boxes), 0)
              FROM preorder_intents
-             WHERE product_id = ? AND status IN ('intent_created','offer_sent','confirmed')"
+             WHERE product_id = ? AND status IN ('waiting_batch','linked_to_batch','awaiting_price_confirmation','offer_sent','confirmed','intent_created')"
         );
         $preorderCountStmt->execute([$productId]);
         $preorderBoxes = (float)$preorderCountStmt->fetchColumn();
 
-        $requestedBoxesTotal = (float)($_POST['boxes_total'] ?? 0);
-        if ($requestedBoxesTotal <= 0) {
-            $requestedBoxesTotal = $preorderBoxes + 1.0;
-        }
+        $requestedBoxesTotal = max(0.0, (float)($_POST['boxes_total'] ?? 0));
 
         $requestedBoxesReserved = (float)($_POST['boxes_reserved'] ?? $preorderBoxes);
         if ($requestedBoxesReserved < 0) {
             $requestedBoxesReserved = 0.0;
         }
-        if ($requestedBoxesReserved > ($requestedBoxesTotal - 1.0)) {
-            $requestedBoxesReserved = max($requestedBoxesTotal - 1.0, 0.0);
-        }
 
-        $requestedBoxesFree = max($requestedBoxesTotal - $requestedBoxesReserved, 1.0);
+        $requestedBoxesFree = max($requestedBoxesTotal - $requestedBoxesReserved, 0.0);
 
         $payload = [
             'product_id' => $productId,

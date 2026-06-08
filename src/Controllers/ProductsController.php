@@ -210,7 +210,7 @@ class ProductsController
                                OR EXISTS (
                                   SELECT 1 FROM order_items oi JOIN orders o ON o.id = oi.order_id
                                   WHERE oi.purchase_batch_id = pb.id
-                                    AND o.status NOT IN ('completed','cancelled','delivered')
+                                    AND o.status NOT IN ('completed','cancelled','returned')
                                )
                            )
                          ORDER BY FIELD(pb.status, 'planned', 'purchased', 'arrived', 'active'), pb.purchased_at ASC, pb.id ASC";
@@ -732,7 +732,7 @@ class ProductsController
     }
 
     /**
-     * Переводит бронь-заказы в обычные, когда для товара появляется дата поставки.
+     * Фиксирует дату/цену reserved-заказов после выкупа, не переводя их в обычный new.
      */
     private function activateReservedOrdersByProduct(int $productId, string $deliveryDate): void
     {
@@ -756,7 +756,7 @@ class ProductsController
         );
         $updStmt = $this->pdo->prepare(
             "UPDATE orders
-             SET delivery_date = ?, total_amount = ?, status = 'new'
+             SET delivery_date = ?, total_amount = ?
              WHERE id = ?"
         );
         foreach ($orderIds as $orderId) {

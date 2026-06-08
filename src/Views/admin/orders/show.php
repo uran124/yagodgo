@@ -97,11 +97,15 @@
       <span><?= htmlspecialchars($order['client_name']) ?></span>
       <span><?= htmlspecialchars($order['phone']) ?></span>
     </div>
-    <div class="flex items-start">
+    <div class="flex flex-wrap items-start gap-2">
       <?php $info = order_status_info($order['status']); ?>
       <button type="button" class="status-open-btn inline-flex items-center px-2 py-0.5 rounded-full text-sm font-medium <?= $info['badge'] ?>" data-open-status-modal="true" title="Изменить статус">
         <?= $info['label'] ?>
       </button>
+      <?php $paymentInfo = payment_status_info($order['payment_status'] ?? null); ?>
+      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-sm font-medium <?= $paymentInfo['badge'] ?>" title="Способ оплаты: <?= htmlspecialchars(payment_method_label($order['payment_method'] ?? null)) ?>">
+        <?= htmlspecialchars($paymentInfo['label']) ?>
+      </span>
     </div>
   </div>
 
@@ -268,7 +272,7 @@
         <span class="mr-1">Комментарий доставки:</span>
         <textarea name="delivery_comment" rows="1" placeholder="Получатель, телефон, подъезд, пожелания" class="border px-2 py-1 rounded w-full align-middle"><?= htmlspecialchars((string)($order['delivery_comment'] ?? '')) ?></textarea>
       </label>
-      <?php if (in_array((string)($order['status'] ?? ''), ['delivered', 'cancelled'], true)): ?>
+      <?php if (in_array((string)($order['status'] ?? ''), ['completed', 'cancelled', 'returned'], true)): ?>
         <div class="basis-full text-xs text-amber-700">Заказ уже завершён/отменён: адрес, дату и комментарий можно сохранить, стоимость доставки не пересчитывается.</div>
       <?php else: ?>
         <div class="basis-full text-xs text-gray-500">При смене адреса или километража стоимость доставки пересчитается, итог заказа изменится на разницу доставки.</div>
@@ -277,10 +281,11 @@
   </form>
 
   <?php $btnClasses = [
-      'processing' => 'bg-yellow-700 hover:bg-yellow-800',
-      'assigned'   => 'bg-green-700 hover:bg-green-800',
-      'delivered'  => 'bg-gray-700 hover:bg-gray-800',
+      'confirmed' => 'bg-yellow-700 hover:bg-yellow-800',
+      'shipped'    => 'bg-green-700 hover:bg-green-800',
+      'completed'  => 'bg-gray-700 hover:bg-gray-800',
       'cancelled'  => 'bg-gray-600 hover:bg-gray-700',
+      'returned'   => 'bg-orange-600 hover:bg-orange-700',
   ]; ?>
   <dialog class="status-dialog" data-status-dialog>
     <div class="status-dialog-content bg-white">
@@ -289,12 +294,19 @@
         <button type="button" class="px-2 py-1 rounded border status-dialog-close" data-close-status-modal>✕</button>
       </div>
       <div class="status-modal-buttons">
-        <?php foreach ([
-            'processing' => 'Принят',
-            'assigned'   => 'В работе',
-            'delivered'  => 'Выполнен',
-            'cancelled'  => 'Отменен'
-          ] as $st => $label): ?>
+        <?php
+          $statusOptions = [
+            'confirmed' => 'Подтверждён',
+            'shipped'    => 'В пути',
+            'completed'  => 'Выполнен',
+            'cancelled'  => 'Отменён',
+            'returned'   => 'Возврат',
+          ];
+          if ((string)($order['status'] ?? '') === 'completed') {
+            $statusOptions = ['returned' => 'Возврат'];
+          }
+        ?>
+        <?php foreach ($statusOptions as $st => $label): ?>
           <form action="<?= $base ?>/orders/status" method="post">
             <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
             <input type="hidden" name="status" value="<?= $st ?>">
