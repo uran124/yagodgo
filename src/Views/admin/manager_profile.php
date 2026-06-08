@@ -32,11 +32,11 @@
     <div class="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 text-center">
       <div>
         <div class="text-xl md:text-2xl font-bold text-[#C86052]"><?= $directBonus ?> ₽</div>
-        <div class="text-sm text-gray-600">3% от прямых</div>
+        <div class="text-sm text-gray-600">+3% по своей ссылке</div>
       </div>
       <div>
         <div class="text-xl md:text-2xl font-bold text-[#C86052]"><?= $secondBonus ?> ₽</div>
-        <div class="text-sm text-gray-600">3% от второго уровня</div>
+        <div class="text-sm text-gray-600">3% от всех продаж</div>
       </div>
       <div>
         <div class="text-xl md:text-2xl font-bold text-[#C86052]"><?= $pointsBalance ?> <span class="text-lg">🍓</span></div>
