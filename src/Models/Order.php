@@ -50,4 +50,16 @@ class Order extends Model
         $rate = $isFirstClientOrder ? 0.10 : 0.03;
         return (int) floor($sumBeforeDiscount * $rate);
     }
+
+    // Управляющий менеджер получает базовые 3% с каждой продажи проекта
+    public static function calculateProjectManagerBonus(int $sumBeforeDiscount): int
+    {
+        return (int) floor($sumBeforeDiscount * 0.03);
+    }
+
+    // Если клиент пришёл по ссылке менеджера, менеджер получает ещё 3% сверх базовых 3%
+    public static function calculateManagerReferralBonus(int $sumBeforeDiscount): int
+    {
+        return (int) floor($sumBeforeDiscount * 0.03);
+    }
 }

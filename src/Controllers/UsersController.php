@@ -18,6 +18,23 @@ class UsersController
     }
 
     /**
+     * Project manager receives the base 3% from every completed sale.
+     */
+    private function findProjectManagerId(): int
+    {
+        $stmt = $this->pdo->query(
+            "SELECT id FROM users WHERE role = 'manager' AND referred_by IS NULL ORDER BY id LIMIT 1"
+        );
+        $managerId = (int)($stmt ? ($stmt->fetchColumn() ?: 0) : 0);
+        if ($managerId > 0) {
+            return $managerId;
+        }
+
+        $stmt = $this->pdo->query("SELECT id FROM users WHERE role = 'manager' ORDER BY id LIMIT 1");
+        return (int)($stmt ? ($stmt->fetchColumn() ?: 0) : 0);
+    }
+
+    /**
      * Get base path for redirects depending on role
      */
     private function basePath(): string
@@ -55,7 +72,6 @@ class UsersController
         $stmt->execute([$table, $column]);
         return $cache[$key] = ((int)$stmt->fetchColumn() > 0);
     }
-
 
     /**
      * Просмотр профиля (клиент)
@@ -206,9 +222,15 @@ class UsersController
         }
 
         $allClientIds = array_merge($directClientIds, $secondClientIds);
+        $projectManagerId = $this->findProjectManagerId();
+        $isProjectManager = ($managerId === $projectManagerId);
 
         $orderCount = 0;
-        if ($allClientIds) {
+        if ($isProjectManager) {
+            $orderCount = (int)$this->pdo
+                ->query("SELECT COUNT(*) FROM orders WHERE status = 'completed'")
+                ->fetchColumn();
+        } elseif ($allClientIds) {
             $placeholders = implode(',', array_fill(0, count($allClientIds), '?'));
             $stmt = $this->pdo->prepare(
                 "SELECT COUNT(*) FROM orders WHERE user_id IN ($placeholders) AND status = 'completed'"
@@ -217,7 +239,7 @@ class UsersController
             $orderCount = (int)$stmt->fetchColumn();
         }
 
-        // Начисления менеджера: 3% от прямых и 3% от второго уровня
+        // Начисления менеджера: 3% по своей ссылке и 3% от всех продаж проекта.
         $directBonus = 0;
         if ($directClientIds) {
             $ph = implode(',', array_fill(0, count($directClientIds), '?'));
@@ -229,13 +251,10 @@ class UsersController
         }
 
         $secondBonus = 0;
-        if ($secondClientIds) {
-            $ph = implode(',', array_fill(0, count($secondClientIds), '?'));
-            $stmt = $this->pdo->prepare(
-                "SELECT SUM(manager_points_accrued) FROM orders WHERE user_id IN ($ph) AND status='completed'"
-            );
-            $stmt->execute($secondClientIds);
-            $secondBonus = (int)($stmt->fetchColumn() ?: 0);
+        if ($isProjectManager) {
+            $secondBonus = (int)($this->pdo
+                ->query("SELECT SUM(manager_points_accrued) FROM orders WHERE status = 'completed'")
+                ->fetchColumn() ?: 0);
         }
 
         // Балансы

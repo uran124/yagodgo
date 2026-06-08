@@ -7,6 +7,7 @@ use App\Helpers\Auth;
 use App\Helpers\ReferralHelper;
 use App\Helpers\PhoneNormalizer;
 use App\Models\OrdersRepository;
+use App\Models\Order;
 use App\Services\AdminOrdersPageService;
 use App\Services\OrderStockOrchestrator;
 use App\Services\StockService;
@@ -35,6 +36,24 @@ class OrdersController
             'partner' => '/partner/orders',
             default   => '/admin/orders',
         };
+    }
+
+    /**
+     * Find the project manager who receives the base 3% from every completed sale.
+     * Root managers (without a referrer) are preferred; if none exist, fall back to the first manager.
+     */
+    private function findProjectManagerId(): int
+    {
+        $stmt = $this->pdo->query(
+            "SELECT id FROM users WHERE role = 'manager' AND referred_by IS NULL ORDER BY id LIMIT 1"
+        );
+        $managerId = (int)($stmt ? ($stmt->fetchColumn() ?: 0) : 0);
+        if ($managerId > 0) {
+            return $managerId;
+        }
+
+        $stmt = $this->pdo->query("SELECT id FROM users WHERE role = 'manager' ORDER BY id LIMIT 1");
+        return (int)($stmt ? ($stmt->fetchColumn() ?: 0) : 0);
     }
 
     /**
@@ -829,20 +848,20 @@ class OrdersController
                         )->execute([$userId, $orderId, $personal, $desc]);
                     }
 
-                    // Бонусы пригласившему и менеджеру (если есть и ещё не начислено)
-                    if ((int)$order['points_accrued'] === 0) {
+                    // Бонусы пригласившему и управляющему менеджеру (если ещё не начислено)
+                    if ((int)$order['points_accrued'] === 0 && (int)$order['manager_points_accrued'] === 0) {
                         $refStmt = $this->pdo->prepare("SELECT referred_by FROM users WHERE id = ?");
                         $refStmt->execute([$userId]);
                         $refId = (int)($refStmt->fetchColumn() ?: 0);
+
+                        $refBonus = 0;
                         if ($refId) {
-                            // Получаем роль пригласившего и его пригласившего (менеджера)
-                            $infoStmt = $this->pdo->prepare("SELECT role, referred_by FROM users WHERE id = ?");
+                            // Получаем роль пригласившего для расчёта партнёрского/реферального процента.
+                            $infoStmt = $this->pdo->prepare("SELECT role FROM users WHERE id = ?");
                             $infoStmt->execute([$refId]);
                             $refInfo = $infoStmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
                             $refRole = $refInfo['role'] ?? '';
-                            $mgrId   = (int)($refInfo['referred_by'] ?? 0);
-
                             $isPartnerReferrer = ($refRole === 'partner');
                             $isFirstClientOrder = false;
                             if ($isPartnerReferrer) {
@@ -853,10 +872,9 @@ class OrdersController
                                 $isFirstClientOrder = ((int)$ordersCountStmt->fetchColumn() === 0);
                             }
 
-                            $refPercent   = ($isPartnerReferrer && $isFirstClientOrder) ? 0.10 : 0.03;
-                            $refBonus     = (int) floor($sum * $refPercent);
-                            $managerBonus = 0;
-
+                            $refBonus = $refRole === 'manager'
+                                ? Order::calculateManagerReferralBonus($sum)
+                                : Order::calculateReferralBonus($sum, $isPartnerReferrer, $isFirstClientOrder);
                             if ($refBonus > 0) {
                                 $this->pdo->prepare(
                                     "UPDATE users SET points_balance = points_balance + ? WHERE id = ?"
@@ -866,27 +884,29 @@ class OrdersController
                                 $this->pdo->prepare(
                                     "INSERT INTO points_transactions (user_id, order_id, amount, transaction_type, description, created_at) VALUES (?, ?, ?, 'accrual', ?, NOW())"
                                 )->execute([$refId, $orderId, $refBonus, $refDesc]);
-
-                                // Менеджеру второго уровня (если есть)
-                                if ($mgrId) {
-                                    $managerBonus = (int) floor($sum * 0.03);
-                                    if ($managerBonus > 0) {
-                                        $this->pdo->prepare(
-                                            "UPDATE users SET points_balance = points_balance + ? WHERE id = ?"
-                                        )->execute([$managerBonus, $mgrId]);
-
-                                        $mgrDesc = "Менеджерский бонус за заказ №{$orderId}";
-                                        $this->pdo->prepare(
-                                            "INSERT INTO points_transactions (user_id, order_id, amount, transaction_type, description, created_at) VALUES (?, ?, ?, 'accrual', ?, NOW())"
-                                        )->execute([$mgrId, $orderId, $managerBonus, $mgrDesc]);
-                                    }
-                                }
-
-                                $this->pdo->prepare(
-                                    "UPDATE orders SET points_accrued = ?, manager_points_accrued = ? WHERE id = ?"
-                                )->execute([$refBonus, $managerBonus, $orderId]);
                             }
                         }
+
+                        // Управляющий менеджер получает 3% от каждой продажи независимо от реферального источника.
+                        $managerBonus = 0;
+                        $projectManagerId = $this->findProjectManagerId();
+                        if ($projectManagerId > 0) {
+                            $managerBonus = Order::calculateProjectManagerBonus($sum);
+                            if ($managerBonus > 0) {
+                                $this->pdo->prepare(
+                                    "UPDATE users SET points_balance = points_balance + ? WHERE id = ?"
+                                )->execute([$managerBonus, $projectManagerId]);
+
+                                $mgrDesc = "Управленческий бонус за заказ №{$orderId}";
+                                $this->pdo->prepare(
+                                    "INSERT INTO points_transactions (user_id, order_id, amount, transaction_type, description, created_at) VALUES (?, ?, ?, 'accrual', ?, NOW())"
+                                )->execute([$projectManagerId, $orderId, $managerBonus, $mgrDesc]);
+                            }
+                        }
+
+                        $this->pdo->prepare(
+                            "UPDATE orders SET points_accrued = ?, manager_points_accrued = ? WHERE id = ?"
+                        )->execute([$refBonus, $managerBonus, $orderId]);
                     }
 
                     // Начисляем селлерам выплаты по заказу
