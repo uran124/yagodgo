@@ -334,12 +334,18 @@ ORDER BY is_closed ASC, pb.id DESC';
         $prices = $this->pricingService->calculateFromPurchase($purchasePrice, $boxSize);
         $instantPrice = (float)$prices['instant_price_per_box'];
         $preorderPrice = (float)$prices['preorder_price_per_box'];
-        $preorderCountStmt = $this->pdo->prepare(
-            "SELECT COALESCE(SUM(requested_boxes), 0)
+        $plannedSupplyDate = $this->nullablePostedDate('planned_supply_date');
+        $coveredDates = $this->coveredDeliveryDatesForDate($plannedSupplyDate);
+        $preorderCountSql = "SELECT COALESCE(SUM(requested_boxes), 0)
              FROM preorder_intents
-             WHERE product_id = ? AND status IN ('waiting_batch','linked_to_batch','awaiting_price_confirmation','offer_sent','confirmed','intent_created')"
-        );
-        $preorderCountStmt->execute([$productId]);
+             WHERE product_id = ? AND status IN ('waiting_batch','linked_to_batch','awaiting_price_confirmation','offer_sent','confirmed','intent_created')";
+        $preorderCountParams = [$productId];
+        if ($coveredDates !== []) {
+            $preorderCountSql .= " AND (desired_delivery_date IS NULL OR DATE(desired_delivery_date) IN (" . implode(',', array_fill(0, count($coveredDates), '?')) . "))";
+            $preorderCountParams = array_merge($preorderCountParams, $coveredDates);
+        }
+        $preorderCountStmt = $this->pdo->prepare($preorderCountSql);
+        $preorderCountStmt->execute($preorderCountParams);
         $preorderBoxes = (float)$preorderCountStmt->fetchColumn();
 
         $requestedBoxesTotal = max(0.0, (float)($_POST['boxes_total'] ?? 0));
@@ -364,7 +370,7 @@ ORDER BY is_closed ASC, pb.id DESC';
             'instant_unit_price' => (float)$prices['instant_unit_price'],
             'preorder_unit_price' => (float)$prices['preorder_unit_price'],
             'status' => $status,
-            'purchased_at' => $this->nullablePostedDate('planned_supply_date'),
+            'purchased_at' => $plannedSupplyDate,
             'comment' => trim((string)($_POST['comment'] ?? '')),
         ];
 
@@ -641,11 +647,57 @@ ORDER BY is_closed ASC, pb.id DESC';
     public function preorderIntentsByProduct(): void
     {
         $productId = (int)($_GET['product_id'] ?? 0);
+        $batchId = (int)($_GET['batch_id'] ?? 0);
+        $matchingOnly = (int)($_GET['matching_only'] ?? 0) === 1;
+        $coveredDates = $this->coveredDeliveryDatesForDate($_GET['planned_supply_date'] ?? null);
+
+        if ($batchId > 0) {
+            $batchStmt = $this->pdo->prepare('SELECT id, product_id, purchased_at FROM purchase_batches WHERE id = ? LIMIT 1');
+            $batchStmt->execute([$batchId]);
+            $batch = $batchStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+            if ($batch) {
+                $productId = (int)($batch['product_id'] ?? $productId);
+                $coveredDates = $this->coveredDeliveryDatesForDate($batch['purchased_at'] ?? null);
+            }
+        }
+
         header('Content-Type: application/json; charset=utf-8');
-        if ($productId <= 0) { echo json_encode(['items'=>[]], JSON_UNESCAPED_UNICODE); exit; }
-        $stmt = $this->pdo->prepare("SELECT pi.id, pi.status, pi.requested_boxes, COALESCE(u.name,'Без имени') AS customer_name, COALESCE(u.phone,'') AS customer_phone FROM preorder_intents pi JOIN users u ON u.id = pi.user_id WHERE pi.product_id = ? AND pi.status IN ('waiting_batch','linked_to_batch','awaiting_price_confirmation','offer_sent','confirmed','intent_created') ORDER BY pi.created_at ASC, pi.id ASC");
-        $stmt->execute([$productId]);
-        echo json_encode(['items'=>$stmt->fetchAll(PDO::FETCH_ASSOC)], JSON_UNESCAPED_UNICODE);
+        if ($productId <= 0) {
+            echo json_encode(['items' => [], 'covered_dates' => []], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $sql = "SELECT pi.id, pi.status, pi.requested_boxes, pi.desired_delivery_date, pi.purchase_batch_id,
+                       COALESCE(u.name,'Без имени') AS customer_name, COALESCE(u.phone,'') AS customer_phone
+                FROM preorder_intents pi
+                JOIN users u ON u.id = pi.user_id
+                WHERE pi.product_id = ?
+                  AND pi.status IN ('waiting_batch','linked_to_batch','awaiting_price_confirmation','offer_sent','confirmed','intent_created')";
+        $params = [$productId];
+        if ($matchingOnly && $coveredDates !== []) {
+            $sql .= " AND (pi.desired_delivery_date IS NULL OR DATE(pi.desired_delivery_date) IN (" . implode(',', array_fill(0, count($coveredDates), '?')) . "))";
+            $params = array_merge($params, $coveredDates);
+        }
+        $sql .= " ORDER BY CASE WHEN pi.desired_delivery_date IS NULL THEN 1 ELSE 0 END, pi.desired_delivery_date ASC, pi.created_at ASC, pi.id ASC";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        foreach ($items as &$item) {
+            $desiredDate = $this->normalizeDateString($item['desired_delivery_date'] ?? null);
+            $item['desired_delivery_date'] = $desiredDate;
+            $item['desired_delivery_date_label'] = $desiredDate ? date('d.m.Y', strtotime($desiredDate)) : 'Не имеет значения';
+            $item['matches_batch_window'] = $coveredDates === [] ? null : ($desiredDate === null || in_array($desiredDate, $coveredDates, true));
+        }
+        unset($item);
+
+        echo json_encode([
+            'items' => $items,
+            'batch_id' => $batchId > 0 ? $batchId : null,
+            'covered_dates' => $coveredDates,
+            'covered_date_labels' => array_map(static fn (string $date): string => date('d.m.Y', strtotime($date)), $coveredDates),
+            'matching_only' => $matchingOnly,
+        ], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -654,10 +706,18 @@ ORDER BY is_closed ASC, pb.id DESC';
         $this->ensureCsrfOrRedirect();
         $intentId = (int)($_POST['intent_id'] ?? 0);
         $action = (string)($_POST['action'] ?? '');
-        if ($intentId <= 0 || !in_array($action, ['confirm','decline'], true)) {
+        $batchId = (int)($_POST['batch_id'] ?? 0);
+        if ($intentId <= 0 || !in_array($action, ['confirm','decline','link'], true)) {
             header('Location: ' . $this->basePath() . '/purchases');
             exit;
         }
+        if ($action === 'link') {
+            $linked = $this->linkPreorderIntentToBatch($intentId, $batchId);
+            $this->setFlash($linked ? 'success' : 'error', $linked ? 'Предзаказ добавлен в закупку.' : 'Не удалось добавить предзаказ: дата не подходит или статус уже изменён.');
+            header('Location: ' . $this->basePath() . '/purchases');
+            exit;
+        }
+
         $result = $this->preorderIntentService->decideByManager($intentId, $action);
         if ($result['ok']) {
             $this->setFlash('success', $action === 'confirm' ? 'Предзаказ подтверждён.' : 'Предзаказ отменён.');
@@ -666,6 +726,55 @@ ORDER BY is_closed ASC, pb.id DESC';
         }
         header('Location: ' . $this->basePath() . '/purchases');
         exit;
+    }
+
+    private function linkPreorderIntentToBatch(int $intentId, int $batchId): bool
+    {
+        if ($intentId <= 0 || $batchId <= 0) {
+            return false;
+        }
+
+        $stmt = $this->pdo->prepare(
+            "SELECT pi.id, pi.product_id, pi.status, pi.desired_delivery_date, pb.product_id AS batch_product_id, pb.purchased_at
+             FROM preorder_intents pi
+             JOIN purchase_batches pb ON pb.id = ?
+             WHERE pi.id = ?
+             LIMIT 1"
+        );
+        $stmt->execute([$batchId, $intentId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row || (int)$row['product_id'] !== (int)$row['batch_product_id']) {
+            return false;
+        }
+
+        $allowedStatuses = ['waiting_batch', 'intent_created', 'linked_to_batch'];
+        if (!in_array((string)($row['status'] ?? ''), $allowedStatuses, true)) {
+            return false;
+        }
+
+        $coveredDates = $this->coveredDeliveryDatesForDate($row['purchased_at'] ?? null);
+        $desiredDate = $this->normalizeDateString($row['desired_delivery_date'] ?? null);
+        if ($desiredDate !== null && $coveredDates !== [] && !in_array($desiredDate, $coveredDates, true)) {
+            return false;
+        }
+
+        $update = $this->pdo->prepare(
+            "UPDATE preorder_intents
+             SET purchase_batch_id = ?, status = 'linked_to_batch', updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?
+               AND status IN ('waiting_batch','intent_created','linked_to_batch')"
+        );
+        $update->execute([$batchId, $intentId]);
+        if ($update->rowCount() < 1) {
+            return false;
+        }
+
+        $this->logPreorderEvent($intentId, 'manager_linked_to_batch', (string)$row['status'], 'linked_to_batch', [
+            'purchase_batch_id' => $batchId,
+            'desired_delivery_date' => $desiredDate,
+            'covered_delivery_dates' => $coveredDates,
+        ]);
+        return true;
     }
 
     public function maintenancePreorders(): void
@@ -714,6 +823,52 @@ ORDER BY is_closed ASC, pb.id DESC';
         $this->setFlash('success', 'Фото закупки обновлены.');
         header('Location: ' . $this->basePath() . '/purchases/' . $batchId);
         exit;
+    }
+
+    private function logPreorderEvent(int $intentId, string $eventType, ?string $fromStatus, ?string $toStatus, ?array $meta = null): void
+    {
+        try {
+            $this->pdo->prepare(
+                "INSERT INTO preorder_intent_events (preorder_intent_id, event_type, from_status, to_status, meta_json, created_at)
+                 VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)"
+            )->execute([
+                $intentId,
+                $eventType,
+                $fromStatus,
+                $toStatus,
+                $meta ? json_encode($meta, JSON_UNESCAPED_UNICODE) : null,
+            ]);
+        } catch (\Throwable) {
+            // audit logging is non-blocking
+        }
+    }
+
+    /** @return array<int,string> */
+    private function coveredDeliveryDatesForDate(mixed $value): array
+    {
+        $date = $this->normalizeDateString($value);
+        if ($date === null) {
+            return [];
+        }
+        $start = new \DateTimeImmutable($date);
+        return [
+            $start->format('Y-m-d'),
+            $start->modify('+1 day')->format('Y-m-d'),
+            $start->modify('+2 day')->format('Y-m-d'),
+        ];
+    }
+
+    private function normalizeDateString(mixed $value): ?string
+    {
+        $raw = trim((string)($value ?? ''));
+        if ($raw === '') {
+            return null;
+        }
+        $ts = strtotime($raw);
+        if ($ts === false) {
+            return null;
+        }
+        return date('Y-m-d', $ts);
     }
 
     private function nullablePostedDate(string $field): ?string

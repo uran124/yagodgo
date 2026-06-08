@@ -328,6 +328,15 @@
                 <input name="comment" type="text" placeholder="причина" class="purchase-reason w-24 border rounded px-1 py-1 text-xs text-gray-900">
                 <button class="purchase-btn-writeoff text-xs bg-red-500 hover:bg-red-400 text-white px-2 py-1 rounded" type="submit">Списать</button>
               </form>
+              <?php if (($batch['status'] ?? '') === 'planned'): ?>
+                <button type="button"
+                        class="purchase-btn-preorders text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-2 py-1 rounded border border-transparent js-open-preorder-modal"
+                        data-product-id="<?= (int)$batch['product_id'] ?>"
+                        data-batch-id="<?= (int)$batch['id'] ?>"
+                        data-matching-only="1">
+                  Предзаказы
+                </button>
+              <?php endif; ?>
               <button type="button" class="purchase-btn-cancel text-xs bg-slate-600 hover:bg-slate-500 text-white px-2 py-1 rounded border border-transparent js-open-reserve-modal" data-batch-id="<?= (int)$batch['id'] ?>">Снять бронь</button>
             </div>
       </div>
@@ -342,7 +351,7 @@
 
 <div id="preorder-modal-backdrop" class="reserve-modal-backdrop">
   <div class="reserve-modal">
-    <div class="p-3 border-b font-semibold flex justify-between"><span>Предзаказы по товару</span><button type="button" id="preorder-modal-close">✕</button></div>
+    <div class="p-3 border-b font-semibold flex justify-between"><span id="preorder-modal-title">Предзаказы по товару</span><button type="button" id="preorder-modal-close">✕</button></div>
     <div id="preorder-modal-list" class="reserve-modal-list"></div>
   </div>
 </div>
@@ -396,6 +405,7 @@
     var preorderModal = document.getElementById('preorder-modal-backdrop');
     var preorderCloseBtn = document.getElementById('preorder-modal-close');
     var preorderList = document.getElementById('preorder-modal-list');
+    var preorderTitle = document.getElementById('preorder-modal-title');
     var preorderStatusLabels = {
       waiting_batch: 'Ожидает закупки',
       linked_to_batch: 'Привязан к закупке',
@@ -418,22 +428,42 @@
     document.querySelectorAll('.js-open-preorder-modal').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var productId = btn.getAttribute('data-product-id');
-        fetch('<?= $basePath ?>/purchases/preorders/intents?product_id=' + encodeURIComponent(productId), { headers: { 'Accept': 'application/json' } })
+        var batchId = btn.getAttribute('data-batch-id') || '';
+        var matchingOnly = btn.getAttribute('data-matching-only') || '';
+        var params = new URLSearchParams();
+        params.set('product_id', productId || '0');
+        if (batchId) params.set('batch_id', batchId);
+        if (matchingOnly) params.set('matching_only', matchingOnly);
+        fetch('<?= $basePath ?>/purchases/preorders/intents?' + params.toString(), { headers: { 'Accept': 'application/json' } })
           .then(function (r) { return r.json(); })
           .then(function (data) {
             var items = Array.isArray(data.items) ? data.items : [];
+            var covered = Array.isArray(data.covered_date_labels) ? data.covered_date_labels : [];
+            if (preorderTitle) {
+              preorderTitle.textContent = batchId
+                ? ('Подходящие предзаказы для закупки #' + batchId + (covered.length ? ' (' + covered.join(', ') + ')' : ''))
+                : 'Предзаказы по товару';
+            }
             preorderList.innerHTML = items.length ? items.map(function (item) {
               var status = item.status || '';
               var statusLabel = preorderStatusLabels[status] || status;
-              var confirmButton = status === 'confirmed'
-                ? '<span class="text-xs text-green-600" title="Уже подтверждено">✔</span>'
-                : '<form method="post" action="<?= $basePath ?>/purchases/preorders/decision"><?= csrf_field() ?><input type="hidden" name="intent_id" value="' + encodeURIComponent(item.id) + '"><input type="hidden" name="action" value="confirm"><button type="submit" class="text-green-600" title="Подтвердить">✔</button></form>';
-              return '<div class="reserve-modal-item"><div><div><b>' + escapeHtml(item.customer_name || '') + '</b></div><div class="text-xs text-gray-500">' + escapeHtml(item.customer_phone || '') + ' · ' + escapeHtml(item.requested_boxes || 0) + ' ящ. · ' + escapeHtml(statusLabel) + '</div></div>' +
+              var desiredLabel = item.desired_delivery_date_label || 'Не имеет значения';
+              var match = item.matches_batch_window;
+              var matchLabel = match === null ? '' : (match ? '<span class="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-100 rounded px-1.5 py-0.5">подходит</span>' : '<span class="text-[11px] text-red-700 bg-red-50 border border-red-100 rounded px-1.5 py-0.5">другая дата</span>');
+              var linkedToCurrentBatch = batchId && String(item.purchase_batch_id || '') === String(batchId);
+              var confirmButton = status === 'confirmed' || linkedToCurrentBatch
+                ? '<span class="text-xs text-green-600" title="Уже добавлено/подтверждено">✔</span>'
+                : (batchId
+                  ? '<form method="post" action="<?= $basePath ?>/purchases/preorders/decision"><?= csrf_field() ?><input type="hidden" name="intent_id" value="' + encodeURIComponent(item.id) + '"><input type="hidden" name="batch_id" value="' + encodeURIComponent(batchId) + '"><input type="hidden" name="action" value="link"><button type="submit" class="text-green-600" title="Добавить в закупку">✔</button></form>'
+                  : '<form method="post" action="<?= $basePath ?>/purchases/preorders/decision"><?= csrf_field() ?><input type="hidden" name="intent_id" value="' + encodeURIComponent(item.id) + '"><input type="hidden" name="action" value="confirm"><button type="submit" class="text-green-600" title="Подтвердить">✔</button></form>');
+              return '<div class="reserve-modal-item"><div><div><b>' + escapeHtml(item.customer_name || '') + '</b></div>' +
+                     '<div class="text-xs text-gray-500">' + escapeHtml(item.customer_phone || '') + ' · ' + escapeHtml(item.requested_boxes || 0) + ' ящ. · ' + escapeHtml(statusLabel) + '</div>' +
+                     '<div class="text-xs text-gray-600 mt-1 flex items-center gap-1 flex-wrap">Дата получения: <b>' + escapeHtml(desiredLabel) + '</b> ' + matchLabel + '</div></div>' +
                      '<div class="flex gap-1">' +
                      confirmButton +
                      '<form method="post" action="<?= $basePath ?>/purchases/preorders/decision"><?= csrf_field() ?><input type="hidden" name="intent_id" value="' + encodeURIComponent(item.id) + '"><input type="hidden" name="action" value="decline"><button type="submit" class="text-red-600" title="Отменить">✖</button></form>' +
                      '</div></div>';
-            }).join('') : '<div class="p-3 text-sm text-gray-500">Нет активных предзаказов</div>';
+            }).join('') : '<div class="p-3 text-sm text-gray-500">Нет активных предзаказов для выбранного окна дат.</div>';
             preorderModal.classList.add('is-open');
           });
       });

@@ -18,7 +18,7 @@
   <?php endif; ?>
   <div>
     <label class="block mb-1">Товар</label>
-    <select name="product_id" class="w-full border px-2 py-1 rounded" required>
+    <select id="purchase-product-id" name="product_id" class="w-full border px-2 py-1 rounded" required>
       <option value="">Выберите товар</option>
       <?php foreach ($products as $p): ?>
         <option value="<?= (int)$p['id'] ?>">
@@ -31,7 +31,7 @@
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
     <div>
       <label class="block mb-1">Дата</label>
-      <input name="planned_supply_date" type="date" class="w-full border px-2 py-1 rounded" aria-describedby="planned-date-help">
+      <input id="planned-supply-date" name="planned_supply_date" type="date" class="w-full border px-2 py-1 rounded" aria-describedby="planned-date-help">
       <p id="planned-date-help" class="mt-1 text-xs text-gray-500">Можно оставить пустой, если точная дата закупки пока неизвестна.</p>
     </div>
     <div>
@@ -46,6 +46,11 @@
   <input type="hidden" name="extra_cost_per_box" value="0">
   <input type="hidden" name="comment" value="">
 
+  <div id="matching-preorders-panel" class="hidden rounded border border-emerald-100 bg-emerald-50 p-3 text-sm text-emerald-900">
+    <div class="font-semibold mb-2">Подходящие предзаказы для этой даты</div>
+    <div id="matching-preorders-list" class="space-y-1 text-xs"></div>
+  </div>
+
   <div class="hidden md:flex items-center justify-between pt-3 border-t border-gray-100">
     <a href="<?= $basePath ?>/purchases" class="px-4 py-2 rounded border border-gray-300 text-gray-700 hover:bg-gray-50">Вернуться</a>
     <button type="submit" class="bg-[#C86052] text-white px-4 py-2 rounded hover:bg-[#B44D47]">Создать</button>
@@ -59,3 +64,46 @@
     </div>
   </div>
 </form>
+
+<script>
+  (function () {
+    var productSelect = document.getElementById('purchase-product-id');
+    var dateInput = document.getElementById('planned-supply-date');
+    var panel = document.getElementById('matching-preorders-panel');
+    var list = document.getElementById('matching-preorders-list');
+    function escapeHtml(value) {
+      return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+    async function refreshMatchingPreorders() {
+      var productId = productSelect ? productSelect.value : '';
+      var plannedDate = dateInput ? dateInput.value : '';
+      if (!productId || !plannedDate || !panel || !list) {
+        if (panel) panel.classList.add('hidden');
+        return;
+      }
+      var params = new URLSearchParams();
+      params.set('product_id', productId);
+      params.set('planned_supply_date', plannedDate);
+      params.set('matching_only', '1');
+      var res = await fetch('<?= $basePath ?>/purchases/preorders/intents?' + params.toString(), { headers: { 'Accept': 'application/json' } });
+      var data = await res.json();
+      var items = Array.isArray(data.items) ? data.items : [];
+      var dates = Array.isArray(data.covered_date_labels) ? data.covered_date_labels : [];
+      panel.classList.remove('hidden');
+      if (!items.length) {
+        list.innerHTML = '<div class="text-emerald-800/70">На окно ' + escapeHtml(dates.join(', ')) + ' активных предзаказов нет.</div>';
+        return;
+      }
+      list.innerHTML = '<div class="mb-1 text-emerald-800/80">Окно закупки: ' + escapeHtml(dates.join(', ')) + '</div>' + items.map(function (item) {
+        return '<div class="rounded bg-white/70 px-2 py-1 border border-emerald-100"><b>' + escapeHtml(item.customer_name || '') + '</b> · ' + escapeHtml(item.requested_boxes || 0) + ' ящ. · дата получения: <b>' + escapeHtml(item.desired_delivery_date_label || 'Не имеет значения') + '</b></div>';
+      }).join('');
+    }
+    if (productSelect) productSelect.addEventListener('change', refreshMatchingPreorders);
+    if (dateInput) dateInput.addEventListener('change', refreshMatchingPreorders);
+  })();
+</script>
