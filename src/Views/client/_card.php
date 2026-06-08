@@ -432,6 +432,9 @@ $nextSupplyDateText = $showNextSupplyBadge ? date('d.m.Y', strtotime($plannedDat
         hint.classList.remove('hidden');
         hint.textContent = data?.message || 'Предзаказ сохранён';
       }
+      if (data?.ok && data?.cart_url) {
+        window.location.href = data.cart_url;
+      }
       closeModal();
     });
   })();

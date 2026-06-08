@@ -12,11 +12,12 @@
     <label for="status" class="mb-1 block text-sm text-gray-600">Фильтр по статусу</label>
     <select name="status" id="status" class="rounded border px-3 py-2 text-sm">
       <option value="">Все заказы</option>
-      <option value="new" <?= $currentFilter === 'new' ? 'selected' : '' ?>>Новый заказ</option>
-      <option value="processing" <?= $currentFilter === 'processing' ? 'selected' : '' ?>>Принят</option>
-      <option value="assigned" <?= $currentFilter === 'assigned' ? 'selected' : '' ?>>В работе</option>
-      <option value="delivered" <?= $currentFilter === 'delivered' ? 'selected' : '' ?>>Выполнен</option>
+      <option value="new" <?= $currentFilter === 'new' ? 'selected' : '' ?>>Ожидает подтверждения</option>
+      <option value="confirmed" <?= $currentFilter === 'confirmed' ? 'selected' : '' ?>>Подтверждён</option>
+      <option value="shipped" <?= $currentFilter === 'shipped' ? 'selected' : '' ?>>В пути</option>
+      <option value="completed" <?= $currentFilter === 'completed' ? 'selected' : '' ?>>Выполнен</option>
       <option value="cancelled" <?= $currentFilter === 'cancelled' ? 'selected' : '' ?>>Отменён</option>
+      <option value="returned" <?= $currentFilter === 'returned' ? 'selected' : '' ?>>Возврат</option>
     </select>
   </div>
   <button type="submit" class="rounded border px-3 py-2 text-sm">Применить</button>
@@ -53,18 +54,18 @@
       <?php if ($o['status'] === 'new'): ?>
         <form method="post" action="/seller/orders/status">
           <input type="hidden" name="order_id" value="<?= (int)$o['id'] ?>">
-          <input type="hidden" name="status" value="processing">
+          <input type="hidden" name="status" value="confirmed">
           <button type="submit" class="border rounded px-3 py-1">✅ Подтвердить</button>
         </form>
       <?php endif; ?>
-      <?php if ($o['status'] === 'processing'): ?>
+      <?php if ($o['status'] === 'confirmed'): ?>
         <form method="post" action="/seller/orders/status">
           <input type="hidden" name="order_id" value="<?= (int)$o['id'] ?>">
-          <input type="hidden" name="status" value="assigned">
-          <button type="submit" class="border rounded px-3 py-1">🧺 Готово к выдаче</button>
+          <input type="hidden" name="status" value="shipped">
+          <button type="submit" class="border rounded px-3 py-1">🚚 В пути</button>
         </form>
       <?php endif; ?>
-      <?php if (in_array($o['status'], ['new', 'processing'], true)): ?>
+      <?php if (in_array($o['status'], ['new', 'confirmed'], true)): ?>
         <form method="post" action="/seller/orders/status">
           <input type="hidden" name="order_id" value="<?= (int)$o['id'] ?>">
           <input type="hidden" name="status" value="cancelled">

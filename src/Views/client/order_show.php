@@ -46,6 +46,17 @@ $discount = max(0, $rawSum - $itemsPaidTotal);
             <?= $info['label'] ?>
           </span>
         </div>
+        <?php $paymentInfo = payment_status_info($order['payment_status'] ?? null); ?>
+        <div class="flex flex-wrap gap-2 text-xs">
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full font-medium <?= $paymentInfo['badge'] ?>">
+            <?= htmlspecialchars($paymentInfo['label']) ?>
+          </span>
+          <?php if (!empty($order['payment_method'])): ?>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-white/20 text-white">
+              <?= htmlspecialchars(payment_method_label($order['payment_method'])) ?>
+            </span>
+          <?php endif; ?>
+        </div>
         <p class="text-white/80 text-sm">
           <?= date('d.m.Y H:i', strtotime($order['created_at'])) ?>
         </p>
@@ -169,7 +180,10 @@ $discount = max(0, $rawSum - $itemsPaidTotal);
       <div class="flex justify-between items-center pt-2">
         <span class="font-semibold text-gray-800 text-lg">Стоимость заказа:</span>
         <?php if ($isReservedOrder && (int)($order['total_amount'] ?? 0) <= 0): ?>
-          <span class="font-bold text-2xl text-gray-800">Цена уточняется</span>
+          <span class="text-right">
+            <span class="block font-bold text-2xl text-gray-800">≈ <?= number_format($rawSum + $shippingCost, 0, '.', ' ') ?> ₽</span>
+            <span class="block text-xs font-medium text-amber-600">Предварительно. Точная цена будет после выкупа</span>
+          </span>
         <?php else: ?>
           <span class="font-bold text-2xl text-gray-800">
             <?= number_format($order['total_amount'], 0, '.', ' ') ?> ₽

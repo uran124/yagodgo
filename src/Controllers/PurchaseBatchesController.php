@@ -5,6 +5,7 @@ use App\Services\PurchaseBatchService;
 use App\Services\PreorderIntentService;
 use App\Services\LegacyProductProjectionService;
 use App\Services\PricingService;
+use App\Services\StockDeficitService;
 use PDO;
 use RuntimeException;
 
@@ -128,6 +129,8 @@ ORDER BY is_closed ASC, pb.id DESC';
         );
         $summary = $summaryStmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
+        $stockDeficitSummary = (new StockDeficitService($this->pdo))->getSummary();
+
         $preorderDemandStmt = $this->pdo->query(
             "SELECT
 "
@@ -179,6 +182,8 @@ ORDER BY is_closed ASC, pb.id DESC';
             'summary' => $summary,
             'preorderDemand' => $preorderDemand,
             'preorderDemandTotals' => $preorderDemandTotals,
+            'stockDeficitRows' => $stockDeficitSummary['rows'],
+            'stockDeficitTotals' => $stockDeficitSummary,
             'basePath' => $this->basePath(),
             'flash' => $this->pullFlash(),
         ]);

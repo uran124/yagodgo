@@ -10,7 +10,9 @@ use App\Models\OrdersRepository;
 use App\Services\AdminOrdersPageService;
 use App\Services\OrderStockOrchestrator;
 use App\Services\StockService;
+use App\Services\StockDeficitService;
 use App\Services\DeliveryPricingService;
+use App\Services\OrderStatusHistoryService;
 
 class OrdersController
 {
@@ -98,7 +100,7 @@ class OrdersController
             "           WHERE pb.product_id = p.id\n" .
             "             AND (\n" .
             "               (pb.status IN ('purchased', 'arrived') AND pb.boxes_free > 0 AND pb.instant_price_per_box > 0)\n" .
-            "               OR (pb.status = 'planned' AND (COALESCE(NULLIF(pb.boxes_total, 0), pb.boxes_free + pb.boxes_reserved) - pb.boxes_reserved) > 0 AND COALESCE(NULLIF(pb.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) > 0)\n" .
+            "               OR (pb.status = 'planned' AND COALESCE(NULLIF(pb.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) > 0)\n" .
             "             )\n" .
             "           ORDER BY CASE WHEN pb.status IN ('purchased', 'arrived') THEN 1 ELSE 2 END, pb.purchased_at ASC, pb.id ASC\n" .
             "           LIMIT 1\n" .
@@ -526,19 +528,30 @@ class OrdersController
             );
             $orderStock = new OrderStockOrchestrator($this->pdo, new StockService($this->pdo));
             foreach ($itemsPrepared as $data) {
-                $orderStock->persistOrderItemWithStock(
-                    $stmtItem,
-                    $orderId,
-                    $data['product_id'],
-                    [
-                        'quantity' => $data['boxes'],
-                        'box_size' => $data['box_size'],
-                        'unit_price' => $data['price_per_box'],
-                        'purchase_batch_id' => $data['purchase_batch_id'],
-                    ],
-                    $data['stock_mode'],
-                    $selectedMode === 'preorder'
-                );
+                $itemPayload = [
+                    'quantity' => $data['boxes'],
+                    'box_size' => $data['box_size'],
+                    'unit_price' => $data['price_per_box'],
+                    'purchase_batch_id' => $data['purchase_batch_id'],
+                ];
+                if ($selectedMode === 'preorder') {
+                    $orderStock->persistOrderItemWithStock(
+                        $stmtItem,
+                        $orderId,
+                        $data['product_id'],
+                        $itemPayload,
+                        $data['stock_mode'],
+                        true
+                    );
+                } else {
+                    $orderStock->persistOrderItemOnly(
+                        $stmtItem,
+                        $orderId,
+                        $data['product_id'],
+                        $itemPayload,
+                        $data['stock_mode']
+                    );
+                }
             }
             $this->pdo->commit();
         } catch (\Throwable $e) {
@@ -567,10 +580,23 @@ class OrdersController
         $orderId   = (int)($_POST['order_id'] ?? 0);
         $courierId = (int)($_POST['courier_id'] ?? 0);
         if ($orderId && $courierId) {
+            $currentStatusStmt = $this->pdo->prepare('SELECT status FROM orders WHERE id = ?');
+            $currentStatusStmt->execute([$orderId]);
+            $fromStatus = $currentStatusStmt->fetchColumn();
+
             $stmt = $this->pdo->prepare(
-                "UPDATE orders SET assigned_to = ?, status = 'assigned' WHERE id = ?"
+                "UPDATE orders SET assigned_to = ?, status = 'shipped' WHERE id = ?"
             );
             $stmt->execute([$courierId, $orderId]);
+
+            (new OrderStatusHistoryService($this->pdo))->record(
+                $orderId,
+                $fromStatus !== false ? (string)$fromStatus : null,
+                'shipped',
+                isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null,
+                isset($_SESSION['role']) ? (string)$_SESSION['role'] : null,
+                'Назначен курьер'
+            );
         }
         header('Location: ' . $this->basePath() . '/' . $orderId);
         exit;
@@ -602,7 +628,7 @@ class OrdersController
 
             $deliveryComment = trim((string)($_POST['delivery_comment'] ?? ''));
             $manualDistanceRaw = str_replace(',', '.', trim((string)($_POST['delivery_distance_km_manual'] ?? '')));
-            $canReprice = $order && !in_array((string)($order['status'] ?? ''), ['delivered', 'cancelled'], true);
+            $canReprice = $order && !in_array((string)($order['status'] ?? ''), ['completed', 'cancelled', 'returned'], true);
 
             $deliveryFee = max(0, (int)($order['delivery_fee'] ?? 0));
             $deliveryDistanceKm = null;
@@ -723,7 +749,7 @@ class OrdersController
     {
         $orderId = (int)($_POST['order_id'] ?? 0);
         $status  = $_POST['status'] ?? '';
-        if ($orderId && in_array($status, ['reserved','new','processing','assigned','delivered','cancelled'], true)) {
+        if ($orderId && in_array($status, ['reserved','new','confirmed','shipped','completed','cancelled'], true)) {
             // Получаем текущий статус и данные заказа
             $stmt = $this->pdo->prepare(
                 "SELECT status, user_id, total_amount, delivery_fee, points_accrued, manager_points_accrued, points_used FROM orders WHERE id = ?"
@@ -732,8 +758,20 @@ class OrdersController
             $order = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($order) {
-                // Если переводим в delivered впервые — начисляем бонусы
-                if ($status === 'delivered' && $order['status'] !== 'delivered') {
+                $stockService = new StockService($this->pdo);
+                $orderStock = new OrderStockOrchestrator($this->pdo, $stockService);
+                if (in_array($status, ['confirmed', 'shipped', 'completed'], true) && (string)$order['status'] === 'new') {
+                    $orderStock->applyStockForOrderId($orderId);
+                }
+                if ($status === 'completed' && $order['status'] !== 'completed') {
+                    $orderStock->commitReservedStockByOrderId($orderId);
+                }
+                if (in_array($status, ['confirmed', 'shipped', 'completed'], true)) {
+                    (new StockDeficitService($this->pdo))->notifyAdminsIfChanged('заказ №' . $orderId . ' → ' . $status);
+                }
+
+                // Если переводим в completed впервые — начисляем бонусы
+                if ($status === 'completed' && $order['status'] !== 'completed') {
                     $userId = (int)$order['user_id'];
                     // Доставка уже входит в total_amount, но баллы начисляются только на товарную часть.
                     $sum    = max(0, (int)$order['total_amount'] - max(0, (int)($order['delivery_fee'] ?? 0)));
@@ -769,7 +807,7 @@ class OrdersController
                             $isFirstClientOrder = false;
                             if ($isPartnerReferrer) {
                                 $ordersCountStmt = $this->pdo->prepare(
-                                    "SELECT COUNT(*) FROM orders WHERE user_id = ? AND status = 'delivered' AND id <> ?"
+                                    "SELECT COUNT(*) FROM orders WHERE user_id = ? AND status = 'completed' AND id <> ?"
                                 );
                                 $ordersCountStmt->execute([$userId, $orderId]);
                                 $isFirstClientOrder = ((int)$ordersCountStmt->fetchColumn() === 0);
@@ -830,10 +868,16 @@ class OrdersController
                 );
                 $stmt->execute([$status, $orderId]);
 
+                (new OrderStatusHistoryService($this->pdo))->record(
+                    $orderId,
+                    (string)$order['status'],
+                    $status,
+                    isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null,
+                    isset($_SESSION['role']) ? (string)$_SESSION['role'] : null
+                );
+
                 if ($status === 'cancelled') {
                     if ($order['status'] !== 'cancelled') {
-                        $stockService = new StockService($this->pdo);
-                        $orderStock = new OrderStockOrchestrator($this->pdo, $stockService);
                         $orderStock->rollbackReservationByOrderId($orderId);
                     }
 
@@ -985,7 +1029,7 @@ class OrdersController
                     throw new \RuntimeException('Для позиции корзины не определена партия отгрузки.');
                 }
 
-                $orderStock->persistOrderItemWithStock(
+                $orderStock->persistOrderItemOnly(
                     $stmtItem,
                     $orderId,
                     (int)$ci['product_id'],
@@ -995,8 +1039,7 @@ class OrdersController
                         'unit_price' => (float)$ci['unit_price'],
                         'purchase_batch_id' => $batchId > 0 ? $batchId : null,
                     ],
-                    $mode,
-                    false
+                    $mode
                 );
             }
 

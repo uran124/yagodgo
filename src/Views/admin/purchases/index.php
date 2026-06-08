@@ -6,6 +6,8 @@
 <?php $summary = $summary ?? []; ?>
 <?php $preorderDemand = $preorderDemand ?? []; ?>
 <?php $preorderDemandTotals = $preorderDemandTotals ?? []; ?>
+<?php $stockDeficitRows = $stockDeficitRows ?? []; ?>
+<?php $stockDeficitTotals = $stockDeficitTotals ?? ['total_deficit_boxes' => 0, 'products_count' => 0]; ?>
 <?php $statusLabels = [
   'planned' => 'Запланирована',
   'purchased' => 'Выкуплена',
@@ -162,6 +164,52 @@
     <a class="purchase-filter-reset bg-gray-100 rounded" href="<?= $basePath ?>/purchases">Сбросить</a>
   </div>
 </form>
+
+
+<div id="stock-deficit" class="bg-white rounded border border-red-200 p-4 mb-4">
+  <div class="flex flex-wrap items-start justify-between gap-3 mb-3">
+    <div>
+      <h2 class="text-lg font-semibold text-red-700 flex items-center gap-2">
+        <span class="material-icons-round text-base">priority_high</span>
+        Дефицит по товарам
+      </h2>
+      <p class="text-xs text-gray-500">Сюда попадают товары, где подтверждённые заказы или бронь требуют больше ящиков, чем указано в закупках.</p>
+    </div>
+    <div class="rounded-2xl bg-red-50 px-4 py-2 text-right text-red-700">
+      <div class="text-xs">Всего нужно докупить</div>
+      <div class="text-2xl font-black">-<?= rtrim(rtrim(number_format((float)($stockDeficitTotals['total_deficit_boxes'] ?? 0), 1, '.', ' '), '0'), '.') ?>!</div>
+      <div class="text-xs"><?= (int)($stockDeficitTotals['products_count'] ?? 0) ?> товаров</div>
+    </div>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-left text-gray-600 border-b">
+          <th class="py-2 pr-3">Товар</th>
+          <th class="py-2 pr-3">Дефицит</th>
+          <th class="py-2 pr-3">В наличии</th>
+          <th class="py-2 pr-3">Бронь</th>
+          <th class="py-2 pr-3">Партий</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php if (!$stockDeficitRows): ?>
+          <tr><td colspan="5" class="py-3 text-gray-500">Дефицита нет.</td></tr>
+        <?php else: ?>
+          <?php foreach ($stockDeficitRows as $row): ?>
+            <tr class="border-b last:border-b-0">
+              <td class="py-2 pr-3 font-medium text-gray-900"><?= htmlspecialchars(trim((string)($row['product_name'] ?? '') . ' ' . (string)($row['variety'] ?? ''))) ?></td>
+              <td class="py-2 pr-3 font-black text-red-700">-<?= rtrim(rtrim(number_format((float)($row['total_deficit_boxes'] ?? 0), 1, '.', ' '), '0'), '.') ?></td>
+              <td class="py-2 pr-3"><?= (float)($row['instant_deficit_boxes'] ?? 0) > 0 ? '-' . rtrim(rtrim(number_format((float)$row['instant_deficit_boxes'], 1, '.', ' '), '0'), '.') : '—' ?></td>
+              <td class="py-2 pr-3"><?= (float)($row['preorder_deficit_boxes'] ?? 0) > 0 ? '-' . rtrim(rtrim(number_format((float)$row['preorder_deficit_boxes'], 1, '.', ' '), '0'), '.') : '—' ?></td>
+              <td class="py-2 pr-3"><?= (int)($row['batches_count'] ?? 0) ?></td>
+            </tr>
+          <?php endforeach; ?>
+        <?php endif; ?>
+      </tbody>
+    </table>
+  </div>
+</div>
 
 <div class="purchase-preorders-box bg-white rounded border p-4 mb-4">
   <div class="flex flex-wrap items-center justify-between gap-3 mb-3">

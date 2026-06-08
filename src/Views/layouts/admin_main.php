@@ -541,13 +541,20 @@
 <body class="min-h-screen bg-gray-100 font-sans">
   <?php
     $supportStaffUnreadCount = 0;
+    $stockDeficitTotalBoxes = 0.0;
+    $stockDeficitProductsCount = 0;
     try {
       global $pdo;
       if (isset($pdo) && $pdo instanceof PDO) {
         $supportStaffUnreadCount = (int)$pdo->query('SELECT COALESCE(SUM(staff_unread_count),0) FROM support_chats')->fetchColumn();
+        $stockDeficitSummary = (new \App\Services\StockDeficitService($pdo))->getSummary();
+        $stockDeficitTotalBoxes = (float)($stockDeficitSummary['total_deficit_boxes'] ?? 0);
+        $stockDeficitProductsCount = (int)($stockDeficitSummary['products_count'] ?? 0);
       }
     } catch (Throwable $e) {
       $supportStaffUnreadCount = 0;
+    $stockDeficitTotalBoxes = 0.0;
+    $stockDeficitProductsCount = 0;
     }
     $currentPath = strtok($_SERVER['REQUEST_URI'] ?? '', '?') ?: '/';
     $layoutRole = $_SESSION['role'] ?? '';
@@ -635,6 +642,14 @@
           <div class="font-bold text-xl text-[#C86052] md:hidden"><?= htmlspecialchars($adminLayoutTitle) ?></div>
         </div>
         <div class="flex items-center gap-3">
+          <?php if ($stockDeficitTotalBoxes > 0): ?>
+            <?php $deficitText = rtrim(rtrim(number_format($stockDeficitTotalBoxes, 1, '.', ' '), '0'), '.'); ?>
+            <a href="<?= htmlspecialchars($adminLayoutBase) ?>/purchases#stock-deficit"
+               class="relative flex items-center gap-1 rounded-full bg-red-500 px-3 py-2 text-sm font-black text-white shadow-lg shadow-red-500/30"
+               title="Дефицит по <?= (int)$stockDeficitProductsCount ?> товарам">
+              <span class="material-icons-round text-base">priority_high</span>-<?= htmlspecialchars($deficitText) ?>!
+            </a>
+          <?php endif; ?>
           <a href="<?= htmlspecialchars($adminLayoutBase) ?>/chats" class="relative flex items-center gap-1 rounded-full bg-[#C86052]/10 px-3 py-2 text-sm font-bold text-[#C86052]">
             <span class="material-icons-round text-base">forum</span> Чат
             <?php if ($supportStaffUnreadCount > 0): ?><span class="absolute -right-1 -top-1 min-w-5 rounded-full bg-red-500 px-1.5 text-center text-[10px] font-bold text-white"><?= $supportStaffUnreadCount ?></span><?php endif; ?>
