@@ -76,6 +76,20 @@ class StockServiceTest extends TestCase
         $this->assertSame(-3.0, (float)$movement['boxes_delta']);
     }
 
+
+    public function testInstantReserveCanCreateNegativeFreeStockForDeficit(): void
+    {
+        $this->service->reserve(1, 1, 12, 123, 'instant');
+
+        $batch = $this->pdo->query('SELECT boxes_free, boxes_reserved FROM purchase_batches WHERE id = 1')->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame(-2.0, (float)$batch['boxes_free']);
+        $this->assertSame(12.0, (float)$batch['boxes_reserved']);
+
+        $product = $this->pdo->query('SELECT free_stock_boxes, reserved_stock_boxes FROM products WHERE id = 1')->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame(-2.0, (float)$product['free_stock_boxes']);
+        $this->assertSame(12.0, (float)$product['reserved_stock_boxes']);
+    }
+
     public function testSellMovesFromReservedToSold(): void
     {
         $this->service->reserve(1, 1, 5, 42, 'instant');
@@ -102,6 +116,27 @@ class StockServiceTest extends TestCase
         $this->assertSame('sale', $movement['movement_type']);
         $this->assertSame('instant', $movement['stock_mode']);
         $this->assertSame(-4.0, (float)$movement['boxes_delta']);
+    }
+
+
+    public function testWriteOffSoldSaleMovesSoldBoxesToWriteOff(): void
+    {
+        $this->service->sellAvailable(1, 1, 4, 91, 'instant');
+
+        $this->service->writeOffSoldSale(1, 1, 4, 91, 7, 'Full return');
+
+        $batch = $this->pdo->query('SELECT boxes_free, boxes_sold, boxes_written_off, boxes_remaining FROM purchase_batches WHERE id = 1')->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame(6.0, (float)$batch['boxes_free']);
+        $this->assertSame(0.0, (float)$batch['boxes_sold']);
+        $this->assertSame(4.0, (float)$batch['boxes_written_off']);
+        $this->assertSame(26.0, (float)$batch['boxes_remaining']);
+
+        $movement = $this->pdo->query('SELECT movement_type, stock_mode, boxes_delta, user_id, comment FROM stock_movements ORDER BY id DESC LIMIT 1')->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame('writeoff', $movement['movement_type']);
+        $this->assertSame('internal', $movement['stock_mode']);
+        $this->assertSame(-4.0, (float)$movement['boxes_delta']);
+        $this->assertSame(7, (int)$movement['user_id']);
+        $this->assertSame('Full return', $movement['comment']);
     }
 
     public function testReturnSaleRestoresStockAndCreatesSchemaCompatibleMovement(): void
@@ -133,6 +168,18 @@ class StockServiceTest extends TestCase
         $this->assertSame('reserve', $movement['movement_type']);
         $this->assertSame('preorder', $movement['stock_mode']);
         $this->assertSame(-2.0, (float)$movement['boxes_delta']);
+    }
+
+
+    public function testPreorderReserveMayExceedPlannedQuantity(): void
+    {
+        $this->pdo->exec('UPDATE purchase_batches SET status = "planned", boxes_total = 0, boxes_free = 0, boxes_reserved = 3 WHERE id = 1');
+
+        $this->service->reserve(1, 1, 5, 78, 'preorder');
+
+        $batch = $this->pdo->query('SELECT boxes_free, boxes_reserved FROM purchase_batches WHERE id = 1')->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame(0.0, (float)$batch['boxes_free']);
+        $this->assertSame(8.0, (float)$batch['boxes_reserved']);
     }
 
     public function testUnreserveRestoresModeStockAndDecreasesReserved(): void

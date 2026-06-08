@@ -7,7 +7,7 @@ use Throwable;
 
 class SupportChatController
 {
-    private const ACTIVE_ORDER_STATUSES = ['reserved', 'new', 'processing', 'assigned'];
+    private const ACTIVE_ORDER_STATUSES = ['reserved', 'new', 'confirmed', 'shipped'];
     private const TELEGRAM_CHAT_ID = '-1002055168794';
     private const TELEGRAM_TOPIC_ID = 1785;
     private const MAX_MESSAGE_LENGTH = 2000;

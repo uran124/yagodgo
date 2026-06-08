@@ -27,7 +27,6 @@ class SellableBatchResolver
                  JOIN products p ON p.id = pb.product_id
                  WHERE pb.product_id = ?
                    AND pb.status = 'planned'
-                   AND {$plannedAvailableExpr} > 0
                    AND COALESCE(NULLIF(pb.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) > 0
                  ORDER BY pb.purchased_at ASC, pb.id ASC
                  LIMIT 1"

@@ -336,7 +336,7 @@ class PurchaseBatchService
                 SELECT 1 FROM order_items oi
                 JOIN orders o ON o.id = oi.order_id
                 WHERE oi.purchase_batch_id = purchase_batches.id
-                  AND o.status NOT IN ('completed','cancelled','delivered')
+                  AND o.status NOT IN ('completed','cancelled','returned')
               )";
         $params = [];
         if ($batchId !== null && $batchId > 0) {
