@@ -206,6 +206,41 @@ class StockService
         }
     }
 
+    public function writeOffSoldSale(int $productId, int $batchId, float $boxes, int $orderId, ?int $userId, string $comment): void
+    {
+        if ($boxes <= 0) {
+            throw new RuntimeException('Write off sold boxes must be greater than zero.');
+        }
+
+        $batch = $this->loadBatch($batchId);
+        if (((float)$batch['boxes_sold'] - $boxes) < 0) {
+            throw new RuntimeException('Not enough sold stock to write off.');
+        }
+
+        $ownsTransaction = !$this->pdo->inTransaction();
+
+        try {
+            if ($ownsTransaction) {
+                $this->pdo->beginTransaction();
+            }
+            $this->appendMovement($batchId, $productId, $orderId, $userId, 'writeoff', 'internal', -$boxes, $comment);
+            $this->updateBatchCounters($batchId, [
+                'boxes_sold' => -$boxes,
+                'boxes_written_off' => $boxes,
+            ]);
+            $this->assertBatchInvariants($batchId);
+            $this->legacyProjection->syncAggregatesFromBatches($productId);
+            if ($ownsTransaction) {
+                $this->pdo->commit();
+            }
+        } catch (Throwable $e) {
+            if ($ownsTransaction && $this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
     public function writeOff(int $batchId, float $boxes, int $userId, string $comment): void
     {
         if ($boxes <= 0) {

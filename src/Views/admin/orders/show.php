@@ -285,6 +285,7 @@
       'shipped'    => 'bg-green-700 hover:bg-green-800',
       'completed'  => 'bg-gray-700 hover:bg-gray-800',
       'cancelled'  => 'bg-gray-600 hover:bg-gray-700',
+      'returned'   => 'bg-orange-600 hover:bg-orange-700',
   ]; ?>
   <dialog class="status-dialog" data-status-dialog>
     <div class="status-dialog-content bg-white">
@@ -297,7 +298,8 @@
             'confirmed' => 'Подтверждён',
             'shipped'    => 'В пути',
             'completed'  => 'Выполнен',
-            'cancelled'  => 'Отменён'
+            'cancelled'  => 'Отменён',
+            'returned'   => 'Возврат'
           ] as $st => $label): ?>
           <form action="<?= $base ?>/orders/status" method="post">
             <input type="hidden" name="order_id" value="<?= $order['id'] ?>">

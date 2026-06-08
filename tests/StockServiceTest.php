@@ -118,6 +118,27 @@ class StockServiceTest extends TestCase
         $this->assertSame(-4.0, (float)$movement['boxes_delta']);
     }
 
+
+    public function testWriteOffSoldSaleMovesSoldBoxesToWriteOff(): void
+    {
+        $this->service->sellAvailable(1, 1, 4, 91, 'instant');
+
+        $this->service->writeOffSoldSale(1, 1, 4, 91, 7, 'Full return');
+
+        $batch = $this->pdo->query('SELECT boxes_free, boxes_sold, boxes_written_off, boxes_remaining FROM purchase_batches WHERE id = 1')->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame(6.0, (float)$batch['boxes_free']);
+        $this->assertSame(0.0, (float)$batch['boxes_sold']);
+        $this->assertSame(4.0, (float)$batch['boxes_written_off']);
+        $this->assertSame(26.0, (float)$batch['boxes_remaining']);
+
+        $movement = $this->pdo->query('SELECT movement_type, stock_mode, boxes_delta, user_id, comment FROM stock_movements ORDER BY id DESC LIMIT 1')->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame('writeoff', $movement['movement_type']);
+        $this->assertSame('internal', $movement['stock_mode']);
+        $this->assertSame(-4.0, (float)$movement['boxes_delta']);
+        $this->assertSame(7, (int)$movement['user_id']);
+        $this->assertSame('Full return', $movement['comment']);
+    }
+
     public function testReturnSaleRestoresStockAndCreatesSchemaCompatibleMovement(): void
     {
         $this->service->sellAvailable(1, 1, 4, 91, 'instant');

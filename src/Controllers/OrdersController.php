@@ -13,6 +13,7 @@ use App\Services\StockService;
 use App\Services\StockDeficitService;
 use App\Services\DeliveryPricingService;
 use App\Services\OrderStatusHistoryService;
+use App\Services\OrderReturnService;
 
 class OrdersController
 {
@@ -749,7 +750,7 @@ class OrdersController
     {
         $orderId = (int)($_POST['order_id'] ?? 0);
         $status  = $_POST['status'] ?? '';
-        if ($orderId && in_array($status, ['reserved','new','confirmed','shipped','completed','cancelled'], true)) {
+        if ($orderId && in_array($status, ['reserved','new','confirmed','shipped','completed','cancelled','returned'], true)) {
             // Получаем текущий статус и данные заказа
             $stmt = $this->pdo->prepare(
                 "SELECT status, user_id, total_amount, delivery_fee, points_accrued, manager_points_accrued, points_used FROM orders WHERE id = ?"
@@ -768,6 +769,16 @@ class OrdersController
                 }
                 if (in_array($status, ['confirmed', 'shipped', 'completed'], true)) {
                     (new StockDeficitService($this->pdo))->notifyAdminsIfChanged('заказ №' . $orderId . ' → ' . $status);
+                }
+                if ($status === 'returned') {
+                    if ((string)$order['status'] !== 'completed') {
+                        header('Location: ' . $this->basePath() . '/' . $orderId);
+                        exit;
+                    }
+                    (new OrderReturnService($this->pdo, $stockService))->returnCompletedOrder(
+                        $orderId,
+                        isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null
+                    );
                 }
 
                 // Если переводим в completed впервые — начисляем бонусы
@@ -882,7 +893,7 @@ class OrdersController
                     }
 
                     $cnt = $this->pdo->prepare(
-                        "SELECT COUNT(*) FROM orders WHERE user_id = ? AND id <> ? AND status <> 'cancelled'"
+                        "SELECT COUNT(*) FROM orders WHERE user_id = ? AND id <> ? AND status NOT IN ('cancelled','returned')"
                     );
                     $cnt->execute([(int)$order['user_id'], $orderId]);
                     if ((int)$cnt->fetchColumn() === 0) {
@@ -1235,7 +1246,7 @@ class OrdersController
             $this->pdo->prepare("DELETE FROM orders WHERE id = ?")->execute([$orderId]);
 
             if ($userId) {
-                $cnt = $this->pdo->prepare("SELECT COUNT(*) FROM orders WHERE user_id = ? AND status <> 'cancelled'");
+                $cnt = $this->pdo->prepare("SELECT COUNT(*) FROM orders WHERE user_id = ? AND status NOT IN ('cancelled','returned')");
                 $cnt->execute([$userId]);
                 if ((int)$cnt->fetchColumn() === 0) {
                     $this->pdo->prepare("UPDATE users SET has_used_referral_coupon = 0 WHERE id = ?")
