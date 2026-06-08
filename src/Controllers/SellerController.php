@@ -5,6 +5,7 @@ use PDO;
 use App\Services\OrderStatusHistoryService;
 use App\Services\OrderStockOrchestrator;
 use App\Services\StockService;
+use App\Services\StockDeficitService;
 
 class SellerController
 {
@@ -206,6 +207,7 @@ class SellerController
 
         if (in_array($status, ['confirmed', 'shipped'], true) && $currentStatus === 'new') {
             (new OrderStockOrchestrator($this->pdo, new StockService($this->pdo)))->applyStockForOrderId($orderId);
+            (new StockDeficitService($this->pdo))->notifyAdminsIfChanged('селлер подтвердил заказ №' . $orderId);
         }
 
         $updateStmt = $this->pdo->prepare("UPDATE orders SET status = ? WHERE id = ?");

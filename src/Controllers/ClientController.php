@@ -4,6 +4,7 @@ namespace App\Controllers;
 use PDO;
 use App\Helpers\PhoneNormalizer;
 use App\Services\StockService;
+use App\Services\StockDeficitService;
 use App\Services\OrderStockOrchestrator;
 use App\Services\ClientCatalogService;
 use App\Services\SellableBatchResolver;
@@ -1000,6 +1001,7 @@ public function cart(): void
     foreach ($createdOrderIds as $oid) {
         $ordersController->notifyAdmins($oid);
     }
+    (new StockDeficitService($this->pdo))->notifyAdminsIfChanged('оформлен заказ');
     if (empty($hasRemainingCartItems)) {
         unset($_SESSION['preorder_checkout_intent_id']);
     }

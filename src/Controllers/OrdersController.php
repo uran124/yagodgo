@@ -10,6 +10,7 @@ use App\Models\OrdersRepository;
 use App\Services\AdminOrdersPageService;
 use App\Services\OrderStockOrchestrator;
 use App\Services\StockService;
+use App\Services\StockDeficitService;
 use App\Services\DeliveryPricingService;
 use App\Services\OrderStatusHistoryService;
 
@@ -764,6 +765,9 @@ class OrdersController
                 }
                 if ($status === 'completed' && $order['status'] !== 'completed') {
                     $orderStock->commitReservedStockByOrderId($orderId);
+                }
+                if (in_array($status, ['confirmed', 'shipped', 'completed'], true)) {
+                    (new StockDeficitService($this->pdo))->notifyAdminsIfChanged('заказ №' . $orderId . ' → ' . $status);
                 }
 
                 // Если переводим в completed впервые — начисляем бонусы
