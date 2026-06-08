@@ -65,9 +65,18 @@ $pickupAddress   = 'Самовывоз: 9 мая, 73';
         <input type="hidden" name="selected_orders_present" value="1">
         <?php foreach ($groups as $dateKey => $block): ?>
           <?php
-            $isPreorderGroup = ($dateKey === 'on_demand' || $dateKey === (defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15'));
+            $isPreorderGroup = false;
+            foreach ($block as $groupItem) {
+              if (($groupItem['stock_mode'] ?? '') === 'preorder') {
+                $isPreorderGroup = true;
+                break;
+              }
+            }
+            $placeholderDate = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
             if ($isPreorderGroup) {
-              $label = 'После выкупа закупки';
+              $label = ($dateKey === 'on_demand' || $dateKey === $placeholderDate)
+                ? 'После выкупа закупки'
+                : ('Предзаказ на ' . date('d.m.Y', strtotime((string)$dateKey)));
               $emoji = '📦';
             } elseif ($dateKey === $today) {
               $label = 'Сегодня';
@@ -142,7 +151,7 @@ $pickupAddress   = 'Самовывоз: 9 мая, 73';
               <div class="mt-4">
                 <input type="hidden"
                        name="order_mode[<?= htmlspecialchars($dateKey) ?>]"
-                       value="<?= ($dateKey === (defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15')) ? 'preorder' : 'instant' ?>">
+                       value="<?= $isPreorderGroup ? 'preorder' : 'instant' ?>">
                 <div class="text-xs text-gray-500">Режим заказа определяется на этапе выбора товара.</div>
               </div>
             </div>

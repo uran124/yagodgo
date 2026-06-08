@@ -129,49 +129,6 @@
                 </div>
               </div>
             <?php endif; ?>
-            <?php if ($dateChange): ?>
-              <div class="rounded-2xl border border-amber-200 bg-amber-50 p-3 space-y-2">
-                <p class="text-sm font-semibold text-amber-900">
-                  <?= $dateChangeReason === 'cancelled' ? 'Поставка по предзаказу отменена' : 'Поставка по предзаказу перенесена' ?>
-                </p>
-                <p class="text-xs text-amber-800">
-                  Текущая дата получения: <b><?= htmlspecialchars($oldDate) ?></b>.
-                  <?php if ($proposedDate): ?> Новая дата: <b><?= htmlspecialchars($proposedDate) ?></b>.<?php endif; ?>
-                  <?php if ($nextSupplyDate): ?> Следующая поставка: <b><?= htmlspecialchars($nextSupplyDate) ?></b>.<?php endif; ?>
-                </p>
-                <div class="flex flex-wrap gap-2">
-                  <?php if ($showProposedButton): ?>
-                    <button type="button"
-                            class="px-3 py-2 rounded-lg text-xs text-white bg-emerald-600"
-                            data-date-change-decision="accept_new"
-                            data-intent-id="<?= (int)$offer['id'] ?>">
-                      Подтвердить <?= htmlspecialchars($proposedDate) ?>
-                    </button>
-                  <?php endif; ?>
-                  <?php if ($nextSupplyDate): ?>
-                    <button type="button"
-                            class="px-3 py-2 rounded-lg text-xs text-white bg-blue-600"
-                            data-date-change-decision="next_supply"
-                            data-intent-id="<?= (int)$offer['id'] ?>">
-                      Следующая поставка <?= htmlspecialchars($nextSupplyDate) ?>
-                    </button>
-                  <?php else: ?>
-                    <button type="button"
-                            class="px-3 py-2 rounded-lg text-xs text-white bg-blue-600"
-                            data-date-change-decision="wait_next"
-                            data-intent-id="<?= (int)$offer['id'] ?>">
-                      Ждать следующую поставку
-                    </button>
-                  <?php endif; ?>
-                  <button type="button"
-                          class="px-3 py-2 rounded-lg text-xs text-white bg-rose-600"
-                          data-date-change-decision="cancel"
-                          data-intent-id="<?= (int)$offer['id'] ?>">
-                    Отменить
-                  </button>
-                </div>
-              </div>
-            <?php endif; ?>
             <div class="flex gap-2">
               <button type="button"
                       class="px-3 py-2 rounded-lg text-sm text-white <?= $isActiveOffer ? 'bg-emerald-600' : 'bg-gray-300 cursor-not-allowed' ?>"

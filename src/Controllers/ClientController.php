@@ -516,6 +516,7 @@ public function cart(): void
             'unit_price' => $it['unit_price'],   // price per box
             'box_size'   => $it['box_size'],
             'seller_id'  => $it['seller_id'],
+            'stock_mode' => $it['stock_mode'] ?? 'instant',
             'purchase_batch_id' => isset($it['purchase_batch_id']) ? (int)$it['purchase_batch_id'] : null,
         ];
     }
@@ -790,7 +791,8 @@ public function cart(): void
     // 9) СОЗДАЁМ ЗАКАЗЫ ПО КАЖДОЙ ДАТЕ, учитываем дату и слот
     $createdOrderIds = [];
         foreach ($itemsByDate as $dateKey => $block) {
-        $isReservedOrder = ($dateKey === PLACEHOLDER_DATE);
+        $orderMode = (string)($orderModeByDate[$dateKey] ?? 'instant');
+        $isReservedOrder = ($orderMode === 'preorder');
         // (7.1) Считаем сумму по блоку и применяем скидку
         $blockSum = 0;
         foreach ($block as $data) {
@@ -826,8 +828,7 @@ public function cart(): void
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?)"
         );
         $pointsAccrued = 0; // пока 0, начислим ниже, если надо
-        $orderDeliveryDate = $isReservedOrder ? date('Y-m-d') : $dateKey;
-        $orderMode = (string)($orderModeByDate[$dateKey] ?? ($isReservedOrder ? 'preorder' : 'instant'));
+        $orderDeliveryDate = ($isReservedOrder && $dateKey === PLACEHOLDER_DATE) ? date('Y-m-d') : $dateKey;
         $reservedAt = $isReservedOrder ? date('Y-m-d H:i:s') : null;
         $bonusesAllowed = $orderMode === 'discount_stock' ? 0 : 1;
         $couponsAllowed = $orderMode === 'discount_stock' ? 0 : 1;
@@ -1026,7 +1027,7 @@ public function cart(): void
         }
 
         $intentStmt = $this->pdo->prepare(
-            "SELECT status, offered_price_per_box, purchase_batch_id FROM preorder_intents WHERE id = ? AND user_id = ? AND product_id = ? LIMIT 1"
+            "SELECT status, offered_price_per_box, purchase_batch_id, desired_delivery_date FROM preorder_intents WHERE id = ? AND user_id = ? AND product_id = ? LIMIT 1"
         );
         $intentStmt->execute([$intentId, $userId, $productId]);
         $intent = $intentStmt->fetch(PDO::FETCH_ASSOC);
@@ -1057,6 +1058,9 @@ public function cart(): void
             $_SESSION['cart_error'] = 'Для предзаказа сейчас нет выкупленной партии с подтвержденной ценой.';
             return;
         }
+
+        $desiredDeliveryDate = $this->normalizeDateString($intent['desired_delivery_date'] ?? null);
+        $_SESSION['delivery_date'][$productId] = $desiredDeliveryDate ?: PLACEHOLDER_DATE;
 
         $this->pdo->prepare(
             "INSERT INTO cart_items (user_id, product_id, quantity, unit_price, stock_mode, purchase_batch_id, boxes, sale_price_per_box)
