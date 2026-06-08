@@ -307,6 +307,15 @@ return [
         return true;
     },
     static function (string $method, string $uri, array $c): bool {
+        if (!routeRegex('POST', '#^/preorder-intents/(\d+)/date-change$#', $method, $uri, $m)) {
+            return false;
+        }
+
+        requireClient();
+        (new App\Controllers\ClientController($c['pdo']))->respondPreorderDateChange((int)$m[1]);
+        return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
         if (!routeRegex('GET', '#^/preorder/continue/([^/]+)$#', $method, $uri, $m)) {
             return false;
         }

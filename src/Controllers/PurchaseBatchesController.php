@@ -825,6 +825,108 @@ ORDER BY is_closed ASC, pb.id DESC';
         exit;
     }
 
+    /** @return array<string,mixed>|null */
+    private function loadBatchForDateConfirmation(int $batchId): ?array
+    {
+        if ($batchId <= 0) {
+            return null;
+        }
+        $stmt = $this->pdo->prepare('SELECT id, product_id, purchased_at, status FROM purchase_batches WHERE id = ? LIMIT 1');
+        $stmt->execute([$batchId]);
+        $batch = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $batch ?: null;
+    }
+
+    private function requestDateConfirmationForBatch(int $batchId, ?string $oldSupplyDate, ?string $newSupplyDate, string $reason): int
+    {
+        $batch = $this->loadBatchForDateConfirmation($batchId);
+        if (!$batch) {
+            return 0;
+        }
+        $productId = (int)($batch['product_id'] ?? 0);
+        if ($productId <= 0) {
+            return 0;
+        }
+
+        $newCoveredDates = $this->coveredDeliveryDatesForDate($newSupplyDate);
+        $nextSupply = $this->findNextSupplyForProduct($productId, $batchId, $newSupplyDate ?? $oldSupplyDate);
+        $stmt = $this->pdo->prepare(
+            "SELECT id, status, desired_delivery_date
+             FROM preorder_intents
+             WHERE purchase_batch_id = ?
+               AND status IN ('linked_to_batch','awaiting_price_confirmation','offer_sent','confirmed')
+             ORDER BY id ASC"
+        );
+        $stmt->execute([$batchId]);
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        $requested = 0;
+        foreach ($items as $item) {
+            $intentId = (int)($item['id'] ?? 0);
+            $desiredDate = $this->normalizeDateString($item['desired_delivery_date'] ?? null);
+            if ($reason === 'rescheduled' && $desiredDate !== null && $newCoveredDates !== [] && in_array($desiredDate, $newCoveredDates, true)) {
+                continue;
+            }
+            $proposedDate = $this->proposedDeliveryDateForChange($desiredDate, $oldSupplyDate, $newSupplyDate, $nextSupply['date'] ?? null);
+            $this->logPreorderEvent($intentId, 'date_change_requested', (string)($item['status'] ?? ''), (string)($item['status'] ?? ''), [
+                'reason' => $reason,
+                'purchase_batch_id' => $batchId,
+                'old_supply_date' => $oldSupplyDate,
+                'new_supply_date' => $newSupplyDate,
+                'old_desired_delivery_date' => $desiredDate,
+                'proposed_delivery_date' => $proposedDate,
+                'next_batch_id' => $nextSupply['id'] ?? null,
+                'next_supply_date' => $nextSupply['date'] ?? null,
+            ]);
+            $requested++;
+        }
+
+        return $requested;
+    }
+
+    private function proposedDeliveryDateForChange(?string $desiredDate, ?string $oldSupplyDate, ?string $newSupplyDate, ?string $nextSupplyDate): ?string
+    {
+        if ($newSupplyDate === null) {
+            return $nextSupplyDate;
+        }
+        if ($desiredDate === null || $oldSupplyDate === null) {
+            return $newSupplyDate;
+        }
+        $oldTs = strtotime($oldSupplyDate);
+        $desiredTs = strtotime($desiredDate);
+        if ($oldTs === false || $desiredTs === false) {
+            return $newSupplyDate;
+        }
+        $offsetDays = max(0, min(2, (int)floor(($desiredTs - $oldTs) / 86400)));
+        return (new \DateTimeImmutable($newSupplyDate))->modify('+' . $offsetDays . ' day')->format('Y-m-d');
+    }
+
+    /** @return array{id:int,date:string}|null */
+    private function findNextSupplyForProduct(int $productId, int $excludeBatchId, ?string $afterDate): ?array
+    {
+        if ($productId <= 0) {
+            return null;
+        }
+        $afterDate = $this->normalizeDateString($afterDate) ?? date('Y-m-d');
+        $stmt = $this->pdo->prepare(
+            "SELECT id, DATE(purchased_at) AS supply_date
+             FROM purchase_batches
+             WHERE product_id = ?
+               AND id <> ?
+               AND status IN ('planned','purchased','arrived')
+               AND purchased_at IS NOT NULL
+               AND DATE(purchased_at) > ?
+             ORDER BY purchased_at ASC, id ASC
+             LIMIT 1"
+        );
+        $stmt->execute([$productId, $excludeBatchId, $afterDate]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            return null;
+        }
+        return ['id' => (int)$row['id'], 'date' => (string)$row['supply_date']];
+    }
+
     private function logPreorderEvent(int $intentId, string $eventType, ?string $fromStatus, ?string $toStatus, ?array $meta = null): void
     {
         try {
@@ -947,7 +1049,7 @@ ORDER BY is_closed ASC, pb.id DESC';
         $boxesFree = max(0.0, (float)($_POST['boxes_free'] ?? 0));
 
         $currentStmt = $this->pdo->prepare(
-            'SELECT boxes_sold, boxes_written_off, boxes_discount
+            'SELECT product_id, status, purchased_at, boxes_sold, boxes_written_off, boxes_discount
                FROM purchase_batches
               WHERE id = ?
               LIMIT 1'
@@ -993,6 +1095,9 @@ ORDER BY is_closed ASC, pb.id DESC';
              WHERE id = :id
              LIMIT 1'
         );
+        $postedSupplyDate = $this->nullablePostedDate('planned_supply_date');
+        $oldSupplyDate = $this->normalizeDateString($currentBatch['purchased_at'] ?? null);
+
         $stmt->execute([
             'id' => $batchId,
             'product_id' => $productId,
@@ -1010,7 +1115,7 @@ ORDER BY is_closed ASC, pb.id DESC';
             'instant_unit_price' => (float)$prices['instant_unit_price'],
             'preorder_unit_price' => (float)$prices['preorder_unit_price'],
             'status' => $status,
-            'purchased_at' => $this->nullablePostedDate('planned_supply_date'),
+            'purchased_at' => $postedSupplyDate,
             'comment' => trim((string)($_POST['comment'] ?? '')),
         ]);
         // compatibility-only projection for legacy admin/reporting surfaces
@@ -1024,6 +1129,10 @@ ORDER BY is_closed ASC, pb.id DESC';
         ]);
 
         $this->storeBatchPhotos($batchId);
+        $newSupplyDate = $this->normalizeDateString($postedSupplyDate);
+        if ($oldSupplyDate !== $newSupplyDate) {
+            $this->requestDateConfirmationForBatch($batchId, $oldSupplyDate, $newSupplyDate, 'rescheduled');
+        }
         $this->setFlash('success', 'Закупка обновлена.');
         header('Location: ' . $this->basePath() . '/purchases/' . $batchId);
         exit;
@@ -1039,8 +1148,12 @@ ORDER BY is_closed ASC, pb.id DESC';
             exit;
         }
         $reason = trim((string)($_POST['close_reason'] ?? 'Ручное закрытие'));
+        $batchBeforeClose = $this->loadBatchForDateConfirmation($batchId);
         try {
             $this->purchaseBatchService->closeBatch($batchId, $reason !== '' ? $reason : 'Ручное закрытие');
+            if ($batchBeforeClose) {
+                $this->requestDateConfirmationForBatch($batchId, $this->normalizeDateString($batchBeforeClose['purchased_at'] ?? null), null, 'cancelled');
+            }
             $this->setFlash('success', 'Закупка закрыта (без удаления данных).');
         } catch (RuntimeException $e) {
             $this->setFlash('error', $e->getMessage());
