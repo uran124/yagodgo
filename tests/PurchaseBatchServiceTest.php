@@ -99,6 +99,7 @@ class PurchaseBatchServiceTest extends TestCase
             product_id INTEGER,
             purchase_batch_id INTEGER NULL,
             requested_boxes REAL,
+            desired_delivery_date TEXT NULL,
             status TEXT,
             offered_price_per_box REAL NULL,
             offer_expires_at TEXT NULL,
@@ -125,6 +126,33 @@ class PurchaseBatchServiceTest extends TestCase
 
         $pricingService = new PricingService($this->pdo);
         $this->service = new PurchaseBatchService($this->pdo, $pricingService);
+    }
+
+
+    public function testCreateBatchLinksOnlyPreordersCoveredByBatchDeliveryWindow(): void
+    {
+        $this->pdo->exec("INSERT INTO preorder_intents (user_id, product_id, requested_boxes, desired_delivery_date, status, created_at) VALUES
+            (101, 1, 1, '2026-06-10', 'waiting_batch', '2026-06-01 10:00:00'),
+            (102, 1, 1, '2026-06-12', 'waiting_batch', '2026-06-01 10:01:00'),
+            (103, 1, 1, '2026-06-13', 'waiting_batch', '2026-06-01 10:02:00')");
+
+        $batchId = $this->service->createBatch([
+            'product_id' => 1,
+            'purchase_price_per_box' => 1000,
+            'boxes_total' => 3,
+            'boxes_reserved' => 3,
+            'purchased_at' => '2026-06-10 09:00:00',
+            'status' => 'planned',
+        ]);
+
+        $rows = $this->pdo->query('SELECT user_id, purchase_batch_id, status FROM preorder_intents ORDER BY user_id')->fetchAll(PDO::FETCH_ASSOC);
+
+        $this->assertSame($batchId, (int)$rows[0]['purchase_batch_id']);
+        $this->assertSame('linked_to_batch', $rows[0]['status']);
+        $this->assertSame($batchId, (int)$rows[1]['purchase_batch_id']);
+        $this->assertSame('linked_to_batch', $rows[1]['status']);
+        $this->assertNull($rows[2]['purchase_batch_id']);
+        $this->assertSame('waiting_batch', $rows[2]['status']);
     }
 
     public function testCreateBatchPersistsBatchAndSyncsProductSnapshot(): void

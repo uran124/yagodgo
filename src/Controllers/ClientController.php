@@ -1406,6 +1406,7 @@ public function cancelReservedOrder(int $orderId): void
         );
         $offersStmt->execute([$userId]);
         $preorderOffers = $offersStmt->fetchAll(PDO::FETCH_ASSOC);
+        $this->attachPendingDateChanges($preorderOffers);
 
         view('client/notifications', [
             'userName' => $_SESSION['name'] ?? null,
@@ -1694,8 +1695,22 @@ public function cancelReservedOrder(int $orderId): void
         $desiredDeliveryDate = null;
         if ($desiredDeliveryDateRaw !== '' && $desiredDeliveryDateRaw !== 'any') {
             $tsDesired = strtotime($desiredDeliveryDateRaw);
-            if ($tsDesired !== false) {
-                $desiredDeliveryDate = date('Y-m-d', $tsDesired);
+            if ($tsDesired === false) {
+                http_response_code(422);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['ok' => false, 'error' => 'Некорректная дата получения предзаказа'], JSON_UNESCAPED_UNICODE);
+                return;
+            }
+            $desiredDeliveryDate = date('Y-m-d', $tsDesired);
+            $minPreorderDate = date('Y-m-d', strtotime('+2 day'));
+            if ($desiredDeliveryDate < $minPreorderDate) {
+                http_response_code(422);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode([
+                    'ok' => false,
+                    'error' => 'Предзаказ можно оформить не раньше ' . date('d.m.Y', strtotime($minPreorderDate)) . '. Если ягода нужна раньше, оформите обычную покупку по текущей цене.',
+                ], JSON_UNESCAPED_UNICODE);
+                return;
             }
         }
         $expectedPriceStored = $expectedPricePerBox > 0 ? $expectedPricePerBox : null;
@@ -1758,11 +1773,14 @@ public function cancelReservedOrder(int $orderId): void
         }
 
         if ($targetBatchId === null || $autoOfferPrice <= 0) {
-            http_response_code(409);
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode([
-                'ok' => false,
-                'error' => 'Для товара пока нет запланированной закупки с предварительной ценой.',
+                'ok' => true,
+                'intent_id' => $intentId,
+                'status' => $targetStatus,
+                'status_label' => 'Ждёт закупку',
+                'eta_delivery_date' => $etaDateValue,
+                'message' => 'Предзаказ сохранён' . ($desiredDeliveryDate ? ' на ' . date('d.m.Y', strtotime($desiredDeliveryDate)) : ' на ближайшую возможную дату') . '. Мы подтвердим его после назначения поставки и финальной цены.',
             ], JSON_UNESCAPED_UNICODE);
             return;
         }
@@ -1782,7 +1800,7 @@ public function cancelReservedOrder(int $orderId): void
             return;
         }
 
-        $_SESSION['delivery_date'][$productId] = PLACEHOLDER_DATE;
+        $_SESSION['delivery_date'][$productId] = $desiredDeliveryDate ?: PLACEHOLDER_DATE;
         $this->pdo->prepare(
             "INSERT INTO cart_items (user_id, product_id, quantity, unit_price, stock_mode, purchase_batch_id, boxes, sale_price_per_box)" .
             " VALUES (?, ?, ?, ?, 'preorder', ?, ?, ?)" .
@@ -1803,7 +1821,7 @@ public function cancelReservedOrder(int $orderId): void
             'status_label' => 'В корзине',
             'eta_delivery_date' => $etaDateValue,
             'cart_url' => '/cart',
-            'message' => 'Предзаказ добавлен в корзину: ' . $etaText . '. Цена предварительная. Точная цена будет после выкупа.',
+            'message' => 'Предзаказ добавлен в корзину' . ($desiredDeliveryDate ? ' на ' . date('d.m.Y', strtotime($desiredDeliveryDate)) : ': ' . $etaText) . '. Цена предварительная. Точная цена будет после выкупа.',
         ], JSON_UNESCAPED_UNICODE);
     }
 
@@ -1889,6 +1907,121 @@ public function cancelReservedOrder(int $orderId): void
         ], JSON_UNESCAPED_UNICODE);
     }
 
+    public function respondPreorderDateChange(int $intentId): void
+    {
+        requireClient();
+        $userId = (int)($_SESSION['user_id'] ?? 0);
+        $decision = (string)($_POST['decision'] ?? '');
+        if (!in_array($decision, ['accept_new','next_supply','wait_next','cancel'], true)) {
+            http_response_code(422);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => false, 'error' => 'Некорректное решение по новой дате'], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        $stmt = $this->pdo->prepare(
+            "SELECT id, user_id, product_id, purchase_batch_id, status, desired_delivery_date
+             FROM preorder_intents
+             WHERE id = ? AND user_id = ?
+             LIMIT 1"
+        );
+        $stmt->execute([$intentId, $userId]);
+        $intent = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$intent) {
+            http_response_code(404);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => false, 'error' => 'Предзаказ не найден'], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        $pending = $this->pendingDateChangeForIntent($intentId);
+        if ($pending === null) {
+            http_response_code(409);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => false, 'error' => 'Нет активного запроса на подтверждение даты'], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+        $meta = $pending['meta'];
+        $fromStatus = (string)($intent['status'] ?? '');
+
+        if ($decision === 'cancel') {
+            $this->pdo->prepare("UPDATE preorder_intents SET status = 'declined', checkout_token = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                ->execute([$intentId]);
+            $this->logPreorderEvent($intentId, 'date_change_cancelled', $fromStatus, 'declined', ['request_event_id' => $pending['id']]);
+            $this->jsonDateChangeResponse('declined', 'Предзаказ отменён.');
+            return;
+        }
+
+        if ($decision === 'wait_next') {
+            $this->pdo->prepare("UPDATE preorder_intents SET purchase_batch_id = NULL, status = 'waiting_batch', offer_expires_at = NULL, checkout_token = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                ->execute([$intentId]);
+            $this->logPreorderEvent($intentId, 'date_change_wait_next', $fromStatus, 'waiting_batch', ['request_event_id' => $pending['id']]);
+            $this->jsonDateChangeResponse('waiting_batch', 'Ок, будем ждать следующую поставку.');
+            return;
+        }
+
+        if ($decision === 'next_supply') {
+            $nextBatchId = (int)($meta['next_batch_id'] ?? 0);
+            $nextDate = $this->normalizeDateString($meta['next_supply_date'] ?? null);
+            if ($nextBatchId <= 0 || $nextDate === null) {
+                $next = $this->findNextSupplyForPreorder((int)$intent['product_id'], (int)($intent['purchase_batch_id'] ?? 0), $this->normalizeDateString($meta['new_supply_date'] ?? $meta['old_supply_date'] ?? null));
+                $nextBatchId = (int)($next['id'] ?? 0);
+                $nextDate = $next['date'] ?? null;
+            }
+            if ($nextBatchId <= 0 || $nextDate === null) {
+                $this->pdo->prepare("UPDATE preorder_intents SET purchase_batch_id = NULL, status = 'waiting_batch', offer_expires_at = NULL, checkout_token = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                    ->execute([$intentId]);
+                $this->logPreorderEvent($intentId, 'date_change_wait_next', $fromStatus, 'waiting_batch', ['request_event_id' => $pending['id'], 'reason' => 'next_supply_missing']);
+                $this->jsonDateChangeResponse('waiting_batch', 'Следующая дата пока неизвестна. Оставили предзаказ в ожидании поставки.');
+                return;
+            }
+            $this->pdo->prepare("UPDATE preorder_intents SET purchase_batch_id = ?, desired_delivery_date = ?, status = 'linked_to_batch', offer_expires_at = NULL, checkout_token = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                ->execute([$nextBatchId, $nextDate, $intentId]);
+            $this->logPreorderEvent($intentId, 'date_change_next_supply', $fromStatus, 'linked_to_batch', [
+                'request_event_id' => $pending['id'],
+                'next_batch_id' => $nextBatchId,
+                'next_supply_date' => $nextDate,
+            ]);
+            $this->jsonDateChangeResponse('linked_to_batch', 'Предзаказ перенесён на следующую поставку ' . date('d.m.Y', strtotime($nextDate)) . '.');
+            return;
+        }
+
+        $proposedDate = $this->normalizeDateString($meta['proposed_delivery_date'] ?? $meta['new_supply_date'] ?? $meta['next_supply_date'] ?? null);
+        if ($proposedDate === null) {
+            http_response_code(409);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => false, 'error' => 'Новая дата пока неизвестна'], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+        $acceptBatchId = (int)($meta['next_batch_id'] ?? 0);
+        if ($acceptBatchId > 0 && $this->normalizeDateString($meta['next_supply_date'] ?? null) === $proposedDate) {
+            $this->pdo->prepare("UPDATE preorder_intents SET purchase_batch_id = ?, desired_delivery_date = ?, status = 'linked_to_batch', offer_expires_at = NULL, checkout_token = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                ->execute([$acceptBatchId, $proposedDate, $intentId]);
+            $toStatus = 'linked_to_batch';
+        } else {
+            $this->pdo->prepare("UPDATE preorder_intents SET desired_delivery_date = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                ->execute([$proposedDate, $intentId]);
+            $toStatus = $fromStatus;
+        }
+        $this->logPreorderEvent($intentId, 'date_change_accepted', $fromStatus, $toStatus, [
+            'request_event_id' => $pending['id'],
+            'accepted_delivery_date' => $proposedDate,
+            'accepted_batch_id' => $acceptBatchId > 0 ? $acceptBatchId : null,
+        ]);
+        $this->jsonDateChangeResponse($fromStatus, 'Новая дата подтверждена: ' . date('d.m.Y', strtotime($proposedDate)) . '.');
+    }
+
+    private function jsonDateChangeResponse(string $status, string $message): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'ok' => true,
+            'status' => $status,
+            'status_label' => $this->preorderIntentStatusLabel($status),
+            'message' => $message,
+        ], JSON_UNESCAPED_UNICODE);
+    }
+
     public function continuePreorderCheckout(string $token): void
     {
         requireClient();
@@ -1935,6 +2068,107 @@ public function cancelReservedOrder(int $orderId): void
         }
         $offer['status_label'] = $this->preorderIntentStatusLabel((string)($offer['status'] ?? ''));
         view('client/preorder_offer', ['offer' => $offer]);
+    }
+
+    /** @param array<int,array<string,mixed>> $preorderOffers */
+    private function attachPendingDateChanges(array &$preorderOffers): void
+    {
+        $ids = array_map(static fn (array $offer): int => (int)($offer['id'] ?? 0), $preorderOffers);
+        $ids = array_values(array_filter($ids, static fn (int $id): bool => $id > 0));
+        if ($ids === []) {
+            return;
+        }
+        $pending = $this->pendingDateChangesForIntents($ids);
+        foreach ($preorderOffers as &$offer) {
+            $intentId = (int)($offer['id'] ?? 0);
+            if (isset($pending[$intentId])) {
+                $offer['date_change'] = $pending[$intentId];
+            }
+        }
+        unset($offer);
+    }
+
+    /** @return array{id:int,meta:array<string,mixed>}|null */
+    private function pendingDateChangeForIntent(int $intentId): ?array
+    {
+        $pending = $this->pendingDateChangesForIntents([$intentId]);
+        return $pending[$intentId] ?? null;
+    }
+
+    /**
+     * @param array<int,int> $intentIds
+     * @return array<int,array{id:int,meta:array<string,mixed>}>
+     */
+    private function pendingDateChangesForIntents(array $intentIds): array
+    {
+        $intentIds = array_values(array_filter(array_map('intval', $intentIds), static fn (int $id): bool => $id > 0));
+        if ($intentIds === []) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($intentIds), '?'));
+        $stmt = $this->pdo->prepare(
+            "SELECT id, preorder_intent_id, event_type, meta_json
+             FROM preorder_intent_events
+             WHERE preorder_intent_id IN ({$placeholders})
+               AND event_type IN ('date_change_requested','date_change_accepted','date_change_next_supply','date_change_wait_next','date_change_cancelled')
+             ORDER BY preorder_intent_id ASC, id ASC"
+        );
+        $stmt->execute($intentIds);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $pending = [];
+        foreach ($rows as $row) {
+            $intentId = (int)($row['preorder_intent_id'] ?? 0);
+            $eventType = (string)($row['event_type'] ?? '');
+            if ($eventType === 'date_change_requested') {
+                $meta = json_decode((string)($row['meta_json'] ?? ''), true);
+                $pending[$intentId] = [
+                    'id' => (int)($row['id'] ?? 0),
+                    'meta' => is_array($meta) ? $meta : [],
+                ];
+                continue;
+            }
+            unset($pending[$intentId]);
+        }
+        return $pending;
+    }
+
+    private function normalizeDateString(mixed $value): ?string
+    {
+        $raw = trim((string)($value ?? ''));
+        if ($raw === '') {
+            return null;
+        }
+        $ts = strtotime($raw);
+        if ($ts === false) {
+            return null;
+        }
+        return date('Y-m-d', $ts);
+    }
+
+    /** @return array{id:int,date:string}|null */
+    private function findNextSupplyForPreorder(int $productId, int $excludeBatchId, ?string $afterDate): ?array
+    {
+        if ($productId <= 0) {
+            return null;
+        }
+        $afterDate = $this->normalizeDateString($afterDate) ?? date('Y-m-d');
+        $stmt = $this->pdo->prepare(
+            "SELECT id, DATE(purchased_at) AS supply_date
+             FROM purchase_batches
+             WHERE product_id = ?
+               AND id <> ?
+               AND status IN ('planned','purchased','arrived')
+               AND purchased_at IS NOT NULL
+               AND DATE(purchased_at) > ?
+             ORDER BY purchased_at ASC, id ASC
+             LIMIT 1"
+        );
+        $stmt->execute([$productId, $excludeBatchId, $afterDate]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            return null;
+        }
+        return ['id' => (int)$row['id'], 'date' => (string)$row['supply_date']];
     }
 
     private function preorderIntentStatusLabel(string $status): string

@@ -47,6 +47,13 @@
             $isActiveOffer = $status === 'offer_sent';
             $expires = !empty($offer['offer_expires_at']) ? date('d.m H:i', strtotime((string)$offer['offer_expires_at'])) : null;
             $desired = !empty($offer['desired_delivery_date']) ? date('d.m.Y', strtotime((string)$offer['desired_delivery_date'])) : 'Не имеет значения';
+            $dateChange = is_array($offer['date_change'] ?? null) ? $offer['date_change'] : null;
+            $dateChangeMeta = is_array($dateChange['meta'] ?? null) ? $dateChange['meta'] : [];
+            $dateChangeReason = (string)($dateChangeMeta['reason'] ?? 'rescheduled');
+            $oldDate = !empty($dateChangeMeta['old_desired_delivery_date']) ? date('d.m.Y', strtotime((string)$dateChangeMeta['old_desired_delivery_date'])) : $desired;
+            $proposedDate = !empty($dateChangeMeta['proposed_delivery_date']) ? date('d.m.Y', strtotime((string)$dateChangeMeta['proposed_delivery_date'])) : null;
+            $nextSupplyDate = !empty($dateChangeMeta['next_supply_date']) ? date('d.m.Y', strtotime((string)$dateChangeMeta['next_supply_date'])) : null;
+            $showProposedButton = $proposedDate && ($dateChangeReason !== 'cancelled' || $proposedDate !== $nextSupplyDate);
           ?>
           <div class="p-4 space-y-2">
             <p class="text-sm font-semibold text-gray-800">
@@ -59,6 +66,49 @@
             </p>
             <?php if ($expires): ?>
               <p class="text-xs text-amber-700">Подтвердите до <?= htmlspecialchars($expires) ?></p>
+            <?php endif; ?>
+            <?php if ($dateChange): ?>
+              <div class="rounded-2xl border border-amber-200 bg-amber-50 p-3 space-y-2">
+                <p class="text-sm font-semibold text-amber-900">
+                  <?= $dateChangeReason === 'cancelled' ? 'Поставка по предзаказу отменена' : 'Поставка по предзаказу перенесена' ?>
+                </p>
+                <p class="text-xs text-amber-800">
+                  Текущая дата получения: <b><?= htmlspecialchars($oldDate) ?></b>.
+                  <?php if ($proposedDate): ?> Новая дата: <b><?= htmlspecialchars($proposedDate) ?></b>.<?php endif; ?>
+                  <?php if ($nextSupplyDate): ?> Следующая поставка: <b><?= htmlspecialchars($nextSupplyDate) ?></b>.<?php endif; ?>
+                </p>
+                <div class="flex flex-wrap gap-2">
+                  <?php if ($showProposedButton): ?>
+                    <button type="button"
+                            class="px-3 py-2 rounded-lg text-xs text-white bg-emerald-600"
+                            data-date-change-decision="accept_new"
+                            data-intent-id="<?= (int)$offer['id'] ?>">
+                      Подтвердить <?= htmlspecialchars($proposedDate) ?>
+                    </button>
+                  <?php endif; ?>
+                  <?php if ($nextSupplyDate): ?>
+                    <button type="button"
+                            class="px-3 py-2 rounded-lg text-xs text-white bg-blue-600"
+                            data-date-change-decision="next_supply"
+                            data-intent-id="<?= (int)$offer['id'] ?>">
+                      Следующая поставка <?= htmlspecialchars($nextSupplyDate) ?>
+                    </button>
+                  <?php else: ?>
+                    <button type="button"
+                            class="px-3 py-2 rounded-lg text-xs text-white bg-blue-600"
+                            data-date-change-decision="wait_next"
+                            data-intent-id="<?= (int)$offer['id'] ?>">
+                      Ждать следующую поставку
+                    </button>
+                  <?php endif; ?>
+                  <button type="button"
+                          class="px-3 py-2 rounded-lg text-xs text-white bg-rose-600"
+                          data-date-change-decision="cancel"
+                          data-intent-id="<?= (int)$offer['id'] ?>">
+                    Отменить
+                  </button>
+                </div>
+              </div>
             <?php endif; ?>
             <div class="flex gap-2">
               <button type="button"
@@ -138,6 +188,22 @@
     closeBtn.addEventListener('click', close);
     modal.addEventListener('click', (e) => {
       if (e.target === modal) close();
+    });
+
+    document.querySelectorAll('[data-date-change-decision]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const decision = btn.getAttribute('data-date-change-decision');
+        const intentId = btn.getAttribute('data-intent-id');
+        if (!decision || !intentId) return;
+        const payload = new URLSearchParams();
+        payload.set('decision', decision);
+        await fetch(`/preorder-intents/${intentId}/date-change`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: payload.toString()
+        });
+        window.location.reload();
+      });
     });
 
     document.querySelectorAll('[data-preorder-action]').forEach((btn) => {
