@@ -44,21 +44,90 @@
         <?php foreach ($preorderOffers as $offer): ?>
           <?php
             $status = (string)($offer['status'] ?? '');
-            $isActiveOffer = $status === 'offer_sent';
-            $expires = !empty($offer['offer_expires_at']) ? date('d.m H:i', strtotime((string)$offer['offer_expires_at'])) : null;
+            $expiresTs = !empty($offer['offer_expires_at']) ? strtotime((string)$offer['offer_expires_at']) : false;
+            $isExpiredOffer = $expiresTs !== false && $expiresTs < time();
+            $isActiveOffer = in_array($status, ['awaiting_price_confirmation', 'offer_sent'], true) && !$isExpiredOffer;
+            $expires = $expiresTs !== false ? date('d.m H:i', $expiresTs) : null;
+            $expectedPrice = (float)($offer['expected_price_per_box'] ?? 0);
+            $finalPrice = (float)($offer['offered_price_per_box'] ?? 0);
+            $priceDelta = ($expectedPrice > 0 && $finalPrice > 0) ? $finalPrice - $expectedPrice : null;
             $desired = !empty($offer['desired_delivery_date']) ? date('d.m.Y', strtotime((string)$offer['desired_delivery_date'])) : 'Не имеет значения';
+            $dateChange = is_array($offer['date_change'] ?? null) ? $offer['date_change'] : null;
+            $dateChangeMeta = is_array($dateChange['meta'] ?? null) ? $dateChange['meta'] : [];
+            $dateChangeReason = (string)($dateChangeMeta['reason'] ?? 'rescheduled');
+            $oldDate = !empty($dateChangeMeta['old_desired_delivery_date']) ? date('d.m.Y', strtotime((string)$dateChangeMeta['old_desired_delivery_date'])) : $desired;
+            $proposedDate = !empty($dateChangeMeta['proposed_delivery_date']) ? date('d.m.Y', strtotime((string)$dateChangeMeta['proposed_delivery_date'])) : null;
+            $nextSupplyDate = !empty($dateChangeMeta['next_supply_date']) ? date('d.m.Y', strtotime((string)$dateChangeMeta['next_supply_date'])) : null;
+            $showProposedButton = $proposedDate && ($dateChangeReason !== 'cancelled' || $proposedDate !== $nextSupplyDate);
           ?>
           <div class="p-4 space-y-2">
             <p class="text-sm font-semibold text-gray-800">
               Пришла поставка: <?= htmlspecialchars((string)$offer['product_name']) ?> <?= htmlspecialchars((string)$offer['variety']) ?>
             </p>
-            <p class="text-xs text-gray-600">
-              Бронь: <?= (float)($offer['requested_boxes'] ?? 0) ?> ящ.,
-              цена: <?= number_format((float)($offer['offered_price_per_box'] ?? 0), 0, '.', ' ') ?> ₽,
-              дата: <?= htmlspecialchars($desired) ?>
-            </p>
-            <?php if ($expires): ?>
-              <p class="text-xs text-amber-700">Подтвердите до <?= htmlspecialchars($expires) ?></p>
+            <div class="rounded-2xl border <?= $isActiveOffer ? 'border-emerald-100 bg-emerald-50' : 'border-gray-100 bg-gray-50' ?> p-3 space-y-1">
+              <p class="text-xs font-semibold <?= $isActiveOffer ? 'text-emerald-900' : 'text-gray-600' ?>">
+                <?= $isActiveOffer ? 'Финальная цена готова к подтверждению' : 'Статус предзаказа: ' . htmlspecialchars($status) ?>
+              </p>
+              <p class="text-xs text-gray-700">
+                Бронь: <?= (float)($offer['requested_boxes'] ?? 0) ?> ящ., дата получения: <?= htmlspecialchars($desired) ?>
+              </p>
+              <?php if ($expectedPrice > 0 || $finalPrice > 0): ?>
+                <p class="text-xs text-gray-700">
+                  <?php if ($expectedPrice > 0): ?>Ожидали: <b><?= number_format($expectedPrice, 0, '.', ' ') ?> ₽</b>.<?php endif; ?>
+                  <?php if ($finalPrice > 0): ?> Финальная цена: <b><?= number_format($finalPrice, 0, '.', ' ') ?> ₽</b>.<?php endif; ?>
+                  <?php if ($priceDelta !== null && abs($priceDelta) >= 0.01): ?>
+                    Изменение: <b class="<?= $priceDelta > 0 ? 'text-rose-700' : 'text-emerald-700' ?>"><?= ($priceDelta > 0 ? '+' : '') . number_format($priceDelta, 0, '.', ' ') ?> ₽</b>.
+                  <?php endif; ?>
+                </p>
+              <?php endif; ?>
+              <?php if ($expires && $isActiveOffer): ?>
+                <p class="text-xs text-amber-700">Подтвердите финальную цену до <?= htmlspecialchars($expires) ?>, иначе бронь истечёт.</p>
+              <?php elseif ($isExpiredOffer || $status === 'expired'): ?>
+                <p class="text-xs text-gray-500">Время подтверждения финальной цены истекло.</p>
+              <?php endif; ?>
+            </div>
+            <?php if ($dateChange): ?>
+              <div class="rounded-2xl border border-amber-200 bg-amber-50 p-3 space-y-2">
+                <p class="text-sm font-semibold text-amber-900">
+                  <?= $dateChangeReason === 'cancelled' ? 'Поставка по предзаказу отменена' : 'Поставка по предзаказу перенесена' ?>
+                </p>
+                <p class="text-xs text-amber-800">
+                  Текущая дата получения: <b><?= htmlspecialchars($oldDate) ?></b>.
+                  <?php if ($proposedDate): ?> Новая дата: <b><?= htmlspecialchars($proposedDate) ?></b>.<?php endif; ?>
+                  <?php if ($nextSupplyDate): ?> Следующая поставка: <b><?= htmlspecialchars($nextSupplyDate) ?></b>.<?php endif; ?>
+                </p>
+                <div class="flex flex-wrap gap-2">
+                  <?php if ($showProposedButton): ?>
+                    <button type="button"
+                            class="px-3 py-2 rounded-lg text-xs text-white bg-emerald-600"
+                            data-date-change-decision="accept_new"
+                            data-intent-id="<?= (int)$offer['id'] ?>">
+                      Подтвердить <?= htmlspecialchars($proposedDate) ?>
+                    </button>
+                  <?php endif; ?>
+                  <?php if ($nextSupplyDate): ?>
+                    <button type="button"
+                            class="px-3 py-2 rounded-lg text-xs text-white bg-blue-600"
+                            data-date-change-decision="next_supply"
+                            data-intent-id="<?= (int)$offer['id'] ?>">
+                      Следующая поставка <?= htmlspecialchars($nextSupplyDate) ?>
+                    </button>
+                  <?php else: ?>
+                    <button type="button"
+                            class="px-3 py-2 rounded-lg text-xs text-white bg-blue-600"
+                            data-date-change-decision="wait_next"
+                            data-intent-id="<?= (int)$offer['id'] ?>">
+                      Ждать следующую поставку
+                    </button>
+                  <?php endif; ?>
+                  <button type="button"
+                          class="px-3 py-2 rounded-lg text-xs text-white bg-rose-600"
+                          data-date-change-decision="cancel"
+                          data-intent-id="<?= (int)$offer['id'] ?>">
+                    Отменить
+                  </button>
+                </div>
+              </div>
             <?php endif; ?>
             <div class="flex gap-2">
               <button type="button"
@@ -66,14 +135,14 @@
                       data-preorder-action="confirm"
                       data-intent-id="<?= (int)$offer['id'] ?>"
                       <?= $isActiveOffer ? '' : 'disabled' ?>>
-                Подтверждаю
+                Подтвердить цену
               </button>
               <button type="button"
                       class="px-3 py-2 rounded-lg text-sm text-white <?= $isActiveOffer ? 'bg-rose-600' : 'bg-gray-300 cursor-not-allowed' ?>"
                       data-preorder-action="decline"
                       data-intent-id="<?= (int)$offer['id'] ?>"
                       <?= $isActiveOffer ? '' : 'disabled' ?>>
-                Отказаться
+                Отказаться от цены
               </button>
             </div>
           </div>
@@ -138,6 +207,22 @@
     closeBtn.addEventListener('click', close);
     modal.addEventListener('click', (e) => {
       if (e.target === modal) close();
+    });
+
+    document.querySelectorAll('[data-date-change-decision]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const decision = btn.getAttribute('data-date-change-decision');
+        const intentId = btn.getAttribute('data-intent-id');
+        if (!decision || !intentId) return;
+        const payload = new URLSearchParams();
+        payload.set('decision', decision);
+        await fetch(`/preorder-intents/${intentId}/date-change`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: payload.toString()
+        });
+        window.location.reload();
+      });
     });
 
     document.querySelectorAll('[data-preorder-action]').forEach((btn) => {
