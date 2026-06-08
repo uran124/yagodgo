@@ -25,6 +25,21 @@ class ClientOrderModeTest extends TestCase
         $this->assertSame('instant', $modes['2026-05-20']);
     }
 
+
+    public function testNormalizeOrderModesKeepsPostedPreorderForRealDesiredDate(): void
+    {
+        $pdo = new PDO('sqlite::memory:');
+        $controller = new ClientController($pdo);
+
+        $modes = $controller->normalizeOrderModes([
+            '2026-06-12' => [7 => ['quantity' => 1]],
+        ], [
+            '2026-06-12' => 'preorder',
+        ]);
+
+        $this->assertSame('preorder', $modes['2026-06-12']);
+    }
+
     public function testShouldDisableRewardsForDiscountStock(): void
     {
         $pdo = new PDO('sqlite::memory:');

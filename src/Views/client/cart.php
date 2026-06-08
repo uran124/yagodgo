@@ -49,7 +49,8 @@
         $placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
         $isPreorderItem = (($it['stock_mode'] ?? '') === 'preorder') || $d === null || $d === $placeholder;
         if ($isPreorderItem) {
-          // Под заказ: select станет disabled
+          // Предзаказ сохраняет выбранную покупателем дату, если она уже есть.
+          $preorderDateValue = ($d !== null && $d !== $placeholder) ? (string)$d : $placeholder;
           $options = [];
         } else {
           $deliveryDate = new DateTimeImmutable($d);
@@ -125,24 +126,30 @@
         <div>
           <label class="block text-sm text-gray-600 font-bold mb-1">Выберите дату получения</label>
           <?php if ($isPreorderItem): ?>
-            <input type="hidden" name="delivery_date[<?= $it['product_id'] ?>]" value="<?= htmlspecialchars($placeholder) ?>" form="checkoutForm">
-          <?php endif; ?>
-          <select name="delivery_date[<?= $it['product_id'] ?>]"
-                  form="checkoutForm"
-                  <?= empty($options) ? 'disabled' : 'required' ?>
-                  class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-red-500 focus:ring-2 focus:ring-red-500/20 focus:outline-none transition-all bg-green-50 shadow-sm">
-            <?php if (!empty($options)): ?>
-              <?php foreach ($options as $opt): ?>
-                <option value="<?= htmlspecialchars($opt['value']) ?>">
-                  <?= htmlspecialchars($opt['label']) ?>
-                </option>
-              <?php endforeach; ?>
-            <?php else: ?>
-              <option>После выкупа закупки</option>
-            <?php endif; ?>
-          </select>
-          <?php if ($isPreorderItem): ?>
+            <input type="hidden" name="delivery_date[<?= $it['product_id'] ?>]" value="<?= htmlspecialchars($preorderDateValue ?? $placeholder) ?>" form="checkoutForm">
+            <div class="w-full rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <?php if (($preorderDateValue ?? $placeholder) !== $placeholder): ?>
+                Предзаказ на <?= htmlspecialchars(date('d.m.Y', strtotime((string)$preorderDateValue))) ?>
+              <?php else: ?>
+                После назначения закупки
+              <?php endif; ?>
+            </div>
             <p class="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-700">Цена предварительная. Точная цена будет после выкупа.</p>
+          <?php else: ?>
+            <select name="delivery_date[<?= $it['product_id'] ?>]"
+                    form="checkoutForm"
+                    <?= empty($options) ? 'disabled' : 'required' ?>
+                    class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-red-500 focus:ring-2 focus:ring-red-500/20 focus:outline-none transition-all bg-green-50 shadow-sm">
+              <?php if (!empty($options)): ?>
+                <?php foreach ($options as $opt): ?>
+                  <option value="<?= htmlspecialchars($opt['value']) ?>">
+                    <?= htmlspecialchars($opt['label']) ?>
+                  </option>
+                <?php endforeach; ?>
+              <?php else: ?>
+                <option>После выкупа закупки</option>
+              <?php endif; ?>
+            </select>
           <?php endif; ?>
         </div>
       </div>

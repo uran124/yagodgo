@@ -275,8 +275,8 @@ $nextSupplyDateText = $showNextSupplyBadge ? date('d.m.Y', strtotime($plannedDat
 
         <!-- Предзаказ — вторичное действие: outline-стиль, меньше веса -->
         <button type="button"
-                <?= (($isSaleSection || !$hasPlannedBatch)) ? 'disabled' : '' ?>
-                class="w-full h-9 flex items-center justify-center gap-1.5 border font-medium text-xs sm:text-sm rounded-xl transition-colors preorder-intent-btn <?= (($isSaleSection || !$hasPlannedBatch)) ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed' : 'border-emerald-500 text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100' ?>"
+                <?= $isSaleSection ? 'disabled' : '' ?>
+                class="w-full h-9 flex items-center justify-center gap-1.5 border font-medium text-xs sm:text-sm rounded-xl transition-colors preorder-intent-btn <?= $isSaleSection ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed' : 'border-emerald-500 text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100' ?>"
                 data-product-id="<?= (int)$p['id'] ?>"
                 data-product-title="<?= htmlspecialchars(trim(($p['product'] ?? '') . ' ' . ($p['variety'] ?? ''))) ?>"
                 data-preorder-price="<?= (float)$preorderDiscountBox ?>"
@@ -326,14 +326,6 @@ $nextSupplyDateText = $showNextSupplyBadge ? date('d.m.Y', strtotime($plannedDat
     const hint = root.querySelector('.preorder-intent-hint');
     if (!btn) return;
 
-    const formatDate = (date) => {
-      const d = new Date(date + 'T00:00:00');
-      if (Number.isNaN(d.getTime())) return '';
-      const dd = String(d.getDate()).padStart(2, '0');
-      const mm = String(d.getMonth() + 1).padStart(2, '0');
-      return `${dd}.${mm}`;
-    };
-
     const toIso = (d) => {
       const y = d.getFullYear();
       const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -341,16 +333,16 @@ $nextSupplyDateText = $showNextSupplyBadge ? date('d.m.Y', strtotime($plannedDat
       return `${y}-${m}-${day}`;
     };
 
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+    const minPreorderDate = new Date(todayDate);
+    minPreorderDate.setDate(todayDate.getDate() + 2);
+    const minPreorderIso = toIso(minPreorderDate);
     const basePlanned = btn.dataset.plannedDate || btn.dataset.deliveryDate || '';
-    const startDate = basePlanned ? new Date(basePlanned + 'T00:00:00') : new Date();
-    const dateChoices = [];
-    if (!Number.isNaN(startDate.getTime())) {
-      for (let i = 0; i < 3; i += 1) {
-        const current = new Date(startDate);
-        current.setDate(startDate.getDate() + i);
-        dateChoices.push({label: formatDate(toIso(current)), value: toIso(current)});
-      }
-    }
+    const plannedDate = basePlanned ? new Date(basePlanned + 'T00:00:00') : null;
+    const defaultDate = plannedDate && !Number.isNaN(plannedDate.getTime()) && plannedDate >= minPreorderDate
+      ? toIso(plannedDate)
+      : minPreorderIso;
 
     const overlay = document.createElement('div');
     overlay.className = 'fixed inset-0 z-[120] bg-black/40 hidden items-center justify-center p-2 sm:p-4';
@@ -367,8 +359,8 @@ $nextSupplyDateText = $showNextSupplyBadge ? date('d.m.Y', strtotime($plannedDat
           </div>
         </div>
         <p class="text-xl sm:text-2xl font-bold mb-2.5 preorder-modal-price"></p>
-        <p class="text-xs sm:text-sm mb-2">Выберите дату для бронирования:</p>
-        <div class="space-y-1.5 sm:space-y-2 preorder-date-list mb-3"></div>
+        <label class="block text-xs sm:text-sm mb-1" for="preorder-modal-date-${btn.dataset.productId || '0'}">Дата получения предзаказа:</label>
+        <input id="preorder-modal-date-${btn.dataset.productId || '0'}" type="date" min="${minPreorderIso}" value="${defaultDate}" class="w-full h-10 rounded-xl border border-gray-200 px-3 text-sm preorder-modal-date mb-3">
         <div class="flex gap-2">
           <button type="button" class="flex-1 h-9 sm:h-10 rounded-xl border border-gray-200 preorder-cancel text-sm">Отмена</button>
           <button type="button" class="flex-1 h-9 sm:h-10 rounded-xl text-white bg-emerald-600 preorder-submit text-sm">Забронировать</button>
@@ -379,24 +371,8 @@ $nextSupplyDateText = $showNextSupplyBadge ? date('d.m.Y', strtotime($plannedDat
     const modalQty = overlay.querySelector('.preorder-modal-qty');
     const modalTitle = overlay.querySelector('.preorder-modal-title');
     const modalPrice = overlay.querySelector('.preorder-modal-price');
-    const dateList = overlay.querySelector('.preorder-date-list');
+    const dateInput = overlay.querySelector('.preorder-modal-date');
     const submitBtn = overlay.querySelector('.preorder-submit');
-    let selectedDate = null;
-
-    const renderDates = () => {
-      const items = [...dateChoices, {label: 'Не имеет значения', value: 'any'}];
-      dateList.innerHTML = items.map((item, idx) => `
-        <button type="button" data-date="${item.value}" class="w-full text-left px-2.5 sm:px-3 py-2 rounded-lg border text-sm ${idx===0 ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200'} preorder-date-item">${item.label}</button>
-      `).join('');
-      selectedDate = items[0]?.value ?? 'any';
-      dateList.querySelectorAll('.preorder-date-item').forEach((el) => {
-        el.addEventListener('click', () => {
-          selectedDate = el.getAttribute('data-date') || 'any';
-          dateList.querySelectorAll('.preorder-date-item').forEach((node) => node.className = 'w-full text-left px-2.5 sm:px-3 py-2 rounded-lg border text-sm border-gray-200 preorder-date-item');
-          el.className = 'w-full text-left px-2.5 sm:px-3 py-2 rounded-lg border text-sm border-emerald-500 bg-emerald-50 preorder-date-item';
-        });
-      });
-    };
 
     const closeModal = () => overlay.classList.add('hidden');
     overlay.querySelector('.preorder-cancel').addEventListener('click', closeModal);
@@ -405,10 +381,10 @@ $nextSupplyDateText = $showNextSupplyBadge ? date('d.m.Y', strtotime($plannedDat
     overlay.querySelector('.preorder-plus').addEventListener('click', () => { modalQty.value = String(Math.max(1, parseInt(modalQty.value || '1', 10) + 1)); });
 
     btn.addEventListener('click', async () => {
-      modalTitle.textContent = `Ожидаем поставку ${btn.dataset.productTitle || ''} ${dateChoices[0]?.label || ''}`;
+      modalTitle.textContent = `Предзаказ ${btn.dataset.productTitle || ''}`;
       modalPrice.textContent = `${Math.round(parseFloat(btn.dataset.preorderPrice || '0')).toLocaleString('ru-RU')} ₽`;
       modalQty.value = qtyInput ? String(Math.max(1, parseFloat(qtyInput.value || '1'))) : '1';
-      renderDates();
+      if (dateInput) dateInput.value = defaultDate;
       overlay.classList.remove('hidden');
     });
 
@@ -419,7 +395,7 @@ $nextSupplyDateText = $showNextSupplyBadge ? date('d.m.Y', strtotime($plannedDat
       payload.set('requested_boxes', String(qty > 0 ? qty : 1));
       payload.set('source_section', btn.dataset.sourceSection || '');
       payload.set('source_delivery_date', btn.dataset.deliveryDate || '');
-      payload.set('desired_delivery_date', selectedDate || 'any');
+      payload.set('desired_delivery_date', dateInput?.value || minPreorderIso);
       payload.set('expected_price_per_box', btn.dataset.preorderPrice || '0');
       payload.set('discount_percent_snapshot', btn.dataset.preorderDiscount || '10');
       const res = await fetch('/preorder-intents', {
