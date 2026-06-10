@@ -418,6 +418,17 @@ class OrdersController
 
         $deliveryComment = trim((string)($_POST['delivery_comment'] ?? ''));
         $deliveryDistanceManualRaw = str_replace(',', '.', trim((string)($_POST['delivery_distance_km_manual'] ?? '')));
+        $selectedLatRaw = str_replace(',', '.', trim((string)($_POST['selected_lat'] ?? '')));
+        $selectedLngRaw = str_replace(',', '.', trim((string)($_POST['selected_lng'] ?? '')));
+        $selectedAddressRaw = trim((string)($_POST['selected_address'] ?? ''));
+        $selectedAddressPayload = [];
+        if ($selectedLatRaw !== '' && $selectedLngRaw !== '' && is_numeric($selectedLatRaw) && is_numeric($selectedLngRaw)) {
+            $selectedAddressPayload = [
+                'selected_lat' => $selectedLatRaw,
+                'selected_lng' => $selectedLngRaw,
+                'selected_address' => $selectedAddressRaw,
+            ];
+        }
         $deliveryFee = 300;
         $deliveryDistanceKm = null;
         $deliveryDistanceM = null;
@@ -454,7 +465,7 @@ class OrdersController
                     $deliveryPricingSource = 'manual';
                     $deliveryNormalizedAddress = $addressForDelivery;
                 } elseif ($addressForDelivery !== '') {
-                    $deliveryCalc = $deliveryPricing->calculateForAddress($addressForDelivery);
+                    $deliveryCalc = $deliveryPricing->calculateForAddress($addressForDelivery, null, $selectedAddressPayload);
                     $deliveryFee = (int)($deliveryCalc['delivery_fee'] ?? $deliveryCalc['price_rub'] ?? 300);
                     $deliveryDistanceKm = isset($deliveryCalc['distance_km']) && $deliveryCalc['distance_km'] !== '' ? (float)$deliveryCalc['distance_km'] : null;
                     $deliveryDistanceM = isset($deliveryCalc['distance_m']) && $deliveryCalc['distance_m'] !== '' ? (int)round((float)$deliveryCalc['distance_m']) : null;
@@ -654,6 +665,17 @@ class OrdersController
 
             $deliveryComment = trim((string)($_POST['delivery_comment'] ?? ''));
             $manualDistanceRaw = str_replace(',', '.', trim((string)($_POST['delivery_distance_km_manual'] ?? '')));
+            $selectedLatRaw = str_replace(',', '.', trim((string)($_POST['selected_lat'] ?? '')));
+            $selectedLngRaw = str_replace(',', '.', trim((string)($_POST['selected_lng'] ?? '')));
+            $selectedAddressRaw = trim((string)($_POST['selected_address'] ?? ''));
+            $selectedAddressPayload = [];
+            if ($selectedLatRaw !== '' && $selectedLngRaw !== '' && is_numeric($selectedLatRaw) && is_numeric($selectedLngRaw)) {
+                $selectedAddressPayload = [
+                    'selected_lat' => $selectedLatRaw,
+                    'selected_lng' => $selectedLngRaw,
+                    'selected_address' => $selectedAddressRaw,
+                ];
+            }
             $canReprice = $order && !in_array((string)($order['status'] ?? ''), ['completed', 'cancelled', 'returned'], true);
 
             $deliveryFee = max(0, (int)($order['delivery_fee'] ?? 0));
@@ -689,7 +711,7 @@ class OrdersController
                             $deliveryPricingSource = 'manual';
                             $deliveryNormalizedAddress = $addressForDelivery;
                         } elseif ($addressForDelivery !== '') {
-                            $deliveryCalc = $deliveryPricing->calculateForAddress($addressForDelivery);
+                            $deliveryCalc = $deliveryPricing->calculateForAddress($addressForDelivery, null, $selectedAddressPayload);
                             $deliveryFee = (int)($deliveryCalc['delivery_fee'] ?? $deliveryCalc['price_rub'] ?? 300);
                             $deliveryDistanceKm = isset($deliveryCalc['distance_km']) && $deliveryCalc['distance_km'] !== '' ? (float)$deliveryCalc['distance_km'] : null;
                             $deliveryDistanceM = isset($deliveryCalc['distance_m']) && $deliveryCalc['distance_m'] !== '' ? (int)round((float)$deliveryCalc['distance_m']) : null;
