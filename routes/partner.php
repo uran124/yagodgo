@@ -12,6 +12,7 @@ return [
             'GET /partner/orders/create' => ['App\\Controllers\\OrdersController', 'create'],
             'POST /partner/orders/create' => ['App\\Controllers\\OrdersController', 'storeManual'],
             'POST /partner/delivery/calculate' => ['App\\Controllers\\DeliveryController', 'calculate'],
+            'GET /partner/delivery/address-suggestions' => ['App\\Controllers\\DeliveryController', 'addressSuggestions'],
             'POST /partner/orders/assign' => ['App\\Controllers\\OrdersController', 'assign'],
             'POST /partner/orders/status' => ['App\\Controllers\\OrdersController', 'updateStatus'],
             'POST /partner/orders/update-item' => ['App\\Controllers\\OrdersController', 'updateItem'],
