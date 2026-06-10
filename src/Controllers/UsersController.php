@@ -1077,11 +1077,30 @@ class UsersController
     {
         $auth    = Auth::user();
         $userId  = (int)($_POST['user_id'] ?? 0);
-        $address = trim($_POST['address'] ?? '');
-        $name    = trim($_POST['recipient_name'] ?? '');
-        $phone   = trim($_POST['recipient_phone'] ?? '');
+        $address = trim((string)($_POST['address'] ?? ''));
+        $selectedAddress = trim((string)($_POST['selected_address'] ?? ''));
+        if ($selectedAddress !== '') {
+            $address = $selectedAddress;
+        }
+        $name    = trim((string)($_POST['recipient_name'] ?? ''));
+        $phone   = trim((string)($_POST['recipient_phone'] ?? ''));
+        $comment = trim((string)($_POST['last_checkout_comment'] ?? ''));
+
         $manualDistanceRaw = str_replace(',', '.', trim((string)($_POST['delivery_distance_km_manual'] ?? '')));
         $manualDistanceKm = ($manualDistanceRaw !== '' && is_numeric($manualDistanceRaw)) ? max(0.0, (float)$manualDistanceRaw) : null;
+
+        $previewDistanceRaw = str_replace(',', '.', trim((string)($_POST['delivery_distance_km_preview'] ?? '')));
+        $previewDistanceKm = ($previewDistanceRaw !== '' && is_numeric($previewDistanceRaw)) ? max(0.0, (float)$previewDistanceRaw) : null;
+        $previewDistanceMRaw = trim((string)($_POST['delivery_distance_m_preview'] ?? ''));
+        $previewDistanceM = ($previewDistanceMRaw !== '' && is_numeric($previewDistanceMRaw)) ? max(0, (int)round((float)$previewDistanceMRaw)) : null;
+        $previewProvider = trim((string)($_POST['delivery_pricing_source_preview'] ?? ''));
+        if ($previewProvider !== '' && !preg_match('/^[a-z0-9_\-]{1,50}$/i', $previewProvider)) {
+            $previewProvider = 'calculated';
+        }
+        $selectedLatRaw = str_replace(',', '.', trim((string)($_POST['selected_lat'] ?? '')));
+        $selectedLngRaw = str_replace(',', '.', trim((string)($_POST['selected_lng'] ?? '')));
+        $selectedLat = ($selectedLatRaw !== '' && is_numeric($selectedLatRaw)) ? (float)$selectedLatRaw : null;
+        $selectedLng = ($selectedLngRaw !== '' && is_numeric($selectedLngRaw)) ? (float)$selectedLngRaw : null;
 
         if ($userId && $address !== '') {
             if ($auth && in_array($auth['role'], ['manager', 'partner'], true) && $auth['id'] !== $userId) {
@@ -1097,15 +1116,32 @@ class UsersController
             $values = [$userId, $address, $name, $phone, 0];
             $placeholders = ['?', '?', '?', '?', '?', 'NOW()'];
 
+            $distanceKm = null;
+            $distanceM = null;
+            $distanceProvider = null;
+
             if ($manualDistanceKm !== null) {
                 (new DeliveryPricingService($this->pdo))->calculatePriceForDistance($manualDistanceKm);
+                $distanceKm = $manualDistanceKm;
+                $distanceM = (int)round($manualDistanceKm * 1000);
+                $distanceProvider = 'manual';
+            } elseif ($previewDistanceKm !== null) {
+                $distanceKm = $previewDistanceKm;
+                $distanceM = $previewDistanceM ?? (int)round($previewDistanceKm * 1000);
+                $distanceProvider = $previewProvider !== '' ? $previewProvider : 'calculated';
+            }
+
+            if ($distanceKm !== null) {
                 foreach ([
-                    'delivery_distance_km' => $manualDistanceKm,
-                    'delivery_distance_m' => (int)round($manualDistanceKm * 1000),
-                    'delivery_distance_provider' => 'manual',
+                    'delivery_distance_km' => $distanceKm,
+                    'delivery_distance_m' => $distanceM,
+                    'delivery_distance_provider' => $distanceProvider,
+                    'delivery_lat' => $selectedLat,
+                    'delivery_lng' => $selectedLng,
+                    'delivery_normalized_address' => $selectedAddress !== '' ? $selectedAddress : $address,
                     'delivery_distance_calculated_at' => date('Y-m-d H:i:s'),
                     'delivery_distance_error' => null,
-                    'last_checkout_comment' => trim((string)($_POST['last_checkout_comment'] ?? '')),
+                    'last_checkout_comment' => $comment,
                 ] as $column => $value) {
                     if ($this->columnExists('addresses', $column)) {
                         $columns[] = $column;
@@ -1115,7 +1151,7 @@ class UsersController
                 }
             } elseif ($this->columnExists('addresses', 'last_checkout_comment')) {
                 $columns[] = 'last_checkout_comment';
-                $values[] = trim((string)($_POST['last_checkout_comment'] ?? ''));
+                $values[] = $comment;
                 $placeholders[] = '?';
             }
 
