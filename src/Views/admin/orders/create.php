@@ -45,7 +45,8 @@ $batches = $purchaseBatches ?? [];
       <div id="addressWrapper" class="hidden space-y-2">
         <label class="block text-xs font-medium text-slate-200">Адрес / самовывоз</label>
         <select name="address_id" id="addressSelect" class="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-white placeholder:text-slate-500"></select>
-        <input type="text" name="address_new" id="addressNew" placeholder="Новый адрес" class="hidden w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-white placeholder:text-slate-500">
+        <input type="text" name="address_new" id="addressNew" placeholder="Новый адрес" class="hidden w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-white placeholder:text-slate-500" autocomplete="off">
+        <ul id="addressNewSuggestions" class="hidden max-h-64 overflow-y-auto rounded-xl border border-slate-600 bg-slate-950 text-sm text-slate-100 shadow-lg"></ul>
       </div>
       <div id="deliveryCalcBlock" class="hidden space-y-2 rounded-xl border border-slate-700 bg-slate-900/70 p-3">
         <div class="flex items-center justify-between gap-2">
@@ -65,6 +66,9 @@ $batches = $purchaseBatches ?? [];
         <input type="hidden" name="delivery_fee_preview" id="deliveryFeePreview" value="300">
         <input type="hidden" name="delivery_distance_km_preview" id="deliveryDistancePreview" value="">
         <input type="hidden" name="delivery_pricing_source_preview" id="deliverySourcePreview" value="pending_review">
+        <input type="hidden" name="selected_lat" id="deliverySelectedLat" value="">
+        <input type="hidden" name="selected_lng" id="deliverySelectedLng" value="">
+        <input type="hidden" name="selected_address" id="deliverySelectedAddress" value="">
       </div>
       <div id="userInfo" class="hidden rounded-xl bg-slate-900/70 p-3 text-xs text-slate-200"></div>
     </div>
@@ -74,7 +78,8 @@ $batches = $purchaseBatches ?? [];
       <input type="text" name="new_name" placeholder="Имя" class="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-white placeholder:text-slate-500">
       <input type="hidden" name="new_phone" id="newPhoneHidden">
       <input type="password" name="new_pin" placeholder="PIN, 4 цифры" maxlength="4" inputmode="numeric" class="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-white placeholder:text-slate-500">
-      <input type="text" name="new_address" id="newClientAddress" placeholder="Адрес, пусто = самовывоз" class="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-white placeholder:text-slate-500">
+      <input type="text" name="new_address" id="newClientAddress" placeholder="Адрес, пусто = самовывоз" class="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-white placeholder:text-slate-500" autocomplete="off">
+      <ul id="newClientAddressSuggestions" class="hidden max-h-64 overflow-y-auto rounded-xl border border-slate-600 bg-slate-950 text-sm text-slate-100 shadow-lg"></ul>
     </div>
 
     <div class="order-step-actions fixed inset-x-0 bottom-0 z-50 grid grid-cols-2 gap-2 border-t border-slate-700 bg-slate-800/95 p-2 backdrop-blur sm:static sm:mx-0 sm:mt-4 sm:border-0 sm:bg-transparent sm:p-0"><a href="<?= $base ?>/orders" class="rounded-xl border border-slate-600 bg-slate-900 px-4 py-3 font-semibold text-slate-100 text-center">Назад</a><button type="button" data-next="step2" class="next-step rounded-xl bg-[#F04483] px-4 py-3 font-semibold text-white shadow-sm shadow-pink-950/30">Далее</button></div>
@@ -457,6 +462,11 @@ $batches = $purchaseBatches ?? [];
   const deliveryFeePreview = document.getElementById('deliveryFeePreview');
   const deliveryDistancePreview = document.getElementById('deliveryDistancePreview');
   const deliverySourcePreview = document.getElementById('deliverySourcePreview');
+  const deliverySelectedLat = document.getElementById('deliverySelectedLat');
+  const deliverySelectedLng = document.getElementById('deliverySelectedLng');
+  const deliverySelectedAddress = document.getElementById('deliverySelectedAddress');
+  const addressNewSuggestions = document.getElementById('addressNewSuggestions');
+  const newClientAddressSuggestions = document.getElementById('newClientAddressSuggestions');
   searchPhone.value = '';
 
   searchPhone.addEventListener('input', () => {
@@ -495,6 +505,7 @@ $batches = $purchaseBatches ?? [];
   });
 
   function selectUser(u) {
+    resetSelectedDeliverySuggestion();
     searchPhone.value = u.phone;
     userIdInput.value = u.id;
     newBlock.classList.add('hidden');
@@ -508,6 +519,7 @@ $batches = $purchaseBatches ?? [];
   }
 
   function createNewClient(phone) {
+    resetSelectedDeliverySuggestion();
     userIdInput.value = '';
     newPhoneHidden.value = phone;
     newBlock.classList.remove('hidden');
@@ -595,6 +607,12 @@ $batches = $purchaseBatches ?? [];
 
     const body = new URLSearchParams();
     body.set('address', address);
+    const selectedAddress = deliverySelectedAddress ? deliverySelectedAddress.value.trim() : '';
+    if (selectedAddress && selectedAddress === address && deliverySelectedLat && deliverySelectedLng && deliverySelectedLat.value && deliverySelectedLng.value) {
+      body.set('selected_address', selectedAddress);
+      body.set('selected_lat', deliverySelectedLat.value);
+      body.set('selected_lng', deliverySelectedLng.value);
+    }
     if (deliveryDistanceManual && deliveryDistanceManual.value.trim() !== '') {
       body.set('delivery_distance_km_manual', deliveryDistanceManual.value.trim());
     }
@@ -629,15 +647,112 @@ $batches = $purchaseBatches ?? [];
   }
 
   addressSelect.addEventListener('change', () => {
+    resetSelectedDeliverySuggestion();
     addressNew.classList.toggle('hidden', addressSelect.value !== 'new');
+    if (addressNewSuggestions) addressNewSuggestions.classList.add('hidden');
     const selected = addressSelect.options[addressSelect.selectedIndex];
     if (deliveryComment && selected && selected.dataset.comment !== undefined) deliveryComment.value = selected.dataset.comment || '';
     if (deliveryDistanceManual) deliveryDistanceManual.value = selected && selected.dataset.distanceKm ? selected.dataset.distanceKm : '';
     calculateDelivery();
     updateSummary();
   });
-  if (addressNew) addressNew.addEventListener('input', () => { calculateDelivery(); updateSummary(); });
-  if (newClientAddress) newClientAddress.addEventListener('input', () => { calculateDelivery(); updateSummary(); });
+  function resetSelectedDeliverySuggestion() {
+    if (deliverySelectedLat) deliverySelectedLat.value = '';
+    if (deliverySelectedLng) deliverySelectedLng.value = '';
+    if (deliverySelectedAddress) deliverySelectedAddress.value = '';
+  }
+
+  function applyDeliverySuggestion(input, suggestionList, item) {
+    // В поле и в БД сохраняем короткий адрес DaData, как в админке настроек:
+    // "г Красноярск, ул 9 Мая, д 73", без индекса и полного региона.
+    const selectedAddress = item.value || item.label || item.unrestricted_value || '';
+    input.value = selectedAddress;
+    if (deliverySelectedLat) deliverySelectedLat.value = item.lat || '';
+    if (deliverySelectedLng) deliverySelectedLng.value = item.lng || '';
+    if (deliverySelectedAddress) deliverySelectedAddress.value = selectedAddress;
+    if (deliveryDistanceManual) deliveryDistanceManual.value = '';
+    if (suggestionList) suggestionList.classList.add('hidden');
+    calculateDelivery();
+    updateSummary();
+  }
+
+  function renderDeliverySuggestions(input, suggestionList, suggestions) {
+    if (!suggestionList) return;
+    suggestionList.innerHTML = '';
+    if (!Array.isArray(suggestions) || suggestions.length === 0) {
+      suggestionList.classList.add('hidden');
+      return;
+    }
+    suggestions.forEach(item => {
+      const li = document.createElement('li');
+      li.className = 'cursor-pointer border-b border-slate-800 px-3 py-2 hover:bg-slate-900 last:border-b-0';
+      const title = document.createElement('div');
+      title.className = 'font-semibold text-slate-100';
+      title.textContent = item.value || item.unrestricted_value || '';
+      const meta = document.createElement('div');
+      meta.className = 'text-xs text-slate-400';
+      const parts = [];
+      if (item.label) parts.push(item.label);
+      if (item.qc_geo !== null && item.qc_geo !== undefined && item.qc_geo !== '') parts.push('qc_geo=' + item.qc_geo);
+      if (item.distance_from_center_km) parts.push(item.distance_from_center_km + ' км от центра поиска');
+      meta.textContent = parts.join(' · ');
+      li.appendChild(title);
+      li.appendChild(meta);
+      li.addEventListener('mousedown', event => {
+        event.preventDefault();
+        applyDeliverySuggestion(input, suggestionList, item);
+      });
+      suggestionList.appendChild(li);
+    });
+    suggestionList.classList.remove('hidden');
+  }
+
+  function attachDeliverySuggest(input, suggestionList) {
+    if (!input || !suggestionList) return;
+    let timer = null;
+    input.addEventListener('input', () => {
+      resetSelectedDeliverySuggestion();
+      calculateDelivery();
+      updateSummary();
+      clearTimeout(timer);
+      const query = input.value.trim();
+      if (query.length < 3) {
+        suggestionList.classList.add('hidden');
+        suggestionList.innerHTML = '';
+        return;
+      }
+      timer = setTimeout(async () => {
+        try {
+          const response = await fetch(basePath + '/delivery/address-suggestions?query=' + encodeURIComponent(query), {
+            credentials: 'same-origin',
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+          });
+          const data = await response.json();
+          if (!response.ok || !data.ok) throw new Error(data.message || 'DaData не вернула подсказки');
+          renderDeliverySuggestions(input, suggestionList, data.suggestions || []);
+        } catch (error) {
+          suggestionList.innerHTML = '<li class="px-3 py-2 text-xs text-red-200">' + escapeHtml(error.message || 'Ошибка подсказок DaData') + '</li>';
+          suggestionList.classList.remove('hidden');
+        }
+      }, 250);
+    });
+    input.addEventListener('focus', () => {
+      if (input.value.trim().length >= 3 && suggestionList.children.length > 0) {
+        suggestionList.classList.remove('hidden');
+      }
+    });
+  }
+
+  attachDeliverySuggest(addressNew, addressNewSuggestions);
+  attachDeliverySuggest(newClientAddress, newClientAddressSuggestions);
+  document.addEventListener('click', event => {
+    if (addressNewSuggestions && !addressNewSuggestions.contains(event.target) && event.target !== addressNew) {
+      addressNewSuggestions.classList.add('hidden');
+    }
+    if (newClientAddressSuggestions && !newClientAddressSuggestions.contains(event.target) && event.target !== newClientAddress) {
+      newClientAddressSuggestions.classList.add('hidden');
+    }
+  });
   if (deliveryRecalcBtn) deliveryRecalcBtn.addEventListener('click', calculateDelivery);
   if (deliveryDistanceManual) deliveryDistanceManual.addEventListener('input', calculateDelivery);
   if (referralToggle) referralToggle.addEventListener('change', updateSummary);
