@@ -239,12 +239,13 @@ class UsersController
             $orderCount = (int)$stmt->fetchColumn();
         }
 
-        // Начисления менеджера: 3% по своей ссылке и 3% от всех продаж проекта.
+        // Начисления менеджера: +3% по своей ссылке только за самостоятельные заказы
+        // и базовые 3% от всех завершённых продаж проекта.
         $directBonus = 0;
         if ($directClientIds) {
             $ph = implode(',', array_fill(0, count($directClientIds), '?'));
             $stmt = $this->pdo->prepare(
-                "SELECT SUM(points_accrued) FROM orders WHERE user_id IN ($ph) AND status='completed'"
+                "SELECT SUM(points_accrued) FROM orders WHERE user_id IN ($ph) AND status='completed' AND created_by_user_id IS NULL"
             );
             $stmt->execute($directClientIds);
             $directBonus = (int)($stmt->fetchColumn() ?: 0);
@@ -256,6 +257,16 @@ class UsersController
                 ->query("SELECT SUM(manager_points_accrued) FROM orders WHERE status = 'completed'")
                 ->fetchColumn() ?: 0);
         }
+
+        $managerAccruals = [];
+        $accrualStmt = $this->pdo->prepare(
+            "SELECT amount, description, created_at FROM points_transactions " .
+            "WHERE user_id = ? AND transaction_type = 'accrual' AND amount > 0 " .
+            "AND (description LIKE 'Базовые 3% менеджера%' OR description LIKE 'Бонус менеджера за самостоятельный заказ%') " .
+            "ORDER BY created_at DESC, id DESC LIMIT 20"
+        );
+        $accrualStmt->execute([$managerId]);
+        $managerAccruals = $accrualStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
         // Балансы
         $balStmt = $this->pdo->prepare("SELECT points_balance, rub_balance FROM users WHERE id = ?");
@@ -315,6 +326,7 @@ class UsersController
             'secondBonus'      => $secondBonus,
             'pointsBalance'    => $pointsBalance,
             'rubBalance'       => $rubBalance,
+            'managerAccruals'  => $managerAccruals,
             'payoutTransactions' => $payoutTransactions,
         ]);
     }
