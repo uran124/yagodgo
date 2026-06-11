@@ -48,7 +48,7 @@ class Model
         return true;
     }
 
-    public function belongsTo(string $related, string $foreignKey): null
+    public function belongsTo(string $related, string $foreignKey): mixed
     {
         return null;
     }
