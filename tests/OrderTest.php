@@ -9,7 +9,6 @@ class OrderTest extends TestCase
     {
         if (!class_exists('App\\Models\\Order')) {
             require_once __DIR__ . '/../src/Models/Order.php';
-            class_alias('Models\\Order', 'App\\Models\\Order');
         }
     }
 

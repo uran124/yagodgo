@@ -1,9 +1,8 @@
 <?php
 namespace App\Models;
 
-// В тестовой среде Illuminate может отсутствовать
 if (!class_exists('Illuminate\\Database\\Eloquent\\Model')) {
-    class_alias('\\stdClass', 'Illuminate\\Database\\Eloquent\\Model');
+    require_once __DIR__ . '/../Support/EloquentModelStub.php';
 }
 
 use Illuminate\Database\Eloquent\Model;
