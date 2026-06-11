@@ -800,7 +800,7 @@ class OrdersController
         if ($orderId && in_array($status, ['reserved','new','confirmed','shipped','completed','cancelled','returned'], true)) {
             // Получаем текущий статус и данные заказа
             $stmt = $this->pdo->prepare(
-                "SELECT status, user_id, total_amount, delivery_fee, points_accrued, manager_points_accrued, points_used FROM orders WHERE id = ?"
+                "SELECT status, user_id, total_amount, delivery_fee, points_accrued, manager_points_accrued, points_used, created_by_user_id FROM orders WHERE id = ?"
             );
             $stmt->execute([$orderId]);
             $order = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -854,7 +854,7 @@ class OrdersController
                 // Если переводим в completed впервые — начисляем бонусы
                 if ($status === 'completed' && $order['status'] !== 'completed') {
                     $userId = (int)$order['user_id'];
-                    // Доставка уже входит в total_amount, но баллы начисляются только на товарную часть.
+                    // total_amount уже хранит сумму после скидок/клубничек; доставку исключаем из базы бонусов.
                     $sum    = max(0, (int)$order['total_amount'] - max(0, (int)($order['delivery_fee'] ?? 0)));
 
                     // 5% личный бонус
@@ -894,15 +894,21 @@ class OrdersController
                                 $isFirstClientOrder = ((int)$ordersCountStmt->fetchColumn() === 0);
                             }
 
-                            $refBonus = $refRole === 'manager'
-                                ? Order::calculateManagerReferralBonus($sum)
-                                : Order::calculateReferralBonus($sum, $isPartnerReferrer, $isFirstClientOrder);
+                            $isSelfPlacedOrder = empty($order['created_by_user_id']);
+                            $isManagerReferrer = ($refRole === 'manager');
+                            if ($isManagerReferrer) {
+                                $refBonus = $isSelfPlacedOrder ? Order::calculateManagerReferralBonus($sum) : 0;
+                            } else {
+                                $refBonus = Order::calculateReferralBonus($sum, $isPartnerReferrer, $isFirstClientOrder);
+                            }
                             if ($refBonus > 0) {
                                 $this->pdo->prepare(
                                     "UPDATE users SET points_balance = points_balance + ? WHERE id = ?"
                                 )->execute([$refBonus, $refId]);
 
-                                $refDesc = "Бонус за заказ №{$orderId}";
+                                $refDesc = $isManagerReferrer
+                                    ? "Бонус менеджера за самостоятельный заказ по ссылке №{$orderId}"
+                                    : "Бонус за заказ №{$orderId}";
                                 $this->pdo->prepare(
                                     "INSERT INTO points_transactions (user_id, order_id, amount, transaction_type, description, created_at) VALUES (?, ?, ?, 'accrual', ?, NOW())"
                                 )->execute([$refId, $orderId, $refBonus, $refDesc]);
@@ -919,7 +925,7 @@ class OrdersController
                                     "UPDATE users SET points_balance = points_balance + ? WHERE id = ?"
                                 )->execute([$managerBonus, $projectManagerId]);
 
-                                $mgrDesc = "Управленческий бонус за заказ №{$orderId}";
+                                $mgrDesc = "Базовые 3% менеджера за заказ №{$orderId}";
                                 $this->pdo->prepare(
                                     "INSERT INTO points_transactions (user_id, order_id, amount, transaction_type, description, created_at) VALUES (?, ?, ?, 'accrual', ?, NOW())"
                                 )->execute([$projectManagerId, $orderId, $managerBonus, $mgrDesc]);
