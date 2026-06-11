@@ -1,6 +1,10 @@
 <?php
 namespace App\Models;
 
+if (!class_exists('Illuminate\\Database\\Eloquent\\Model')) {
+    require_once __DIR__ . '/../Support/EloquentModelStub.php';
+}
+
 use Illuminate\Database\Eloquent\Model;
 
 class PointsTransaction extends Model
