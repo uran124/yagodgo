@@ -20,6 +20,7 @@
           <span class="material-icons-round">edit</span>
         </a>
         <form action="/admin/slots/delete" method="post" onsubmit="return confirm('Удалить слот?');">
+          <?= csrf_field() ?>
           <input type="hidden" name="id" value="<?= $s['id'] ?>">
           <button type="submit" class="text-red-600">
             <span class="material-icons-round">delete</span>

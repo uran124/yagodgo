@@ -22,6 +22,7 @@
       </td>
       <td class="p-3 text-center">
         <form action="/admin/content/materials/toggle-active" method="post" class="inline-block">
+          <?= csrf_field() ?>
           <input type="hidden" name="id" value="<?= $m['id'] ?>">
           <input type="hidden" name="category_id" value="<?= $category['id'] ?>">
           <label class="relative inline-flex items-center cursor-pointer">
@@ -32,6 +33,7 @@
       </td>
       <td class="p-3 text-center">
         <form action="/admin/content/materials/toggle-home" method="post" class="inline-block">
+          <?= csrf_field() ?>
           <input type="hidden" name="id" value="<?= $m['id'] ?>">
           <input type="hidden" name="category_id" value="<?= $category['id'] ?>">
           <label class="relative inline-flex items-center cursor-pointer">

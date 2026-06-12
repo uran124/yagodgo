@@ -10,6 +10,7 @@
 
 <?php if ($isNew): ?>
   <form action="<?= $base ?>/users/save" method="post" class="bg-white p-6 rounded shadow max-w-md space-y-4">
+    <?= csrf_field() ?>
     <div>
       <label class="block mb-1">Имя</label>
       <input name="name" type="text" class="w-full border px-2 py-1 rounded" required>
@@ -51,6 +52,7 @@
   </script>
 <?php else: ?>
   <form action="<?= $base ?>/users/save" method="post" class="bg-white p-6 rounded shadow max-w-md space-y-4">
+    <?= csrf_field() ?>
     <input type="hidden" name="id" value="<?= $user['id'] ?>">
     <div>
       <label class="block mb-1">Имя</label>
@@ -113,6 +115,7 @@
         onsubmit="return confirm('Удалить пользователя? Это действие нельзя отменить.');"
         class="inline"
       >
+        <?= csrf_field() ?>
         <input type="hidden" name="id" value="<?= $user['id'] ?>">
         <button
           type="submit"

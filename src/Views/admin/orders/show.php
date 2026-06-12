@@ -128,6 +128,7 @@
           </div>
         </div>
         <form action="<?= $base ?>/orders/update-item" method="post" class="item-editor" data-autosave="true">
+          <?= csrf_field() ?>
           <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
           <input type="hidden" name="product_id" value="<?= $it['product_id'] ?>">
           <input type="hidden" name="quantity" value="<?= $it['quantity'] ?>" data-base-field="quantity">
@@ -151,6 +152,7 @@
     <?php endforeach; ?>
 
     <form action="<?= $base ?>/orders/add-item" method="post" class="pt-2 border-t item-editor">
+      <?= csrf_field() ?>
       <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
       <label class="col-span-2">Товар
       <select name="product_id" class="border px-2 py-1 rounded w-full">
@@ -222,6 +224,7 @@
   </div>
 
   <form action="<?= $base ?>/orders/comment" method="post" class="bg-white p-2 md:p-4 rounded shadow card space-y-1 md:space-y-2" data-autosave="true">
+    <?= csrf_field() ?>
     <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
     <label class="block">
       <span class="block mb-1">Комментарий:</span>
@@ -230,6 +233,7 @@
   </form>
 
   <form action="<?= $base ?>/orders/referral" method="post" class="bg-white p-2 md:p-4 rounded shadow card space-y-1 md:space-y-2" data-autosave="true">
+    <?= csrf_field() ?>
     <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
     <input type="hidden" name="user_id" value="<?= $order['user_id'] ?>">
     <label class="inline-flex items-center cursor-pointer">
@@ -241,6 +245,7 @@
   </form>
 
   <form action="<?= $base ?>/orders/update-delivery" method="post" class="bg-white p-2 md:p-4 rounded shadow card space-y-1 md:space-y-2" data-autosave="true">
+    <?= csrf_field() ?>
     <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
     <div class="delivery-fields">
       <label>
@@ -308,6 +313,7 @@
         ?>
         <?php foreach ($statusOptions as $st => $label): ?>
           <form action="<?= $base ?>/orders/status" method="post">
+            <?= csrf_field() ?>
             <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
             <input type="hidden" name="status" value="<?= $st ?>">
             <button class="px-3 py-1 rounded text-white <?= $btnClasses[$st] ?>" type="submit"><?= $label ?></button>
@@ -319,6 +325,7 @@
 
   <div class="card bg-white shadow">
     <form action="<?= $base ?>/orders/delete" method="post" onsubmit="return confirm('Удалить этот заказ?');">
+      <?= csrf_field() ?>
       <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
       <button class="px-2 py-1 text-xs rounded text-red-700 border border-red-700 hover:bg-red-700 hover:text-white" type="submit" title="Удалить заказ">Удалить заказ</button>
     </form>
