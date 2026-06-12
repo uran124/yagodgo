@@ -48,10 +48,12 @@
               <div class="text-sm text-gray-600"><?= htmlspecialchars($addr['recipient_name']) ?>, <?= htmlspecialchars($addr['recipient_phone']) ?></div>
               <?php if (!$addr['is_primary']): ?>
                 <form action="/profile/set-primary" method="post" class="inline">
+                  <?= csrf_field() ?>
                   <input type="hidden" name="id" value="<?= $addr['id'] ?>">
                   <button class="text-emerald-600 text-sm">Сделать основным</button>
                 </form>
                 <form action="/profile/delete-address" method="post" class="inline ml-2">
+                  <?= csrf_field() ?>
                   <input type="hidden" name="id" value="<?= $addr['id'] ?>">
                   <button class="text-red-600 text-sm">Удалить</button>
                 </form>

@@ -20,6 +20,7 @@ $sectionUrl = static fn(string $section): string => $section === 'general' ? '/a
   </nav>
 
 <form action="<?= htmlspecialchars($sectionUrl($activeSection)) ?>" method="post" class="bg-white p-6 rounded shadow space-y-4">
+  <?= csrf_field() ?>
   <?php if ($activeSection === 'general'): ?>
   <div>
     <label class="block mb-1">Название компании</label>
