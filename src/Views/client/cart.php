@@ -97,6 +97,7 @@
           <div class="flex items-center space-x-3">
             <?php if ($it['quantity'] > 1): ?>
               <form action="/cart/update" method="post">
+                <?= csrf_field() ?>
                 <input type="hidden" name="product_id" value="<?= $it['product_id'] ?>">
                 <button type="submit" name="action" value="decrease" class="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full">
                   <span class="material-icons-round text-gray-600">remove</span>
@@ -104,6 +105,7 @@
               </form>
             <?php else: ?>
               <form action="/cart/remove" method="post" class="remove-from-cart-form" data-id="<?= $it['product_id'] ?>" data-name="<?= htmlspecialchars($it['product']) ?><?php if (!empty($it['variety'])): ?> <?= htmlspecialchars($it['variety']) ?><?php endif; ?>" data-price="<?= $unitPriceToUse ?>" data-qty="<?= $it['quantity'] ?>">
+                <?= csrf_field() ?>
                 <input type="hidden" name="product_id" value="<?= $it['product_id'] ?>">
                 <button type="submit" class="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full">
                   <span class="material-icons-round text-gray-600">delete_outline</span>
@@ -112,6 +114,7 @@
             <?php endif; ?>
             <span class="font-medium text-gray-800"><?= $it['quantity'] ?></span>
             <form action="/cart/update" method="post">
+              <?= csrf_field() ?>
               <input type="hidden" name="product_id" value="<?= $it['product_id'] ?>">
               <button type="submit" name="action" value="increase" class="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full">
                 <span class="material-icons-round text-gray-600">add</span>

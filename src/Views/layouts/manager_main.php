@@ -410,6 +410,7 @@ $isMobileNavActive = static function (string $href) use ($currentPath): bool {
       }
     }
   </style>
+  <meta name="csrf-token" content="<?= htmlspecialchars(csrf_token(), ENT_QUOTES) ?>">
 </head>
 <body class="flex flex-col h-screen overflow-hidden bg-gray-100 font-sans">
 

@@ -10,6 +10,7 @@
 
 $switch = static function (string $type, int $id, bool $checked, bool $enabled = true): void { ?>
   <form action="/admin/apps/sitemap/toggle-item" method="post" class="inline-block">
+    <?= csrf_field() ?>
     <input type="hidden" name="type" value="<?= htmlspecialchars($type) ?>">
     <input type="hidden" name="id" value="<?= $id ?>">
     <label class="relative inline-flex items-center <?= $enabled ? 'cursor-pointer' : 'cursor-not-allowed opacity-50' ?>">
@@ -21,6 +22,7 @@ $switch = static function (string $type, int $id, bool $checked, bool $enabled =
 
 $pageSwitch = static function (string $key, bool $checked): void { ?>
   <form action="/admin/apps/sitemap/toggle-page" method="post" class="inline-block">
+    <?= csrf_field() ?>
     <input type="hidden" name="key" value="<?= htmlspecialchars($key) ?>">
     <label class="relative inline-flex items-center cursor-pointer">
       <input type="checkbox" onchange="this.form.submit()" class="sr-only peer" <?= $checked ? 'checked' : '' ?>>
@@ -37,6 +39,7 @@ $pageSwitch = static function (string $key, bool $checked): void { ?>
       <p class="mt-1 text-sm text-gray-500">Последнее обновление: <?= $settings['last_generated'] ? htmlspecialchars((string)$settings['last_generated']) : 'никогда' ?></p>
     </div>
     <form action="/admin/apps/sitemap/generate" method="post">
+      <?= csrf_field() ?>
       <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-[#C86052] px-5 py-3 font-semibold text-white shadow hover:bg-[#B44D47]">
         <span class="material-icons-round text-base">sync</span>
         Обновить sitemap.xml
