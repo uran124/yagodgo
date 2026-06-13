@@ -5,6 +5,7 @@ use PHPUnit\Framework\TestCase;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;
+use App\Middleware\CsrfMiddleware;
 
 class CsrfProtectionTest extends TestCase
 {
@@ -14,6 +15,7 @@ class CsrfProtectionTest extends TestCase
             @session_start();
         }
         require_once __DIR__ . '/../src/helpers.php';
+        require_once __DIR__ . '/../src/Middleware/CsrfMiddleware.php';
         $_SESSION = [];
         $_POST = [];
         unset($_SERVER['HTTP_X_CSRF_TOKEN']);
@@ -47,6 +49,17 @@ class CsrfProtectionTest extends TestCase
         $this->assertTrue(is_csrf_exempt_path('/telegram/callback'));
         $this->assertTrue(is_csrf_exempt_path('/payments/robokassa/result'));
         $this->assertFalse(is_csrf_exempt_path('/admin/orders/status'));
+    }
+
+    public function testCsrfMiddlewareProtectsOnlyBrowserPostRoutes(): void
+    {
+        $middleware = new CsrfMiddleware();
+
+        $this->assertFalse($middleware->shouldProtect('GET', '/admin/orders/status'));
+        $this->assertFalse($middleware->shouldProtect('POST', '/telegram/webhook'));
+        $this->assertFalse($middleware->shouldProtect('POST', '/payments/robokassa/result'));
+        $this->assertTrue($middleware->shouldProtect('POST', '/admin/orders/status'));
+        $this->assertTrue($middleware->shouldProtect('post', '/checkout'));
     }
 
     public function testAllPostFormsRenderCsrfField(): void

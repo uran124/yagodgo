@@ -121,34 +121,6 @@ if (!function_exists('is_csrf_exempt_path')) {
     }
 }
 
-if (!function_exists('enforce_csrf_for_request')) {
-    /**
-     * Enforce CSRF protection for browser state-changing requests.
-     */
-    function enforce_csrf_for_request(string $method, string $uri): void
-    {
-        if ($method !== 'POST' || is_csrf_exempt_path($uri)) {
-            return;
-        }
-
-        if (verify_csrf_token(csrf_request_token())) {
-            return;
-        }
-
-        http_response_code(419);
-        $accept = $_SERVER['HTTP_ACCEPT'] ?? '';
-        $requestedWith = $_SERVER['HTTP_X_REQUESTED_WITH'] ?? '';
-        if (stripos($accept, 'application/json') !== false || strtolower($requestedWith) === 'xmlhttprequest') {
-            header('Content-Type: application/json; charset=UTF-8');
-            echo json_encode(['error' => 'Недействительный токен безопасности'], JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-
-        echo 'Недействительный токен безопасности. Обновите страницу и попробуйте снова.';
-        exit;
-    }
-}
-
 if (!function_exists('get_setting')) {
     /**
      * Retrieve a setting value from the database with simple in-request caching.
