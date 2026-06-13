@@ -109,6 +109,7 @@ define('DISCOUNT_FACTOR', $constants['discount_factor']);
 require_once __DIR__ . '/../src/helpers.php';
 
 $authMiddleware = new App\Middleware\AuthMiddleware();
+$csrfMiddleware = new App\Middleware\CsrfMiddleware();
 
 return [
     'pdo' => $pdo,
@@ -116,4 +117,5 @@ return [
     'smsConfig' => $smsConfig,
     'emailConfig' => $emailConfig,
     'authMiddleware' => $authMiddleware,
+    'csrfMiddleware' => $csrfMiddleware,
 ];

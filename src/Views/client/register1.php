@@ -37,6 +37,7 @@
     <!-- Форма регистрации -->
     <div class="bg-white rounded-3xl shadow-2xl p-8 backdrop-blur-sm">
       <form id="registerForm" action="/register" method="post" class="space-y-6">
+        <?= csrf_field() ?>
 
         <!-- Поле имени -->
         <div class="space-y-2">

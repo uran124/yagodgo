@@ -123,6 +123,7 @@
                   data-id="<?= $product['id'] ?>"
                   data-name="<?= htmlspecialchars($product['product'] . ($product['variety'] ? ' ' . $product['variety'] : '')) ?>"
                   data-price="<?= $priceBox ?>">
+              <?= csrf_field() ?>
               <input type="hidden" name="product_id" value="<?= $product['id'] ?>">
               <input type="hidden" name="stock_mode" value="instant">
 

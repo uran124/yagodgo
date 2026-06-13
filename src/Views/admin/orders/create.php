@@ -12,6 +12,7 @@ $batches = $purchaseBatches ?? [];
 <?php endif; ?>
 
 <form action="<?= $base ?>/orders/create" method="post" class="order-create-form space-y-4 pb-24" id="orderForm">
+  <?= csrf_field() ?>
   <input type="hidden" name="stock_mode" id="stockMode" value="instant">
 
   <div class="rounded-2xl bg-slate-800/70 p-2 ring-1 ring-slate-700" aria-label="Прогресс оформления заказа">

@@ -470,6 +470,7 @@
       });
     }
   </script>
+  <meta name="csrf-token" content="<?= htmlspecialchars(csrf_token(), ENT_QUOTES) ?>">
 </head>
 <body class="bg-gradient-to-br from-orange-50 via-white to-pink-50 text-gray-800 min-h-screen">
 

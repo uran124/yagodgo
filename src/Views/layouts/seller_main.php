@@ -274,6 +274,7 @@ $labelRole = 'Селлер';
       body { font-size: 14px; }
     }
   </style>
+  <meta name="csrf-token" content="<?= htmlspecialchars(csrf_token(), ENT_QUOTES) ?>">
 </head>
 <body class="flex flex-col min-h-screen bg-gray-100 font-sans">
 
