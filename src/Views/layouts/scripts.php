@@ -1,3 +1,33 @@
+<script>
+(function () {
+  const tokenMeta = document.querySelector('meta[name="csrf-token"]');
+  const csrfToken = tokenMeta ? tokenMeta.getAttribute('content') : '';
+  if (!csrfToken || !window.fetch) {
+    return;
+  }
+
+  const unsafeMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+  const originalFetch = window.fetch.bind(window);
+
+  window.fetch = function (input, init) {
+    init = init || {};
+    const request = input instanceof Request ? input : null;
+    const method = (init.method || (request ? request.method : 'GET') || 'GET').toUpperCase();
+    const url = request ? request.url : String(input);
+    const target = new URL(url, window.location.href);
+
+    if (target.origin === window.location.origin && unsafeMethods.has(method)) {
+      const headers = new Headers(init.headers || (request ? request.headers : undefined));
+      if (!headers.has('X-CSRF-Token')) {
+        headers.set('X-CSRF-Token', csrfToken);
+      }
+      init.headers = headers;
+    }
+
+    return originalFetch(input, init);
+  };
+})();
+</script>
 <!-- Analytics and other script includes -->
 
 <!-- Yandex.Metrika counter -->

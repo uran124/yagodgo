@@ -62,6 +62,7 @@ $pickupAddress   = 'Самовывоз: 9 мая, 73';
       ?>
 
       <form action="/checkout" method="post" class="space-y-6" data-checkout-form>
+        <?= csrf_field() ?>
         <input type="hidden" name="selected_orders_present" value="1">
         <?php foreach ($groups as $dateKey => $block): ?>
           <?php

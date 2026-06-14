@@ -27,6 +27,18 @@ class AuthControllerTest extends TestCase
         $_POST = [];
     }
 
+    public function testRotatesSessionIdAfterAuthentication(): void
+    {
+        $initialSessionId = session_id();
+        $controller = new AuthController(new PDO('sqlite::memory:'));
+        $method = new \ReflectionMethod($controller, 'rotateSessionIdAfterAuthentication');
+        $method->setAccessible(true);
+
+        $method->invoke($controller);
+
+        $this->assertNotSame($initialSessionId, session_id());
+    }
+
     public function testVerifyResetPinCode(): void
     {
         $_SESSION['reset_phone'] = '79029237794';

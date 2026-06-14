@@ -1,5 +1,6 @@
 <?php /** @var array|null $category */ ?>
 <form action="/admin/content/category/save" method="post" class="space-y-4 bg-white p-6 rounded shadow max-w-md">
+  <?= csrf_field() ?>
   <?php if (!empty($category['id'])): ?>
     <input type="hidden" name="id" value="<?= $category['id'] ?>">
   <?php endif; ?>

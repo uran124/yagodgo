@@ -119,6 +119,7 @@ $nextSupplyDateText = $showNextSupplyBadge ? date('d.m.Y', strtotime($plannedDat
       <?php if ($isStaff): ?>
         <div class="absolute top-10 left-3 bg-white border rounded shadow p-2 z-10 hidden" data-date-form="<?= $p['id'] ?>">
           <form action="<?= $basePath ?>/products/update-date" method="post" class="flex items-center space-x-2">
+            <?= csrf_field() ?>
             <input type="hidden" name="id" value="<?= $p['id'] ?>">
             <input type="date" name="delivery_date" value="<?= htmlspecialchars($d ?? '') ?>" class="border px-1 py-1 rounded text-sm">
             <button type="submit" class="bg-blue-500 text-white rounded px-2 py-1 text-xs">Обновить закупку</button>
@@ -219,6 +220,7 @@ $nextSupplyDateText = $showNextSupplyBadge ? date('d.m.Y', strtotime($plannedDat
       <?php if ($isStaff): ?>
         <div class="mt-2 hidden" data-price-form="<?= $p['id'] ?>">
           <form action="<?= $basePath ?>/products/update-price" method="post" class="flex items-center space-x-2">
+            <?= csrf_field() ?>
             <input type="hidden" name="id" value="<?= $p['id'] ?>">
             <input type="hidden" name="purchase_batch_id" value="<?= (int)($p['purchase_batch_id'] ?? 0) ?>">
             <input type="hidden" name="price_context" value="<?= htmlspecialchars($isPreorderSection ? 'preorder' : ($isInStockSection ? 'in_stock' : $cardSection)) ?>">
@@ -237,6 +239,7 @@ $nextSupplyDateText = $showNextSupplyBadge ? date('d.m.Y', strtotime($plannedDat
               data-id="<?= $p['id'] ?>"
               data-name="<?= htmlspecialchars($p['product'] . ($p['variety'] ? ' ' . $p['variety'] : '')) ?>"
               data-price="<?= $priceBox ?>">
+          <?= csrf_field() ?>
 
           <input type="hidden" name="product_id" value="<?= $p['id'] ?>">
           <input type="hidden" name="stock_mode" value="instant">

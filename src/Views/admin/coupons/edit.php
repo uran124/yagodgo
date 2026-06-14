@@ -1,5 +1,6 @@
 <?php /** @var array|null $coupon */ ?>
 <form action="/admin/coupons/save" method="post" class="bg-white p-6 rounded shadow max-w-md space-y-4">
+  <?= csrf_field() ?>
   <?php if ($coupon): ?>
     <input type="hidden" name="id" value="<?= $coupon['id'] ?>">
   <?php endif; ?>

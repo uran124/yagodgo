@@ -1,10 +1,49 @@
 <?php
 declare(strict_types=1);
 
-ini_set('display_errors', '1');
+$appEnv = getenv('APP_ENV') ?: 'production';
+$appDebugRaw = getenv('APP_DEBUG');
+$appDebug = $appDebugRaw !== false
+    ? filter_var($appDebugRaw, FILTER_VALIDATE_BOOLEAN)
+    : !in_array($appEnv, ['production', 'prod'], true);
+
+ini_set('display_errors', $appDebug ? '1' : '0');
+ini_set('display_startup_errors', $appDebug ? '1' : '0');
+ini_set('log_errors', '1');
 error_reporting(E_ALL);
 
 mb_internal_encoding('UTF-8');
+
+function appLog(string $message, ?Throwable $throwable = null): void
+{
+    $logFile = getenv('APP_LOG_FILE') ?: dirname(__DIR__) . '/log/app.log';
+    $logDir = dirname($logFile);
+    if (!is_dir($logDir)) {
+        @mkdir($logDir, 0775, true);
+    }
+
+    $context = $throwable !== null
+        ? sprintf(' in %s:%d\n%s', $throwable->getFile(), $throwable->getLine(), $throwable->getTraceAsString())
+        : '';
+    $safeMessage = class_exists('App\Helpers\SensitiveData')
+        ? \App\Helpers\SensitiveData::sanitizeText($message . $context)
+        : $message . $context;
+
+    error_log(sprintf('[%s] %s%s', date('Y-m-d H:i:s'), $safeMessage, PHP_EOL), 3, $logFile);
+}
+
+function renderBootstrapError(string $publicMessage, ?Throwable $throwable = null): void
+{
+    global $appDebug;
+
+    http_response_code(500);
+    if ($appDebug && $throwable !== null) {
+        echo '<pre>' . htmlspecialchars($publicMessage . "\n" . $throwable->getMessage() . "\n" . $throwable->getTraceAsString(), ENT_QUOTES) . '</pre>';
+        return;
+    }
+
+    echo htmlspecialchars($publicMessage, ENT_QUOTES);
+}
 
 session_start();
 header('Content-Type: text/html; charset=UTF-8');
@@ -35,6 +74,11 @@ if (file_exists($vendorAutoload)) {
     });
 }
 
+set_exception_handler(static function (Throwable $e): void {
+    appLog('Uncaught exception: ' . $e->getMessage(), $e);
+    renderBootstrapError('Внутренняя ошибка приложения. Попробуйте позже.', $e);
+});
+
 /**
  * @param array<string, mixed> $config
  * @param array<int, string> $requiredKeys
@@ -50,8 +94,8 @@ function ensureRequiredConfig(string $configName, array $config, array $required
     }
 
     if ($missing !== []) {
-        http_response_code(500);
-        echo 'Ошибка конфигурации: отсутствуют обязательные ключи: ' . htmlspecialchars(implode(', ', $missing));
+        appLog('Missing required config keys: ' . implode(', ', $missing));
+        renderBootstrapError('Ошибка конфигурации: отсутствуют обязательные ключи: ' . implode(', ', $missing));
         exit;
     }
 }
@@ -68,14 +112,13 @@ ensureRequiredConfig('sms', $smsConfig, ['api_id']);
 ensureRequiredConfig('email', $emailConfig, ['from']);
 
 if (!filter_var($emailConfig['from'], FILTER_VALIDATE_EMAIL)) {
-    http_response_code(500);
-    echo 'Ошибка конфигурации: email.from должен быть валидным email-адресом.';
+    appLog('Invalid email.from runtime config value.');
+    renderBootstrapError('Ошибка конфигурации: email.from должен быть валидным email-адресом.');
     exit;
 }
 
 set_error_handler(static function (int $severity, string $message, string $file, int $line): bool {
-    $safeMessage = \App\Helpers\SensitiveData::sanitizeText($message);
-    error_log(sprintf('[%s] PHP error: %s in %s:%d', date('Y-m-d H:i:s'), $safeMessage, $file, $line));
+    appLog(sprintf('PHP error [%d]: %s in %s:%d', $severity, $message, $file, $line));
     return false;
 });
 
@@ -88,9 +131,8 @@ try {
         $dbConfig['options']
     );
 } catch (PDOException $e) {
-    http_response_code(500);
-    echo 'Ошибка подключения к базе данных. Проверьте корректность database.* в конфиге.';
-    error_log(\App\Helpers\SensitiveData::sanitizeText($e->getMessage()));
+    appLog('Database connection failed: ' . $e->getMessage(), $e);
+    renderBootstrapError('Ошибка подключения к базе данных. Проверьте корректность database.* в конфиге.', $e);
     exit;
 }
 
@@ -109,6 +151,7 @@ define('DISCOUNT_FACTOR', $constants['discount_factor']);
 require_once __DIR__ . '/../src/helpers.php';
 
 $authMiddleware = new App\Middleware\AuthMiddleware();
+$csrfMiddleware = new App\Middleware\CsrfMiddleware();
 
 return [
     'pdo' => $pdo,
@@ -116,4 +159,5 @@ return [
     'smsConfig' => $smsConfig,
     'emailConfig' => $emailConfig,
     'authMiddleware' => $authMiddleware,
+    'csrfMiddleware' => $csrfMiddleware,
 ];

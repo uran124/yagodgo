@@ -1,11 +1,20 @@
 <?php
 
-['pdo' => $pdo, 'telegramConfig' => $telegramConfig, 'smsConfig' => $smsConfig, 'emailConfig' => $emailConfig, 'authMiddleware' => $authMiddleware] = require __DIR__ . '/bootstrap/app.php';
+[
+    'pdo' => $pdo,
+    'telegramConfig' => $telegramConfig,
+    'smsConfig' => $smsConfig,
+    'emailConfig' => $emailConfig,
+    'authMiddleware' => $authMiddleware,
+    'csrfMiddleware' => $csrfMiddleware,
+] = require __DIR__ . '/bootstrap/app.php';
 require __DIR__ . '/bootstrap/views.php';
 require __DIR__ . '/bootstrap/auth.php';
 
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $method = $_SERVER['REQUEST_METHOD'];
+
+requireCsrf($method, $uri);
 
 if ($uri === '/favicon.ico') {
     $faviconPath = __DIR__ . '/assets/images/favicon.svg';
@@ -22,6 +31,7 @@ $context = [
     'smsConfig' => $smsConfig,
     'emailConfig' => $emailConfig,
     'authMiddleware' => $authMiddleware,
+    'csrfMiddleware' => $csrfMiddleware,
 ];
 
 $routes = require __DIR__ . '/routes/index.php';

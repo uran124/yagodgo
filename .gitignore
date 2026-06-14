@@ -1,2 +1,9 @@
 /vendor/
 .phpunit.result.cache
+
+# Runtime logs and generated files
+*.log
+/log/*
+!/log/.gitkeep
+/uploads/*
+!/uploads/.gitkeep

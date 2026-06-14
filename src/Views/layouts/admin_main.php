@@ -537,6 +537,7 @@
       transition: transform 0.3s ease;
     }
   </style>
+  <meta name="csrf-token" content="<?= htmlspecialchars(csrf_token(), ENT_QUOTES) ?>">
 </head>
 <body class="min-h-screen bg-gray-100 font-sans">
   <?php
