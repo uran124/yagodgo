@@ -158,6 +158,7 @@ make test      # запустить PHPUnit
 - `config/sms.php` — SMS integration;
 - `config/email.php` — email sender config;
 - `config/constants.php` — бизнес-константы (`placeholder_date`, `box_markup`, `discount_factor`).
+- `APP_ENV`, `APP_DEBUG`, `APP_LOG_FILE` — режим запуска, debug-вывод и путь к application log.
 
 ### Важное замечание
 
@@ -175,6 +176,9 @@ make test      # запустить PHPUnit
 
 Опциональные:
 
+- `APP_ENV` (`production` по умолчанию; для локальной разработки — `local`)
+- `APP_DEBUG` (`false` в production, `true`/`1` для подробных локальных ошибок)
+- `APP_LOG_FILE` (по умолчанию `log/app.log`)
 - `TELEGRAM_ADMIN_TOPIC_ID`
 - `TELEGRAM_SECRET_TOKEN`
 
@@ -187,6 +191,16 @@ make test      # запустить PHPUnit
 - `config/REQUIRED_KEYS.md`
 
 При старте приложения `bootstrap/app.php` валидирует обязательные ключи и завершает запуск с понятной ошибкой, если что-то не задано.
+
+
+### Режимы ошибок и логирование
+
+`bootstrap/app.php` выбирает режим ошибок по `APP_ENV` и `APP_DEBUG`:
+
+- production-safe режим по умолчанию: `APP_ENV=production`, `APP_DEBUG=false`, `display_errors=0`;
+- локальная разработка: `APP_ENV=local`, при отсутствии `APP_DEBUG` подробный вывод включается автоматически;
+- детали PHP errors / uncaught exceptions / ошибок подключения к БД пишутся в `APP_LOG_FILE` или `log/app.log`;
+- в production пользователю показывается безопасное сообщение без stack trace и секретов.
 
 ### Чеклист ротации ключей
 
