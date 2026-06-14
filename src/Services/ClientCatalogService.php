@@ -62,7 +62,8 @@ class ClientCatalogService
                 10,
                 'discount'
             ),
-            'materials' => $this->fetchLatestMaterials(),
+            'materials' => $this->fetchHomeMaterials(),
+            'materialCategories' => $this->fetchMaterialCategories(),
         ];
     }
 
@@ -250,16 +251,31 @@ class ClientCatalogService
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function fetchLatestMaterials(): array
+    private function fetchHomeMaterials(): array
     {
         $stmt = $this->pdo->query(
             "SELECT m.id, m.alias AS mat_alias, m.title, m.short_desc, m.image_path,\n" .
-            "       c.alias AS cat_alias\n" .
+            "       c.name AS category_name, c.alias AS cat_alias\n" .
             "FROM materials m\n" .
             "JOIN content_categories c ON c.id = m.category_id\n" .
-            "WHERE m.is_active = 1 AND m.show_on_home = 1\n" .
-            "ORDER BY m.created_at DESC\n" .
-            "LIMIT 5"
+            "WHERE m.is_active = 1\n" .
+            "ORDER BY c.name ASC, m.created_at DESC, m.id DESC"
+        );
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function fetchMaterialCategories(): array
+    {
+        $stmt = $this->pdo->query(
+            "SELECT c.id, c.name, c.alias, COUNT(m.id) AS materials_count\n" .
+            "FROM content_categories c\n" .
+            "JOIN materials m ON m.category_id = c.id AND m.is_active = 1\n" .
+            "GROUP BY c.id, c.name, c.alias\n" .
+            "ORDER BY c.name ASC"
         );
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);

@@ -4,6 +4,7 @@
  * @var array $sellerProducts
  * @var array $preorderProducts
  * @var array $discountProducts
+ * @var array $materialCategories
  * @var string|null $userName
  */ ?>
 
@@ -198,11 +199,22 @@
             Рассказываем, как выбрать свежую клубнику, черешню и другие сезонные ягоды в Красноярске, как хранить фрукты после доставки и какие сорта лучше подходят для десертов, заготовок и подарков.
           </p>
         </div>
-        <a href="/catalog" class="inline-flex items-center text-sm font-semibold text-red-500 hover:text-red-600">
-          Купить ягоды
+        <a href="/content" class="inline-flex items-center text-sm font-semibold text-red-500 hover:text-red-600">
+          Все материалы
           <span class="material-icons-round text-base ml-1">arrow_forward</span>
         </a>
       </div>
+      <?php if (!empty($materialCategories)): ?>
+        <nav class="flex gap-2 overflow-x-auto no-scrollbar pb-3 mb-3" aria-label="Разделы материалов">
+          <a href="/content" class="flex-none rounded-full bg-red-500 px-3 py-1.5 text-xs font-semibold text-white shadow-sm">Все материалы</a>
+          <?php foreach ($materialCategories as $category): ?>
+            <a href="/content/<?= urlencode((string)$category['alias']) ?>" class="flex-none rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 shadow-sm ring-1 ring-gray-100 hover:text-red-500">
+              <?= htmlspecialchars((string)$category['name']) ?>
+              <span class="text-gray-400">(<?= (int)$category['materials_count'] ?>)</span>
+            </a>
+          <?php endforeach; ?>
+        </nav>
+      <?php endif; ?>
       <div class="embla drag-free has-arrows relative" itemscope itemtype="https://schema.org/ItemList">
         <button data-dir="left" class="hidden md:flex items-center justify-center w-8 h-8 absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100" aria-label="Предыдущие материалы">
           <span class="material-icons-round text-gray-600">chevron_left</span>
@@ -217,6 +229,11 @@
                 <meta itemprop="position" content="<?= $index + 1 ?>">
                 <meta itemprop="name" content="<?= htmlspecialchars((string)$m['title'], ENT_QUOTES) ?>">
                 <meta itemprop="url" content="/content/<?= urlencode((string)$m['cat_alias']) ?>/<?= urlencode((string)$m['mat_alias']) ?>">
+                <?php if (!empty($m['category_name'])): ?>
+                  <a href="/content/<?= urlencode((string)$m['cat_alias']) ?>" class="mb-2 inline-flex rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-500 hover:bg-red-100">
+                    <?= htmlspecialchars((string)$m['category_name']) ?>
+                  </a>
+                <?php endif; ?>
                 <?php $material = $m; include __DIR__ . '/_material_card.php'; ?>
               </div>
             <?php endforeach; ?>

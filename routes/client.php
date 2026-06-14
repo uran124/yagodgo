@@ -94,6 +94,22 @@ return [
         return true;
     },
     static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('GET', '/content', $method, $uri)) {
+            return false;
+        }
+
+        (new App\Controllers\ClientController($c['pdo']))->materials();
+        return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeRegex('GET', '#^/content/([^/]+)$#', $method, $uri, $m)) {
+            return false;
+        }
+
+        (new App\Controllers\ClientController($c['pdo']))->materials($m[1]);
+        return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
         if (!routeRegex('GET', '#^/content/([^/]+)/([^/]+)$#', $method, $uri, $m)) {
             return false;
         }

@@ -1422,6 +1422,77 @@ public function cancelReservedOrder(int $orderId): void
     }
 
 
+
+    /** Список SEO-материалов */
+    public function materials(?string $categoryAlias = null): void
+    {
+        $category = null;
+        $params = [];
+        $where = 'm.is_active = 1';
+
+        if ($categoryAlias !== null) {
+            $catStmt = $this->pdo->prepare(
+                'SELECT id, name, alias, meta_title, meta_description, meta_keywords
+                   FROM content_categories
+                  WHERE alias = ?
+                  LIMIT 1'
+            );
+            $catStmt->execute([$categoryAlias]);
+            $category = $catStmt->fetch(PDO::FETCH_ASSOC);
+            if (!$category) {
+                http_response_code(404);
+                echo 'Раздел материалов не найден';
+                return;
+            }
+
+            $where .= ' AND c.alias = ?';
+            $params[] = $categoryAlias;
+        }
+
+        $stmt = $this->pdo->prepare(
+            "SELECT m.id, m.alias AS mat_alias, m.title, m.short_desc, m.image_path, m.created_at,
+                    c.name AS category_name, c.alias AS cat_alias
+               FROM materials m
+               JOIN content_categories c ON c.id = m.category_id
+              WHERE {$where}
+              ORDER BY c.name ASC, m.created_at DESC, m.id DESC"
+        );
+        $stmt->execute($params);
+        $materials = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $categoriesStmt = $this->pdo->query(
+            "SELECT c.id, c.name, c.alias, COUNT(m.id) AS materials_count
+               FROM content_categories c
+               JOIN materials m ON m.category_id = c.id AND m.is_active = 1
+              GROUP BY c.id, c.name, c.alias
+              ORDER BY c.name ASC"
+        );
+
+        $title = $category
+            ? (string)($category['meta_title'] ?: $category['name'] . ' — материалы BerryGo')
+            : 'Полезные материалы о ягодах и фруктах | BerryGo';
+        $description = $category
+            ? (string)($category['meta_description'] ?: 'SEO-материалы BerryGo: советы о выборе, хранении и заказе свежих ягод и фруктов с доставкой в Красноярске.')
+            : 'Все полезные материалы BerryGo о свежих ягодах, фруктах, клубнике, черешне, хранении, сортах и доставке по Красноярску.';
+
+        view('client/materials', [
+            'materials' => $materials,
+            'categories' => $categoriesStmt->fetchAll(PDO::FETCH_ASSOC),
+            'currentCategory' => $category,
+            'meta' => [
+                'title' => $title,
+                'description' => $description,
+                'keywords' => $category ? (string)($category['meta_keywords'] ?? '') : 'ягоды Красноярск, клубника Красноярск, черешня Красноярск, доставка ягод, свежие фрукты',
+            ],
+            'breadcrumbs' => $category
+                ? [
+                    ['label' => 'Материалы', 'url' => '/content'],
+                    ['label' => $category['name']],
+                ]
+                : [['label' => 'Материалы']],
+        ]);
+    }
+
     /** Показ одного материала */
     public function showMaterial(string $categoryAlias, string $alias): void
     {
@@ -1429,7 +1500,7 @@ public function cancelReservedOrder(int $orderId): void
             "SELECT m.*, c.alias AS category_alias, c.name AS category_name
                FROM materials m
                JOIN content_categories c ON c.id = m.category_id
-               WHERE m.alias = ? AND c.alias = ?"
+               WHERE m.alias = ? AND c.alias = ? AND m.is_active = 1"
         );
         $stmt->execute([$alias, $categoryAlias]);
         $material = $stmt->fetch(PDO::FETCH_ASSOC);
