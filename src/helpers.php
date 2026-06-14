@@ -91,6 +91,36 @@ if (!function_exists('verify_csrf_token')) {
     }
 }
 
+if (!function_exists('csrf_request_token')) {
+    /**
+     * Read CSRF token from a submitted form or AJAX header.
+     */
+    function csrf_request_token(): ?string
+    {
+        $token = $_POST['csrf_token'] ?? null;
+        if (is_string($token) && $token !== '') {
+            return $token;
+        }
+
+        $headerToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? null;
+        return is_string($headerToken) && $headerToken !== '' ? $headerToken : null;
+    }
+}
+
+if (!function_exists('is_csrf_exempt_path')) {
+    /**
+     * Public machine-to-machine endpoints that cannot submit browser session CSRF tokens.
+     */
+    function is_csrf_exempt_path(string $uri): bool
+    {
+        if (in_array($uri, ['/telegram/webhook', '/telegram/callback'], true)) {
+            return true;
+        }
+
+        return str_starts_with($uri, '/payments/robokassa/');
+    }
+}
+
 if (!function_exists('get_setting')) {
     /**
      * Retrieve a setting value from the database with simple in-request caching.

@@ -84,6 +84,7 @@
     body { background: linear-gradient(135deg, var(--cream) 0%, #FFF 100%); }
     .berry-gradient { background: linear-gradient(135deg, var(--berry-red) 0%, var(--berry-pink) 100%); }
   </style>
+  <meta name="csrf-token" content="<?= htmlspecialchars(csrf_token(), ENT_QUOTES) ?>">
 </head>
 <body class="bg-gradient-to-br from-orange-50 via-white to-pink-50 text-gray-800 min-h-screen">
 <?= $content ?>

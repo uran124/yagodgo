@@ -50,6 +50,7 @@
             <div class="text-lg font-bold"><?= number_format($boxPrice,0,'.',' ') ?> ₽</div>
           </div>
           <form action="/cart/add" method="post" class="mt-auto flex add-to-cart-form" data-id="<?= $p['id'] ?>" data-name="<?= htmlspecialchars($p['product'] . ($p['variety'] ? ' ' . $p['variety'] : '')) ?>" data-price="<?= $boxPrice ?>">
+            <?= csrf_field() ?>
             <input type="hidden" name="product_id" value="<?= $p['id'] ?>">
             <input type="hidden" name="stock_mode" value="instant">
             <input type="number" name="quantity" value="1" min="1" step="1" class="w-20 border border-gray-300 px-2 py-1 rounded-l text-center">
