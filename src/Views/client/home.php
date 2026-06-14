@@ -4,16 +4,17 @@
  * @var array $sellerProducts
  * @var array $preorderProducts
  * @var array $discountProducts
+ * @var array $materialCategories
  * @var string|null $userName
  */ ?>
 
 <main class="bg-gradient-to-br from-orange-50 via-white to-pink-50 min-h-screen pb-24">
 
   <div class="pt-4 px-4">
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+    <div class="grid grid-cols-1 gap-4 md:gap-6">
 
       <!-- Hero — компактный на мобиле, полный на десктопе -->
-      <section class="relative overflow-hidden bg-gradient-to-br from-red-500 via-pink-500 to-rose-400 accent-gradient-via text-white rounded-2xl md:rounded-3xl shadow-xl md:shadow-2xl p-5 md:p-8 lg:col-span-2">
+      <section class="relative overflow-hidden bg-gradient-to-br from-red-500 via-pink-500 to-rose-400 accent-gradient-via text-white rounded-2xl md:rounded-3xl shadow-xl md:shadow-2xl p-5 md:p-8">
         <div class="absolute top-0 right-0 w-24 h-24 md:w-32 md:h-32 bg-white/10 rounded-full -translate-y-12 translate-x-12 md:-translate-y-16 md:translate-x-16"></div>
         <div class="absolute bottom-0 left-0 w-16 h-16 md:w-24 md:h-24 bg-white/10 rounded-full translate-y-8 -translate-x-8 md:translate-y-12 md:-translate-x-12"></div>
 
@@ -21,10 +22,11 @@
           <!-- Текст -->
           <div class="flex-1 md:mb-6">
             <h1 class="text-xl md:text-4xl font-bold leading-tight mb-1 md:mb-3">
-              <span class="hidden md:inline">Добро пожаловать в </span>
               <span class="bg-gradient-to-r from-yellow-200 to-orange-200 bg-clip-text text-transparent">BerryGo</span>
+              <span class="hidden md:inline"> — доставка свежих ягод и фруктов в Красноярске</span>
+              <span class="md:hidden"> — ягоды в Красноярске</span>
             </h1>
-            <p class="text-sm md:text-lg opacity-90 mb-1 md:mb-2">Ягоды и фрукты из Киргизии</p>
+            <p class="text-sm md:text-lg opacity-90 mb-1 md:mb-2">Клубника, черешня, сезонные ягоды и фрукты из Киргизии с доставкой на дом</p>
             <p class="hidden md:block text-sm opacity-75">🚀 Доставка за час • 🍓 100% натуральные • ❄️ Всегда свежие</p>
             <!-- Теги только на мобиле, горизонтально -->
             <div class="flex gap-2 mt-1.5 md:hidden flex-wrap">
@@ -45,24 +47,6 @@
         </div>
       </section>
 
-      <?php if (!empty($materials)): ?>
-      <section class="hidden md:block lg:col-span-1">
-        <div class="embla embla-news embla--fade">
-          <div class="embla__viewport">
-            <div class="embla__container eq-row">
-              <?php foreach ($materials as $m): ?>
-                <div class="embla__slide">
-                  <?php $material = $m; include __DIR__ . '/_material_card.php'; ?>
-                </div>
-              <?php endforeach; ?>
-            </div>
-          </div>
-          <div class="embla__controls">
-            <div class="embla__dots"></div>
-          </div>
-        </div>
-      </section>
-      <?php endif; ?>
     </div>
   </div>
 
@@ -198,6 +182,59 @@
               <div class="embla__slide flex-none w-[64vw] sm:w-1/2 md:w-1/3">
                 <?php $cardSection = 'sale'; ?>
                 <?php include __DIR__ . '/_card.php'; ?>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        </div>
+      </div>
+    </section>
+  <?php endif; ?>
+
+  <?php if (!empty($materials)): ?>
+    <section class="px-4 mb-8" aria-labelledby="home-materials-title">
+      <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-4">
+        <div class="max-w-3xl">
+          <h2 id="home-materials-title" class="text-xl md:text-2xl font-bold text-gray-800">Полезные материалы о ягодах и фруктах</h2>
+          <p class="text-sm text-gray-600 mt-1 leading-relaxed">
+            Рассказываем, как выбрать свежую клубнику, черешню и другие сезонные ягоды в Красноярске, как хранить фрукты после доставки и какие сорта лучше подходят для десертов, заготовок и подарков.
+          </p>
+        </div>
+        <a href="/content" class="inline-flex items-center text-sm font-semibold text-red-500 hover:text-red-600">
+          Все материалы
+          <span class="material-icons-round text-base ml-1">arrow_forward</span>
+        </a>
+      </div>
+      <?php if (!empty($materialCategories)): ?>
+        <nav class="flex gap-2 overflow-x-auto no-scrollbar pb-3 mb-3" aria-label="Разделы материалов">
+          <a href="/content" class="flex-none rounded-full bg-red-500 px-3 py-1.5 text-xs font-semibold text-white shadow-sm">Все материалы</a>
+          <?php foreach ($materialCategories as $category): ?>
+            <a href="/content/<?= urlencode((string)$category['alias']) ?>" class="flex-none rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 shadow-sm ring-1 ring-gray-100 hover:text-red-500">
+              <?= htmlspecialchars((string)$category['name']) ?>
+              <span class="text-gray-400">(<?= (int)$category['materials_count'] ?>)</span>
+            </a>
+          <?php endforeach; ?>
+        </nav>
+      <?php endif; ?>
+      <div class="embla drag-free has-arrows relative" itemscope itemtype="https://schema.org/ItemList">
+        <button data-dir="left" class="hidden md:flex items-center justify-center w-8 h-8 absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100" aria-label="Предыдущие материалы">
+          <span class="material-icons-round text-gray-600">chevron_left</span>
+        </button>
+        <button data-dir="right" class="hidden md:flex items-center justify-center w-8 h-8 absolute right-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100" aria-label="Следующие материалы">
+          <span class="material-icons-round text-gray-600">chevron_right</span>
+        </button>
+        <div class="embla__viewport">
+          <div class="embla__container space-x-4 pb-2 no-scrollbar eq-row">
+            <?php foreach ($materials as $index => $m): ?>
+              <div class="embla__slide flex-none w-[72vw] sm:w-1/2 md:w-1/3 lg:w-1/4" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <meta itemprop="position" content="<?= $index + 1 ?>">
+                <meta itemprop="name" content="<?= htmlspecialchars((string)$m['title'], ENT_QUOTES) ?>">
+                <meta itemprop="url" content="/content/<?= urlencode((string)$m['cat_alias']) ?>/<?= urlencode((string)$m['mat_alias']) ?>">
+                <?php if (!empty($m['category_name'])): ?>
+                  <a href="/content/<?= urlencode((string)$m['cat_alias']) ?>" class="mb-2 inline-flex rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-500 hover:bg-red-100">
+                    <?= htmlspecialchars((string)$m['category_name']) ?>
+                  </a>
+                <?php endif; ?>
+                <?php $material = $m; include __DIR__ . '/_material_card.php'; ?>
               </div>
             <?php endforeach; ?>
           </div>

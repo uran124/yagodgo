@@ -174,6 +174,21 @@ class AppsController
         if ($categoryInSitemap) {
             $materialWhere[] = 'c.in_sitemap = 1';
         }
+        $categoryWhere = ['1=1'];
+        if ($categoryInSitemap) {
+            $categoryWhere[] = 'c.in_sitemap = 1';
+        }
+        $stmt = $this->pdo->query(
+            "SELECT DISTINCT c.alias
+               FROM content_categories c
+               JOIN materials m ON m.category_id = c.id" . ($materialIsActive ? " AND m.is_active = 1" : "") . "
+              WHERE " . implode(' AND ', $categoryWhere) . "
+              ORDER BY c.alias ASC"
+        );
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $urls[] = ['content/' . $row['alias'], '0.75'];
+        }
+
         $stmt = $this->pdo->query(
             "SELECT m.alias AS mat_alias, c.alias AS cat_alias
                FROM materials m
@@ -249,6 +264,7 @@ class AppsController
         return [
             ['key' => 'home', 'label' => 'Главная', 'path' => '', 'priority' => '1.0'],
             ['key' => 'catalog', 'label' => 'Каталог', 'path' => 'catalog', 'priority' => '0.9'],
+            ['key' => 'content', 'label' => 'Материалы', 'path' => 'content', 'priority' => '0.8'],
             ['key' => 'register', 'label' => 'Регистрация', 'path' => 'register', 'priority' => '0.4'],
             ['key' => 'login', 'label' => 'Вход', 'path' => 'login', 'priority' => '0.3'],
             ['key' => 'reset_pin', 'label' => 'Восстановление PIN', 'path' => 'reset-pin', 'priority' => '0.2'],

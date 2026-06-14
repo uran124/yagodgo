@@ -829,6 +829,7 @@
             <li><a href="/catalog" class="hover:underline">Каталог ягод и фруктов</a></li>
             <li><a href="/catalog/klubnika" class="hover:underline">Клубника в Красноярске</a></li>
             <li><a href="/catalog/chereshnya" class="hover:underline">Черешня с доставкой</a></li>
+            <li><a href="/content" class="hover:underline">Полезные материалы о ягодах</a></li>
             <li><a href="/favorites" class="hover:underline">Избранное и предзаказы</a></li>
             <li><a href="/orders" class="hover:underline">История заказов</a></li>
           </ul>
