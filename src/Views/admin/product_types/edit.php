@@ -1,6 +1,7 @@
 <?php /** @var array|null $type */ ?>
 <?php $role = $_SESSION['role'] ?? ''; $base = $role === 'seller' ? '/seller' : '/admin'; ?>
 <form action="<?= $base ?>/product-types/save" method="post" class="space-y-4 bg-white p-6 rounded shadow max-w-lg mx-auto">
+  <?= csrf_field() ?>
   <?php if (!empty($type['id'])): ?>
     <input type="hidden" name="id" value="<?= $type['id'] ?>">
   <?php endif; ?>

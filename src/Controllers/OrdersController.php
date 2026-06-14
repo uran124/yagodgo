@@ -15,6 +15,7 @@ use App\Services\StockDeficitService;
 use App\Services\DeliveryPricingService;
 use App\Services\OrderStatusHistoryService;
 use App\Services\OrderReturnService;
+use App\Services\OrderTotalsService;
 
 class OrdersController
 {
@@ -1436,54 +1437,6 @@ class OrdersController
 
     private function recalculateTotals(int $orderId): void
     {
-        $stmt = $this->pdo->prepare(
-            "SELECT SUM(quantity * unit_price) FROM order_items WHERE order_id = ?"
-        );
-        $stmt->execute([$orderId]);
-        $rawTotal = (float)$stmt->fetchColumn();
-
-        $oStmt = $this->pdo->prepare(
-            "SELECT user_id, points_used, coupon_code, address_id, delivery_fee FROM orders WHERE id = ?"
-        );
-        $oStmt->execute([$orderId]);
-        $oRow = $oStmt->fetch(PDO::FETCH_ASSOC);
-        $pointsUsed = (int)($oRow['points_used'] ?? 0);
-        $deliveryFee = max(0, (int)($oRow['delivery_fee'] ?? 0));
-        $userId    = (int)($oRow['user_id'] ?? 0);
-        $hasUsedReferral = 0;
-        if ($userId) {
-            $uStmt = $this->pdo->prepare("SELECT has_used_referral_coupon FROM users WHERE id = ?");
-            $uStmt->execute([$userId]);
-            $hasUsedReferral = (int)$uStmt->fetchColumn();
-        }
-
-        $subAfterPickup = $rawTotal;
-
-        $discountApplied = 0;
-        $couponCode = $oRow['coupon_code'] ?? '';
-        if ($couponCode !== '') {
-            $cStmt = $this->pdo->prepare(
-                "SELECT type, discount, points FROM coupons WHERE code = ?"
-            );
-            $cStmt->execute([$couponCode]);
-            $coupon = $cStmt->fetch(PDO::FETCH_ASSOC) ?: null;
-            if ($coupon) {
-                if ($coupon['type'] === 'discount') {
-                    $percent = (float)$coupon['discount'];
-                    $discountApplied = (int) floor(($subAfterPickup - $pointsUsed) * ($percent / 100));
-                }
-            } else {
-                // реферальный код даёт скидку 10% только если отметка использована
-                if ($hasUsedReferral === 1) {
-                    $discountApplied = (int) floor(($subAfterPickup - $pointsUsed) * 0.10);
-                }
-            }
-        }
-
-        $finalTotal = max(0, $subAfterPickup - $pointsUsed - $discountApplied) + $deliveryFee;
-
-        $this->pdo->prepare(
-            "UPDATE orders SET total_amount = ?, discount_applied = ? WHERE id = ?"
-        )->execute([$finalTotal, $discountApplied, $orderId]);
+        (new OrderTotalsService($this->pdo))->recalculate($orderId);
     }
 }

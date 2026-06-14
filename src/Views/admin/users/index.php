@@ -21,6 +21,7 @@
         <td class="p-3 text-gray-600"><?= (int)$p['rub_balance'] ?></td>
         <td class="p-3">
           <form action="<?= $base ?>/users/reset-balance" method="post" class="inline">
+            <?= csrf_field() ?>
             <input type="hidden" name="id" value="<?= $p['id'] ?>">
             <input type="hidden" name="redirect" value="<?= $base ?>/users">
             <button type="submit" class="px-2 py-1 bg-[#C86052] text-white rounded text-sm">Рассчетать</button>
@@ -70,6 +71,7 @@
         </td>
       <td class="p-3 text-center">
         <form action="<?= $base ?>/users/toggle-block" method="post" class="inline-block">
+          <?= csrf_field() ?>
           <input type="hidden" name="id" value="<?= $u['id'] ?>">
           <label class="relative inline-flex items-center cursor-pointer">
             <input type="checkbox" onchange="this.form.submit()" <?= $u['is_blocked'] ? 'checked' : '' ?> class="sr-only peer">

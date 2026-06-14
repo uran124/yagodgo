@@ -4,6 +4,7 @@
 /** @var array $products */
 ?>
 <form action="/admin/content/materials/save" method="post" enctype="multipart/form-data" class="space-y-4 bg-white p-6 rounded shadow max-w-lg">
+  <?= csrf_field() ?>
   <input type="hidden" name="category_id" value="<?= $category['id'] ?>">
   <?php if (!empty($material['id'])): ?>
     <input type="hidden" name="id" value="<?= $material['id'] ?>">

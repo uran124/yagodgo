@@ -1,5 +1,6 @@
 <?php /** @var array|null $slot */ ?>
 <form action="/admin/slots/save" method="post" class="bg-white p-6 rounded shadow max-w-md space-y-4">
+  <?= csrf_field() ?>
   <?php if ($slot): ?>
     <input type="hidden" name="id" value="<?= $slot['id'] ?>">
   <?php endif; ?>

@@ -21,6 +21,7 @@ $redirectPath = $currentPath ? (parse_url($currentPath, PHP_URL_PATH) ?: '') : '
 <?php endif; ?>
 
 <form action="<?= $base ?>/users/save" method="post" class="bg-white p-4 rounded shadow mb-4 space-y-4">
+  <?= csrf_field() ?>
   <input type="hidden" name="id" value="<?= $user['id'] ?>">
   <?php if ($redirectPath): ?>
     <input type="hidden" name="redirect" value="<?= htmlspecialchars($redirectPath) ?>">
@@ -111,6 +112,7 @@ $redirectPath = $currentPath ? (parse_url($currentPath, PHP_URL_PATH) ?: '') : '
     onsubmit="return confirm('Удалить пользователя? Это действие нельзя отменить.');"
     class="mb-4"
   >
+    <?= csrf_field() ?>
     <input type="hidden" name="id" value="<?= $user['id'] ?>">
     <?php if ($redirectPath): ?>
       <input type="hidden" name="redirect" value="<?= htmlspecialchars($redirectPath) ?>">
@@ -160,12 +162,14 @@ $redirectPath = $currentPath ? (parse_url($currentPath, PHP_URL_PATH) ?: '') : '
               </div>
             </div>
             <form action="<?= $base ?>/users/delete-address" method="post" onsubmit="return confirm('Удалить адрес?');">
+              <?= csrf_field() ?>
               <input type="hidden" name="id" value="<?= $addr['id'] ?>">
               <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
               <button type="submit" class="text-red-600">🗑️</button>
             </form>
           </div>
           <form action="<?= $base ?>/users/update-address-delivery" method="post" class="mt-2 grid gap-2 md:grid-cols-[140px_1fr_auto]">
+            <?= csrf_field() ?>
             <input type="hidden" name="id" value="<?= $addr['id'] ?>">
             <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
             <input name="delivery_distance_km_manual" type="number" min="0" step="0.001" value="<?= htmlspecialchars((string)($addr['delivery_distance_km'] ?? '')) ?>" class="border px-2 py-1 rounded" placeholder="Км вручную">
@@ -177,6 +181,7 @@ $redirectPath = $currentPath ? (parse_url($currentPath, PHP_URL_PATH) ?: '') : '
     </ul>
   <?php endif; ?>
   <form action="<?= $base ?>/users/add-address" method="post" class="space-y-2" data-user-address-form>
+    <?= csrf_field() ?>
     <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
 
     <div class="relative" data-user-address-root>
