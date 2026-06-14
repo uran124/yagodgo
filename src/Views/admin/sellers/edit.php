@@ -1,6 +1,7 @@
 <?php /** @var array|null $seller */ ?>
 <?php $base = '/admin'; ?>
 <form action="<?= $base ?>/sellers/save" method="post" class="bg-white p-6 rounded shadow max-w-md space-y-4">
+  <?= csrf_field() ?>
   <input type="hidden" name="id" value="<?= $seller['id'] ?? '' ?>">
   <div>
     <label class="block mb-1">Название компании</label>

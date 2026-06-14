@@ -97,6 +97,7 @@ $statusLabels = [
   </div>
 
   <form id="product-card-form" action="<?= $base ?>/products/save" method="post" enctype="multipart/form-data">
+    <?= csrf_field() ?>
   <?php if (!empty($product['id'])): ?>
     <input type="hidden" name="id" value="<?= (int)$product['id'] ?>">
   <?php endif; ?>

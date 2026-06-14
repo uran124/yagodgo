@@ -1,6 +1,7 @@
 <?php /** @var string $type */ ?>
 <?php /** @var array|null $data */ ?>
 <form action="/admin/apps/seo/save" method="post" class="space-y-4 bg-white p-6 rounded shadow max-w-lg mx-auto">
+  <?= csrf_field() ?>
   <input type="hidden" name="type" value="<?= htmlspecialchars($type) ?>">
   <?php if ($type !== 'page'): ?>
     <input type="hidden" name="id" value="<?= (int)($data['id'] ?? 0) ?>">

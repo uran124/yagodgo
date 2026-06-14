@@ -4,6 +4,7 @@
 </a>
 <div class="bg-white p-4 rounded shadow mb-6">
   <form action="/admin/coupons/generate" method="post" class="flex items-end space-x-2">
+    <?= csrf_field() ?>
     <select name="type" class="border px-2 py-1 rounded">
       <option value="points">Баллы</option>
       <option value="discount">Скидка %</option>

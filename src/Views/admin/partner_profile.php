@@ -43,6 +43,7 @@
     </div>
     <div class="text-center mt-4">
       <form method="POST" action="/partner/payout">
+        <?= csrf_field() ?>
         <button class="bg-[#C86052] text-white px-4 py-2 rounded">Запросить выплату</button>
       </form>
     </div>

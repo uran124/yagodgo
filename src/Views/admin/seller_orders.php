@@ -53,6 +53,7 @@
     <div class="mt-2 flex flex-wrap gap-2 text-sm">
       <?php if ($o['status'] === 'new'): ?>
         <form method="post" action="/seller/orders/status">
+          <?= csrf_field() ?>
           <input type="hidden" name="order_id" value="<?= (int)$o['id'] ?>">
           <input type="hidden" name="status" value="confirmed">
           <button type="submit" class="border rounded px-3 py-1">✅ Подтвердить</button>
@@ -60,6 +61,7 @@
       <?php endif; ?>
       <?php if ($o['status'] === 'confirmed'): ?>
         <form method="post" action="/seller/orders/status">
+          <?= csrf_field() ?>
           <input type="hidden" name="order_id" value="<?= (int)$o['id'] ?>">
           <input type="hidden" name="status" value="shipped">
           <button type="submit" class="border rounded px-3 py-1">🚚 В пути</button>
@@ -67,6 +69,7 @@
       <?php endif; ?>
       <?php if (in_array($o['status'], ['new', 'confirmed'], true)): ?>
         <form method="post" action="/seller/orders/status">
+          <?= csrf_field() ?>
           <input type="hidden" name="order_id" value="<?= (int)$o['id'] ?>">
           <input type="hidden" name="status" value="cancelled">
           <button type="submit" class="border rounded px-3 py-1">⚠️ Нет в наличии</button>

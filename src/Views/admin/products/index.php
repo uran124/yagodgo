@@ -66,6 +66,7 @@
         <?php endif; ?>
         <td class="p-3 text-center">
           <form action="<?= $base ?>/products/toggle" method="post" class="inline-block">
+            <?= csrf_field() ?>
             <input type="hidden" name="id" value="<?= $p['id'] ?>">
             <label class="relative inline-flex items-center cursor-pointer">
               <input type="checkbox" name="active" onchange="this.form.submit()" <?= $p['is_active'] ? 'checked' : '' ?> class="sr-only peer">
@@ -76,6 +77,7 @@
         <?php if (!$isManager): ?>
         <td class="p-3 text-center">
           <form action="<?= $base ?>/products/delete" method="post" onsubmit="return confirm('Удалить товар?');">
+            <?= csrf_field() ?>
             <input type="hidden" name="id" value="<?= $p['id'] ?>">
             <button type="submit" class="text-red-600">
               <span class="material-icons-round">delete</span>

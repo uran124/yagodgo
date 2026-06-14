@@ -70,6 +70,13 @@ class AuthController
         $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
         return $prefix . ':' . $ip . ':' . $phone;
     }
+
+    private function rotateSessionIdAfterAuthentication(): void
+    {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_regenerate_id(true);
+        }
+    }
     
     /**
      * Показ формы регистрации
@@ -172,6 +179,7 @@ public function register(): void
     }
 
     // Устанавливаем сессию
+    $this->rotateSessionIdAfterAuthentication();
     $_SESSION['user_id']        = $userId;
     $_SESSION['role']           = 'client';
     $_SESSION['name']           = $name;
@@ -234,6 +242,7 @@ public function register(): void
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($user && password_verify($pin, $user['password_hash'])) {
+            $this->rotateSessionIdAfterAuthentication();
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['role']    = $user['role'];
             $_SESSION['name']    = $user['name'];

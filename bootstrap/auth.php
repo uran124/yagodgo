@@ -8,6 +8,14 @@ if (!function_exists('requireRole')) {
     }
 }
 
+if (!function_exists('requireCsrf')) {
+    function requireCsrf(string $method, string $uri): void
+    {
+        global $csrfMiddleware;
+        $csrfMiddleware->handle($method, $uri);
+    }
+}
+
 if (!function_exists('requireClient')) {
     function requireClient(): void
     {
