@@ -52,6 +52,18 @@ jobs:
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
 
+      - name: Validate Composer metadata
+        run: composer validate --strict --no-check-publish
+
+      - name: Audit Composer dependencies
+        run: composer audit --no-interaction
+
+      - name: PHP syntax lint
+        run: make lint
+
+      - name: Static route and CSRF guards
+        run: make static-checks
+
       - name: Wait for MySQL
         run: |
           set -euo pipefail

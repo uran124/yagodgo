@@ -1,4 +1,4 @@
-.PHONY: migrate status test supply-smoke supply-digest supply-release-check supply-discount-rollover
+.PHONY: migrate status test lint static-checks supply-smoke supply-digest supply-release-check supply-discount-rollover
 
 migrate:
 	php bin/migrate.php up
@@ -8,6 +8,12 @@ status:
 
 test:
 	vendor/bin/phpunit
+
+lint:
+	find src routes bootstrap config bin tests -name '*.php' -print0 | xargs -0 -n1 php -l
+
+static-checks:
+	php bin/static_checks.php
 
 supply-smoke:
 	php bin/supply_smoke.php
