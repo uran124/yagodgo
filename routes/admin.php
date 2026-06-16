@@ -205,6 +205,10 @@ return [
             '/admin/orders/referral' => 'updateReferral',
             '/admin/orders/update-delivery' => 'updateDelivery',
             '/admin/orders/delete' => 'delete',
+            '/admin/orders/production/create' => 'createProductionJob',
+            '/admin/orders/production/assign' => 'assignProductionJob',
+            '/admin/orders/production/photo' => 'uploadProductionPhoto',
+            '/admin/orders/production/photo-review' => 'reviewProductionPhoto',
         ];
         if ($method !== 'POST' || !isset($map[$uri])) return false;
         requireAdmin(); (new App\Controllers\OrdersController($c['pdo']))->{$map[$uri]}(); return true;
