@@ -222,6 +222,12 @@ class OrdersController
         $jobId = (int)($_POST['job_id'] ?? 0);
         $executorId = (int)($_POST['executor_id'] ?? 0);
         $executorType = (string)($_POST['executor_type'] ?? 'internal_staff');
+        $executorRef = (string)($_POST['executor_ref'] ?? '');
+        if ($executorRef !== '' && str_contains($executorRef, ':')) {
+            [$refType, $refId] = explode(':', $executorRef, 2);
+            $executorType = $refType !== '' ? $refType : $executorType;
+            $executorId = (int)$refId;
+        }
 
         if ($orderId <= 0 || $jobId <= 0 || $executorId <= 0) {
             header('Location: ' . ($orderId > 0 ? $this->basePath() . '/' . $orderId : $this->basePath()) . '?error=' . urlencode('invalid production assignment'));

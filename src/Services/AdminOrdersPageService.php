@@ -147,11 +147,17 @@ class AdminOrdersPageService
      */
     private function fetchProductionExecutors(): array
     {
+        if ($this->tableExists('partner_profiles')) {
+            return (new PartnerProfileService($this->pdo))->eligibleProductionExecutors();
+        }
+
         if ($this->tableExists('production_executor_settings')) {
             $stmt = $this->pdo->query(
                 "SELECT u.id, u.name, u.role, pes.executor_type, pes.current_mode,
 " .
-                "       pes.default_fulfillment_model, pes.default_bonus_percent, pes.default_bonus_amount,
+                "       pes.default_fulfillment_model, 'internal_bonus' AS monetization_model, 'berrygo_only' AS client_visibility,
+" .
+                "       pes.default_bonus_percent, pes.default_bonus_amount,
 " .
                 "       pes.max_active_jobs,
 " .
@@ -192,7 +198,9 @@ class AdminOrdersPageService
         $stmt = $this->pdo->query(
             "SELECT id, name, role, 'internal_staff' AS executor_type, 'on_shift' AS current_mode,
 " .
-            "       'by_berrygo_on_site' AS default_fulfillment_model, 10.00 AS default_bonus_percent, 0.00 AS default_bonus_amount,
+            "       'by_berrygo_on_site' AS default_fulfillment_model, 'internal_bonus' AS monetization_model, 'berrygo_only' AS client_visibility,
+" .
+            "       10.00 AS default_bonus_percent, 0.00 AS default_bonus_amount,
 " .
             "       1 AS max_active_jobs, 0 AS active_jobs_count
 " .

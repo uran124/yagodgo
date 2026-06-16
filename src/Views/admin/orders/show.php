@@ -363,11 +363,11 @@
                 <?= csrf_field() ?>
                 <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
                 <input type="hidden" name="job_id" value="<?= (int)$job['id'] ?>">
-                <input type="hidden" name="executor_type" value="internal_staff">
-                <label class="text-xs">Назначить внутреннего исполнителя
-                  <select name="executor_id" class="block border px-2 py-1 rounded text-sm">
+                <label class="text-xs">Назначить исполнителя
+                  <select name="executor_ref" class="block border px-2 py-1 rounded text-sm">
                     <?php foreach ($productionExecutors as $executor): ?>
-                      <option value="<?= (int)$executor['id'] ?>"><?= htmlspecialchars($executor['name'] ?: ('#' . $executor['id'])) ?> · <?= htmlspecialchars($executor['role'] ?? '') ?> · <?= htmlspecialchars($executor['current_mode'] ?? 'on_shift') ?></option>
+                      <?php $executorType = (string)($executor['executor_type'] ?? 'internal_staff'); ?>
+                      <option value="<?= htmlspecialchars($executorType . ':' . (int)$executor['id']) ?>"><?= htmlspecialchars($executor['name'] ?: ('#' . $executor['id'])) ?> · <?= htmlspecialchars($executorType) ?> · <?= htmlspecialchars((string)($executor['current_mode'] ?? $executor['status'] ?? 'active')) ?></option>
                     <?php endforeach; ?>
                   </select>
                 </label>
