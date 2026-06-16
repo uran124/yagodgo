@@ -50,6 +50,22 @@ class ProductionJobServiceTest extends TestCase
             comment TEXT NULL,
             created_at TEXT NOT NULL
         )');
+        $this->pdo->exec('CREATE TABLE products (
+            id INTEGER PRIMARY KEY,
+            variety TEXT,
+            requires_production INTEGER NOT NULL DEFAULT 0,
+            production_spec_id INTEGER NULL,
+            default_fulfillment_model TEXT NOT NULL DEFAULT "by_berrygo_on_site",
+            default_production_minutes INTEGER NOT NULL DEFAULT 120,
+            default_executor_bonus_percent REAL NOT NULL DEFAULT 10,
+            default_executor_bonus_amount REAL NOT NULL DEFAULT 0
+        )');
+        $this->pdo->exec('CREATE TABLE order_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            order_id INTEGER NOT NULL,
+            product_id INTEGER NOT NULL,
+            quantity REAL NOT NULL
+        )');
     }
 
     public function testCreateStoresProductionJobInsideOrderFlowAndRecordsEvent(): void
@@ -101,5 +117,30 @@ class ProductionJobServiceTest extends TestCase
         $this->assertSame('new', $events[1]['from_status']);
         $this->assertSame('assigned', $events[1]['to_status']);
         $this->assertSame('production_job_assigned', $events[1]['comment']);
+    }
+
+    public function testCreateForOrderIfRequiredCreatesJobsOnlyForProductionProducts(): void
+    {
+        $service = new ProductionJobService($this->pdo);
+        $this->pdo->exec("INSERT INTO products (id, variety, requires_production, production_spec_id, default_fulfillment_model, default_production_minutes, default_executor_bonus_percent, default_executor_bonus_amount) VALUES
+            (1, 'Набор 12 ягод', 1, 7, 'by_berrygo_on_site', 120, 10, 400),
+            (2, 'Обычная клубника', 0, NULL, 'by_berrygo_on_site', 60, 0, 0)");
+        $this->pdo->exec("INSERT INTO order_items (order_id, product_id, quantity) VALUES (501, 1, 1), (501, 2, 1)");
+
+        $this->assertSame(1, $service->createForOrderIfRequired(501));
+        $this->assertSame(0, $service->createForOrderIfRequired(501));
+
+        $job = $this->pdo->query('SELECT order_id, product_id, status, fulfillment_model, bonus_type, bonus_value, bonus_amount_locked, manager_comment FROM production_jobs WHERE order_id = 501')->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame(501, (int)$job['order_id']);
+        $this->assertSame(1, (int)$job['product_id']);
+        $this->assertSame('new', $job['status']);
+        $this->assertSame('by_berrygo_on_site', $job['fulfillment_model']);
+        $this->assertSame('internal_bonus', $job['bonus_type']);
+        $this->assertSame(10.0, (float)$job['bonus_value']);
+        $this->assertSame(400.0, (float)$job['bonus_amount_locked']);
+        $this->assertStringContainsString('Набор 12 ягод', $job['manager_comment']);
+
+        $event = $this->pdo->query("SELECT comment FROM production_job_events WHERE order_id = 501")->fetchColumn();
+        $this->assertSame('production_job_auto_created', $event);
     }
 }

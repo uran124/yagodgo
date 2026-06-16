@@ -66,6 +66,82 @@ class ProductionJobService
         return $jobId;
     }
 
+
+    public function createForOrderIfRequired(int $orderId): int
+    {
+        if ($orderId <= 0 || !$this->tableExists('production_jobs') || !$this->columnExists('products', 'requires_production')) {
+            return 0;
+        }
+
+        $productNameExpression = (string)$this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite'
+            ? "GROUP_CONCAT(COALESCE(NULLIF(p.variety, ''), 'Товар #' || p.id), ', ')"
+            : "GROUP_CONCAT(COALESCE(NULLIF(p.variety, ''), CONCAT('Товар #', p.id)) SEPARATOR ', ')";
+
+        $select = "SELECT oi.product_id,
+                          SUM(oi.quantity) AS total_quantity,
+                          MAX(p.default_fulfillment_model) AS fulfillment_model,
+                          MAX(p.default_production_minutes) AS production_minutes,
+                          MAX(p.default_executor_bonus_percent) AS bonus_percent,
+                          MAX(p.default_executor_bonus_amount) AS fixed_bonus,
+                          MAX(p.production_spec_id) AS production_spec_id,
+                          {$productNameExpression} AS product_names
+                   FROM order_items oi
+                   JOIN products p ON p.id = oi.product_id
+                   WHERE oi.order_id = ?
+                     AND p.requires_production = 1
+                   GROUP BY oi.product_id
+                   ORDER BY oi.product_id";
+        $stmt = $this->pdo->prepare($select);
+        $stmt->execute([$orderId]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        if (!$rows) {
+            return 0;
+        }
+
+        $created = 0;
+        foreach ($rows as $row) {
+            $productId = (int)($row['product_id'] ?? 0);
+            if ($productId <= 0 || $this->jobExistsForOrderProduct($orderId, $productId)) {
+                continue;
+            }
+
+            $minutes = max(1, (int)($row['production_minutes'] ?? 120));
+            $fixedBonus = (float)($row['fixed_bonus'] ?? 0);
+            $bonusPercent = (float)($row['bonus_percent'] ?? 10);
+            $deadlineExpression = $this->deadlineExpression($minutes);
+
+            $stmtInsert = $this->pdo->prepare(
+                'INSERT INTO production_jobs (
+                    order_id, product_id, fulfillment_model, production_location, status,
+                    production_deadline, bonus_type, bonus_value, bonus_amount_locked,
+                    manager_comment, created_at, updated_at
+                ) VALUES (
+                    :order_id, :product_id, :fulfillment_model, :production_location, :status,
+                    ' . $deadlineExpression . ', :bonus_type, :bonus_value, :bonus_amount_locked,
+                    :manager_comment, ' . $this->currentTimestampExpression() . ', ' . $this->currentTimestampExpression() . '
+                )'
+            );
+            $fulfillmentModel = (string)($row['fulfillment_model'] ?: 'by_berrygo_on_site');
+            $stmtInsert->execute([
+                'order_id' => $orderId,
+                'product_id' => $productId,
+                'fulfillment_model' => $fulfillmentModel,
+                'production_location' => $fulfillmentModel === 'by_berrygo_remote' ? 'remote' : 'shop',
+                'status' => self::STATUS_NEW,
+                'bonus_type' => 'internal_bonus',
+                'bonus_value' => $bonusPercent,
+                'bonus_amount_locked' => $fixedBonus,
+                'manager_comment' => 'Автозадание по производственному товару: ' . (string)($row['product_names'] ?? ('#' . $productId)),
+            ]);
+
+            $jobId = (int)$this->pdo->lastInsertId();
+            $this->recordEvent($jobId, $orderId, null, self::STATUS_NEW, null, null, 'production_job_auto_created');
+            $created++;
+        }
+
+        return $created;
+    }
+
     public function assignAtomically(int $jobId, int $executorId, string $executorType, ?int $changedByUserId = null, ?string $changedByRole = null): bool
     {
         if ($jobId <= 0 || $executorId <= 0 || $executorType === '') {
@@ -118,6 +194,55 @@ class ProductionJobService
             'changed_by_role' => $changedByRole,
             'comment' => $comment,
         ]);
+    }
+
+
+    private function jobExistsForOrderProduct(int $orderId, int $productId): bool
+    {
+        $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM production_jobs WHERE order_id = ? AND product_id = ?');
+        $stmt->execute([$orderId, $productId]);
+        return (int)$stmt->fetchColumn() > 0;
+    }
+
+    private function tableExists(string $table): bool
+    {
+        $driver = (string)$this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+        if ($driver === 'sqlite') {
+            $stmt = $this->pdo->prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?");
+            $stmt->execute([$table]);
+            return (bool)$stmt->fetchColumn();
+        }
+
+        $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?');
+        $stmt->execute([$table]);
+        return (int)$stmt->fetchColumn() > 0;
+    }
+
+    private function columnExists(string $table, string $column): bool
+    {
+        $driver = (string)$this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+        if ($driver === 'sqlite') {
+            $stmt = $this->pdo->query("PRAGMA table_info({$table})");
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                if (($row['name'] ?? '') === $column) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?');
+        $stmt->execute([$table, $column]);
+        return (int)$stmt->fetchColumn() > 0;
+    }
+
+    private function deadlineExpression(int $minutes): string
+    {
+        if ((string)$this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite') {
+            return "datetime('now', '+" . $minutes . " minutes')";
+        }
+
+        return 'DATE_ADD(NOW(), INTERVAL ' . $minutes . ' MINUTE)';
     }
 
     private function findOrderId(int $jobId): ?int
