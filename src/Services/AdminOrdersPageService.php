@@ -72,7 +72,101 @@ class AdminOrdersPageService
             'addresses' => $this->fetchAddresses((int)$order['user_id']),
             'slots' => $this->fetchSlots(),
             'products' => $this->fetchActiveProducts(),
+            'productionJobs' => $this->fetchProductionJobs($id),
+            'productionExecutors' => $this->fetchProductionExecutors(),
         ];
+    }
+
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function fetchProductionJobs(int $orderId): array
+    {
+        if (!$this->tableExists('production_jobs')) {
+            return [];
+        }
+
+        $stmt = $this->pdo->prepare(
+            "SELECT *
+" .
+            "FROM production_jobs
+" .
+            "WHERE order_id = ?
+" .
+            "ORDER BY created_at DESC, id DESC"
+        );
+        $stmt->execute([$orderId]);
+        $jobs = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        if (!$jobs || !$this->tableExists('production_job_events')) {
+            foreach ($jobs as &$job) {
+                $job['events'] = [];
+            }
+            unset($job);
+            return $jobs;
+        }
+
+        $jobIds = array_values(array_filter(array_map(static fn (array $job): int => (int)($job['id'] ?? 0), $jobs)));
+        if (!$jobIds) {
+            return $jobs;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($jobIds), '?'));
+        $eventsStmt = $this->pdo->prepare(
+            "SELECT *
+" .
+            "FROM production_job_events
+" .
+            "WHERE job_id IN ({$placeholders})
+" .
+            "ORDER BY created_at DESC, id DESC"
+        );
+        $eventsStmt->execute($jobIds);
+
+        $eventsByJob = [];
+        foreach ($eventsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $event) {
+            $eventsByJob[(int)$event['job_id']][] = $event;
+        }
+
+        foreach ($jobs as &$job) {
+            $job['events'] = $eventsByJob[(int)$job['id']] ?? [];
+        }
+        unset($job);
+
+        return $jobs;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function fetchProductionExecutors(): array
+    {
+        $stmt = $this->pdo->query(
+            "SELECT id, name, role
+" .
+            "FROM users
+" .
+            "WHERE role IN ('admin', 'manager', 'partner')
+" .
+            "ORDER BY name, id"
+        );
+
+        return $stmt ? ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
+    }
+
+    private function tableExists(string $table): bool
+    {
+        $driver = (string)$this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+        if ($driver === 'sqlite') {
+            $stmt = $this->pdo->prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?");
+            $stmt->execute([$table]);
+            return (bool)$stmt->fetchColumn();
+        }
+
+        $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?');
+        $stmt->execute([$table]);
+        return (int)$stmt->fetchColumn() > 0;
     }
 
     /**
