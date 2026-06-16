@@ -295,6 +295,9 @@
               <div><span class="text-gray-500">Готовность:</span> <?= htmlspecialchars((string)($job['production_deadline'] ?? '—')) ?></div>
               <div><span class="text-gray-500">Передача:</span> <?= htmlspecialchars((string)($job['handover_deadline'] ?? '—')) ?></div>
               <div><span class="text-gray-500">Бонус:</span> <?= htmlspecialchars($bonusLabels[$job['bonus_type'] ?? ''] ?? (string)($job['bonus_type'] ?? '—')) ?> · <?= number_format((float)($job['bonus_amount_locked'] ?? 0), 0, '.', ' ') ?> ₽</div>
+              <div><span class="text-gray-500">Материалы:</span> <?= number_format((float)($job['estimated_materials_cost'] ?? 0), 0, '.', ' ') ?> ₽</div>
+              <div><span class="text-gray-500">Такси/логистика:</span> <?= number_format((float)(($job['materials_delivery_cost'] ?? 0) + ($job['result_delivery_cost'] ?? 0)), 0, '.', ' ') ?> ₽</div>
+              <div><span class="text-gray-500">Прогноз маржи:</span> <?= $job['estimated_margin_amount'] !== null ? number_format((float)$job['estimated_margin_amount'], 0, '.', ' ') . ' ₽' : '—' ?> · <?= htmlspecialchars((string)($job['margin_status'] ?? 'unknown')) ?></div>
               <div><span class="text-gray-500">Исполнитель:</span> <?= $executorId > 0 ? ('#' . $executorId . ' · ' . htmlspecialchars((string)($job['executor_type'] ?? ''))) : 'не назначен' ?></div>
             </div>
             <?php if (!empty($job['manager_comment'])): ?>
@@ -369,6 +372,18 @@
         </label>
         <label class="text-sm">Бонус зафиксирован, ₽
           <input type="number" name="bonus_amount_locked" min="0" step="1" value="0" class="mt-1 w-full border px-2 py-1 rounded">
+        </label>
+        <label class="text-sm">Материалы, ₽
+          <input type="number" name="estimated_materials_cost" min="0" step="1" value="0" class="mt-1 w-full border px-2 py-1 rounded">
+        </label>
+        <label class="text-sm">Такси материалов, ₽
+          <input type="number" name="materials_delivery_cost" min="0" step="1" value="0" class="mt-1 w-full border px-2 py-1 rounded">
+        </label>
+        <label class="text-sm">Такси результата, ₽
+          <input type="number" name="result_delivery_cost" min="0" step="1" value="0" class="mt-1 w-full border px-2 py-1 rounded">
+        </label>
+        <label class="text-sm">Минимальная маржа, ₽
+          <input type="number" name="minimum_margin_amount" min="0" step="1" value="0" class="mt-1 w-full border px-2 py-1 rounded">
         </label>
         <label class="text-sm md:col-span-2">Комментарий менеджера
           <textarea name="manager_comment" rows="2" class="mt-1 w-full border px-2 py-1 rounded" placeholder="Например: клубника в шоколаде, сделать на смене"></textarea>

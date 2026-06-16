@@ -26,14 +26,17 @@ class ProductionJobService
                 production_location, status, production_deadline, handover_deadline,
                 bonus_type, bonus_value, bonus_amount_locked, materials_required,
                 materials_delivery_required, materials_delivery_cost,
-                result_delivery_required, result_delivery_cost, manager_comment,
-                created_at, updated_at
+                result_delivery_required, result_delivery_cost, estimated_materials_cost,
+                estimated_acquiring_cost, estimated_margin_amount, minimum_margin_amount,
+                margin_status, manager_comment, created_at, updated_at
             ) VALUES (
                 :order_id, :product_id, :executor_type, :executor_id, :fulfillment_model,
                 :production_location, :status, :production_deadline, :handover_deadline,
                 :bonus_type, :bonus_value, :bonus_amount_locked, :materials_required,
                 :materials_delivery_required, :materials_delivery_cost,
-                :result_delivery_required, :result_delivery_cost, :manager_comment,
+                :result_delivery_required, :result_delivery_cost, :estimated_materials_cost,
+                :estimated_acquiring_cost, :estimated_margin_amount, :minimum_margin_amount,
+                :margin_status, :manager_comment,
                 ' . $this->currentTimestampExpression() . ', ' . $this->currentTimestampExpression() . '
             )'
         );
@@ -57,6 +60,11 @@ class ProductionJobService
             'materials_delivery_cost' => isset($data['materials_delivery_cost']) ? (float)$data['materials_delivery_cost'] : 0,
             'result_delivery_required' => !empty($data['result_delivery_required']) ? 1 : 0,
             'result_delivery_cost' => isset($data['result_delivery_cost']) ? (float)$data['result_delivery_cost'] : 0,
+            'estimated_materials_cost' => isset($data['estimated_materials_cost']) ? (float)$data['estimated_materials_cost'] : 0,
+            'estimated_acquiring_cost' => isset($data['estimated_acquiring_cost']) ? (float)$data['estimated_acquiring_cost'] : 0,
+            'estimated_margin_amount' => isset($data['estimated_margin_amount']) ? (float)$data['estimated_margin_amount'] : null,
+            'minimum_margin_amount' => isset($data['minimum_margin_amount']) ? (float)$data['minimum_margin_amount'] : 0,
+            'margin_status' => (string)($data['margin_status'] ?? 'unknown'),
             'manager_comment' => $data['manager_comment'] ?? null,
         ]);
 
@@ -85,6 +93,8 @@ class ProductionJobService
                           MAX(p.default_executor_bonus_percent) AS bonus_percent,
                           MAX(p.default_executor_bonus_amount) AS fixed_bonus,
                           MAX(p.production_spec_id) AS production_spec_id,
+                          MAX(p.default_materials_cost) AS materials_cost,
+                          MAX(p.minimum_production_margin) AS minimum_margin,
                           {$productNameExpression} AS product_names
                    FROM order_items oi
                    JOIN products p ON p.id = oi.product_id
@@ -112,16 +122,23 @@ class ProductionJobService
             $lineTotal = (float)($row['line_total'] ?? 0);
             $lockedBonus = max($fixedBonus, round($lineTotal * $bonusPercent / 100, 2));
             $deadlineExpression = $this->deadlineExpression($minutes);
+            $materialsCost = max(0, (float)($row['materials_cost'] ?? 0) * max(1, (float)($row['total_quantity'] ?? 1)));
+            $acquiringCost = round($lineTotal * 0.035, 2);
+            $minimumMargin = max(0, (float)($row['minimum_margin'] ?? 0));
+            $estimatedMargin = round($lineTotal - $materialsCost - $lockedBonus - $acquiringCost, 2);
+            $marginStatus = $estimatedMargin >= $minimumMargin ? 'ok' : 'low_margin';
 
             $stmtInsert = $this->pdo->prepare(
                 'INSERT INTO production_jobs (
                     order_id, product_id, fulfillment_model, production_location, status,
                     production_deadline, bonus_type, bonus_value, bonus_amount_locked,
-                    manager_comment, created_at, updated_at
+                    estimated_materials_cost, estimated_acquiring_cost, estimated_margin_amount,
+                    minimum_margin_amount, margin_status, manager_comment, created_at, updated_at
                 ) VALUES (
                     :order_id, :product_id, :fulfillment_model, :production_location, :status,
                     ' . $deadlineExpression . ', :bonus_type, :bonus_value, :bonus_amount_locked,
-                    :manager_comment, ' . $this->currentTimestampExpression() . ', ' . $this->currentTimestampExpression() . '
+                    :estimated_materials_cost, :estimated_acquiring_cost, :estimated_margin_amount,
+                    :minimum_margin_amount, :margin_status, :manager_comment, ' . $this->currentTimestampExpression() . ', ' . $this->currentTimestampExpression() . '
                 )'
             );
             $fulfillmentModel = (string)($row['fulfillment_model'] ?: 'by_berrygo_on_site');
@@ -134,6 +151,11 @@ class ProductionJobService
                 'bonus_type' => 'internal_bonus',
                 'bonus_value' => $bonusPercent,
                 'bonus_amount_locked' => $lockedBonus,
+                'estimated_materials_cost' => $materialsCost,
+                'estimated_acquiring_cost' => $acquiringCost,
+                'estimated_margin_amount' => $estimatedMargin,
+                'minimum_margin_amount' => $minimumMargin,
+                'margin_status' => $marginStatus,
                 'manager_comment' => 'Автозадание по производственному товару: ' . (string)($row['product_names'] ?? ('#' . $productId)),
             ]);
 

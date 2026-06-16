@@ -202,6 +202,13 @@ class OrdersController
             'bonus_type' => $_POST['bonus_type'] ?? 'internal_bonus',
             'bonus_value' => (float)($_POST['bonus_value'] ?? 0),
             'bonus_amount_locked' => (float)($_POST['bonus_amount_locked'] ?? 0),
+            'materials_delivery_required' => ((float)($_POST['materials_delivery_cost'] ?? 0)) > 0,
+            'materials_delivery_cost' => (float)($_POST['materials_delivery_cost'] ?? 0),
+            'result_delivery_required' => ((float)($_POST['result_delivery_cost'] ?? 0)) > 0,
+            'result_delivery_cost' => (float)($_POST['result_delivery_cost'] ?? 0),
+            'estimated_materials_cost' => (float)($_POST['estimated_materials_cost'] ?? 0),
+            'minimum_margin_amount' => (float)($_POST['minimum_margin_amount'] ?? 0),
+            'margin_status' => 'manual',
             'manager_comment' => trim((string)($_POST['manager_comment'] ?? '')) ?: null,
         ]);
 

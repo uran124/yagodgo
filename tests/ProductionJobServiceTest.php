@@ -29,6 +29,11 @@ class ProductionJobServiceTest extends TestCase
             materials_delivery_cost REAL NOT NULL DEFAULT 0,
             result_delivery_required INTEGER NOT NULL DEFAULT 0,
             result_delivery_cost REAL NOT NULL DEFAULT 0,
+            estimated_materials_cost REAL NOT NULL DEFAULT 0,
+            estimated_acquiring_cost REAL NOT NULL DEFAULT 0,
+            estimated_margin_amount REAL NULL,
+            minimum_margin_amount REAL NOT NULL DEFAULT 0,
+            margin_status TEXT NOT NULL DEFAULT "unknown",
             manager_comment TEXT NULL,
             assigned_at TEXT NULL,
             started_at TEXT NULL,
@@ -58,7 +63,9 @@ class ProductionJobServiceTest extends TestCase
             default_fulfillment_model TEXT NOT NULL DEFAULT "by_berrygo_on_site",
             default_production_minutes INTEGER NOT NULL DEFAULT 120,
             default_executor_bonus_percent REAL NOT NULL DEFAULT 10,
-            default_executor_bonus_amount REAL NOT NULL DEFAULT 0
+            default_executor_bonus_amount REAL NOT NULL DEFAULT 0,
+            default_materials_cost REAL NOT NULL DEFAULT 0,
+            minimum_production_margin REAL NOT NULL DEFAULT 0
         )');
         $this->pdo->exec('CREATE TABLE order_items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -123,15 +130,15 @@ class ProductionJobServiceTest extends TestCase
     public function testCreateForOrderIfRequiredCreatesJobsOnlyForProductionProducts(): void
     {
         $service = new ProductionJobService($this->pdo);
-        $this->pdo->exec("INSERT INTO products (id, variety, requires_production, production_spec_id, default_fulfillment_model, default_production_minutes, default_executor_bonus_percent, default_executor_bonus_amount) VALUES
-            (1, 'Набор 12 ягод', 1, 7, 'by_berrygo_on_site', 120, 10, 400),
-            (2, 'Обычная клубника', 0, NULL, 'by_berrygo_on_site', 60, 0, 0)");
+        $this->pdo->exec("INSERT INTO products (id, variety, requires_production, production_spec_id, default_fulfillment_model, default_production_minutes, default_executor_bonus_percent, default_executor_bonus_amount, default_materials_cost, minimum_production_margin) VALUES
+            (1, 'Набор 12 ягод', 1, 7, 'by_berrygo_on_site', 120, 10, 400, 1100, 650),
+            (2, 'Обычная клубника', 0, NULL, 'by_berrygo_on_site', 60, 0, 0, 0, 0)");
         $this->pdo->exec("INSERT INTO order_items (order_id, product_id, quantity, unit_price) VALUES (501, 1, 1, 6000), (501, 2, 1, 1000)");
 
         $this->assertSame(1, $service->createForOrderIfRequired(501));
         $this->assertSame(0, $service->createForOrderIfRequired(501));
 
-        $job = $this->pdo->query('SELECT order_id, product_id, status, fulfillment_model, bonus_type, bonus_value, bonus_amount_locked, manager_comment FROM production_jobs WHERE order_id = 501')->fetch(PDO::FETCH_ASSOC);
+        $job = $this->pdo->query('SELECT order_id, product_id, status, fulfillment_model, bonus_type, bonus_value, bonus_amount_locked, estimated_materials_cost, estimated_acquiring_cost, estimated_margin_amount, minimum_margin_amount, margin_status, manager_comment FROM production_jobs WHERE order_id = 501')->fetch(PDO::FETCH_ASSOC);
         $this->assertSame(501, (int)$job['order_id']);
         $this->assertSame(1, (int)$job['product_id']);
         $this->assertSame('new', $job['status']);
@@ -139,6 +146,11 @@ class ProductionJobServiceTest extends TestCase
         $this->assertSame('internal_bonus', $job['bonus_type']);
         $this->assertSame(10.0, (float)$job['bonus_value']);
         $this->assertSame(600.0, (float)$job['bonus_amount_locked']);
+        $this->assertSame(1100.0, (float)$job['estimated_materials_cost']);
+        $this->assertSame(210.0, (float)$job['estimated_acquiring_cost']);
+        $this->assertSame(4090.0, (float)$job['estimated_margin_amount']);
+        $this->assertSame(650.0, (float)$job['minimum_margin_amount']);
+        $this->assertSame('ok', $job['margin_status']);
         $this->assertStringContainsString('Набор 12 ягод', $job['manager_comment']);
 
         $event = $this->pdo->query("SELECT comment FROM production_job_events WHERE order_id = 501")->fetchColumn();
