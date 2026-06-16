@@ -118,6 +118,14 @@ return [
         return true;
     },
     static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('GET', '/klubnika-v-shokolade', $method, $uri)) {
+            return false;
+        }
+
+        (new App\Controllers\ClientController($c['pdo']))->showProductType('klubnika-v-shokolade');
+        return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
         if (!routeRegex('GET', '#^/catalog/([^/]+)/([^/]+)$#', $method, $uri, $m)) {
             return false;
         }
