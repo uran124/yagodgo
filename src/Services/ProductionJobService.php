@@ -167,6 +167,116 @@ class ProductionJobService
         return $created;
     }
 
+
+    public function addPhoto(int $jobId, string $imagePath, string $photoType = 'ready', ?int $changedByUserId = null, ?string $changedByRole = null): bool
+    {
+        if ($jobId <= 0 || $imagePath === '' || !$this->tableExists('production_job_photos')) {
+            return false;
+        }
+
+        $orderId = $this->findOrderId($jobId);
+        if ($orderId === null) {
+            return false;
+        }
+
+        $stmt = $this->pdo->prepare(
+            'INSERT INTO production_job_photos (job_id, order_id, image_path, photo_type, review_status, created_at)
+             VALUES (:job_id, :order_id, :image_path, :photo_type, :review_status, ' . $this->currentTimestampExpression() . ')'
+        );
+        $stmt->execute([
+            'job_id' => $jobId,
+            'order_id' => $orderId,
+            'image_path' => $imagePath,
+            'photo_type' => in_array($photoType, ['ready', 'packaging', 'handover'], true) ? $photoType : 'ready',
+            'review_status' => 'pending',
+        ]);
+
+        $this->transitionStatus($jobId, 'photo_uploaded', $changedByUserId, $changedByRole, 'production_photo_uploaded');
+
+        return true;
+    }
+
+    public function reviewPhoto(int $photoId, string $reviewStatus, ?int $reviewedByUserId, ?string $comment = null): bool
+    {
+        if ($photoId <= 0 || !$this->tableExists('production_job_photos')) {
+            return false;
+        }
+
+        $reviewStatus = in_array($reviewStatus, ['approved', 'rejected'], true) ? $reviewStatus : 'rejected';
+        $stmt = $this->pdo->prepare(
+            'UPDATE production_job_photos
+                SET review_status = :review_status,
+                    reviewed_by_user_id = :reviewed_by_user_id,
+                    reviewed_at = ' . $this->currentTimestampExpression() . ',
+                    review_comment = :review_comment
+              WHERE id = :photo_id'
+        );
+        $stmt->execute([
+            'review_status' => $reviewStatus,
+            'reviewed_by_user_id' => $reviewedByUserId,
+            'review_comment' => $comment,
+            'photo_id' => $photoId,
+        ]);
+
+        if ($stmt->rowCount() < 1) {
+            return false;
+        }
+
+        $photo = $this->findPhoto($photoId);
+        if (!$photo) {
+            return true;
+        }
+
+        $this->transitionStatus(
+            (int)$photo['job_id'],
+            $reviewStatus === 'approved' ? 'approved' : 'problem',
+            $reviewedByUserId,
+            null,
+            $reviewStatus === 'approved' ? 'production_photo_approved' : 'production_photo_rejected'
+        );
+
+        return true;
+    }
+
+    public function transitionStatus(int $jobId, string $toStatus, ?int $changedByUserId = null, ?string $changedByRole = null, ?string $comment = null): bool
+    {
+        if ($jobId <= 0 || $toStatus === '') {
+            return false;
+        }
+
+        $stmt = $this->pdo->prepare('SELECT order_id, status FROM production_jobs WHERE id = ?');
+        $stmt->execute([$jobId]);
+        $job = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$job) {
+            return false;
+        }
+
+        $fromStatus = (string)$job['status'];
+        if ($fromStatus === $toStatus) {
+            return true;
+        }
+
+        $timestamp = $this->currentTimestampExpression();
+        $photoUploadedAt = $toStatus === 'photo_uploaded' ? $timestamp : 'photo_uploaded_at';
+        $approvedAt = $toStatus === 'approved' ? $timestamp : 'approved_at';
+        $update = $this->pdo->prepare(
+            'UPDATE production_jobs
+                SET status = :status,
+                    photo_uploaded_at = ' . $photoUploadedAt . ',
+                    approved_at = ' . $approvedAt . ',
+                    updated_at = ' . $timestamp . '
+              WHERE id = :job_id'
+        );
+        $update->execute([
+            'status' => $toStatus,
+            'job_id' => $jobId,
+        ]);
+
+        $this->recordEvent($jobId, (int)$job['order_id'], $fromStatus, $toStatus, $changedByUserId, $changedByRole, $comment);
+
+        return true;
+    }
+
     public function assignAtomically(int $jobId, int $executorId, string $executorType, ?int $changedByUserId = null, ?string $changedByRole = null): bool
     {
         if ($jobId <= 0 || $executorId <= 0 || $executorType === '') {
@@ -221,6 +331,16 @@ class ProductionJobService
         ]);
     }
 
+
+
+    /** @return array<string,mixed>|null */
+    private function findPhoto(int $photoId): ?array
+    {
+        $stmt = $this->pdo->prepare('SELECT * FROM production_job_photos WHERE id = ?');
+        $stmt->execute([$photoId]);
+        $photo = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $photo ?: null;
+    }
 
     private function jobExistsForOrderProduct(int $orderId, int $productId): bool
     {

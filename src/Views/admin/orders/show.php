@@ -304,6 +304,60 @@
               <div class="rounded bg-slate-50 p-2 text-sm text-slate-700"><?= nl2br(htmlspecialchars((string)$job['manager_comment'])) ?></div>
             <?php endif; ?>
 
+            <?php $photos = $job['photos'] ?? []; ?>
+            <div class="border-t pt-2 space-y-2">
+              <div class="text-sm font-medium">Фото-контроль</div>
+              <?php if (empty($photos)): ?>
+                <div class="text-xs text-amber-700">Фото результата ещё не загружено.</div>
+              <?php else: ?>
+                <div class="grid gap-2 md:grid-cols-3">
+                  <?php foreach ($photos as $photo): ?>
+                    <div class="rounded border border-slate-200 p-2 text-xs space-y-2">
+                      <a href="<?= htmlspecialchars((string)$photo['image_path']) ?>" target="_blank" rel="noopener">
+                        <img src="<?= htmlspecialchars((string)$photo['image_path']) ?>" alt="Фото производства" class="h-28 w-full rounded object-cover">
+                      </a>
+                      <div>Тип: <?= htmlspecialchars((string)($photo['photo_type'] ?? 'ready')) ?></div>
+                      <div>Проверка: <?= htmlspecialchars((string)($photo['review_status'] ?? 'pending')) ?></div>
+                      <?php if (($photo['review_status'] ?? 'pending') === 'pending'): ?>
+                        <div class="flex flex-wrap gap-1">
+                          <form action="<?= $base ?>/orders/production/photo-review" method="post">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
+                            <input type="hidden" name="photo_id" value="<?= (int)$photo['id'] ?>">
+                            <input type="hidden" name="review_status" value="approved">
+                            <button class="rounded bg-green-700 px-2 py-1 text-white" type="submit">Принять</button>
+                          </form>
+                          <form action="<?= $base ?>/orders/production/photo-review" method="post">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
+                            <input type="hidden" name="photo_id" value="<?= (int)$photo['id'] ?>">
+                            <input type="hidden" name="review_status" value="rejected">
+                            <button class="rounded border border-red-600 px-2 py-1 text-red-700" type="submit">Отклонить</button>
+                          </form>
+                        </div>
+                      <?php endif; ?>
+                    </div>
+                  <?php endforeach; ?>
+                </div>
+              <?php endif; ?>
+              <form action="<?= $base ?>/orders/production/photo" method="post" enctype="multipart/form-data" class="flex flex-wrap items-end gap-2">
+                <?= csrf_field() ?>
+                <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
+                <input type="hidden" name="job_id" value="<?= (int)$job['id'] ?>">
+                <label class="text-xs">Тип фото
+                  <select name="photo_type" class="block rounded border px-2 py-1 text-sm">
+                    <option value="ready">Готовый набор</option>
+                    <option value="packaging">Упаковка</option>
+                    <option value="handover">Передача</option>
+                  </select>
+                </label>
+                <label class="text-xs">Фото
+                  <input type="file" name="photo" accept="image/*" class="block text-sm">
+                </label>
+                <button class="rounded bg-slate-800 px-3 py-1 text-sm text-white" type="submit">Загрузить фото</button>
+              </form>
+            </div>
+
             <?php if ($executorId === 0 && !empty($productionExecutors)): ?>
               <form action="<?= $base ?>/orders/production/assign" method="post" class="flex flex-wrap items-end gap-2 border-t pt-2">
                 <?= csrf_field() ?>

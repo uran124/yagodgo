@@ -99,38 +99,43 @@ class AdminOrdersPageService
         $stmt->execute([$orderId]);
         $jobs = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-        if (!$jobs || !$this->tableExists('production_job_events')) {
-            foreach ($jobs as &$job) {
-                $job['events'] = [];
-            }
-            unset($job);
-            return $jobs;
-        }
-
         $jobIds = array_values(array_filter(array_map(static fn (array $job): int => (int)($job['id'] ?? 0), $jobs)));
         if (!$jobIds) {
             return $jobs;
         }
 
         $placeholders = implode(',', array_fill(0, count($jobIds), '?'));
-        $eventsStmt = $this->pdo->prepare(
-            "SELECT *
-" .
-            "FROM production_job_events
-" .
-            "WHERE job_id IN ({$placeholders})
-" .
-            "ORDER BY created_at DESC, id DESC"
-        );
-        $eventsStmt->execute($jobIds);
-
         $eventsByJob = [];
-        foreach ($eventsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $event) {
-            $eventsByJob[(int)$event['job_id']][] = $event;
+        if ($this->tableExists('production_job_events')) {
+            $eventsStmt = $this->pdo->prepare(
+                "SELECT *\n" .
+                "FROM production_job_events\n" .
+                "WHERE job_id IN ({$placeholders})\n" .
+                "ORDER BY created_at DESC, id DESC"
+            );
+            $eventsStmt->execute($jobIds);
+            foreach ($eventsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $event) {
+                $eventsByJob[(int)$event['job_id']][] = $event;
+            }
+        }
+
+        $photosByJob = [];
+        if ($this->tableExists('production_job_photos')) {
+            $photosStmt = $this->pdo->prepare(
+                "SELECT *\n" .
+                "FROM production_job_photos\n" .
+                "WHERE job_id IN ({$placeholders})\n" .
+                "ORDER BY created_at DESC, id DESC"
+            );
+            $photosStmt->execute($jobIds);
+            foreach ($photosStmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $photo) {
+                $photosByJob[(int)$photo['job_id']][] = $photo;
+            }
         }
 
         foreach ($jobs as &$job) {
             $job['events'] = $eventsByJob[(int)$job['id']] ?? [];
+            $job['photos'] = $photosByJob[(int)$job['id']] ?? [];
         }
         unset($job);
 

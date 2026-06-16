@@ -55,6 +55,18 @@ class ProductionJobServiceTest extends TestCase
             comment TEXT NULL,
             created_at TEXT NOT NULL
         )');
+        $this->pdo->exec('CREATE TABLE production_job_photos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            job_id INTEGER NOT NULL,
+            order_id INTEGER NOT NULL,
+            image_path TEXT NOT NULL,
+            photo_type TEXT NOT NULL DEFAULT "ready",
+            review_status TEXT NOT NULL DEFAULT "pending",
+            reviewed_by_user_id INTEGER NULL,
+            reviewed_at TEXT NULL,
+            review_comment TEXT NULL,
+            created_at TEXT NOT NULL
+        )');
         $this->pdo->exec('CREATE TABLE products (
             id INTEGER PRIMARY KEY,
             variety TEXT,
@@ -125,6 +137,42 @@ class ProductionJobServiceTest extends TestCase
         $this->assertSame('new', $events[1]['from_status']);
         $this->assertSame('assigned', $events[1]['to_status']);
         $this->assertSame('production_job_assigned', $events[1]['comment']);
+    }
+
+    public function testAddAndReviewPhotoMovesProductionStatuses(): void
+    {
+        $service = new ProductionJobService($this->pdo);
+        $jobId = $service->create(['order_id' => 901]);
+
+        $this->assertTrue($service->addPhoto($jobId, '/uploads/production/ready.webp', 'ready', 7, 'manager'));
+
+        $job = $this->pdo->query('SELECT status, photo_uploaded_at FROM production_jobs WHERE id = ' . $jobId)->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame('photo_uploaded', $job['status']);
+        $this->assertNotEmpty($job['photo_uploaded_at']);
+
+        $photo = $this->pdo->query('SELECT id, order_id, image_path, photo_type, review_status FROM production_job_photos WHERE job_id = ' . $jobId)->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame(901, (int)$photo['order_id']);
+        $this->assertSame('/uploads/production/ready.webp', $photo['image_path']);
+        $this->assertSame('ready', $photo['photo_type']);
+        $this->assertSame('pending', $photo['review_status']);
+
+        $this->assertTrue($service->reviewPhoto((int)$photo['id'], 'approved', 8, 'ok'));
+
+        $reviewedPhoto = $this->pdo->query('SELECT review_status, reviewed_by_user_id, reviewed_at, review_comment FROM production_job_photos WHERE id = ' . (int)$photo['id'])->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame('approved', $reviewedPhoto['review_status']);
+        $this->assertSame(8, (int)$reviewedPhoto['reviewed_by_user_id']);
+        $this->assertNotEmpty($reviewedPhoto['reviewed_at']);
+        $this->assertSame('ok', $reviewedPhoto['review_comment']);
+
+        $approvedJob = $this->pdo->query('SELECT status, approved_at FROM production_jobs WHERE id = ' . $jobId)->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame('approved', $approvedJob['status']);
+        $this->assertNotEmpty($approvedJob['approved_at']);
+
+        $events = $this->pdo->query('SELECT to_status, comment FROM production_job_events WHERE job_id = ' . $jobId . ' ORDER BY id')->fetchAll(PDO::FETCH_ASSOC);
+        $this->assertSame('production_photo_uploaded', $events[1]['comment']);
+        $this->assertSame('photo_uploaded', $events[1]['to_status']);
+        $this->assertSame('production_photo_approved', $events[2]['comment']);
+        $this->assertSame('approved', $events[2]['to_status']);
     }
 
     public function testCreateForOrderIfRequiredCreatesJobsOnlyForProductionProducts(): void

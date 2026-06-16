@@ -242,6 +242,74 @@ class OrdersController
         exit;
     }
 
+
+    public function uploadProductionPhoto(): void
+    {
+        $orderId = (int)($_POST['order_id'] ?? 0);
+        $jobId = (int)($_POST['job_id'] ?? 0);
+        $photoType = (string)($_POST['photo_type'] ?? 'ready');
+        if ($orderId <= 0 || $jobId <= 0 || empty($_FILES['photo']['tmp_name'])) {
+            header('Location: ' . ($orderId > 0 ? $this->basePath() . '/' . $orderId : $this->basePath()) . '?error=' . urlencode('invalid production photo'));
+            exit;
+        }
+
+        $tmp = (string)$_FILES['photo']['tmp_name'];
+        $name = (string)($_FILES['photo']['name'] ?? 'photo');
+        $error = (int)($_FILES['photo']['error'] ?? UPLOAD_ERR_NO_FILE);
+        if ($error !== UPLOAD_ERR_OK || !is_uploaded_file($tmp)) {
+            header('Location: ' . $this->basePath() . '/' . $orderId . '?error=' . urlencode('Фото не загружено'));
+            exit;
+        }
+
+        $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+        if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true)) {
+            $ext = 'jpg';
+        }
+        $dir = dirname(__DIR__, 2) . '/uploads/production';
+        if (!is_dir($dir)) {
+            mkdir($dir, 0775, true);
+        }
+        $fileName = uniqid('production_' . $jobId . '_', true) . '.' . $ext;
+        $absPath = $dir . '/' . $fileName;
+        if (!move_uploaded_file($tmp, $absPath)) {
+            header('Location: ' . $this->basePath() . '/' . $orderId . '?error=' . urlencode('Не удалось сохранить фото'));
+            exit;
+        }
+
+        (new ProductionJobService($this->pdo))->addPhoto(
+            $jobId,
+            '/uploads/production/' . $fileName,
+            $photoType,
+            isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null,
+            $_SESSION['role'] ?? null
+        );
+
+        header('Location: ' . $this->basePath() . '/' . $orderId . '?msg=' . urlencode('Фото производства загружено'));
+        exit;
+    }
+
+    public function reviewProductionPhoto(): void
+    {
+        $orderId = (int)($_POST['order_id'] ?? 0);
+        $photoId = (int)($_POST['photo_id'] ?? 0);
+        $reviewStatus = (string)($_POST['review_status'] ?? 'rejected');
+        $comment = trim((string)($_POST['review_comment'] ?? '')) ?: null;
+        if ($orderId <= 0 || $photoId <= 0) {
+            header('Location: ' . ($orderId > 0 ? $this->basePath() . '/' . $orderId : $this->basePath()) . '?error=' . urlencode('invalid production review'));
+            exit;
+        }
+
+        (new ProductionJobService($this->pdo))->reviewPhoto(
+            $photoId,
+            $reviewStatus,
+            isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null,
+            $comment
+        );
+
+        header('Location: ' . $this->basePath() . '/' . $orderId . '?msg=' . urlencode('Проверка фото сохранена'));
+        exit;
+    }
+
     // Форма создания заказа вручную (админ)
     public function create(): void
     {

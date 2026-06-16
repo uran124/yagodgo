@@ -24,6 +24,8 @@ return [
             'POST /partner/orders/delete' => ['App\\Controllers\\OrdersController', 'delete'],
             'POST /partner/orders/production/create' => ['App\\Controllers\\OrdersController', 'createProductionJob'],
             'POST /partner/orders/production/assign' => ['App\\Controllers\\OrdersController', 'assignProductionJob'],
+            'POST /partner/orders/production/photo' => ['App\\Controllers\\OrdersController', 'uploadProductionPhoto'],
+            'POST /partner/orders/production/photo-review' => ['App\\Controllers\\OrdersController', 'reviewProductionPhoto'],
             'GET /partner/products' => ['App\\Controllers\\ProductsController', 'index'],
             'GET /partner/products/edit' => ['App\\Controllers\\ProductsController', 'edit'],
             'POST /partner/products/save' => ['App\\Controllers\\ProductsController', 'save'],

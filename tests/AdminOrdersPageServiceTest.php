@@ -136,6 +136,18 @@ class AdminOrdersPageServiceTest extends TestCase
             comment TEXT NULL,
             created_at TEXT NOT NULL
         )');
+        $this->pdo->exec('CREATE TABLE production_job_photos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            job_id INTEGER NOT NULL,
+            order_id INTEGER NOT NULL,
+            image_path TEXT NOT NULL,
+            photo_type TEXT NOT NULL DEFAULT "ready",
+            review_status TEXT NOT NULL DEFAULT "pending",
+            reviewed_by_user_id INTEGER NULL,
+            reviewed_at TEXT NULL,
+            review_comment TEXT NULL,
+            created_at TEXT NOT NULL
+        )');
         $this->pdo->exec('CREATE TABLE production_executor_settings (
             user_id INTEGER PRIMARY KEY,
             executor_type TEXT NOT NULL DEFAULT "internal_staff",
@@ -177,6 +189,8 @@ class AdminOrdersPageServiceTest extends TestCase
             VALUES (5, 1, 1, 'internal_staff', 2, 'by_berrygo_on_site', 'shop', 'assigned', '2026-06-16 15:00:00', '2026-06-16 16:00:00', 'internal_bonus', 10, 300, 0, 0, 0, 0, 'Сделать на смене', '2026-06-16 12:00:00', '2026-06-16 12:00:00')");
         $this->pdo->exec("INSERT INTO production_job_events (job_id, order_id, from_status, to_status, changed_by_user_id, changed_by_role, comment, created_at)
             VALUES (5, 1, 'new', 'assigned', 3, 'admin', 'production_job_assigned', '2026-06-16 12:05:00')");
+        $this->pdo->exec("INSERT INTO production_job_photos (job_id, order_id, image_path, photo_type, review_status, created_at)
+            VALUES (5, 1, '/uploads/production/ready.webp', 'ready', 'pending', '2026-06-16 12:10:00')");
         $this->pdo->exec("INSERT INTO production_executor_settings (user_id, executor_type, is_active, current_mode, default_fulfillment_model, default_bonus_percent, default_bonus_amount, max_active_jobs, created_at, updated_at) VALUES
             (2, 'internal_staff', 1, 'on_shift', 'by_berrygo_on_site', 10, 300, 2, '2026-06-16 12:00:00', '2026-06-16 12:00:00'),
             (3, 'internal_staff', 1, 'offline', 'by_berrygo_on_site', 10, 0, 1, '2026-06-16 12:00:00', '2026-06-16 12:00:00')");
@@ -202,6 +216,9 @@ class AdminOrdersPageServiceTest extends TestCase
         $this->assertSame(5, (int)$data['productionJobs'][0]['id']);
         $this->assertSame('assigned', $data['productionJobs'][0]['status']);
         $this->assertSame('production_job_assigned', $data['productionJobs'][0]['events'][0]['comment']);
+        $this->assertCount(1, $data['productionJobs'][0]['photos']);
+        $this->assertSame('/uploads/production/ready.webp', $data['productionJobs'][0]['photos'][0]['image_path']);
+        $this->assertSame('pending', $data['productionJobs'][0]['photos'][0]['review_status']);
         $this->assertCount(1, $data['productionExecutors']);
         $this->assertSame('on_shift', $data['productionExecutors'][0]['current_mode']);
     }
