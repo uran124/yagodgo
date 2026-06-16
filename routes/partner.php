@@ -22,6 +22,8 @@ return [
             'POST /partner/orders/referral' => ['App\\Controllers\\OrdersController', 'updateReferral'],
             'POST /partner/orders/update-delivery' => ['App\\Controllers\\OrdersController', 'updateDelivery'],
             'POST /partner/orders/delete' => ['App\\Controllers\\OrdersController', 'delete'],
+            'POST /partner/orders/production/create' => ['App\\Controllers\\OrdersController', 'createProductionJob'],
+            'POST /partner/orders/production/assign' => ['App\\Controllers\\OrdersController', 'assignProductionJob'],
             'GET /partner/products' => ['App\\Controllers\\ProductsController', 'index'],
             'GET /partner/products/edit' => ['App\\Controllers\\ProductsController', 'edit'],
             'POST /partner/products/save' => ['App\\Controllers\\ProductsController', 'save'],
