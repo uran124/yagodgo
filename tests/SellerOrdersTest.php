@@ -28,6 +28,7 @@ class SellerOrdersTest extends TestCase
     public function testSellerOrderCalculations(): void
     {
         if (!class_exists('App\\Controllers\\SellerController')) {
+            require_once __DIR__ . '/../src/Services/SellerEconomicsService.php';
             require_once __DIR__ . '/../src/Controllers/SellerController.php';
         }
 
@@ -42,6 +43,7 @@ class SellerOrdersTest extends TestCase
         $pdo->exec('CREATE TABLE order_items (id INTEGER PRIMARY KEY AUTOINCREMENT, order_id INT, product_id INT, quantity REAL, boxes REAL, unit_price REAL)');
         $pdo->exec('CREATE TABLE products (id INT, product_type_id INT, seller_id INT, box_size REAL, box_unit TEXT, variety TEXT)');
         $pdo->exec('CREATE TABLE product_types (id INT, name TEXT)');
+        $pdo->exec('CREATE TABLE partner_profiles (user_id INT, partner_type TEXT, monetization_model TEXT, commission_rate REAL, subscription_fee REAL, fixed_fee_per_order REAL, client_visibility TEXT)');
 
         $pdo->exec("INSERT INTO users (id,name,phone) VALUES (2,'Людмила','79025505385')");
         $pdo->exec("INSERT INTO addresses (id,street) VALUES (1,'Елены Стасовой 48Е')");
@@ -52,6 +54,7 @@ class SellerOrdersTest extends TestCase
         $pdo->exec("INSERT INTO products (id,product_type_id,seller_id,box_size,box_unit,variety) VALUES (2,1,2,2.0,'кг','')");
         $pdo->exec("INSERT INTO order_items (order_id,product_id,quantity,boxes,unit_price) VALUES (1,1,2.0,1,600)");
         $pdo->exec("INSERT INTO order_items (order_id,product_id,quantity,boxes,unit_price) VALUES (1,2,3.0,1.5,800)");
+        $pdo->exec("INSERT INTO partner_profiles (user_id, partner_type, monetization_model, commission_rate, subscription_fee, fixed_fee_per_order, client_visibility) VALUES (1, 'marketplace_seller', 'commission', 25, 0, 0, 'seller_visible')");
 
         $controller = new SellerController($pdo);
         ob_start();
@@ -64,8 +67,9 @@ class SellerOrdersTest extends TestCase
         $this->assertEquals(1, count($data['orders']));
         $order = $data['orders'][0];
         $this->assertEquals(1200, $order['seller_subtotal']);
-        $this->assertEquals(360, $order['commission']);
-        $this->assertEquals(840, $order['payout']);
+        $this->assertEquals('commission', $order['monetization_model']);
+        $this->assertEquals(300, $order['commission']);
+        $this->assertEquals(900, $order['payout']);
         $this->assertEquals(33.33, $order['points_applied']);
         $this->assertEquals('79******385', $order['phone']);
     }
