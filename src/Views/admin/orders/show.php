@@ -223,6 +223,163 @@
     </div>
   </div>
 
+
+  <?php
+    $productionStatusLabels = [
+      'new' => 'Новое',
+      'assigned' => 'Назначено',
+      'materials_pending' => 'Ждёт материалы',
+      'materials_sent' => 'Материалы отправлены',
+      'materials_received' => 'Материалы получены',
+      'in_progress' => 'В работе',
+      'photo_uploaded' => 'Фото загружено',
+      'approved' => 'Принято менеджером',
+      'ready_for_handover' => 'Готово к передаче',
+      'handed_over' => 'Передано',
+      'completed' => 'Завершено',
+      'cancelled' => 'Отменено',
+      'problem' => 'Проблема',
+    ];
+    $fulfillmentLabels = [
+      'by_berrygo_on_site' => 'berryGo · на смене',
+      'by_berrygo_remote' => 'berryGo · удалённо',
+      'by_partner_under_berrygo_brand' => 'Партнёр под брендом berryGo',
+      'by_seller' => 'Исполнение селлером',
+      'by_berrygo_from_seller_stock' => 'berryGo со склада селлера',
+    ];
+    $productionLocationLabels = [
+      'shop' => 'На точке berryGo',
+      'remote' => 'Удалённо',
+      'partner' => 'У партнёра',
+      'seller' => 'У селлера',
+    ];
+    $bonusLabels = [
+      'salary' => 'В зарплате',
+      'internal_bonus' => 'Внутренний бонус',
+      'fixed_payout' => 'Фикс. выплата',
+      'commission' => 'Комиссия',
+      'subscription' => 'Абонентка',
+      'commission_plus_subscription' => 'Комиссия + абонентка',
+      'fixed_fee_per_order' => 'Фикс за заказ',
+    ];
+    $productionJobs = $productionJobs ?? [];
+    $productionExecutors = $productionExecutors ?? [];
+  ?>
+  <div class="bg-white p-2 md:p-4 rounded shadow card space-y-3">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <div>
+        <h2 class="font-semibold">Производство</h2>
+        <p class="text-xs text-gray-500">Производственные задания остаются внутри этого заказа и не создают отдельный заказ.</p>
+      </div>
+      <span class="text-xs rounded-full bg-slate-100 px-2 py-1 text-slate-600">Заданий: <?= count($productionJobs) ?></span>
+    </div>
+
+    <?php if (empty($productionJobs)): ?>
+      <div class="rounded border border-dashed border-slate-300 p-3 text-sm text-gray-600">Пока нет производственных заданий для этого заказа.</div>
+    <?php else: ?>
+      <div class="space-y-2">
+        <?php foreach ($productionJobs as $job): ?>
+          <?php
+            $jobStatus = (string)($job['status'] ?? 'new');
+            $executorId = (int)($job['executor_id'] ?? 0);
+            $events = $job['events'] ?? [];
+          ?>
+          <div class="rounded border border-slate-200 p-3 space-y-2">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="font-semibold">Задание #<?= (int)$job['id'] ?></div>
+              <span class="rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700"><?= htmlspecialchars($productionStatusLabels[$jobStatus] ?? $jobStatus) ?></span>
+            </div>
+            <div class="grid gap-1 text-sm md:grid-cols-2">
+              <div><span class="text-gray-500">Модель:</span> <?= htmlspecialchars($fulfillmentLabels[$job['fulfillment_model'] ?? ''] ?? (string)($job['fulfillment_model'] ?? '—')) ?></div>
+              <div><span class="text-gray-500">Место:</span> <?= htmlspecialchars($productionLocationLabels[$job['production_location'] ?? ''] ?? (string)($job['production_location'] ?? '—')) ?></div>
+              <div><span class="text-gray-500">Готовность:</span> <?= htmlspecialchars((string)($job['production_deadline'] ?? '—')) ?></div>
+              <div><span class="text-gray-500">Передача:</span> <?= htmlspecialchars((string)($job['handover_deadline'] ?? '—')) ?></div>
+              <div><span class="text-gray-500">Бонус:</span> <?= htmlspecialchars($bonusLabels[$job['bonus_type'] ?? ''] ?? (string)($job['bonus_type'] ?? '—')) ?> · <?= number_format((float)($job['bonus_amount_locked'] ?? 0), 0, '.', ' ') ?> ₽</div>
+              <div><span class="text-gray-500">Исполнитель:</span> <?= $executorId > 0 ? ('#' . $executorId . ' · ' . htmlspecialchars((string)($job['executor_type'] ?? ''))) : 'не назначен' ?></div>
+            </div>
+            <?php if (!empty($job['manager_comment'])): ?>
+              <div class="rounded bg-slate-50 p-2 text-sm text-slate-700"><?= nl2br(htmlspecialchars((string)$job['manager_comment'])) ?></div>
+            <?php endif; ?>
+
+            <?php if ($executorId === 0 && !empty($productionExecutors)): ?>
+              <form action="<?= $base ?>/orders/production/assign" method="post" class="flex flex-wrap items-end gap-2 border-t pt-2">
+                <?= csrf_field() ?>
+                <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
+                <input type="hidden" name="job_id" value="<?= (int)$job['id'] ?>">
+                <input type="hidden" name="executor_type" value="internal_staff">
+                <label class="text-xs">Назначить внутреннего исполнителя
+                  <select name="executor_id" class="block border px-2 py-1 rounded text-sm">
+                    <?php foreach ($productionExecutors as $executor): ?>
+                      <option value="<?= (int)$executor['id'] ?>"><?= htmlspecialchars($executor['name'] ?: ('#' . $executor['id'])) ?> · <?= htmlspecialchars($executor['role'] ?? '') ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                </label>
+                <button class="rounded bg-[#C86052] px-3 py-1 text-sm text-white" type="submit">Назначить</button>
+              </form>
+            <?php endif; ?>
+
+            <?php if (!empty($events)): ?>
+              <details class="text-xs text-gray-600">
+                <summary class="cursor-pointer">История производства</summary>
+                <div class="mt-1 space-y-1">
+                  <?php foreach ($events as $event): ?>
+                    <div class="rounded bg-slate-50 p-2">
+                      <span class="font-medium"><?= htmlspecialchars((string)($event['created_at'] ?? '')) ?></span>
+                      · <?= htmlspecialchars((string)($event['from_status'] ?? '—')) ?> → <?= htmlspecialchars((string)($event['to_status'] ?? '')) ?>
+                      <?php if (!empty($event['comment'])): ?> · <?= htmlspecialchars((string)$event['comment']) ?><?php endif; ?>
+                    </div>
+                  <?php endforeach; ?>
+                </div>
+              </details>
+            <?php endif; ?>
+          </div>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+
+    <details class="rounded border border-slate-200 p-3">
+      <summary class="cursor-pointer font-medium">Создать производственное задание</summary>
+      <form action="<?= $base ?>/orders/production/create" method="post" class="mt-3 grid gap-2 md:grid-cols-2">
+        <?= csrf_field() ?>
+        <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
+        <label class="text-sm">Модель исполнения
+          <select name="fulfillment_model" class="mt-1 w-full border px-2 py-1 rounded">
+            <option value="by_berrygo_on_site">berryGo · на смене</option>
+            <option value="by_berrygo_remote">berryGo · удалённо</option>
+          </select>
+        </label>
+        <label class="text-sm">Место
+          <select name="production_location" class="mt-1 w-full border px-2 py-1 rounded">
+            <option value="shop">На точке berryGo</option>
+            <option value="remote">Удалённо</option>
+          </select>
+        </label>
+        <label class="text-sm">Дедлайн готовности
+          <input type="datetime-local" name="production_deadline" class="mt-1 w-full border px-2 py-1 rounded">
+        </label>
+        <label class="text-sm">Дедлайн передачи
+          <input type="datetime-local" name="handover_deadline" class="mt-1 w-full border px-2 py-1 rounded">
+        </label>
+        <label class="text-sm">Тип бонуса
+          <select name="bonus_type" class="mt-1 w-full border px-2 py-1 rounded">
+            <option value="internal_bonus">Внутренний бонус</option>
+            <option value="salary">В зарплате</option>
+            <option value="fixed_payout">Фикс. выплата</option>
+          </select>
+        </label>
+        <label class="text-sm">Бонус зафиксирован, ₽
+          <input type="number" name="bonus_amount_locked" min="0" step="1" value="0" class="mt-1 w-full border px-2 py-1 rounded">
+        </label>
+        <label class="text-sm md:col-span-2">Комментарий менеджера
+          <textarea name="manager_comment" rows="2" class="mt-1 w-full border px-2 py-1 rounded" placeholder="Например: клубника в шоколаде, сделать на смене"></textarea>
+        </label>
+        <div class="md:col-span-2">
+          <button class="rounded bg-green-700 px-3 py-1 text-white" type="submit">Создать задание</button>
+        </div>
+      </form>
+    </details>
+  </div>
+
   <form action="<?= $base ?>/orders/comment" method="post" class="bg-white p-2 md:p-4 rounded shadow card space-y-1 md:space-y-2" data-autosave="true">
     <?= csrf_field() ?>
     <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
