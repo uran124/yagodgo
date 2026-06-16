@@ -72,7 +72,147 @@ class AdminOrdersPageService
             'addresses' => $this->fetchAddresses((int)$order['user_id']),
             'slots' => $this->fetchSlots(),
             'products' => $this->fetchActiveProducts(),
+            'productionJobs' => $this->fetchProductionJobs($id),
+            'productionExecutors' => $this->fetchProductionExecutors(),
         ];
+    }
+
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function fetchProductionJobs(int $orderId): array
+    {
+        if (!$this->tableExists('production_jobs')) {
+            return [];
+        }
+
+        $stmt = $this->pdo->prepare(
+            "SELECT *
+" .
+            "FROM production_jobs
+" .
+            "WHERE order_id = ?
+" .
+            "ORDER BY created_at DESC, id DESC"
+        );
+        $stmt->execute([$orderId]);
+        $jobs = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        if (!$jobs || !$this->tableExists('production_job_events')) {
+            foreach ($jobs as &$job) {
+                $job['events'] = [];
+            }
+            unset($job);
+            return $jobs;
+        }
+
+        $jobIds = array_values(array_filter(array_map(static fn (array $job): int => (int)($job['id'] ?? 0), $jobs)));
+        if (!$jobIds) {
+            return $jobs;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($jobIds), '?'));
+        $eventsStmt = $this->pdo->prepare(
+            "SELECT *
+" .
+            "FROM production_job_events
+" .
+            "WHERE job_id IN ({$placeholders})
+" .
+            "ORDER BY created_at DESC, id DESC"
+        );
+        $eventsStmt->execute($jobIds);
+
+        $eventsByJob = [];
+        foreach ($eventsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [] as $event) {
+            $eventsByJob[(int)$event['job_id']][] = $event;
+        }
+
+        foreach ($jobs as &$job) {
+            $job['events'] = $eventsByJob[(int)$job['id']] ?? [];
+        }
+        unset($job);
+
+        return $jobs;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function fetchProductionExecutors(): array
+    {
+        if ($this->tableExists('production_executor_settings')) {
+            $stmt = $this->pdo->query(
+                "SELECT u.id, u.name, u.role, pes.executor_type, pes.current_mode,
+" .
+                "       pes.default_fulfillment_model, pes.default_bonus_percent, pes.default_bonus_amount,
+" .
+                "       pes.max_active_jobs,
+" .
+                "       COALESCE(active_jobs.active_count, 0) AS active_jobs_count
+" .
+                "FROM production_executor_settings pes
+" .
+                "JOIN users u ON u.id = pes.user_id
+" .
+                "LEFT JOIN (
+" .
+                "    SELECT executor_id, COUNT(*) AS active_count
+" .
+                "    FROM production_jobs
+" .
+                "    WHERE executor_type = 'internal_staff'
+" .
+                "      AND status IN ('assigned','materials_pending','materials_sent','materials_received','in_progress','photo_uploaded','approved','ready_for_handover')
+" .
+                "    GROUP BY executor_id
+" .
+                ") active_jobs ON active_jobs.executor_id = pes.user_id
+" .
+                "WHERE pes.executor_type = 'internal_staff'
+" .
+                "  AND pes.is_active = 1
+" .
+                "  AND pes.current_mode IN ('on_shift', 'remote_available')
+" .
+                "  AND COALESCE(active_jobs.active_count, 0) < pes.max_active_jobs
+" .
+                "ORDER BY CASE pes.current_mode WHEN 'on_shift' THEN 1 WHEN 'remote_available' THEN 2 ELSE 9 END, u.name, u.id"
+            );
+
+            return $stmt ? ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
+        }
+
+        $stmt = $this->pdo->query(
+            "SELECT id, name, role, 'internal_staff' AS executor_type, 'on_shift' AS current_mode,
+" .
+            "       'by_berrygo_on_site' AS default_fulfillment_model, 10.00 AS default_bonus_percent, 0.00 AS default_bonus_amount,
+" .
+            "       1 AS max_active_jobs, 0 AS active_jobs_count
+" .
+            "FROM users
+" .
+            "WHERE role IN ('admin', 'manager', 'partner')
+" .
+            "ORDER BY name, id"
+        );
+
+        return $stmt ? ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
+    }
+
+    private function tableExists(string $table): bool
+    {
+        $driver = (string)$this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+        if ($driver === 'sqlite') {
+            $stmt = $this->pdo->prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?");
+            $stmt->execute([$table]);
+            return (bool)$stmt->fetchColumn();
+        }
+
+        $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?');
+        $stmt->execute([$table]);
+        return (int)$stmt->fetchColumn() > 0;
     }
 
     /**

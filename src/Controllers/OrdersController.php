@@ -16,6 +16,7 @@ use App\Services\DeliveryPricingService;
 use App\Services\OrderStatusHistoryService;
 use App\Services\OrderReturnService;
 use App\Services\OrderTotalsService;
+use App\Services\ProductionJobService;
 
 class OrdersController
 {
@@ -177,6 +178,68 @@ class OrdersController
         viewAdmin('orders/show', array_merge([
             'pageTitle' => "Заказ #{$id}",
         ], $data));
+    }
+
+
+    public function createProductionJob(): void
+    {
+        $orderId = (int)($_POST['order_id'] ?? 0);
+        if ($orderId <= 0) {
+            header('Location: ' . $this->basePath());
+            exit;
+        }
+
+        $productionDeadline = str_replace('T', ' ', (string)($_POST['production_deadline'] ?? ''));
+        $handoverDeadline = str_replace('T', ' ', (string)($_POST['handover_deadline'] ?? ''));
+
+        $service = new ProductionJobService($this->pdo);
+        $service->create([
+            'order_id' => $orderId,
+            'fulfillment_model' => $_POST['fulfillment_model'] ?? 'by_berrygo_on_site',
+            'production_location' => $_POST['production_location'] ?? 'shop',
+            'production_deadline' => $productionDeadline !== '' ? $productionDeadline : null,
+            'handover_deadline' => $handoverDeadline !== '' ? $handoverDeadline : null,
+            'bonus_type' => $_POST['bonus_type'] ?? 'internal_bonus',
+            'bonus_value' => (float)($_POST['bonus_value'] ?? 0),
+            'bonus_amount_locked' => (float)($_POST['bonus_amount_locked'] ?? 0),
+            'materials_delivery_required' => ((float)($_POST['materials_delivery_cost'] ?? 0)) > 0,
+            'materials_delivery_cost' => (float)($_POST['materials_delivery_cost'] ?? 0),
+            'result_delivery_required' => ((float)($_POST['result_delivery_cost'] ?? 0)) > 0,
+            'result_delivery_cost' => (float)($_POST['result_delivery_cost'] ?? 0),
+            'estimated_materials_cost' => (float)($_POST['estimated_materials_cost'] ?? 0),
+            'minimum_margin_amount' => (float)($_POST['minimum_margin_amount'] ?? 0),
+            'margin_status' => 'manual',
+            'manager_comment' => trim((string)($_POST['manager_comment'] ?? '')) ?: null,
+        ]);
+
+        header('Location: ' . $this->basePath() . '/' . $orderId . '?msg=' . urlencode('Производственное задание создано'));
+        exit;
+    }
+
+    public function assignProductionJob(): void
+    {
+        $orderId = (int)($_POST['order_id'] ?? 0);
+        $jobId = (int)($_POST['job_id'] ?? 0);
+        $executorId = (int)($_POST['executor_id'] ?? 0);
+        $executorType = (string)($_POST['executor_type'] ?? 'internal_staff');
+
+        if ($orderId <= 0 || $jobId <= 0 || $executorId <= 0) {
+            header('Location: ' . ($orderId > 0 ? $this->basePath() . '/' . $orderId : $this->basePath()) . '?error=' . urlencode('invalid production assignment'));
+            exit;
+        }
+
+        $assigned = (new ProductionJobService($this->pdo))->assignAtomically(
+            $jobId,
+            $executorId,
+            $executorType,
+            isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null,
+            $_SESSION['role'] ?? null
+        );
+
+        $param = $assigned ? 'msg' : 'error';
+        $message = $assigned ? 'Исполнитель назначен' : 'Задание уже назначено или недоступно';
+        header('Location: ' . $this->basePath() . '/' . $orderId . '?' . $param . '=' . urlencode($message));
+        exit;
     }
 
     // Форма создания заказа вручную (админ)

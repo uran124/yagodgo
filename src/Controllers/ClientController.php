@@ -10,6 +10,7 @@ use App\Services\ClientCatalogService;
 use App\Services\SellableBatchResolver;
 use App\Services\DeliveryPricingService;
 use App\Services\OrderStatusHistoryService;
+use App\Services\ProductionJobService;
 
 class ClientController
 {
@@ -894,7 +895,10 @@ public function cart(): void
             }
         }
 
-        // (7.4) Создаём записи выплат для селлеров
+        // (7.4) Создаём производственные задания для товаров berryGo, которые требуют изготовления.
+        (new ProductionJobService($this->pdo))->createForOrderIfRequired($orderId);
+
+        // (7.5) Создаём записи выплат для селлеров
         // Для discount_stock выплаты не формируем (низкомаржинальный режим)
         if ($orderMode === 'discount_stock') {
             continue;
