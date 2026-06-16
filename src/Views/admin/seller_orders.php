@@ -48,6 +48,7 @@
     </ul>
     <div class="text-sm flex justify-between"><span>Стоимость позиций (итого)</span><span><?= number_format($o['seller_subtotal'], 0, '.', ' ') ?> ₽</span></div>
     <div class="text-sm flex justify-between"><span>Оплачено клубничками</span><span><?= number_format($o['points_applied'], 0, '.', ' ') ?> ₽</span></div>
+    <div class="text-sm flex justify-between"><span>Модель монетизации</span><span><?= htmlspecialchars((string)($o['monetization_model'] ?? 'commission')) ?></span></div>
     <div class="text-sm flex justify-between"><span>Комиссия BerryGo (<?= (float)$o['commission_rate'] ?>%)</span><span><?= number_format($o['commission'], 0, '.', ' ') ?> ₽</span></div>
     <div class="text-sm flex justify-between font-semibold"><span>Выплата селлеру</span><span><?= number_format($o['payout'], 0, '.', ' ') ?> ₽</span></div>
     <div class="mt-2 flex flex-wrap gap-2 text-sm">

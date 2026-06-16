@@ -23,5 +23,35 @@
       <option value="warehouse_delivery" <?= ($seller['work_mode'] ?? '')==='warehouse_delivery' ? 'selected' : '' ?>>Со своего склада</option>
     </select>
   </div>
+  <?php $profile = $seller['partner_profile'] ?? []; ?>
+  <div class="border-t pt-4">
+    <h2 class="font-semibold mb-2">Модель селлера</h2>
+    <label class="block mb-1">Монетизация</label>
+    <select name="monetization_model" class="w-full border px-2 py-1 rounded">
+      <option value="commission" <?= ($profile['monetization_model'] ?? 'commission')==='commission' ? 'selected' : '' ?>>Комиссия с продаж</option>
+      <option value="subscription" <?= ($profile['monetization_model'] ?? '')==='subscription' ? 'selected' : '' ?>>Абонентская плата</option>
+      <option value="commission_plus_subscription" <?= ($profile['monetization_model'] ?? '')==='commission_plus_subscription' ? 'selected' : '' ?>>Комиссия + абонентка</option>
+      <option value="fixed_fee_per_order" <?= ($profile['monetization_model'] ?? '')==='fixed_fee_per_order' ? 'selected' : '' ?>>Фикс за заказ</option>
+    </select>
+  </div>
+  <div>
+    <label class="block mb-1">Комиссия, %</label>
+    <input type="number" step="0.01" name="commission_rate" value="<?= htmlspecialchars((string)($profile['commission_rate'] ?? 30)) ?>" class="w-full border px-2 py-1 rounded">
+  </div>
+  <div>
+    <label class="block mb-1">Абонентская плата, ₽</label>
+    <input type="number" step="0.01" name="subscription_fee" value="<?= htmlspecialchars((string)($profile['subscription_fee'] ?? 0)) ?>" class="w-full border px-2 py-1 rounded">
+  </div>
+  <div>
+    <label class="block mb-1">Фикс за заказ, ₽</label>
+    <input type="number" step="0.01" name="fixed_fee_per_order" value="<?= htmlspecialchars((string)($profile['fixed_fee_per_order'] ?? 0)) ?>" class="w-full border px-2 py-1 rounded">
+  </div>
+  <div>
+    <label class="block mb-1">Видимость селлера клиенту</label>
+    <select name="client_visibility" class="w-full border px-2 py-1 rounded">
+      <option value="seller_visible" <?= ($profile['client_visibility'] ?? 'seller_visible')==='seller_visible' ? 'selected' : '' ?>>Показывать селлера</option>
+      <option value="berrygo_only" <?= ($profile['client_visibility'] ?? '')==='berrygo_only' ? 'selected' : '' ?>>Только berryGo</option>
+    </select>
+  </div>
   <button type="submit" class="bg-[#C86052] text-white px-4 py-2 rounded">Сохранить</button>
 </form>
