@@ -50,4 +50,20 @@ class SellerEconomicsServiceTest extends TestCase
         $this->assertSame(350.0, $fixedFee['commission']);
         $this->assertSame(1650.0, $fixedFee['payout']);
     }
+
+    public function testPayoutRecordKeepsCommissionOnlyForSellerFulfilledModes(): void
+    {
+        $this->pdo->exec("INSERT INTO partner_profiles (user_id, partner_type, monetization_model, commission_rate, subscription_fee, fixed_fee_per_order, client_visibility)
+            VALUES (13, 'marketplace_seller', 'commission', 25, 0, 0, 'seller_visible')");
+        $service = new SellerEconomicsService($this->pdo);
+
+        $berryGoStock = $service->payoutRecord(13, 1200, 'berrygo_store');
+        $this->assertSame(300.0, $berryGoStock['commission']);
+        $this->assertSame(900.0, $berryGoStock['payout']);
+
+        $sellerFulfilled = $service->payoutRecord(13, 1200, 'own_store');
+        $this->assertSame(300.0, $sellerFulfilled['commission']);
+        $this->assertSame(-300.0, $sellerFulfilled['payout']);
+    }
+
 }

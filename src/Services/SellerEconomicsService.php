@@ -78,6 +78,24 @@ class SellerEconomicsService
         ];
     }
 
+
+    /** @return array<string,float|string> */
+    public function payoutRecord(int $sellerId, float $grossAmount, string $workMode): array
+    {
+        $economics = $this->calculate($sellerId, $grossAmount, $grossAmount, 0.0);
+        $commission = (float)$economics['commission'];
+        $payout = in_array($workMode, ['own_store', 'warehouse_delivery'], true)
+            ? -$commission
+            : (float)$economics['payout'];
+
+        return [
+            'commission_rate' => (float)$economics['commission_rate'],
+            'commission' => $commission,
+            'payout' => $payout,
+            'monetization_model' => (string)$economics['monetization_model'],
+        ];
+    }
+
     private function tableExists(string $table): bool
     {
         $driver = (string)$this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
