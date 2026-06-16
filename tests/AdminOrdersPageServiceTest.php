@@ -131,6 +131,21 @@ class AdminOrdersPageServiceTest extends TestCase
             comment TEXT NULL,
             created_at TEXT NOT NULL
         )');
+        $this->pdo->exec('CREATE TABLE production_executor_settings (
+            user_id INTEGER PRIMARY KEY,
+            executor_type TEXT NOT NULL DEFAULT "internal_staff",
+            is_active INTEGER NOT NULL DEFAULT 1,
+            can_work_on_site INTEGER NOT NULL DEFAULT 1,
+            can_work_remote INTEGER NOT NULL DEFAULT 0,
+            current_mode TEXT NOT NULL DEFAULT "offline",
+            default_fulfillment_model TEXT NOT NULL DEFAULT "by_berrygo_on_site",
+            default_bonus_percent REAL NOT NULL DEFAULT 10,
+            default_bonus_amount REAL NOT NULL DEFAULT 0,
+            max_active_jobs INTEGER NOT NULL DEFAULT 1,
+            notes TEXT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )');
 
         $this->pdo->exec("INSERT INTO users (id, name, phone, role, referral_code, has_used_referral_coupon) VALUES
             (1, 'Client', '79000000001', 'client', 'REF01', 0),
@@ -157,6 +172,9 @@ class AdminOrdersPageServiceTest extends TestCase
             VALUES (5, 1, 1, 'internal_staff', 2, 'by_berrygo_on_site', 'shop', 'assigned', '2026-06-16 15:00:00', '2026-06-16 16:00:00', 'internal_bonus', 10, 300, 0, 0, 0, 0, 'Сделать на смене', '2026-06-16 12:00:00', '2026-06-16 12:00:00')");
         $this->pdo->exec("INSERT INTO production_job_events (job_id, order_id, from_status, to_status, changed_by_user_id, changed_by_role, comment, created_at)
             VALUES (5, 1, 'new', 'assigned', 3, 'admin', 'production_job_assigned', '2026-06-16 12:05:00')");
+        $this->pdo->exec("INSERT INTO production_executor_settings (user_id, executor_type, is_active, current_mode, default_fulfillment_model, default_bonus_percent, default_bonus_amount, max_active_jobs, created_at, updated_at) VALUES
+            (2, 'internal_staff', 1, 'on_shift', 'by_berrygo_on_site', 10, 300, 2, '2026-06-16 12:00:00', '2026-06-16 12:00:00'),
+            (3, 'internal_staff', 1, 'offline', 'by_berrygo_on_site', 10, 0, 1, '2026-06-16 12:00:00', '2026-06-16 12:00:00')");
 
         $this->service = new AdminOrdersPageService($this->pdo);
     }
@@ -179,7 +197,8 @@ class AdminOrdersPageServiceTest extends TestCase
         $this->assertSame(5, (int)$data['productionJobs'][0]['id']);
         $this->assertSame('assigned', $data['productionJobs'][0]['status']);
         $this->assertSame('production_job_assigned', $data['productionJobs'][0]['events'][0]['comment']);
-        $this->assertCount(2, $data['productionExecutors']);
+        $this->assertCount(1, $data['productionExecutors']);
+        $this->assertSame('on_shift', $data['productionExecutors'][0]['current_mode']);
     }
 
     public function testBuildCreateDataReturnsSellablePurchaseBatches(): void

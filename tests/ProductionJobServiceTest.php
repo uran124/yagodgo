@@ -64,7 +64,8 @@ class ProductionJobServiceTest extends TestCase
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             order_id INTEGER NOT NULL,
             product_id INTEGER NOT NULL,
-            quantity REAL NOT NULL
+            quantity REAL NOT NULL,
+            unit_price REAL NOT NULL DEFAULT 0
         )');
     }
 
@@ -125,7 +126,7 @@ class ProductionJobServiceTest extends TestCase
         $this->pdo->exec("INSERT INTO products (id, variety, requires_production, production_spec_id, default_fulfillment_model, default_production_minutes, default_executor_bonus_percent, default_executor_bonus_amount) VALUES
             (1, 'Набор 12 ягод', 1, 7, 'by_berrygo_on_site', 120, 10, 400),
             (2, 'Обычная клубника', 0, NULL, 'by_berrygo_on_site', 60, 0, 0)");
-        $this->pdo->exec("INSERT INTO order_items (order_id, product_id, quantity) VALUES (501, 1, 1), (501, 2, 1)");
+        $this->pdo->exec("INSERT INTO order_items (order_id, product_id, quantity, unit_price) VALUES (501, 1, 1, 6000), (501, 2, 1, 1000)");
 
         $this->assertSame(1, $service->createForOrderIfRequired(501));
         $this->assertSame(0, $service->createForOrderIfRequired(501));
@@ -137,7 +138,7 @@ class ProductionJobServiceTest extends TestCase
         $this->assertSame('by_berrygo_on_site', $job['fulfillment_model']);
         $this->assertSame('internal_bonus', $job['bonus_type']);
         $this->assertSame(10.0, (float)$job['bonus_value']);
-        $this->assertSame(400.0, (float)$job['bonus_amount_locked']);
+        $this->assertSame(600.0, (float)$job['bonus_amount_locked']);
         $this->assertStringContainsString('Набор 12 ягод', $job['manager_comment']);
 
         $event = $this->pdo->query("SELECT comment FROM production_job_events WHERE order_id = 501")->fetchColumn();

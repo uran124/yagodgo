@@ -79,6 +79,7 @@ class ProductionJobService
 
         $select = "SELECT oi.product_id,
                           SUM(oi.quantity) AS total_quantity,
+                          SUM(oi.quantity * oi.unit_price) AS line_total,
                           MAX(p.default_fulfillment_model) AS fulfillment_model,
                           MAX(p.default_production_minutes) AS production_minutes,
                           MAX(p.default_executor_bonus_percent) AS bonus_percent,
@@ -108,6 +109,8 @@ class ProductionJobService
             $minutes = max(1, (int)($row['production_minutes'] ?? 120));
             $fixedBonus = (float)($row['fixed_bonus'] ?? 0);
             $bonusPercent = (float)($row['bonus_percent'] ?? 10);
+            $lineTotal = (float)($row['line_total'] ?? 0);
+            $lockedBonus = max($fixedBonus, round($lineTotal * $bonusPercent / 100, 2));
             $deadlineExpression = $this->deadlineExpression($minutes);
 
             $stmtInsert = $this->pdo->prepare(
@@ -130,7 +133,7 @@ class ProductionJobService
                 'status' => self::STATUS_NEW,
                 'bonus_type' => 'internal_bonus',
                 'bonus_value' => $bonusPercent,
-                'bonus_amount_locked' => $fixedBonus,
+                'bonus_amount_locked' => $lockedBonus,
                 'manager_comment' => 'Автозадание по производственному товару: ' . (string)($row['product_names'] ?? ('#' . $productId)),
             ]);
 

@@ -310,7 +310,7 @@
                 <label class="text-xs">Назначить внутреннего исполнителя
                   <select name="executor_id" class="block border px-2 py-1 rounded text-sm">
                     <?php foreach ($productionExecutors as $executor): ?>
-                      <option value="<?= (int)$executor['id'] ?>"><?= htmlspecialchars($executor['name'] ?: ('#' . $executor['id'])) ?> · <?= htmlspecialchars($executor['role'] ?? '') ?></option>
+                      <option value="<?= (int)$executor['id'] ?>"><?= htmlspecialchars($executor['name'] ?: ('#' . $executor['id'])) ?> · <?= htmlspecialchars($executor['role'] ?? '') ?> · <?= htmlspecialchars($executor['current_mode'] ?? 'on_shift') ?></option>
                     <?php endforeach; ?>
                   </select>
                 </label>
