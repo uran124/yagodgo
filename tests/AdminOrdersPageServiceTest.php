@@ -29,7 +29,11 @@ class AdminOrdersPageServiceTest extends TestCase
             user_id INTEGER,
             street TEXT,
             is_primary INTEGER DEFAULT 0,
-            created_at TEXT
+            created_at TEXT,
+            last_checkout_comment TEXT NULL,
+            delivery_distance_km REAL NULL,
+            delivery_distance_m INTEGER NULL,
+            delivery_distance_provider TEXT NULL
         )');
         $this->pdo->exec('CREATE TABLE delivery_slots (id INTEGER PRIMARY KEY, time_from TEXT, time_to TEXT)');
         $this->pdo->exec('CREATE TABLE orders (
@@ -56,6 +60,7 @@ class AdminOrdersPageServiceTest extends TestCase
             box_size REAL,
             box_unit TEXT,
             price REAL DEFAULT 0,
+            preorder_price_per_box REAL DEFAULT 0,
             image_path TEXT NULL,
             is_active INTEGER
         )');
@@ -86,6 +91,61 @@ class AdminOrdersPageServiceTest extends TestCase
             created_at TEXT
         )');
         $this->pdo->exec('CREATE TABLE coupons (code TEXT PRIMARY KEY, type TEXT, discount INTEGER, points INTEGER)');
+        $this->pdo->exec('CREATE TABLE production_jobs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            order_id INTEGER NOT NULL,
+            product_id INTEGER NULL,
+            executor_type TEXT NULL,
+            executor_id INTEGER NULL,
+            fulfillment_model TEXT NOT NULL DEFAULT "by_berrygo_on_site",
+            production_location TEXT NOT NULL DEFAULT "shop",
+            status TEXT NOT NULL DEFAULT "new",
+            production_deadline TEXT NULL,
+            handover_deadline TEXT NULL,
+            bonus_type TEXT NOT NULL DEFAULT "internal_bonus",
+            bonus_value REAL NOT NULL DEFAULT 0,
+            bonus_amount_locked REAL NOT NULL DEFAULT 0,
+            materials_required TEXT NULL,
+            materials_delivery_required INTEGER NOT NULL DEFAULT 0,
+            materials_delivery_cost REAL NOT NULL DEFAULT 0,
+            result_delivery_required INTEGER NOT NULL DEFAULT 0,
+            result_delivery_cost REAL NOT NULL DEFAULT 0,
+            manager_comment TEXT NULL,
+            assigned_at TEXT NULL,
+            started_at TEXT NULL,
+            photo_uploaded_at TEXT NULL,
+            approved_at TEXT NULL,
+            handed_over_at TEXT NULL,
+            completed_at TEXT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )');
+        $this->pdo->exec('CREATE TABLE production_job_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            job_id INTEGER NOT NULL,
+            order_id INTEGER NOT NULL,
+            from_status TEXT NULL,
+            to_status TEXT NOT NULL,
+            changed_by_user_id INTEGER NULL,
+            changed_by_role TEXT NULL,
+            comment TEXT NULL,
+            created_at TEXT NOT NULL
+        )');
+        $this->pdo->exec('CREATE TABLE production_executor_settings (
+            user_id INTEGER PRIMARY KEY,
+            executor_type TEXT NOT NULL DEFAULT "internal_staff",
+            is_active INTEGER NOT NULL DEFAULT 1,
+            can_work_on_site INTEGER NOT NULL DEFAULT 1,
+            can_work_remote INTEGER NOT NULL DEFAULT 0,
+            current_mode TEXT NOT NULL DEFAULT "offline",
+            default_fulfillment_model TEXT NOT NULL DEFAULT "by_berrygo_on_site",
+            default_bonus_percent REAL NOT NULL DEFAULT 10,
+            default_bonus_amount REAL NOT NULL DEFAULT 0,
+            max_active_jobs INTEGER NOT NULL DEFAULT 1,
+            notes TEXT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )');
 
         $this->pdo->exec("INSERT INTO users (id, name, phone, role, referral_code, has_used_referral_coupon) VALUES
             (1, 'Client', '79000000001', 'client', 'REF01', 0),
@@ -108,6 +168,13 @@ class AdminOrdersPageServiceTest extends TestCase
             (1, 1, 2, 1, 600)");
         $this->pdo->exec("INSERT INTO points_transactions (order_id, created_at) VALUES (1, '2025-03-20 11:00:00')");
         $this->pdo->exec("INSERT INTO coupons (code, type, discount, points) VALUES ('POINTS70', 'points', 0, 50)");
+        $this->pdo->exec("INSERT INTO production_jobs (id, order_id, product_id, executor_type, executor_id, fulfillment_model, production_location, status, production_deadline, handover_deadline, bonus_type, bonus_value, bonus_amount_locked, materials_delivery_required, materials_delivery_cost, result_delivery_required, result_delivery_cost, manager_comment, created_at, updated_at)
+            VALUES (5, 1, 1, 'internal_staff', 2, 'by_berrygo_on_site', 'shop', 'assigned', '2026-06-16 15:00:00', '2026-06-16 16:00:00', 'internal_bonus', 10, 300, 0, 0, 0, 0, 'Сделать на смене', '2026-06-16 12:00:00', '2026-06-16 12:00:00')");
+        $this->pdo->exec("INSERT INTO production_job_events (job_id, order_id, from_status, to_status, changed_by_user_id, changed_by_role, comment, created_at)
+            VALUES (5, 1, 'new', 'assigned', 3, 'admin', 'production_job_assigned', '2026-06-16 12:05:00')");
+        $this->pdo->exec("INSERT INTO production_executor_settings (user_id, executor_type, is_active, current_mode, default_fulfillment_model, default_bonus_percent, default_bonus_amount, max_active_jobs, created_at, updated_at) VALUES
+            (2, 'internal_staff', 1, 'on_shift', 'by_berrygo_on_site', 10, 300, 2, '2026-06-16 12:00:00', '2026-06-16 12:00:00'),
+            (3, 'internal_staff', 1, 'offline', 'by_berrygo_on_site', 10, 0, 1, '2026-06-16 12:00:00', '2026-06-16 12:00:00')");
 
         $this->service = new AdminOrdersPageService($this->pdo);
     }
@@ -126,6 +193,12 @@ class AdminOrdersPageServiceTest extends TestCase
         $this->assertCount(1, $data['slots']);
         $this->assertCount(1, $data['products']);
         $this->assertSame(1500.0, (float)$data['products'][0]['price_per_box']);
+        $this->assertCount(1, $data['productionJobs']);
+        $this->assertSame(5, (int)$data['productionJobs'][0]['id']);
+        $this->assertSame('assigned', $data['productionJobs'][0]['status']);
+        $this->assertSame('production_job_assigned', $data['productionJobs'][0]['events'][0]['comment']);
+        $this->assertCount(1, $data['productionExecutors']);
+        $this->assertSame('on_shift', $data['productionExecutors'][0]['current_mode']);
     }
 
     public function testBuildCreateDataReturnsSellablePurchaseBatches(): void
