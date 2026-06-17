@@ -30,6 +30,7 @@ class SettingsController
             'pricing'  => 'Цены',
             'preorder' => 'Предзаказ',
             'payments' => 'Оплата',
+            'registration_notifications' => 'Регистрация / Уведомления',
             'delivery' => 'Доставка',
             'theme'    => 'Тема',
         ];
@@ -88,6 +89,10 @@ class SettingsController
                 'payment_method_cash_pickup_enabled',
                 'payment_method_card_on_delivery_enabled',
                 'payment_method_card_pickup_enabled',
+            ],
+            'registration_notifications' => [
+                'registration_phone_verification_enabled',
+                'registration_email_verification_ttl_minutes',
             ],
             'delivery' => [
                 'delivery_store_address',
@@ -186,6 +191,12 @@ class SettingsController
                     unset($_POST[$passwordKey]);
                 }
             }
+        }
+
+        if ($activeSection === 'registration_notifications') {
+            $_POST['registration_phone_verification_enabled'] = isset($_POST['registration_phone_verification_enabled']) ? '1' : '0';
+            $ttl = isset($_POST['registration_email_verification_ttl_minutes']) ? (int)$_POST['registration_email_verification_ttl_minutes'] : 60;
+            $_POST['registration_email_verification_ttl_minutes'] = (string)max(5, min(1440, $ttl));
         }
 
         if ($activeSection === 'delivery') {

@@ -1,4 +1,5 @@
 <?php /** @var string|null $error */ ?>
+<?php $phoneVerificationEnabled = $phoneVerificationEnabled ?? true; ?>
 
 <main class="bg-gradient-to-br from-orange-50 via-white to-pink-50 flex items-center justify-center px-4 py-4 sm:py-8 min-h-screen absolute top-0 left-0 right-0 bottom-0 overflow-auto">
 
@@ -18,6 +19,16 @@
       </h1>
 
     </div>
+
+    <!-- Уведомление об ошибке -->
+    <?php if (!empty($_GET['notice'])): ?>
+      <div class="bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-400 p-3 sm:p-4 rounded-2xl mb-3 sm:mb-6">
+        <div class="flex items-center">
+          <span class="material-icons-round text-green-500 mr-2 sm:mr-3 text-lg sm:text-xl">mark_email_read</span>
+          <p class="text-green-700 font-medium text-sm sm:text-base"><?= htmlspecialchars($_GET['notice']) ?></p>
+        </div>
+      </div>
+    <?php endif; ?>
 
     <!-- Уведомление об ошибке -->
     <?php if (!empty($_GET['error'])): ?>
@@ -48,6 +59,7 @@
             </div>
             <input id="phone" name="phone" type="tel" maxlength="10" inputmode="numeric" pattern="\d{10}" placeholder="902 923 7794" required class="w-full pl-16 sm:pl-20 pr-3 sm:pr-4 py-2.5 sm:py-3 md:py-4 text-sm sm:text-base md:text-lg border-2 border-gray-100 rounded-2xl focus:border-red-500 focus:ring-2 focus:ring-red-100 outline-none transition-all text-gray-800 placeholder-gray-400">
           </div>
+          <?php if ($phoneVerificationEnabled): ?>
           <div class="flex">
             <button type="button" id="sendRegCode" class="w-full bg-red-500 text-white py-2 rounded-2xl">Подтвердить номер</button>
           </div>
@@ -59,9 +71,12 @@
               <?php endfor; ?>
             </div>
           </div>
+          <?php else: ?>
+            <p class="rounded-2xl bg-amber-50 px-3 py-2 text-xs text-amber-700">SMS-подтверждение временно отключено. Телефон будет сохранён без проверки, а для продолжения нужно подтвердить email по ссылке.</p>
+          <?php endif; ?>
         </div>
 
-        <fieldset id="extraFields" disabled class="opacity-50 space-y-3 sm:space-y-4">
+        <fieldset id="extraFields" <?= $phoneVerificationEnabled ? 'disabled' : '' ?> class="<?= $phoneVerificationEnabled ? 'opacity-50' : '' ?> space-y-3 sm:space-y-4">
         <!-- Поле имени -->
         <div class="relative">
           <div class="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 flex items-center">
@@ -76,6 +91,23 @@
             class="w-full pl-12 sm:pl-16 pr-3 sm:pr-4 py-2.5 sm:py-3 md:py-4 text-sm sm:text-base md:text-lg border-2 border-gray-100 rounded-2xl focus:border-red-500 focus:ring-2 focus:ring-red-100 outline-none transition-all text-gray-800 placeholder-gray-400"
           >
         </div>
+
+        <?php if (!$phoneVerificationEnabled): ?>
+        <div class="relative">
+          <div class="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 flex items-center">
+            <span class="material-icons-round text-red-500 mr-1 sm:mr-2 text-lg sm:text-xl">email</span>
+          </div>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            placeholder="Email для подтверждения"
+            required
+            class="w-full pl-12 sm:pl-16 pr-3 sm:pr-4 py-2.5 sm:py-3 md:py-4 text-sm sm:text-base md:text-lg border-2 border-gray-100 rounded-2xl focus:border-red-500 focus:ring-2 focus:ring-red-100 outline-none transition-all text-gray-800 placeholder-gray-400"
+          >
+        </div>
+        <?php endif; ?>
+
         <!-- Поле адреса -->
         <div class="relative">
           <div class="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 flex items-center">
@@ -214,6 +246,7 @@
 
 <script>
 // Маска для телефона: только цифры
+const phoneVerificationEnabled = <?= $phoneVerificationEnabled ? 'true' : 'false' ?>;
 const phoneInput = document.getElementById('phone');
 phoneInput.addEventListener('input', function() {
   this.value = this.value.replace(/\D/g, '').slice(0, 10);
@@ -224,7 +257,9 @@ const codeRegBlock = document.getElementById('codeRegBlock');
 const regCodeInputs = document.querySelectorAll('input[data-reg-code]');
 const extraFields = document.getElementById('extraFields');
 
-sendRegBtn.addEventListener('click', () => sendCode('sms'));
+if (sendRegBtn) {
+  sendRegBtn.addEventListener('click', () => sendCode('sms'));
+}
 
 function sendCode(method) {
   const phone = phoneInput.value.replace(/\D/g, '');
@@ -367,6 +402,17 @@ document.getElementById('registerForm').addEventListener('submit', function(e) {
     alert('Пожалуйста, введите корректный номер телефона (10 цифр)');
     document.getElementById('phone').focus();
     return;
+  }
+
+  if (!phoneVerificationEnabled) {
+    const emailInput = document.getElementById('email');
+    const email = emailInput ? emailInput.value.trim() : '';
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      e.preventDefault();
+      alert('Пожалуйста, введите корректный email для подтверждения');
+      if (emailInput) emailInput.focus();
+      return;
+    }
   }
   
   if (address.length < 5) {

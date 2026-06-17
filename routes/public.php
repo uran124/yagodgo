@@ -56,14 +56,21 @@ return [
 
         return true;
     },
-    static function (string $method, string $uri): bool {
+    static function (string $method, string $uri, array $c): bool {
         if (!routeExact('GET', '/register', $method, $uri)) {
             return false;
         }
 
-        viewAuth('client/register', [
-            'error' => $_GET['error'] ?? null,
-        ]);
+        (new App\Controllers\AuthController($c['pdo']))->showRegistrationForm();
+
+        return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('GET', '/register/verify-email', $method, $uri)) {
+            return false;
+        }
+
+        (new App\Controllers\AuthController($c['pdo']))->verifyRegistrationEmail();
 
         return true;
     },
@@ -72,7 +79,7 @@ return [
             return false;
         }
 
-        (new App\Controllers\AuthController($c['pdo']))->register();
+        (new App\Controllers\AuthController($c['pdo'], [], [], $c['emailConfig']))->register();
 
         return true;
     },
