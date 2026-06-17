@@ -9,6 +9,7 @@ return [
             'GET /manager/profile' => ['App\\Controllers\\UsersController', 'managerProfile'],
             'POST /manager/payout' => ['App\\Controllers\\UsersController', 'requestPayout'],
             'GET /manager/orders' => ['App\\Controllers\\OrdersController', 'index'],
+            'GET /manager/production' => ['App\\Controllers\\ProductionController', 'index'],
             'GET /manager/orders/create' => ['App\\Controllers\\OrdersController', 'create'],
             'POST /manager/orders/create' => ['App\\Controllers\\OrdersController', 'storeManual'],
             'POST /manager/delivery/calculate' => ['App\\Controllers\\DeliveryController', 'calculate'],
