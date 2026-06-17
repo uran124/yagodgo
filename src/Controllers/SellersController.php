@@ -2,6 +2,8 @@
 namespace App\Controllers;
 
 use PDO;
+use App\Services\PartnerProfileService;
+use App\Services\SellerEconomicsService;
 
 class SellersController
 {
@@ -84,17 +86,13 @@ class SellersController
             }
         }
 
+        $economics = new SellerEconomicsService($this->pdo);
         foreach ($orders as &$o) {
             $o['items'] = $itemsByOrder[$o['id']] ?? [];
             $orderTotal = (float)($o['order_total'] ?? 0);
             $sellerSubtotal = (float)($o['seller_subtotal'] ?? 0);
             $pointsUsed = (float)($o['points_used'] ?? 0);
-            $o['commission_rate'] = 30.0;
-            $o['commission'] = round($sellerSubtotal * $o['commission_rate'] / 100, 2);
-            $o['payout'] = $sellerSubtotal - $o['commission'];
-            $o['points_applied'] = $orderTotal > 0
-                ? round($pointsUsed * $sellerSubtotal / $orderTotal, 2)
-                : 0.0;
+            $o = array_merge($o, $economics->calculate($id, $sellerSubtotal, $orderTotal, $pointsUsed));
             unset($o['order_total']);
         }
         unset($o);
@@ -114,6 +112,9 @@ class SellersController
             $stmt = $this->pdo->prepare("SELECT id, company_name, pickup_address, delivery_cost, work_mode FROM users WHERE id = ? AND role = 'seller'");
             $stmt->execute([$id]);
             $seller = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($seller) {
+                $seller['partner_profile'] = (new PartnerProfileService($this->pdo))->find($id);
+            }
             if (!$seller) {
                 header('Location: ' . $this->basePath());
                 exit;
@@ -133,10 +134,27 @@ class SellersController
         $pickup  = trim($_POST['pickup_address'] ?? '');
         $cost    = (float)($_POST['delivery_cost'] ?? 0);
         $mode    = $_POST['work_mode'] ?? 'berrygo_store';
+        $monetizationModel = (string)($_POST['monetization_model'] ?? 'commission');
+        $clientVisibility = (string)($_POST['client_visibility'] ?? 'seller_visible');
+        $commissionRate = (float)($_POST['commission_rate'] ?? 30);
+        $subscriptionFee = (float)($_POST['subscription_fee'] ?? 0);
+        $fixedFeePerOrder = (float)($_POST['fixed_fee_per_order'] ?? 0);
 
         if ($id) {
             $stmt = $this->pdo->prepare("UPDATE users SET company_name = ?, pickup_address = ?, delivery_cost = ?, work_mode = ? WHERE id = ? AND role = 'seller'");
             $stmt->execute([$company, $pickup, $cost, $mode, $id]);
+
+            (new PartnerProfileService($this->pdo))->save([
+                'user_id' => $id,
+                'partner_type' => 'marketplace_seller',
+                'status' => 'active',
+                'default_fulfillment_model' => $mode === 'berrygo_store' ? 'by_berrygo_from_seller_stock' : 'by_seller',
+                'monetization_model' => $monetizationModel,
+                'client_visibility' => $clientVisibility,
+                'commission_rate' => $commissionRate,
+                'subscription_fee' => $subscriptionFee,
+                'fixed_fee_per_order' => $fixedFeePerOrder,
+            ]);
         }
 
         header('Location: ' . $this->basePath());

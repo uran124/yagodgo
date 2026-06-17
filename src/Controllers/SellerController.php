@@ -6,6 +6,7 @@ use App\Services\OrderStatusHistoryService;
 use App\Services\OrderStockOrchestrator;
 use App\Services\StockService;
 use App\Services\StockDeficitService;
+use App\Services\SellerEconomicsService;
 
 class SellerController
 {
@@ -140,18 +141,14 @@ class SellerController
             }
         }
 
+        $economics = new SellerEconomicsService($this->pdo);
         foreach ($orders as &$o) {
             $o['items'] = $itemsByOrder[$o['id']] ?? [];
             $orderTotal = (float)($o['order_total'] ?? 0);
             $sellerSubtotal = (float)($o['seller_subtotal'] ?? 0);
             $pointsUsed = (float)($o['points_used'] ?? 0);
 
-            $o['commission_rate'] = 30.0;
-            $o['commission'] = round($sellerSubtotal * $o['commission_rate'] / 100, 2);
-            $o['payout'] = $sellerSubtotal - $o['commission'];
-            $o['points_applied'] = $orderTotal > 0
-                ? round($pointsUsed * $sellerSubtotal / $orderTotal, 2)
-                : 0.0;
+            $o = array_merge($o, $economics->calculate($sellerId, $sellerSubtotal, $orderTotal, $pointsUsed));
 
             // Маскируем телефон, если заказ ещё не подтверждён
             if ($o['status'] === 'new') {

@@ -87,6 +87,10 @@ return [
         requireAdmin(); (new App\Controllers\OrdersController($c['pdo']))->index(); return true;
     },
     static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('GET', '/admin/production', $method, $uri)) return false;
+        requireAdmin(); (new App\Controllers\ProductionController($c['pdo']))->index(); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
         if (!routeExact('GET', '/admin/purchases', $method, $uri)) return false;
         requireAdmin(); (new App\Controllers\PurchaseBatchesController($c['pdo']))->index(); return true;
     },
@@ -205,6 +209,10 @@ return [
             '/admin/orders/referral' => 'updateReferral',
             '/admin/orders/update-delivery' => 'updateDelivery',
             '/admin/orders/delete' => 'delete',
+            '/admin/orders/production/create' => 'createProductionJob',
+            '/admin/orders/production/assign' => 'assignProductionJob',
+            '/admin/orders/production/photo' => 'uploadProductionPhoto',
+            '/admin/orders/production/photo-review' => 'reviewProductionPhoto',
         ];
         if ($method !== 'POST' || !isset($map[$uri])) return false;
         requireAdmin(); (new App\Controllers\OrdersController($c['pdo']))->{$map[$uri]}(); return true;

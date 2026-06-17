@@ -10,6 +10,8 @@ use App\Services\ClientCatalogService;
 use App\Services\SellableBatchResolver;
 use App\Services\DeliveryPricingService;
 use App\Services\OrderStatusHistoryService;
+use App\Services\ProductionJobService;
+use App\Services\SellerEconomicsService;
 
 class ClientController
 {
@@ -894,7 +896,10 @@ public function cart(): void
             }
         }
 
-        // (7.4) Создаём записи выплат для селлеров
+        // (7.4) Создаём производственные задания для товаров berryGo, которые требуют изготовления.
+        (new ProductionJobService($this->pdo))->createForOrderIfRequired($orderId);
+
+        // (7.5) Создаём записи выплат для селлеров
         // Для discount_stock выплаты не формируем (низкомаржинальный режим)
         if ($orderMode === 'discount_stock') {
             continue;
@@ -921,17 +926,17 @@ public function cart(): void
             $pStmt = $this->pdo->prepare(
                 "INSERT INTO seller_payouts (seller_id, order_id, gross_amount, commission_rate, commission_amount, payout_amount) VALUES (?, ?, ?, ?, ?, ?)"
             );
+            $sellerEconomics = new SellerEconomicsService($this->pdo);
             foreach ($sellerTotals as $sid => $gross) {
-                $rate = 30.00;
-                $commission = round($gross * $rate / 100, 2);
-                $mode = $modes[$sid] ?? 'berrygo_store';
-                // Для собственных магазинов и доставки удерживаем комиссию, иначе выплачиваем 70%
-                if (in_array($mode, ['own_store', 'warehouse_delivery'], true)) {
-                    $payout = -$commission;
-                } else {
-                    $payout = $gross - $commission;
-                }
-                $pStmt->execute([$sid, $orderId, $gross, $rate, $commission, $payout]);
+                $payoutRecord = $sellerEconomics->payoutRecord((int)$sid, (float)$gross, (string)($modes[$sid] ?? 'berrygo_store'));
+                $pStmt->execute([
+                    $sid,
+                    $orderId,
+                    $gross,
+                    (float)$payoutRecord['commission_rate'],
+                    (float)$payoutRecord['commission'],
+                    (float)$payoutRecord['payout'],
+                ]);
             }
         }
 
