@@ -239,6 +239,28 @@ $sectionUrl = static fn(string $section): string => $section === 'general' ? '/a
   </fieldset>
   <?php endif; ?>
 
+  <?php if ($activeSection === 'registration_notifications'): ?>
+  <fieldset class="border border-gray-200 rounded-lg p-4 space-y-4">
+    <legend class="px-2 text-sm font-semibold text-gray-600">Регистрация</legend>
+    <label class="flex items-start gap-3 rounded border border-gray-200 p-3">
+      <input type="checkbox" name="registration_phone_verification_enabled" value="1"
+             <?= (($settings['registration_phone_verification_enabled'] ?? '1') === '1') ? 'checked' : '' ?>
+             class="mt-1 h-4 w-4 rounded border-gray-300 text-[#C86052] focus:ring-[#C86052]">
+      <span>
+        <span class="block font-medium text-gray-800">Подтверждать телефон при регистрации</span>
+        <span class="block text-xs text-gray-500">Если выключено, SMS не отправляется: аккаунт создаётся сразу, email становится обязательным, а продолжить работу можно только после подтверждения email по ссылке.</span>
+      </span>
+    </label>
+    <div>
+      <label class="block mb-1">Срок действия ссылки подтверждения email, минут</label>
+      <input name="registration_email_verification_ttl_minutes" type="number" min="5" max="1440" step="1"
+             value="<?= htmlspecialchars($settings['registration_email_verification_ttl_minutes'] ?? '60') ?>"
+             class="w-full border px-2 py-1 rounded">
+      <p class="mt-1 text-xs text-gray-500">Используется в аварийном режиме, когда подтверждение телефона выключено.</p>
+    </div>
+  </fieldset>
+  <?php endif; ?>
+
   <?php if ($activeSection === 'delivery'): ?>
   <fieldset class="border border-gray-200 rounded-lg p-4 space-y-4">
     <legend class="px-2 text-sm font-semibold text-gray-600">Доставка и расстояния</legend>

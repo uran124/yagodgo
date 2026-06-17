@@ -77,14 +77,77 @@ class AuthController
             session_regenerate_id(true);
         }
     }
+
+
+    private function getSetting(string $key, string $default): string
+    {
+        try {
+            $stmt = $this->pdo->prepare('SELECT setting_value FROM settings WHERE setting_key = ? LIMIT 1');
+            $stmt->execute([$key]);
+            $value = $stmt->fetchColumn();
+            return $value !== false ? (string)$value : $default;
+        } catch (\Throwable $e) {
+            return $default;
+        }
+    }
+
+    private function isPhoneVerificationEnabled(): bool
+    {
+        return $this->getSetting('registration_phone_verification_enabled', '1') === '1';
+    }
+
+    private function ensureEmailVerificationColumns(): void
+    {
+        try {
+            $this->pdo->exec("ALTER TABLE users ADD COLUMN email varchar(255) DEFAULT NULL");
+        } catch (\Throwable $e) {}
+        try {
+            $this->pdo->exec("ALTER TABLE users ADD COLUMN email_verified_at datetime DEFAULT NULL");
+        } catch (\Throwable $e) {}
+        try {
+            $this->pdo->exec("ALTER TABLE users ADD COLUMN email_verification_token_hash varchar(255) DEFAULT NULL");
+        } catch (\Throwable $e) {}
+        try {
+            $this->pdo->exec("ALTER TABLE users ADD COLUMN email_verification_expires_at datetime DEFAULT NULL");
+        } catch (\Throwable $e) {}
+        try {
+            $this->pdo->exec("CREATE UNIQUE INDEX users_email_unique ON users (email)");
+        } catch (\Throwable $e) {}
+    }
+
+    private function buildAbsoluteUrl(string $path): string
+    {
+        $host = $_SERVER['HTTP_HOST'] ?? '';
+        if ($host === '') {
+            return $path;
+        }
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        return $scheme . '://' . $host . $path;
+    }
+
+    private function sendRegistrationEmailVerification(int $userId, string $email): bool
+    {
+        $this->ensureEmailVerificationColumns();
+        $token = bin2hex(random_bytes(32));
+        $tokenHash = hash('sha256', $token);
+        $ttl = max(5, min(1440, (int)$this->getSetting('registration_email_verification_ttl_minutes', '60')));
+        $stmt = $this->pdo->prepare("UPDATE users SET email_verification_token_hash = ?, email_verification_expires_at = DATE_ADD(NOW(), INTERVAL {$ttl} MINUTE) WHERE id = ?");
+        $stmt->execute([$tokenHash, $userId]);
+
+        $link = $this->buildAbsoluteUrl('/register/verify-email?token=' . urlencode($token));
+        $mailer = new MailSender($this->emailConfig['from'] ?? 'noreply@example.com');
+        return $mailer->send($email, 'Подтверждение email BerryGo', "Для завершения регистрации перейдите по ссылке: {$link}");
+    }
     
     /**
      * Показ формы регистрации
      */
     public function showRegistrationForm(): void
     {
-        $invite = trim($_GET['invite'] ?? '');
-        include 'src/Views/client/register.php';
+        viewAuth('client/register', [
+            'error' => $_GET['error'] ?? null,
+            'phoneVerificationEnabled' => $this->isPhoneVerificationEnabled(),
+        ]);
     }
 
     /**
@@ -96,6 +159,7 @@ public function register(): void
     $phoneRaw    = $_POST['phone'] ?? '';
     $address     = trim($_POST['address'] ?? '');
     $pinRaw      = $_POST['pin'] ?? '';
+    $emailRaw    = $_POST['email'] ?? '';
     // Читаем код-приглашение из POST-поля "invite"
     $inputInvite = trim($_POST['invite'] ?? '');
 
@@ -107,8 +171,10 @@ public function register(): void
 
     $phone = PhoneNormalizer::normalize($phoneRaw);
     $pin   = trim($pinRaw);
+    $email = mb_strtolower(trim($emailRaw));
+    $phoneVerificationEnabled = $this->isPhoneVerificationEnabled();
 
-    if (empty($_SESSION['reg_verified']) || $_SESSION['reg_phone'] !== $phone) {
+    if ($phoneVerificationEnabled && (empty($_SESSION['reg_verified']) || $_SESSION['reg_phone'] !== $phone)) {
         header('Location: /register?error=' . urlencode('Подтвердите номер'));
         exit;
     }
@@ -118,7 +184,8 @@ public function register(): void
         $name === '' ||
         !preg_match('/^7\d{10}$/', $phone) ||
         !preg_match('/^\d{4}$/', $pin) ||
-        $address === ''
+        $address === '' ||
+        (!$phoneVerificationEnabled && !filter_var($email, FILTER_VALIDATE_EMAIL))
     ) {
         header('Location: /register?error=' . urlencode('Неверные данные'));
         exit;
@@ -135,6 +202,16 @@ public function register(): void
         }
     }
 
+    if (!$phoneVerificationEnabled) {
+        $this->ensureEmailVerificationColumns();
+        $stmt = $this->pdo->prepare("SELECT id FROM users WHERE email = ? LIMIT 1");
+        $stmt->execute([$email]);
+        if ($stmt->fetch(PDO::FETCH_ASSOC)) {
+            header('Location: /register?error=' . urlencode('Email уже зарегистрирован'));
+            exit;
+        }
+    }
+
     // Генерация собственного реферального кода (8 символов)
     $newCode = ReferralHelper::generateUniqueCode($this->pdo, 8);
 
@@ -146,13 +223,23 @@ public function register(): void
         $this->pdo->beginTransaction();
 
         // 1) Вставляем нового пользователя
-        $stmt = $this->pdo->prepare("
-            INSERT INTO users 
-                (role, name, phone, password_hash, referral_code, referred_by, has_used_referral_coupon, points_balance, rub_balance, created_at)
-            VALUES 
-                ('client', ?, ?, ?, ?, ?, 0, 0, 0, NOW())
-        ");
-        $stmt->execute([$name, $phone, $pinHash, $newCode, $referredBy]);
+        if ($phoneVerificationEnabled) {
+            $stmt = $this->pdo->prepare("
+                INSERT INTO users 
+                    (role, name, phone, password_hash, referral_code, referred_by, has_used_referral_coupon, points_balance, rub_balance, created_at)
+                VALUES 
+                    ('client', ?, ?, ?, ?, ?, 0, 0, 0, NOW())
+            ");
+            $stmt->execute([$name, $phone, $pinHash, $newCode, $referredBy]);
+        } else {
+            $stmt = $this->pdo->prepare("
+                INSERT INTO users 
+                    (role, name, phone, email, password_hash, referral_code, referred_by, has_used_referral_coupon, points_balance, rub_balance, created_at)
+                VALUES 
+                    ('client', ?, ?, ?, ?, ?, ?, 0, 0, 0, NOW())
+            ");
+            $stmt->execute([$name, $phone, $email, $pinHash, $newCode, $referredBy]);
+        }
         $userId = (int)$this->pdo->lastInsertId();
 
         // 2) Сохраняем адрес
@@ -178,6 +265,18 @@ public function register(): void
         exit;
     }
 
+    unset($_SESSION['reg_verified'], $_SESSION['reg_phone'], $_SESSION['reg_code']);
+    unset($_SESSION['invite_code']);
+
+    if (!$phoneVerificationEnabled) {
+        $sent = $this->sendRegistrationEmailVerification($userId, $email);
+        $message = $sent
+            ? 'Аккаунт создан. Мы отправили ссылку подтверждения на email — перейдите по ней, чтобы продолжить.'
+            : 'Аккаунт создан, но письмо не удалось отправить. Свяжитесь с поддержкой.';
+        header('Location: /register?notice=' . urlencode($message));
+        exit;
+    }
+
     // Устанавливаем сессию
     $this->rotateSessionIdAfterAuthentication();
     $_SESSION['user_id']        = $userId;
@@ -186,10 +285,7 @@ public function register(): void
     $_SESSION['referral_code']  = $newCode;
     // Новый пользователь получает баланс 0 при регистрации
     $_SESSION['points_balance'] = 0;
-
     $_SESSION['rub_balance'] = 0;
-    unset($_SESSION['reg_verified'], $_SESSION['reg_phone'], $_SESSION['reg_code']);
-    unset($_SESSION['invite_code']);
 
     header('Location: /notifications');
     exit;
@@ -233,15 +329,30 @@ public function register(): void
             exit;
         }
 
-        $stmt = $this->pdo->prepare(
-            "SELECT id, role, password_hash, name, referral_code, points_balance, rub_balance
-             FROM users
-             WHERE phone = ?"
-        );
-        $stmt->execute([$phone]);
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        try {
+            $stmt = $this->pdo->prepare(
+                "SELECT id, role, password_hash, name, referral_code, points_balance, rub_balance, email, email_verified_at
+                 FROM users
+                 WHERE phone = ?"
+            );
+            $stmt->execute([$phone]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (\PDOException $e) {
+            $stmt = $this->pdo->prepare(
+                "SELECT id, role, password_hash, name, referral_code, points_balance, rub_balance
+                 FROM users
+                 WHERE phone = ?"
+            );
+            $stmt->execute([$phone]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        }
 
         if ($user && password_verify($pin, $user['password_hash'])) {
+            if (!empty($user['email']) && empty($user['email_verified_at'])) {
+                header('Location: /login?error=' . urlencode('Подтвердите email по ссылке из письма, чтобы продолжить.'));
+                exit;
+            }
+
             $this->rotateSessionIdAfterAuthentication();
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['role']    = $user['role'];
@@ -354,6 +465,40 @@ public function register(): void
             $_SESSION['reg_verified'] = true;
         }
         echo json_encode(['success' => $valid]);
+    }
+
+
+    public function verifyRegistrationEmail(): void
+    {
+        $token = trim((string)($_GET['token'] ?? ''));
+        if ($token === '') {
+            header('Location: /register?error=' . urlencode('Некорректная ссылка подтверждения'));
+            exit;
+        }
+
+        $this->ensureEmailVerificationColumns();
+        $tokenHash = hash('sha256', $token);
+        $stmt = $this->pdo->prepare("SELECT id, role, name, referral_code, points_balance, rub_balance FROM users WHERE email_verification_token_hash = ? AND email_verified_at IS NULL AND email_verification_expires_at >= NOW() LIMIT 1");
+        $stmt->execute([$tokenHash]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$user) {
+            header('Location: /register?error=' . urlencode('Ссылка подтверждения недействительна или устарела'));
+            exit;
+        }
+
+        $stmt = $this->pdo->prepare("UPDATE users SET email_verified_at = NOW(), email_verification_token_hash = NULL, email_verification_expires_at = NULL WHERE id = ?");
+        $stmt->execute([(int)$user['id']]);
+
+        $this->rotateSessionIdAfterAuthentication();
+        $_SESSION['user_id'] = (int)$user['id'];
+        $_SESSION['role'] = $user['role'];
+        $_SESSION['name'] = $user['name'];
+        $_SESSION['referral_code'] = $user['referral_code'];
+        $_SESSION['points_balance'] = (int)$user['points_balance'];
+        $_SESSION['rub_balance'] = (int)$user['rub_balance'];
+
+        header('Location: /notifications');
+        exit;
     }
 
     // Страница восстановления PIN
