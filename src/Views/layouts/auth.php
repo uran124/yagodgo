@@ -63,27 +63,9 @@
   <link rel="icon" type="image/png" sizes="192x192" href="/assets/images/icon-192-maskable.png" purpose="maskable">
   <link rel="icon" type="image/png" sizes="512x512" href="/assets/images/icon-512-maskable.png" purpose="maskable">
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <link rel="stylesheet" href="/assets/css/theme.css">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 
-  <style>
-    :root {
-      --berry-red: #FF6B6B;
-      --berry-pink: #FF8E8E;
-      --fresh-green: #4ECDC4;
-      --leaf-green: #45B7AA;
-      --cream: #FFF8F5;
-      --soft-gray: #F8FAFC;
-      --text-dark: #1A202C;
-      --text-gray: #4A5568;
-    }
-    * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
-    body { background: linear-gradient(135deg, var(--cream) 0%, #FFF 100%); }
-    .berry-gradient { background: linear-gradient(135deg, var(--berry-red) 0%, var(--berry-pink) 100%); }
-  </style>
   <meta name="csrf-token" content="<?= htmlspecialchars(csrf_token(), ENT_QUOTES) ?>">
 </head>
 <body class="bg-gradient-to-br from-orange-50 via-white to-pink-50 text-gray-800 min-h-screen">
