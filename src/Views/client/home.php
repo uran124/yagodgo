@@ -54,10 +54,10 @@
     <section class="px-4 mb-8 mt-6">
       <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-4">💥 Акции</h2>
       <div class="embla drag-free has-arrows relative">
-        <button data-dir="left" class="hidden md:flex items-center justify-center w-8 h-8 absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
+        <button data-dir="left" class="hidden items-center justify-center w-8 h-8 absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
           <span class="material-icons-round text-gray-600">chevron_left</span>
         </button>
-        <button data-dir="right" class="hidden md:flex items-center justify-center w-8 h-8 absolute right-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
+        <button data-dir="right" class="hidden items-center justify-center w-8 h-8 absolute right-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
           <span class="material-icons-round text-gray-600">chevron_right</span>
         </button>
         <div class="embla__viewport">
@@ -84,10 +84,10 @@
     <?php $noStockMessage = (string)(get_setting('ui_home_no_stock_message', 'На данный момент ягод нет в наличии. Воспользуйтесь нашим предложением предварительного заказа со скидкой 10% — это дополнительная скидка за оформление предварительного бронирования.') ?? ''); ?>
     <?php if (!empty($regularProducts)): ?>
       <div class="embla drag-free has-arrows relative">
-        <button data-dir="left" class="hidden md:flex items-center justify-center w-8 h-8 absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
+        <button data-dir="left" class="hidden items-center justify-center w-8 h-8 absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
           <span class="material-icons-round text-gray-600">chevron_left</span>
         </button>
-        <button data-dir="right" class="hidden md:flex items-center justify-center w-8 h-8 absolute right-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
+        <button data-dir="right" class="hidden items-center justify-center w-8 h-8 absolute right-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
           <span class="material-icons-round text-gray-600">chevron_right</span>
         </button>
         <div class="embla__viewport">
@@ -117,10 +117,10 @@
     <section class="px-4 mb-8">
       <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-4">🤝 Товары от селлеров</h2>
       <div class="embla drag-free has-arrows relative">
-        <button data-dir="left" class="hidden md:flex items-center justify-center w-8 h-8 absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
+        <button data-dir="left" class="hidden items-center justify-center w-8 h-8 absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
           <span class="material-icons-round text-gray-600">chevron_left</span>
         </button>
-        <button data-dir="right" class="hidden md:flex items-center justify-center w-8 h-8 absolute right-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
+        <button data-dir="right" class="hidden items-center justify-center w-8 h-8 absolute right-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
           <span class="material-icons-round text-gray-600">chevron_right</span>
         </button>
         <div class="embla__viewport">
@@ -141,10 +141,10 @@
     <section class="px-4 mb-8">
       <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-4">🛒 Предварительный заказ -10%</h2>
       <div class="embla drag-free has-arrows relative">
-        <button data-dir="left" class="hidden md:flex items-center justify-center w-8 h-8 absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
+        <button data-dir="left" class="hidden items-center justify-center w-8 h-8 absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
           <span class="material-icons-round text-gray-600">chevron_left</span>
         </button>
-        <button data-dir="right" class="hidden md:flex items-center justify-center w-8 h-8 absolute right-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
+        <button data-dir="right" class="hidden items-center justify-center w-8 h-8 absolute right-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
           <span class="material-icons-round text-gray-600">chevron_right</span>
         </button>
         <div class="embla__viewport">
@@ -170,10 +170,10 @@
     <section class="px-4 mb-8">
       <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-4">🏷️ Выгодные остатки</h2>
       <div class="embla drag-free has-arrows relative">
-        <button data-dir="left" class="hidden md:flex items-center justify-center w-8 h-8 absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
+        <button data-dir="left" class="hidden items-center justify-center w-8 h-8 absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
           <span class="material-icons-round text-gray-600">chevron_left</span>
         </button>
-        <button data-dir="right" class="hidden md:flex items-center justify-center w-8 h-8 absolute right-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
+        <button data-dir="right" class="hidden items-center justify-center w-8 h-8 absolute right-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
           <span class="material-icons-round text-gray-600">chevron_right</span>
         </button>
         <div class="embla__viewport">
