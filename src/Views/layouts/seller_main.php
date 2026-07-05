@@ -15,7 +15,6 @@ $labelRole = 'Селлер';
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Админка BerryGo – <?= htmlspecialchars($pageTitle) ?></title>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
   <style>
     :root {
       --accent-primary: <?= htmlspecialchars($lightTheme['primary']) ?>;
@@ -275,6 +274,7 @@ $labelRole = 'Селлер';
     }
   </style>
   <meta name="csrf-token" content="<?= htmlspecialchars(csrf_token(), ENT_QUOTES) ?>">
+  <script src="/assets/js/local-icons.js" defer></script>
 </head>
 <body class="flex flex-col min-h-screen bg-gray-100 font-sans">
 
