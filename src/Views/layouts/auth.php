@@ -64,9 +64,9 @@
   <link rel="icon" type="image/png" sizes="512x512" href="/assets/images/icon-512-maskable.png" purpose="maskable">
 
   <link rel="stylesheet" href="/assets/css/theme.css">
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 
   <meta name="csrf-token" content="<?= htmlspecialchars(csrf_token(), ENT_QUOTES) ?>">
+  <script src="/assets/js/local-icons.js" defer></script>
 </head>
 <body class="bg-gradient-to-br from-orange-50 via-white to-pink-50 text-gray-800 min-h-screen">
 <?= $content ?>
