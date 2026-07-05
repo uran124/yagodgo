@@ -882,9 +882,9 @@
   });
 </script>
 
-  <script src="https://cdn.jsdelivr.net/npm/embla-carousel@8/embla-carousel.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/embla-carousel-autoplay@6/embla-carousel-autoplay.umd.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/embla-carousel-fade@8/embla-carousel-fade.umd.js"></script>
+  <script src="/assets/js/embla-carousel.umd.min.js"></script>
+  <script src="/assets/js/embla-carousel-autoplay.umd.js"></script>
+  <script src="/assets/js/embla-carousel-fade.umd.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     // Drag free carousels
