@@ -5,10 +5,10 @@ declare(strict_types=1);
 // Конфигурация подключения к базе данных.
 // Для локальной разработки задайте переменные окружения DB_*.
 return [
-    'host'      => getenv('DB_HOST') ?: '',
-    'dbname'    => getenv('DB_NAME') ?: '',
-    'user'      => getenv('DB_USER') ?: '',
-    'password'  => getenv('DB_PASSWORD') ?: '',
+    'host'      => getenv('DB_HOST') ?: '188.127.239.143',
+    'dbname'    => getenv('DB_NAME') ?: 'yago',
+    'user'      => getenv('DB_USER') ?: 'yago',
+    'password'  => getenv('DB_PASSWORD') ?: 'yago11!!',
     'charset'   => getenv('DB_CHARSET') ?: 'utf8mb4',
 
     'options'   => [
