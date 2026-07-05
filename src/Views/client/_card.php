@@ -143,7 +143,7 @@ $nextSupplyDateText = $showNextSupplyBadge ? date('d.m.Y', strtotime($plannedDat
     <!-- Название и сорт -->
     <div class="mb-2">
       <?php $boxLabel = htmlspecialchars($boxSize . ' ' . $boxUnit); ?>
-      <h3 class="text-sm sm:text-lg font-semibold text-gray-800">
+      <h3 class="text-sm sm:text-lg font-semibold text-gray-800 mt-0 mb-0">
         <a href="/catalog/<?= urlencode($p['type_alias']) ?>/<?= urlencode($p['alias']) ?>" class="hover:underline">
           <?= htmlspecialchars($p['product']      ?? '') ?>
           <?php if (!empty($p['variety'])): ?>
