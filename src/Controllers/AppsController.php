@@ -141,10 +141,10 @@ class AppsController
         $key = preg_replace('/[^a-z0-9_\-]/i', '', (string)($_POST['key'] ?? ''));
         $knownKeys = array_column($this->getStaticSitemapPages(), 'key');
         if ($key !== '' && in_array($key, $knownKeys, true)) {
+            $this->ensureSettingsTable();
             $settings = $this->getSitemapPageToggles($knownKeys);
             $nextValue = !($settings[$key] ?? true) ? '1' : '0';
-            $stmt = $this->pdo->prepare("REPLACE INTO settings (setting_key, setting_value) VALUES (?, ?)");
-            $stmt->execute(['sitemap_page_' . $key, $nextValue]);
+            $this->saveSetting('sitemap_page_' . $key, $nextValue);
         }
         header('Location: /admin/apps/sitemap');
         exit;
@@ -295,6 +295,43 @@ class AppsController
         }
 
         return $toggles;
+    }
+
+    private function ensureSettingsTable(): void
+    {
+        $driver = (string)$this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+        if ($driver === 'sqlite') {
+            $this->pdo->exec(
+                'CREATE TABLE IF NOT EXISTS settings (setting_key TEXT PRIMARY KEY, setting_value TEXT NOT NULL)'
+            );
+            return;
+        }
+
+        $this->pdo->exec(
+            "CREATE TABLE IF NOT EXISTS settings ("
+            . "setting_key varchar(100) NOT NULL PRIMARY KEY,"
+            . "setting_value text NOT NULL,"
+            . "updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
+            . ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Ключ-значение для хранения настроек приложения'"
+        );
+    }
+
+    private function saveSetting(string $key, string $value): void
+    {
+        $driver = (string)$this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+        if ($driver === 'sqlite') {
+            $stmt = $this->pdo->prepare(
+                'INSERT OR REPLACE INTO settings (setting_key, setting_value) VALUES (?, ?)'
+            );
+            $stmt->execute([$key, $value]);
+            return;
+        }
+
+        $stmt = $this->pdo->prepare(
+            'INSERT INTO settings (setting_key, setting_value) VALUES (?, ?) '
+            . 'ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)'
+        );
+        $stmt->execute([$key, $value]);
     }
 
     /**

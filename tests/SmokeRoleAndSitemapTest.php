@@ -57,6 +57,36 @@ class SmokeRoleAndSitemapTest extends TestCase
         $this->assertStringNotContainsString('add_shopping_cart</span>', $layout);
     }
 
+    public function testSitemapGenerationSkipsDisabledStaticPages(): void
+    {
+        $pdo = new PDO('sqlite::memory:');
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+        $pdo->exec('CREATE TABLE sitemap_settings (id INTEGER PRIMARY KEY, is_active INTEGER, last_generated TEXT)');
+        $pdo->exec('CREATE TABLE settings (setting_key TEXT PRIMARY KEY, setting_value TEXT)');
+        $pdo->exec('CREATE TABLE content_categories (id INTEGER PRIMARY KEY, alias TEXT)');
+        $pdo->exec('CREATE TABLE materials (id INTEGER PRIMARY KEY, alias TEXT, category_id INTEGER, in_sitemap INTEGER)');
+        $pdo->exec('CREATE TABLE product_types (id INTEGER PRIMARY KEY, alias TEXT)');
+        $pdo->exec('CREATE TABLE products (id INTEGER PRIMARY KEY, alias TEXT, product_type_id INTEGER, in_sitemap INTEGER, is_active INTEGER)');
+
+        $pdo->exec("INSERT INTO sitemap_settings (id, is_active, last_generated) VALUES (1, 1, NULL)");
+        $pdo->exec("INSERT INTO settings (setting_key, setting_value) VALUES ('sitemap_page_catalog', '0')");
+
+        $sitemapPath = __DIR__ . '/../sitemap.xml';
+        $original = file_exists($sitemapPath) ? (string)file_get_contents($sitemapPath) : null;
+
+        $controller = new AppsController($pdo);
+        $controller->generateSitemap();
+
+        $generated = (string)file_get_contents($sitemapPath);
+        $this->assertStringContainsString('https://berrygo.ru', $generated);
+        $this->assertStringNotContainsString('https://berrygo.ru/catalog</loc>', $generated);
+
+        if ($original !== null) {
+            file_put_contents($sitemapPath, $original);
+        }
+    }
+
     public function testSitemapGenerationWorksInCliMode(): void
     {
         $pdo = new PDO('sqlite::memory:');
