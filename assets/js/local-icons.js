@@ -4,23 +4,23 @@
   style.textContent = `.material-icons-round,.material-icons{display:inline-block;width:1em;height:1em;font-size:24px;line-height:1;vertical-align:-0.125em;flex-shrink:0;background-color:currentColor;mask:var(--local-icon-url) center/contain no-repeat;-webkit-mask:var(--local-icon-url) center/contain no-repeat}.material-icons-round:not([data-local-svg-icon]),.material-icons:not([data-local-svg-icon]){background-color:transparent;width:auto;height:auto}`;
   document.head.appendChild(style);
   const iconMap = {
-    add: 'plus', close: 'x', delete: 'x', remove: 'minus', menu: 'menu', search: 'search', home: 'home',
-    grid_view: 'layout-grid', dashboard: 'layout-grid', auto_awesome_mosaic: 'layout-grid', category: 'layout-grid',
-    shopping_cart: 'shopping-cart', shopping_bag: 'shopping-cart', receipt_long: 'receipt-text', receipt: 'receipt-text',
-    notifications: 'bell', priority_high: 'bell', forum: 'bell', support_agent: 'bell',
-    person: 'user-round', account_circle: 'user-round', manage_accounts: 'user-round', people: 'user-round',
-    logout: 'log-out', inventory_2: 'package', package: 'package', storefront: 'store', store: 'store',
+    add: 'plus', close: 'x', delete: 'trash', remove: 'minus', menu: 'menu', search: 'search', home: 'home',
+    grid_view: 'layout-grid', dashboard: 'dashboard', auto_awesome_mosaic: 'dashboard', category: 'layout-grid',
+    shopping_cart: 'shopping-cart', shopping_bag: 'shopping-cart', receipt_long: 'orders', receipt: 'receipt-text',
+    notifications: 'bell', priority_high: 'alert-circle', forum: 'message-circle', support_agent: 'messages-square',
+    person: 'user-round', account_circle: 'user-round', manage_accounts: 'user-cog', people: 'users',
+    logout: 'log-out', inventory_2: 'boxes', package: 'package', storefront: 'store', store: 'store',
     local_shipping: 'truck', truck: 'truck', favorite: 'heart', favorite_border: 'heart', card_giftcard: 'gift',
-    percent: 'badge-percent', verified: 'badge-check', shield: 'shield-check', local_florist: 'leaf',
-    spa: 'leaf', eco: 'leaf', camera_alt: 'camera', photo_camera: 'camera', install_mobile: 'strawberry',
-    admin_panel_settings: 'shield-check', bar_chart: 'badge-percent', chevron_left: 'minus', chevron_right: 'plus', expand_less: 'minus',
-    expand_more: 'plus', check_circle: 'badge-check', done: 'badge-check', task_alt: 'badge-check', done_all: 'badge-check', badge: 'badge-check',
-    add_comment: 'plus', add_shopping_cart: 'shopping-cart', arrow_back: 'minus', arrow_forward: 'plus', attach_file: 'receipt-text',
-    ac_unit: 'strawberry', bolt: 'badge-percent', calendar_today: 'receipt-text', comment: 'bell', credit_card: 'receipt-text',
-    delete_outline: 'x', edit: 'receipt-text', email: 'bell', error: 'bell', flash_on: 'badge-percent', image: 'camera',
-    location_on: 'store', lock: 'shield-check', lock_reset: 'shield-check', login: 'user-round', mark_email_read: 'bell',
-    more_vert: 'menu', payments: 'receipt-text', person_add: 'user-round', phone: 'bell', schedule: 'bell', sell: 'badge-percent',
-    send: 'truck', sms: 'bell', sticky_note_2: 'receipt-text', swap_vert: 'plus', sync: 'truck', telegram: 'bell'
+    percent: 'ticket-percent', verified: 'badge-check', shield: 'shield-check', local_florist: 'leaf',
+    spa: 'leaf', eco: 'leaf', camera_alt: 'camera', photo_camera: 'camera', install_mobile: 'app-window',
+    admin_panel_settings: 'settings', bar_chart: 'badge-percent', chevron_left: 'chevron-left', chevron_right: 'chevron-right', expand_less: 'chevron-left',
+    expand_more: 'chevron-right', check_circle: 'check', done: 'check', task_alt: 'check', done_all: 'check', badge: 'badge-check',
+    add_comment: 'message-circle', add_shopping_cart: 'shopping-cart', arrow_back: 'chevron-left', arrow_forward: 'arrow-right', attach_file: 'file-text',
+    ac_unit: 'strawberry', article: 'file-text', apps: 'app-window', bolt: 'badge-percent', calendar_today: 'calendar', comment: 'message-circle', credit_card: 'receipt-text',
+    delete_outline: 'trash', download: 'download', edit: 'edit', email: 'mail', error: 'alert-circle', flash_on: 'badge-percent', image: 'image',
+    local_offer: 'ticket-percent', location_on: 'map', lock: 'lock', lock_reset: 'lock', login: 'user-round', mark_email_read: 'mail',
+    more_vert: 'menu', payments: 'receipt-text', person_add: 'user-round', phone: 'phone', schedule: 'clock', sell: 'ticket-percent',
+    send: 'send', sms: 'message-circle', sticky_note_2: 'file-text', swap_vert: 'layers', sync: 'upload', telegram: 'send', upload: 'upload'
   };
 
   const replaceIcon = (node) => {
