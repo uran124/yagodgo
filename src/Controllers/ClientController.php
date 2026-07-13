@@ -1464,7 +1464,7 @@ public function cancelReservedOrder(int $orderId): void
                          preorder_pb.id AS preorder_purchase_batch_id,
                          DATE(preorder_pb.purchased_at) AS preorder_availability_date,
                          (COALESCE(NULLIF(preorder_pb.boxes_total, 0), preorder_pb.boxes_free + preorder_pb.boxes_reserved) - preorder_pb.boxes_reserved) AS preorder_available_boxes,
-                         COALESCE(NULLIF(preorder_pb.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) AS confirmed_preorder_price_per_box
+                         COALESCE(preorder_pb.preorder_price_per_box, 0) AS confirmed_preorder_price_per_box
                   FROM products p
                   JOIN product_types t ON t.id = p.product_type_id
                   LEFT JOIN purchase_batches instant_pb ON instant_pb.id = (
@@ -1484,7 +1484,7 @@ public function cancelReservedOrder(int $orderId): void
                         AND pb_p.status = 'planned'
                         AND pb_p.purchased_at IS NOT NULL
                         AND (COALESCE(NULLIF(pb_p.boxes_total, 0), pb_p.boxes_free + pb_p.boxes_reserved) - pb_p.boxes_reserved) > 0
-                        AND COALESCE(NULLIF(pb_p.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) > 0
+                        AND pb_p.preorder_price_per_box > 0
                       ORDER BY pb_p.purchased_at ASC, pb_p.id ASC
                       LIMIT 1
                   )
@@ -1493,7 +1493,7 @@ public function cancelReservedOrder(int $orderId): void
                       FROM purchase_batches pb2
                       WHERE pb2.product_id = p.id
                         AND ((pb2.status IN ('purchased', 'arrived') AND (pb2.boxes_free > 0 OR pb2.boxes_discount > 0))
-                             OR (pb2.status = 'planned' AND COALESCE(NULLIF(pb2.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) > 0))
+                             OR (pb2.status = 'planned' AND pb2.purchased_at IS NOT NULL AND (COALESCE(NULLIF(pb2.boxes_total, 0), pb2.boxes_free + pb2.boxes_reserved) - pb2.boxes_reserved) > 0 AND pb2.preorder_price_per_box > 0))
                       ORDER BY CASE WHEN pb2.status IN ('purchased', 'arrived') AND pb2.boxes_free > 0 THEN 1 WHEN pb2.status IN ('purchased', 'arrived') AND pb2.boxes_discount > 0 THEN 2 WHEN pb2.status = 'planned' THEN 3 ELSE 9 END, pb2.purchased_at ASC, pb2.id ASC
                       LIMIT 1
                   )
@@ -1575,7 +1575,7 @@ public function cancelReservedOrder(int $orderId): void
                  FROM purchase_batches pb2
                  WHERE pb2.product_id = p.id
                    AND ((pb2.status IN ('purchased', 'arrived') AND (pb2.boxes_free > 0 OR pb2.boxes_discount > 0))
-                        OR (pb2.status = 'planned' AND COALESCE(NULLIF(pb2.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) > 0))
+                        OR (pb2.status = 'planned' AND pb2.purchased_at IS NOT NULL AND (COALESCE(NULLIF(pb2.boxes_total, 0), pb2.boxes_free + pb2.boxes_reserved) - pb2.boxes_reserved) > 0 AND pb2.preorder_price_per_box > 0))
                  ORDER BY CASE WHEN pb2.status IN ('purchased', 'arrived') AND pb2.boxes_free > 0 THEN 1 WHEN pb2.status IN ('purchased', 'arrived') AND pb2.boxes_discount > 0 THEN 2 WHEN pb2.status = 'planned' THEN 3 ELSE 9 END, pb2.purchased_at ASC, pb2.id ASC
                  LIMIT 1
              )
@@ -1651,43 +1651,11 @@ public function cancelReservedOrder(int $orderId): void
         $existingStmt->execute([$userId, $productId]);
         $existingId = $existingStmt->fetchColumn();
 
-        $plannedBatchStmt = $this->pdo->prepare(
-            "SELECT pb.id, pb.purchased_at, COALESCE(NULLIF(pb.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), 0) AS preorder_price_per_box,
-                    COALESCE(NULLIF(pb.instant_price_per_box, 0), NULLIF(p.price, 0), 0) AS regular_price_per_box,
-                    (COALESCE(NULLIF(pb.boxes_total, 0), pb.boxes_free + pb.boxes_reserved) - pb.boxes_reserved) AS available_boxes
-             FROM purchase_batches pb
-             JOIN products p ON p.id = pb.product_id
-             WHERE pb.product_id = ? AND pb.status = 'planned'
-               AND (COALESCE(NULLIF(pb.boxes_total, 0), pb.boxes_free + pb.boxes_reserved) - pb.boxes_reserved) > 0
-             ORDER BY pb.purchased_at ASC, pb.id ASC
-             LIMIT 1"
-        );
-        $plannedBatchStmt->execute([$productId]);
-        $plannedBatch = $plannedBatchStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        $plannedBatch = (new SellableBatchResolver($this->pdo))->resolveForProduct($productId, 'preorder');
         $hasPlannedBatch = $plannedBatch !== null;
-        $autoOfferPrice = $hasPlannedBatch ? round((float)($plannedBatch['preorder_price_per_box'] ?? 0), 2) : 0.0;
-        if ($hasPlannedBatch && $autoOfferPrice <= 0) {
-            $regularForPreorder = (float)($plannedBatch['regular_price_per_box'] ?? ($product['price'] ?? 0));
-            $discountPercent = max(0.0, min(99.0, (float)(get_setting('ui_preorder_discount_percent', '10') ?? '10')));
-            if ($regularForPreorder > 0) {
-                $autoOfferPrice = round($regularForPreorder * ((100.0 - $discountPercent) / 100.0), 0);
-            }
-        }
-        if (!$hasPlannedBatch || $autoOfferPrice <= 0) {
-            error_log('Preorder price unavailable: ' . json_encode([
-                'product_id' => $productId,
-                'purchase_batch_id' => $plannedBatch['id'] ?? null,
-                'regular_price' => $plannedBatch['regular_price_per_box'] ?? ($product['price'] ?? null),
-                'expected_price' => $autoOfferPrice,
-            ], JSON_UNESCAPED_UNICODE));
-            http_response_code(422);
-            header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(['ok' => false, 'error' => 'Цена предзаказа уточняется'], JSON_UNESCAPED_UNICODE);
-            return;
-        }
-        $expectedPricePerBox = $autoOfferPrice;
-        $targetStatus = 'linked_to_batch';
-        $targetBatchId = (int)$plannedBatch['id'];
+        $autoOfferPrice = $hasPlannedBatch ? round((float)($plannedBatch['price_per_box'] ?? 0), 2) : 0.0;
+        $targetStatus = $hasPlannedBatch ? 'linked_to_batch' : 'waiting_batch';
+        $targetBatchId = $hasPlannedBatch ? (int)$plannedBatch['id'] : null;
 
         $etaDateValue = null;
         if ($sourceSection === 'in_stock' && $sourceDeliveryDate !== '') {

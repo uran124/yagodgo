@@ -67,4 +67,18 @@ final class ClientMixedCartTest extends TestCase
         $this->assertStringContainsString('Поставка подтверждена', $controller);
     }
 
+    public function testClientPreorderUsesOnlyConfirmedSellableBatches(): void
+    {
+        $resolver = file_get_contents(__DIR__ . '/../src/Services/SellableBatchResolver.php');
+        $controller = file_get_contents(__DIR__ . '/../src/Controllers/ClientController.php');
+        $catalog = file_get_contents(__DIR__ . '/../src/Services/ClientCatalogService.php');
+
+        $this->assertStringContainsString("pb.purchased_at IS NOT NULL", $resolver);
+        $this->assertStringContainsString('{$plannedAvailableExpr} > 0', $resolver);
+        $this->assertStringContainsString('AND pb.preorder_price_per_box > 0', $resolver);
+        $this->assertStringContainsString("resolveForProduct(\$productId, 'preorder')", $controller);
+        $this->assertStringContainsString('AND pb_p.purchased_at IS NOT NULL', $catalog);
+        $this->assertStringContainsString('AND pb_p.preorder_price_per_box > 0', $catalog);
+    }
+
 }

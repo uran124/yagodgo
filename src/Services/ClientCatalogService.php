@@ -120,16 +120,16 @@ class ClientCatalogService
     private function fetchProducts(string $where, string $orderBy, array $params = [], ?int $limit = null, string $offerMode = 'auto'): array
     {
         $batchSelectorCondition = match ($offerMode) {
-            'preorder' => "pb2.status = 'planned'",
+            'preorder' => "pb2.status = 'planned' AND pb2.purchased_at IS NOT NULL AND (COALESCE(NULLIF(pb2.boxes_total, 0), pb2.boxes_free + pb2.boxes_reserved) - pb2.boxes_reserved) > 0 AND pb2.preorder_price_per_box > 0",
             'discount' => "pb2.status IN ('purchased', 'arrived') AND pb2.boxes_discount > 0 AND pb2.discount_price_per_box > 0",
             'in_stock' => "pb2.status IN ('purchased', 'arrived') AND pb2.boxes_free > 0 AND pb2.instant_price_per_box > 0",
-            default => "((pb2.status IN ('purchased', 'arrived') AND (pb2.boxes_free > 0 OR pb2.boxes_discount > 0)) OR pb2.status = 'planned')",
+            default => "((pb2.status IN ('purchased', 'arrived') AND (pb2.boxes_free > 0 OR pb2.boxes_discount > 0)) OR (pb2.status = 'planned' AND pb2.purchased_at IS NOT NULL AND (COALESCE(NULLIF(pb2.boxes_total, 0), pb2.boxes_free + pb2.boxes_reserved) - pb2.boxes_reserved) > 0 AND pb2.preorder_price_per_box > 0))",
         };
         $batchSelectorOrder = match ($offerMode) {
             'preorder' => "pb2.purchased_at ASC, pb2.id ASC",
             'discount' => "pb2.purchased_at ASC, pb2.id ASC",
             'in_stock' => "pb2.purchased_at ASC, pb2.id ASC",
-            default => "CASE WHEN pb2.status IN ('purchased', 'arrived') AND pb2.boxes_free > 0 THEN 1 WHEN pb2.status IN ('purchased', 'arrived') AND pb2.boxes_discount > 0 THEN 2 WHEN pb2.status = 'planned' THEN 3 ELSE 9 END, pb2.purchased_at ASC, pb2.id ASC",
+            default => "CASE WHEN pb2.status IN ('purchased', 'arrived') AND pb2.boxes_free > 0 THEN 1 WHEN pb2.status IN ('purchased', 'arrived') AND pb2.boxes_discount > 0 THEN 2 WHEN pb2.status = 'planned' AND pb2.purchased_at IS NOT NULL THEN 3 ELSE 9 END, pb2.purchased_at ASC, pb2.id ASC",
         };
 
         $sql = "SELECT p.id,\n" .
@@ -170,16 +170,16 @@ class ClientCatalogService
             "       preorder_pb.id AS preorder_purchase_batch_id,\n" .
             "       DATE(preorder_pb.purchased_at) AS preorder_availability_date,\n" .
             "       (COALESCE(NULLIF(preorder_pb.boxes_total, 0), preorder_pb.boxes_free + preorder_pb.boxes_reserved) - preorder_pb.boxes_reserved) AS preorder_available_boxes,\n" .
-            "       COALESCE(NULLIF(preorder_pb.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) AS confirmed_preorder_price_per_box\n" .
+            "       COALESCE(preorder_pb.preorder_price_per_box, 0) AS confirmed_preorder_price_per_box\n" .
             "FROM products p\n" .
             "JOIN product_types t ON t.id = p.product_type_id\n" .
             "LEFT JOIN users u ON u.id = p.seller_id\n" .
             "LEFT JOIN (\n" .
             "    SELECT pbx.product_id,\n" .
-            "           MAX(CASE WHEN pbx.status = 'planned' THEN 1 ELSE 0 END) AS has_planned_batch,\n" .
+            "           MAX(CASE WHEN pbx.status = 'planned' AND pbx.purchased_at IS NOT NULL AND (COALESCE(NULLIF(pbx.boxes_total, 0), pbx.boxes_free + pbx.boxes_reserved) - pbx.boxes_reserved) > 0 AND pbx.preorder_price_per_box > 0 THEN 1 ELSE 0 END) AS has_planned_batch,\n" .
             "           MAX(CASE WHEN pbx.status IN ('purchased', 'arrived') AND pbx.boxes_free > 0 THEN 1 ELSE 0 END) AS has_in_stock_batch,\n" .
             "           MAX(CASE WHEN pbx.status IN ('purchased', 'arrived') AND pbx.boxes_discount > 0 THEN 1 ELSE 0 END) AS has_discount_batch,\n" .
-            "           MIN(CASE WHEN pbx.status = 'planned' THEN pbx.purchased_at ELSE NULL END) AS next_planned_date\n" .
+            "           MIN(CASE WHEN pbx.status = 'planned' AND pbx.purchased_at IS NOT NULL AND (COALESCE(NULLIF(pbx.boxes_total, 0), pbx.boxes_free + pbx.boxes_reserved) - pbx.boxes_reserved) > 0 AND pbx.preorder_price_per_box > 0 THEN pbx.purchased_at ELSE NULL END) AS next_planned_date\n" .
             "    FROM purchase_batches pbx\n" .
             "    GROUP BY pbx.product_id\n" .
             ") availability ON availability.product_id = p.id\n" .
@@ -200,7 +200,7 @@ class ClientCatalogService
             "      AND pb_p.status = 'planned'\n" .
             "      AND pb_p.purchased_at IS NOT NULL\n" .
             "      AND (COALESCE(NULLIF(pb_p.boxes_total, 0), pb_p.boxes_free + pb_p.boxes_reserved) - pb_p.boxes_reserved) > 0\n" .
-            "      AND COALESCE(NULLIF(pb_p.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) > 0\n" .
+            "      AND pb_p.preorder_price_per_box > 0\n" .
             "    ORDER BY pb_p.purchased_at ASC, pb_p.id ASC\n" .
             "    LIMIT 1\n" .
             ")\n" .

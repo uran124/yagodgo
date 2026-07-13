@@ -76,7 +76,7 @@ class ClientCatalogServiceTest extends TestCase
         $this->pdo->exec("INSERT INTO purchase_batches (id, product_id, status, boxes_free, boxes_discount, boxes_total, boxes_reserved, instant_price_per_box, preorder_price_per_box, discount_price_per_box, purchased_at) VALUES
             (11, 1, 'arrived', 0, 3, 3, 0, 1000, 900, 800, '2025-03-25 08:00:00'),
             (12, 2, 'purchased', 5, 0, 5, 0, 900, 810, 0, '2025-03-24 08:00:00'),
-            (13, 4, 'planned', 0, 0, 6, 1, 0, 0, 0, '2025-03-27 08:00:00'),
+            (13, 4, 'planned', 0, 0, 6, 1, 0, 1070, 0, '2025-03-27 08:00:00'),
             (14, 2, 'planned', 0, 0, 4, 0, 0, 810, 0, '2025-03-29 08:00:00'),
             (15, 1, 'planned', 0, 0, 4, 1, 0, 0, 0, '2025-03-30 08:00:00')
         ");
@@ -120,7 +120,7 @@ class ClientCatalogServiceTest extends TestCase
         $this->assertSame(14, (int)$data['regularProducts'][0]['preorder_purchase_batch_id']);
         $this->assertSame('2025-03-29', $data['regularProducts'][0]['preorder_availability_date']);
         $saleByAlias = array_column($data['saleProducts'], null, 'alias');
-        $this->assertSame(1, (int)$saleByAlias['sale-product']['has_planned_batch']);
+        $this->assertSame(0, (int)$saleByAlias['sale-product']['has_planned_batch']);
         $this->assertSame(0, (int)($saleByAlias['sale-product']['preorder_purchase_batch_id'] ?? 0));
     }
 
@@ -134,7 +134,7 @@ class ClientCatalogServiceTest extends TestCase
         $this->assertSame('sale', $productsByAlias['sale-product']['catalog_section']);
         $this->assertSame(12, (int)$productsByAlias['regular-product']['instant_purchase_batch_id']);
         $this->assertSame(14, (int)$productsByAlias['regular-product']['preorder_purchase_batch_id']);
-        $this->assertSame(1, (int)$productsByAlias['sale-product']['has_planned_batch']);
+        $this->assertSame(0, (int)$productsByAlias['sale-product']['has_planned_batch']);
         $this->assertSame('in_stock', $productsByAlias['regular-product']['catalog_section']);
         $this->assertSame(900.0, (float)$productsByAlias['regular-product']['price']);
         $this->assertSame('/batch-regular.jpg', $productsByAlias['regular-product']['image_path']);
