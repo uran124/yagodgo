@@ -11,7 +11,7 @@ use App\Services\SellableBatchResolver;
 use App\Services\DeliveryPricingService;
 use App\Services\OrderStatusHistoryService;
 use App\Services\ProductionJobService;
-use App\Services\SellerEconomicsService;
+use App\Services\OrderGroupCreationService;
 
 class ClientController
 {
@@ -640,42 +640,11 @@ public function cart(): void
     // 5) Считаем, сколько баллов списать (не более суммы заказа)
     $pointsToUse  = $hasDiscountStockOrder ? 0 : min($pointsBalance, $allTotal);
 
-    $this->pdo->beginTransaction();
-    $stockService = new StockService($this->pdo);
-    $orderStock = new OrderStockOrchestrator($this->pdo, $stockService);
-
     try {
     $this->pdo->prepare(
         "INSERT INTO order_groups (user_id, created_by_user_id, comment) VALUES (?, NULL, ?)"
     )->execute([$userId, 'client checkout']);
     $orderGroupId = (int)$this->pdo->lastInsertId();
-
-    // 6) Если списываем баллы — обновляем баланс и фиксируем транзакцию
-    if ($pointsToUse > 0) {
-        $this->pdo->prepare(
-          "UPDATE users SET points_balance = points_balance - ? WHERE id = ?"
-        )->execute([$pointsToUse, $userId]);
-    
-        // Здесь transaction_type заменён на 'usage', 
-        // чтобы совпадало с тем, что хранится в ENUM
-        $stmtTx = $this->pdo->prepare(
-            "INSERT INTO points_transactions
-              (user_id, amount, transaction_type, description, order_id, created_at)
-             VALUES (?, ?, 'usage', 'Скидка за заказ', NULL, NOW())"
-        );
-        $stmtTx->execute([$userId, -$pointsToUse]);
-    }
-
-    // 7) Распределяем списанные баллы и купон с баллами только на первый заказ
-    $discountsByDate = [];
-    $pointsTotal = $pointsToUse + $couponPoints;
-    $firstKey = array_key_first($itemsByDate);
-    foreach ($itemsByDate as $dateKey => $block) {
-        $discountsByDate[$dateKey] = 0;
-    }
-    if ($pointsTotal > 0 && $firstKey !== null) {
-        $discountsByDate[$firstKey] = min($pointsTotal, $allTotal);
-    }
 
     // 8) Обрабатываем адреса, комментарии и предварительный расчёт доставки по каждой дате.
     $postedAddresses = is_array($_POST['address_id'] ?? null) ? $_POST['address_id'] : [];
@@ -804,176 +773,55 @@ public function cart(): void
         ]);
     }
 
-    // 9) СОЗДАЁМ ЗАКАЗЫ ПО КАЖДОЙ ДАТЕ, учитываем дату и слот
-    $createdOrderIds = [];
-        foreach ($itemsByDate as $dateKey => $block) {
-        $orderMode = (string)($orderModeByDate[$dateKey] ?? 'instant');
-        $isReservedOrder = ($orderMode === 'preorder');
-        // (7.1) Считаем сумму по блоку и применяем скидку
-        $blockSum = 0;
-        foreach ($block as $data) {
-            $blockSum += $data['quantity'] * $data['unit_price'];
-        }
-        $subAfterPickup = $blockSum;
-        $pointsDiscount = $discountsByDate[$dateKey] ?? 0;
-        $couponDiscount = 0;
-        if ($discountPercent > 0) {
-            $couponDiscount = (int) floor(($subAfterPickup - $pointsDiscount) * ($discountPercent / 100));
-        }
-        $addrInput = $addrInputByDate[$dateKey] ?? ($postedAddresses[$dateKey] ?? $defaultAddress);
-        $deliveryRow = $deliveryByDate[$dateKey] ?? ['delivery_fee' => 300];
-        $shippingFee = (int)($deliveryRow['delivery_fee'] ?? 300);
-        $finalSum = $subAfterPickup - $pointsDiscount - $couponDiscount + $shippingFee;
-        if ($isReservedOrder) {
-            // В корзине показываем предварительную цену, но сумма reserved-заказа становится точной
-            // только после подтверждения и пересчёта order_items.
-            $finalSum = 0;
-        }
-
-        $slotId = $_POST['slot_id'][$dateKey] ?? null; // из формы
-        $status = $isReservedOrder ? 'reserved' : 'new';
-
-        // (7.2) Вставляем заказ. Поскольку у таблицы orders есть колонки discount_applied, points_used, points_accrued, нужно задать их:
-        $stmtOrder = $this->pdo->prepare(
-            "INSERT INTO orders
-               (user_id, order_group_id, address_id, slot_id, status, total_amount,
-                discount_applied, points_used, points_accrued, coupon_code,
-                delivery_date, delivery_fee, delivery_distance_km, delivery_tariff_zone_id,
-                delivery_pricing_source, delivery_comment,
-                created_at, order_mode, bonuses_allowed, coupons_allowed, reserved_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?)"
-        );
-        $pointsAccrued = 0; // пока 0, начислим ниже, если надо
-        $deliveryDateOnly = $this->dateFromCartGroupKey((string)$dateKey);
-        $orderDeliveryDate = ($isReservedOrder && $deliveryDateOnly === PLACEHOLDER_DATE) ? date('Y-m-d') : $deliveryDateOnly;
-        $reservedAt = $isReservedOrder ? date('Y-m-d H:i:s') : null;
-        $bonusesAllowed = $orderMode === 'discount_stock' ? 0 : 1;
-        $couponsAllowed = $orderMode === 'discount_stock' ? 0 : 1;
-
-        $stmtOrder->execute([
-            $userId,
-            $orderGroupId,
-            $addressIds[$dateKey],
-            $slotId,
-            $status,
-            $finalSum,
-            $couponDiscount, // discount_applied = скидка по купону
-            $pointsDiscount,  // points_used = списанные баллы
-            $pointsAccrued,   // points_accrued = пока 0
-            $couponsAllowed ? $couponCode : '',
-            $orderDeliveryDate,
-            $shippingFee,
-            $deliveryRow['distance_km'] ?? null,
-            $deliveryRow['delivery_tariff_zone_id'] ?? null,
-            $deliveryRow['delivery_pricing_source'] ?? null,
-            $deliveryCommentByDate[$dateKey] ?? '',
-            $orderMode,
-            $bonusesAllowed,
-            $couponsAllowed,
-            $reservedAt,
-        ]);
-        $orderId = (int)$this->pdo->lastInsertId();
-        $createdOrderIds[] = $orderId;
-
-        // (7.3) Вставляем позиции в order_items
-        $stmtItem = $this->pdo->prepare(
-            "INSERT INTO order_items (order_id, product_id, quantity, boxes, unit_price, stock_mode, purchase_batch_id)\n" .
-            "VALUES (?, ?, ?, ?, ?, ?, ?)"
-        );
-        foreach ($block as $data) {
-            $prodId = (int)$data['product_id'];
-            $kgQty   = $data['quantity'] * $data['box_size'];
-            $kgPrice = $data['box_size'] > 0
-                ? $data['unit_price'] / $data['box_size']
-                : $data['unit_price'];
-
-            $itemPayload = [
-                'quantity' => (float)$data['quantity'],
-                'box_size' => (float)$data['box_size'],
-                'unit_price' => (float)$data['unit_price'],
-                'purchase_batch_id' => isset($data['purchase_batch_id']) ? (int)$data['purchase_batch_id'] : null,
-            ];
-            if ($isReservedOrder) {
-                $orderStock->persistOrderItemWithStock(
-                    $stmtItem,
-                    $orderId,
-                    (int)$prodId,
-                    $itemPayload,
-                    $orderMode,
-                    true
-                );
-            } else {
-                $orderStock->persistOrderItemOnly(
-                    $stmtItem,
-                    $orderId,
-                    (int)$prodId,
-                    $itemPayload,
-                    $orderMode
-                );
-            }
-        }
-
-        // (7.4) Создаём производственные задания для товаров berryGo, которые требуют изготовления.
-        (new ProductionJobService($this->pdo))->createForOrderIfRequired($orderId);
-
-        // (7.5) Создаём записи выплат для селлеров
-        // Для discount_stock выплаты не формируем (низкомаржинальный режим)
-        if ($orderMode === 'discount_stock') {
-            continue;
-        }
-
-        $sellerTotals = [];
-        foreach ($block as $prodId => $data) {
-            $sid = $data['seller_id'] ?? null;
-            if ($sid) {
-                $sellerTotals[$sid] = ($sellerTotals[$sid] ?? 0) + $data['quantity'] * $data['unit_price'];
-            }
-        }
-        if ($sellerTotals) {
-            // Получаем режим работы селлеров одним запросом
-            $sellerIds = array_keys($sellerTotals);
-            $placeholders = implode(',', array_fill(0, count($sellerIds), '?'));
-            $mStmt = $this->pdo->prepare("SELECT id, work_mode FROM users WHERE id IN ($placeholders)");
-            $mStmt->execute($sellerIds);
-            $modes = [];
-            foreach ($mStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-                $modes[(int)$row['id']] = $row['work_mode'];
-            }
-
-            $pStmt = $this->pdo->prepare(
-                "INSERT INTO seller_payouts (seller_id, order_id, gross_amount, commission_rate, commission_amount, payout_amount) VALUES (?, ?, ?, ?, ?, ?)"
-            );
-            $sellerEconomics = new SellerEconomicsService($this->pdo);
-            foreach ($sellerTotals as $sid => $gross) {
-                $payoutRecord = $sellerEconomics->payoutRecord((int)$sid, (float)$gross, (string)($modes[$sid] ?? 'berrygo_store'));
-                $pStmt->execute([
-                    $sid,
-                    $orderId,
-                    $gross,
-                    (float)$payoutRecord['commission_rate'],
-                    (float)$payoutRecord['commission'],
-                    (float)$payoutRecord['payout'],
-                ]);
-            }
-        }
-
-    }
-
-    // 10) Очищаем из корзины только выбранные для оформления блоки.
+    // 9) Создаём связанные заказы через общий сервис клиентского/ручного оформления.
+    $selectedItemsForService = [];
     $selectedCartItemIds = [];
-    foreach ($itemsByDate as $block) {
+    foreach ($itemsByDate as $dateKey => $block) {
+        $deliveryDateOnly = $this->dateFromCartGroupKey((string)$dateKey);
         foreach ($block as $cartRow) {
             $selectedCartItemIds[] = (int)($cartRow['cart_item_id'] ?? 0);
+            $selectedItemsForService[] = [
+                'stock_mode' => (string)($cartRow['stock_mode'] ?? 'instant'),
+                'purchase_batch_id' => (int)($cartRow['purchase_batch_id'] ?? 0),
+                'boxes' => (float)($cartRow['quantity'] ?? 0),
+                'delivery_date' => $deliveryDateOnly,
+            ];
         }
     }
     $selectedCartItemIds = array_values(array_unique(array_filter($selectedCartItemIds)));
-    if ($selectedCartItemIds) {
-        $placeholders = implode(',', array_fill(0, count($selectedCartItemIds), '?'));
-        $deleteParams = array_merge([$userId], $selectedCartItemIds);
-        $this->pdo->prepare("DELETE FROM cart_items WHERE user_id = ? AND id IN ($placeholders)")->execute($deleteParams);
-        foreach ($selectedCartItemIds as $cartItemId) {
-            unset($_SESSION['delivery_date'][$cartItemId]);
-        }
+
+    $deliveryGroupsForService = [];
+    foreach ($itemsByDate as $dateKey => $_) {
+        $deliveryRow = $deliveryByDate[$dateKey] ?? ['delivery_fee' => 300];
+        $deliveryGroupsForService[$dateKey] = [
+            'address_id' => $addressIds[$dateKey] ?? null,
+            'slot_id' => $_POST['slot_id'][$dateKey] ?? null,
+            'delivery_fee' => (int)($deliveryRow['delivery_fee'] ?? 300),
+            'distance_km' => $deliveryRow['distance_km'] ?? null,
+            'delivery_tariff_zone_id' => $deliveryRow['delivery_tariff_zone_id'] ?? null,
+            'delivery_pricing_source' => $deliveryRow['delivery_pricing_source'] ?? null,
+            'delivery_comment' => $deliveryCommentByDate[$dateKey] ?? '',
+        ];
+    }
+
+    $creationResult = (new OrderGroupCreationService($this->pdo))->createForClientCheckout(
+        $userId,
+        $selectedItemsForService,
+        [
+            'coupon_code' => $couponCode,
+            'discount_percent' => $discountPercent,
+            'coupon_points' => $couponPoints,
+            'points' => $pointsToUse,
+            'available_points' => $pointsBalance,
+            'delivery_groups' => $deliveryGroupsForService,
+            'cart_item_ids_to_delete' => $selectedCartItemIds,
+            'comment' => 'client checkout',
+        ]
+    );
+    $createdOrderIds = $creationResult['order_ids'];
+
+    foreach ($selectedCartItemIds as $cartItemId) {
+        unset($_SESSION['delivery_date'][$cartItemId]);
     }
     if (empty($_SESSION['delivery_date'])) {
         $_SESSION['delivery_date'] = [];
@@ -983,7 +831,7 @@ public function cart(): void
     $hasRemainingCartItems = ((int)$remainingStmt->fetchColumn() > 0);
     $this->refreshCartTotal();
 
-        $preorderIntentId = (int)($_SESSION['preorder_checkout_intent_id'] ?? 0);
+    $preorderIntentId = (int)($_SESSION['preorder_checkout_intent_id'] ?? 0);
     if ($preorderIntentId > 0 && !$hasRemainingCartItems) {
         $this->pdo->prepare(
             "UPDATE preorder_intents SET status = 'completed', updated_at = NOW() WHERE id = ? AND user_id = ? AND status IN ('confirmed','moved_to_cart')"
@@ -1004,7 +852,6 @@ public function cart(): void
         )->execute([$userId]);
     }
 
-    $this->pdo->commit();
     } catch (\Throwable $e) {
         if ($this->pdo->inTransaction()) {
             $this->pdo->rollBack();
@@ -1017,6 +864,10 @@ public function cart(): void
 
         header('Location: /checkout?coupon_error=' . urlencode($message));
         exit;
+    }
+
+    foreach ($createdOrderIds as $oid) {
+        (new ProductionJobService($this->pdo))->createForOrderIfRequired((int)$oid);
     }
 
     // Оповещаем администраторов о новых заказах

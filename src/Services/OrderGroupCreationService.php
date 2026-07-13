@@ -98,6 +98,7 @@ class OrderGroupCreationService
                     'delivery_comment' => $deliveryComment,
                 ]);
                 $this->insertItemsAndReserve($orderId, $group['items']);
+                $this->createSellerPayouts($orderId, $group['items'], $mode);
                 if ($pointsUsed > 0) {
                     $this->insertPointsUsage($userId, $orderId, $pointsUsed);
                 }
@@ -119,6 +120,156 @@ class OrderGroupCreationService
             }
             $this->pdo->commit();
             return ['order_group_id' => $groupId, 'order_ids' => $orderIds, 'orders' => $orders];
+        } catch (Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw new RuntimeException($e->getMessage() !== '' ? $e->getMessage() : 'Заказ не создан. Попробуйте ещё раз', 0, $e);
+        }
+    }
+
+
+    /**
+     * @param array<int,array{stock_mode:string,purchase_batch_id:int,boxes:float,delivery_date:string}> $selectedItems
+     * @param array<string,mixed> $options
+     * @return array{order_group_id:int,order_ids:array<int,int>,orders:array<int,array<string,mixed>>,deleted_cart_item_ids:array<int,int>}
+     */
+    public function createForClientCheckout(int $userId, array $selectedItems, array $options = []): array
+    {
+        if ($userId <= 0) {
+            throw new RuntimeException('Заказ не создан. Проверьте клиента');
+        }
+
+        $prepared = $this->prepareItems($selectedItems);
+        if ($prepared === []) {
+            throw new RuntimeException('Добавьте товары в заказ');
+        }
+
+        $groupsByKey = [];
+        foreach ($prepared as $item) {
+            $key = $item['stock_mode'] . '|' . $item['delivery_date'];
+            if (!isset($groupsByKey[$key])) {
+                $groupsByKey[$key] = [
+                    'group_key' => $key,
+                    'stock_mode' => $item['stock_mode'],
+                    'delivery_date' => $item['delivery_date'],
+                    'items' => [],
+                    'items_total' => 0,
+                ];
+            }
+            $groupsByKey[$key]['items'][] = $item;
+            $groupsByKey[$key]['items_total'] += (int)round((float)$item['boxes'] * (float)$item['price_per_box']);
+        }
+        $groups = array_values($groupsByKey);
+        $amounts = array_map(static fn(array $group): int => (int)$group['items_total'], $groups);
+        $discountPercent = max(0.0, (float)($options['discount_percent'] ?? 0));
+        $percentDiscounts = $discountPercent > 0 ? $this->allocator->allocatePercentDiscount($amounts, $discountPercent) : array_fill(0, count($groups), 0);
+
+        $afterPercent = [];
+        foreach ($amounts as $idx => $amount) {
+            $afterPercent[$idx] = max(0, (int)$amount - (int)($percentDiscounts[$idx] ?? 0));
+        }
+        $couponPointDiscounts = $this->allocator->allocateFixedAmount($afterPercent, max(0, (int)($options['coupon_points'] ?? 0)));
+        $afterCouponPoints = [];
+        foreach ($afterPercent as $idx => $amount) {
+            $afterCouponPoints[$idx] = max(0, (int)$amount - (int)($couponPointDiscounts[$idx] ?? 0));
+        }
+        $userPoints = $this->allocator->allocatePoints(
+            $afterCouponPoints,
+            max(0, (int)($options['points'] ?? 0)),
+            max(0, (int)($options['available_points'] ?? 0)),
+            array_sum($afterCouponPoints)
+        );
+
+        $couponCode = trim((string)($options['coupon_code'] ?? ''));
+        $deliveryGroups = is_array($options['delivery_groups'] ?? null) ? $options['delivery_groups'] : [];
+        $cartItemIds = array_values(array_unique(array_filter(array_map('intval', (array)($options['cart_item_ids_to_delete'] ?? [])))));
+        $createdBy = isset($options['created_by_user_id']) ? (int)$options['created_by_user_id'] : null;
+        $groupComment = trim((string)($options['comment'] ?? 'client checkout'));
+
+        try {
+            $this->pdo->beginTransaction();
+            $groupId = $this->insertOrderGroup($userId, $createdBy > 0 ? $createdBy : null, $groupComment);
+            $orderIds = [];
+            $orders = [];
+            $chargedDeliveries = [];
+
+            foreach ($groups as $idx => $group) {
+                $delivery = is_array($deliveryGroups[$group['group_key']] ?? null) ? $deliveryGroups[$group['group_key']] : [];
+                $addressId = (int)($delivery['address_id'] ?? 0);
+                if ($addressId <= 0) {
+                    throw new RuntimeException('Выберите адрес получения для каждого заказа');
+                }
+                $slotId = isset($delivery['slot_id']) && $delivery['slot_id'] !== '' ? (int)$delivery['slot_id'] : null;
+                $shippingKey = $group['delivery_date'] . '|' . $addressId . '|' . (string)$slotId;
+                $deliveryFee = max(0, (int)($delivery['delivery_fee'] ?? 0));
+                $orderDeliveryFee = isset($chargedDeliveries[$shippingKey]) ? 0 : $deliveryFee;
+                $chargedDeliveries[$shippingKey] = true;
+
+                $mode = (string)$group['stock_mode'];
+                $status = $mode === 'preorder' ? 'reserved' : 'new';
+                $discount = (int)($percentDiscounts[$idx] ?? 0);
+                $couponPointDiscount = (int)($couponPointDiscounts[$idx] ?? 0);
+                $pointsUsed = (int)($userPoints[$idx] ?? 0);
+                $totalPointsDiscount = $couponPointDiscount + $pointsUsed;
+                $total = max(0, (int)$group['items_total'] - $discount - $totalPointsDiscount) + $orderDeliveryFee;
+
+                $orderId = $this->insertOrder([
+                    'order_group_id' => $groupId,
+                    'user_id' => $userId,
+                    'address_id' => $addressId,
+                    'slot_id' => $slotId,
+                    'status' => $status,
+                    'total_amount' => $total,
+                    'discount_applied' => $discount,
+                    'points_used' => $totalPointsDiscount,
+                    'points_accrued' => 0,
+                    'coupon_code' => $couponCode,
+                    'delivery_date' => $group['delivery_date'],
+                    'created_by_user_id' => $createdBy > 0 ? $createdBy : null,
+                    'order_mode' => $mode,
+                    'purchase_batch_id' => count($group['items']) === 1 ? (int)$group['items'][0]['purchase_batch_id'] : null,
+                    'delivery_fee' => $orderDeliveryFee,
+                    'delivery_distance_km' => $delivery['distance_km'] ?? null,
+                    'delivery_tariff_zone_id' => $delivery['delivery_tariff_zone_id'] ?? null,
+                    'delivery_pricing_source' => $delivery['delivery_pricing_source'] ?? null,
+                    'delivery_comment' => trim((string)($delivery['delivery_comment'] ?? '')),
+                    'reserved_at' => $mode === 'preorder' ? date('Y-m-d H:i:s') : null,
+                    'bonuses_allowed' => 1,
+                    'coupons_allowed' => 1,
+                ]);
+                $this->insertItemsAndReserve($orderId, $group['items']);
+                $this->createSellerPayouts($orderId, $group['items'], $mode);
+                if ($pointsUsed > 0) {
+                    $this->insertPointsUsage($userId, $orderId, $pointsUsed);
+                }
+                $orderIds[] = $orderId;
+                $orders[] = [
+                    'id' => $orderId,
+                    'group_key' => $group['group_key'],
+                    'status' => $status,
+                    'order_mode' => $mode,
+                    'delivery_date' => $group['delivery_date'],
+                    'items_total' => (int)$group['items_total'],
+                    'discount_applied' => $discount,
+                    'coupon_points_used' => $couponPointDiscount,
+                    'points_used' => $pointsUsed,
+                    'delivery_fee' => $orderDeliveryFee,
+                    'total_amount' => $total,
+                ];
+            }
+
+            $totalUserPoints = array_sum($userPoints);
+            if ($totalUserPoints > 0) {
+                $this->pdo->prepare('UPDATE users SET points_balance = points_balance - ? WHERE id = ?')->execute([$totalUserPoints, $userId]);
+            }
+            if ($cartItemIds !== []) {
+                $placeholders = implode(',', array_fill(0, count($cartItemIds), '?'));
+                $params = array_merge([$userId], $cartItemIds);
+                $this->pdo->prepare("DELETE FROM cart_items WHERE user_id = ? AND id IN ($placeholders)")->execute($params);
+            }
+            $this->pdo->commit();
+            return ['order_group_id' => $groupId, 'order_ids' => $orderIds, 'orders' => $orders, 'deleted_cart_item_ids' => $cartItemIds];
         } catch (Throwable $e) {
             if ($this->pdo->inTransaction()) {
                 $this->pdo->rollBack();
@@ -221,6 +372,44 @@ class OrderGroupCreationService
             if ($item['stock_mode'] === 'preorder') {
                 $this->pdo->prepare('UPDATE purchase_batches SET boxes_reserved = boxes_reserved + ? WHERE id = ?')->execute([$boxes, (int)$item['purchase_batch_id']]);
             }
+        }
+    }
+
+
+    /** @param array<int,array<string,mixed>> $items */
+    private function createSellerPayouts(int $orderId, array $items, string $mode): void
+    {
+        if ($mode === 'discount_stock' || !$this->tableExists('seller_payouts')) {
+            return;
+        }
+        $sellerTotals = [];
+        $sellerModes = [];
+        $productStmt = $this->pdo->prepare('SELECT p.seller_id, u.work_mode FROM products p LEFT JOIN users u ON u.id = p.seller_id WHERE p.id = ?');
+        foreach ($items as $item) {
+            $productStmt->execute([(int)$item['product_id']]);
+            $row = $productStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+            $sellerId = (int)($row['seller_id'] ?? 0);
+            if ($sellerId <= 0) {
+                continue;
+            }
+            $sellerTotals[$sellerId] = ($sellerTotals[$sellerId] ?? 0.0) + ((float)$item['boxes'] * (float)$item['price_per_box']);
+            $sellerModes[$sellerId] = (string)($row['work_mode'] ?? 'berrygo_store');
+        }
+        if ($sellerTotals === []) {
+            return;
+        }
+        $stmt = $this->pdo->prepare('INSERT INTO seller_payouts (seller_id, order_id, gross_amount, commission_rate, commission_amount, payout_amount) VALUES (?, ?, ?, ?, ?, ?)');
+        $economics = new SellerEconomicsService($this->pdo);
+        foreach ($sellerTotals as $sellerId => $gross) {
+            $record = $economics->payoutRecord((int)$sellerId, (float)$gross, $sellerModes[$sellerId] ?? 'berrygo_store');
+            $stmt->execute([
+                (int)$sellerId,
+                $orderId,
+                (float)$gross,
+                (float)$record['commission_rate'],
+                (float)$record['commission'],
+                (float)$record['payout'],
+            ]);
         }
     }
 

@@ -23,6 +23,7 @@ class OrderGroupCreationServiceTest extends TestCase
         $this->pdo->exec('CREATE TABLE orders (id INTEGER PRIMARY KEY AUTOINCREMENT, order_group_id INTEGER NULL, user_id INTEGER, address_id INTEGER, slot_id INTEGER NULL, status TEXT, total_amount INTEGER, discount_applied INTEGER DEFAULT 0, points_used INTEGER DEFAULT 0, points_accrued INTEGER DEFAULT 0, coupon_code TEXT NULL, delivery_date TEXT, created_by_user_id INTEGER NULL, created_at TEXT, order_mode TEXT, purchase_batch_id INTEGER NULL, delivery_fee INTEGER DEFAULT 0, delivery_comment TEXT NULL)');
         $this->pdo->exec('CREATE TABLE order_items (id INTEGER PRIMARY KEY AUTOINCREMENT, order_id INTEGER, product_id INTEGER, quantity REAL, boxes REAL, unit_price REAL, stock_mode TEXT, purchase_batch_id INTEGER)');
         $this->pdo->exec('CREATE TABLE points_transactions (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, order_id INTEGER, amount INTEGER, transaction_type TEXT, description TEXT, created_at TEXT)');
+        $this->pdo->exec('CREATE TABLE cart_items (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, product_id INTEGER, stock_mode TEXT, purchase_batch_id INTEGER, quantity REAL, unit_price REAL, boxes REAL)');
         $this->pdo->exec("INSERT INTO users (id, points_balance) VALUES (1, 100)");
         $this->pdo->exec("INSERT INTO addresses (id, user_id, street) VALUES (1, 1, 'ул. Тестовая')");
         $this->pdo->exec("INSERT INTO product_types (id, name) VALUES (1, 'Клубника')");
@@ -95,6 +96,40 @@ class OrderGroupCreationServiceTest extends TestCase
         $items = $this->pdo->query('SELECT purchase_batch_id, boxes FROM order_items WHERE order_id = ' . (int)$result['order_ids'][0] . ' ORDER BY id')->fetchAll(PDO::FETCH_ASSOC);
         $this->assertSame([1, 2], array_map('intval', array_column($items, 'purchase_batch_id')));
         $this->assertSame([3.0, 2.0], array_map('floatval', array_column($items, 'boxes')));
+    }
+
+
+    public function testClientCheckoutUsesSharedServiceAllocationsAndDeletesCartRows(): void
+    {
+        $this->pdo->exec("INSERT INTO purchase_batches (id, product_id, status, purchased_at, box_size_snapshot, box_unit_snapshot, boxes_free, boxes_total, boxes_reserved, instant_price_per_box, preorder_price_per_box) VALUES
+            (1, 10, 'purchased', '2026-07-04', 2, 'кг', 5, 5, 0, 1500, 0),
+            (2, 10, 'planned', '2026-07-18', 2, 'кг', 0, 5, 0, 0, 1350)");
+        $this->pdo->exec("INSERT INTO cart_items (id, user_id, product_id, stock_mode, purchase_batch_id, quantity, unit_price, boxes) VALUES
+            (101, 1, 10, 'instant', 1, 1, 1500, 1),
+            (102, 1, 10, 'preorder', 2, 1, 1350, 1)");
+
+        $result = $this->service->createForClientCheckout(1, [
+            ['stock_mode' => 'instant', 'purchase_batch_id' => 1, 'boxes' => 1, 'delivery_date' => '2026-07-15'],
+            ['stock_mode' => 'preorder', 'purchase_batch_id' => 2, 'boxes' => 1, 'delivery_date' => '2026-07-18'],
+        ], [
+            'coupon_code' => 'BERRY',
+            'discount_percent' => 10,
+            'coupon_points' => 50,
+            'points' => 100,
+            'available_points' => 100,
+            'cart_item_ids_to_delete' => [101, 102],
+            'delivery_groups' => [
+                'instant|2026-07-15' => ['address_id' => 1, 'slot_id' => 5, 'delivery_fee' => 300, 'delivery_comment' => 'домофон'],
+                'preorder|2026-07-18' => ['address_id' => 1, 'slot_id' => 5, 'delivery_fee' => 300, 'delivery_comment' => 'домофон'],
+            ],
+        ]);
+
+        $this->assertCount(2, $result['order_ids']);
+        $this->assertSame(0, (int)$this->pdo->query('SELECT COUNT(*) FROM cart_items')->fetchColumn());
+        $this->assertSame(2, (int)$this->pdo->query('SELECT COUNT(*) FROM points_transactions')->fetchColumn());
+        $this->assertSame(0, (int)$this->pdo->query('SELECT COUNT(*) FROM points_transactions WHERE order_id IS NULL')->fetchColumn());
+        $this->assertSame(3.0, (float)$this->pdo->query('SELECT boxes_reserved FROM purchase_batches WHERE id = 2')->fetchColumn());
+        $this->assertSame(0, (int)$this->pdo->query('SELECT COUNT(DISTINCT order_group_id) - 1 FROM orders')->fetchColumn());
     }
 
     public function testFailureRollsBackCreatedOrders(): void

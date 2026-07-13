@@ -270,6 +270,35 @@ $primaryDisplayPrice = $canBuyNow ? $instantPriceBox : ($canConfirmedPreorder ? 
           </button>
           <p class="mt-1.5 text-[11px] text-gray-400 text-center">Дата поступления уточняется</p>
         <?php endif; ?>
+
+        <?php if ($canConfirmedPreorder): ?>
+          <button type="button"
+                  class="w-full h-10 flex items-center justify-center gap-1.5 border font-medium text-xs sm:text-sm rounded-xl transition-colors preorder-intent-btn border-emerald-500 text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100 <?= $canBuyNow ? '' : 'mb-2' ?>"
+                  data-product-id="<?= (int)$p['id'] ?>"
+                  data-product-title="<?= htmlspecialchars(trim(($p['product'] ?? '') . ' ' . ($p['variety'] ?? ''))) ?>"
+                  data-preorder-price="<?= (float)$confirmedPreorderPriceBox ?>"
+                  data-preorder-discount="<?= (float)$preorderDiscountPercent ?>"
+                  data-source-section="<?= htmlspecialchars($cardSection) ?>"
+                  data-delivery-date="<?= htmlspecialchars($confirmedPreorderDate) ?>"
+                  data-supply-date="<?= htmlspecialchars($confirmedPreorderDate) ?>">
+            <span class="material-icons-round text-base leading-none">schedule</span>
+            Предзаказать на <?= htmlspecialchars($confirmedPreorderDateText) ?> — <?= number_format($confirmedPreorderPriceBox, 0, '.', ' ') ?> ₽
+          </button>
+        <?php elseif (!$canBuyNow): ?>
+          <button type="button"
+                  class="w-full h-10 flex items-center justify-center gap-1.5 border border-emerald-500 text-emerald-700 font-medium text-xs sm:text-sm rounded-xl transition-colors preorder-intent-btn hover:bg-emerald-50 active:bg-emerald-100"
+                  data-product-id="<?= (int)$p['id'] ?>"
+                  data-product-title="<?= htmlspecialchars(trim(($p['product'] ?? '') . ' ' . ($p['variety'] ?? ''))) ?>"
+                  data-preorder-price="0"
+                  data-preorder-discount="0"
+                  data-source-section="notify"
+                  data-delivery-date=""
+                  data-supply-date="">
+            <span class="material-icons-round text-base leading-none">notifications</span>
+            Сообщить о поступлении
+          </button>
+          <p class="mt-1.5 text-[11px] text-gray-400 text-center">Дата поступления уточняется</p>
+        <?php endif; ?>
         <p class="mt-1.5 text-[11px] text-gray-400 hidden preorder-intent-hint"></p>
       <?php else: ?>
         <?php if (!empty($_SESSION['user_id']) && !$active): ?>

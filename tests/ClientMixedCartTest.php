@@ -39,9 +39,11 @@ final class ClientMixedCartTest extends TestCase
     {
         $controller = file_get_contents(__DIR__ . '/../src/Controllers/ClientController.php');
 
-        $this->assertStringContainsString('INSERT INTO order_groups (user_id, created_by_user_id, comment)', $controller);
-        $this->assertStringContainsString('user_id, order_group_id, address_id', $controller);
-        $this->assertStringContainsString('$orderGroupId', $controller);
+        $this->assertStringContainsString('createForClientCheckout', $controller);
+        $placeOrder = substr($controller, strpos($controller, 'public function placeOrder'));
+        $this->assertStringNotContainsString('INSERT INTO orders', $placeOrder);
+        $this->assertStringNotContainsString('INSERT INTO order_groups', $placeOrder);
+        $this->assertStringContainsString('cart_item_ids_to_delete', $placeOrder);
     }
 
     public function testClientFacingCopyDoesNotMentionInternalPurchaseWorkflow(): void
