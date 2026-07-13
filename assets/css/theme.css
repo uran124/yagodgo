@@ -230,6 +230,17 @@
       flex: 0 0 66vw;
       scroll-snap-align: start;
     }
+    @media (max-width: 639px) {
+      .product-mobile-carousel .embla__viewport {
+        overflow-x: auto;
+        scroll-behavior: smooth;
+        scroll-snap-type: x proximity;
+        -webkit-overflow-scrolling: touch;
+      }
+      .product-mobile-carousel .embla__slide {
+        scroll-snap-align: start;
+      }
+    }
     @media (min-width: 640px) {
       .product-mobile-slide {
         width: 50%;

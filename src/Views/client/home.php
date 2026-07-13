@@ -53,7 +53,7 @@
   <?php if (!empty($saleProducts)): ?>
     <section class="px-4 mb-8 mt-6">
       <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-4">💥 Акции</h2>
-      <div class="embla drag-free has-arrows relative">
+      <div class="embla drag-free has-arrows product-mobile-carousel relative">
         <button data-dir="left" class="hidden items-center justify-center w-8 h-8 absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
           <span class="material-icons-round text-gray-600">chevron_left</span>
         </button>
@@ -83,7 +83,7 @@
     <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-4">🚚 В наличии</h2>
     <?php $noStockMessage = (string)(get_setting('ui_home_no_stock_message', 'На данный момент ягод нет в наличии. Воспользуйтесь нашим предложением предварительного заказа со скидкой 10% — это дополнительная скидка за оформление предварительного бронирования.') ?? ''); ?>
     <?php if (!empty($regularProducts)): ?>
-      <div class="embla drag-free has-arrows relative">
+      <div class="embla drag-free has-arrows product-mobile-carousel relative">
         <button data-dir="left" class="hidden items-center justify-center w-8 h-8 absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
           <span class="material-icons-round text-gray-600">chevron_left</span>
         </button>
@@ -116,7 +116,7 @@
   <?php if (!empty($sellerProducts)): ?>
     <section class="px-4 mb-8">
       <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-4">🤝 Товары от селлеров</h2>
-      <div class="embla drag-free has-arrows relative">
+      <div class="embla drag-free has-arrows product-mobile-carousel relative">
         <button data-dir="left" class="hidden items-center justify-center w-8 h-8 absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
           <span class="material-icons-round text-gray-600">chevron_left</span>
         </button>
@@ -140,7 +140,7 @@
   <?php if (!empty($preorderProducts)): ?>
     <section class="px-4 mb-8">
       <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-4">🛒 Предварительный заказ -10%</h2>
-      <div class="embla drag-free has-arrows relative">
+      <div class="embla drag-free has-arrows product-mobile-carousel relative">
         <button data-dir="left" class="hidden items-center justify-center w-8 h-8 absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
           <span class="material-icons-round text-gray-600">chevron_left</span>
         </button>
@@ -169,7 +169,7 @@
   <?php if (!empty($discountProducts)): ?>
     <section class="px-4 mb-8">
       <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-4">🏷️ Выгодные остатки</h2>
-      <div class="embla drag-free has-arrows relative">
+      <div class="embla drag-free has-arrows product-mobile-carousel relative">
         <button data-dir="left" class="hidden items-center justify-center w-8 h-8 absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow rounded-full z-10 hover:bg-gray-100">
           <span class="material-icons-round text-gray-600">chevron_left</span>
         </button>
