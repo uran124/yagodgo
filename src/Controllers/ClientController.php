@@ -641,10 +641,6 @@ public function cart(): void
     $pointsToUse  = $hasDiscountStockOrder ? 0 : min($pointsBalance, $allTotal);
 
     try {
-    $this->pdo->prepare(
-        "INSERT INTO order_groups (user_id, created_by_user_id, comment) VALUES (?, NULL, ?)"
-    )->execute([$userId, 'client checkout']);
-    $orderGroupId = (int)$this->pdo->lastInsertId();
 
     // 8) Обрабатываем адреса, комментарии и предварительный расчёт доставки по каждой дате.
     $postedAddresses = is_array($_POST['address_id'] ?? null) ? $_POST['address_id'] : [];

@@ -223,21 +223,21 @@ class AdminOrdersPageServiceTest extends TestCase
         $this->assertSame('on_shift', $data['productionExecutors'][0]['current_mode']);
     }
 
-    public function testBuildCreateDataReturnsSellablePurchaseBatches(): void
+    public function testBuildCreateDataReturnsManualOrderOffersWithoutLegacyPurchaseBatchList(): void
     {
         $data = $this->service->buildCreateData();
 
-        $this->assertCount(3, $data['purchaseBatches']);
-        $this->assertSame(10, (int)$data['purchaseBatches'][0]['purchase_batch_id']);
-        $this->assertSame('in_stock', $data['purchaseBatches'][0]['mode_group']);
-        $this->assertSame(1500.0, (float)$data['purchaseBatches'][0]['price_per_box']);
-        $this->assertSame(12.0, (float)$data['purchaseBatches'][0]['available_boxes']);
-        $this->assertSame(11, (int)$data['purchaseBatches'][1]['purchase_batch_id']);
-        $this->assertSame('preorder', $data['purchaseBatches'][1]['mode_group']);
-        $this->assertSame(1400.0, (float)$data['purchaseBatches'][1]['price_per_box']);
-        $this->assertSame(12, (int)$data['purchaseBatches'][2]['purchase_batch_id']);
-        $this->assertSame('preorder', $data['purchaseBatches'][2]['mode_group']);
-        $this->assertSame(600.0, (float)$data['purchaseBatches'][2]['price_per_box']);
-        $this->assertSame(4.0, (float)$data['purchaseBatches'][2]['available_boxes']);
+        $this->assertArrayNotHasKey('purchaseBatches', $data);
+        $this->assertCount(1, $data['inStockOffers']);
+        $this->assertSame(10, (int)$data['inStockOffers'][0]['purchase_batch_id']);
+        $this->assertSame('instant', $data['inStockOffers'][0]['stock_mode']);
+        $this->assertSame(1500.0, (float)$data['inStockOffers'][0]['price_per_box']);
+        $this->assertSame(12.0, (float)$data['inStockOffers'][0]['available_boxes']);
+
+        $this->assertCount(1, $data['preorderOffers']);
+        $this->assertSame(11, (int)$data['preorderOffers'][0]['purchase_batch_id']);
+        $this->assertSame('preorder', $data['preorderOffers'][0]['stock_mode']);
+        $this->assertSame(1400.0, (float)$data['preorderOffers'][0]['price_per_box']);
+        $this->assertSame(7.0, (float)$data['preorderOffers'][0]['available_boxes']);
     }
 }
