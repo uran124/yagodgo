@@ -1629,12 +1629,19 @@ public function cancelReservedOrder(int $orderId): void
             return;
         }
 
-        $productStmt = $this->pdo->prepare("SELECT id FROM products WHERE id = ? AND is_active = 1 LIMIT 1");
+        $productStmt = $this->pdo->prepare("SELECT id, seller_id, price, preorder_price_per_box FROM products WHERE id = ? AND is_active = 1 LIMIT 1");
         $productStmt->execute([$productId]);
-        if (!$productStmt->fetchColumn()) {
+        $product = $productStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$product) {
             http_response_code(404);
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode(['ok' => false, 'error' => 'Товар не найден'], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+        if (!empty($product['seller_id'])) {
+            http_response_code(422);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => false, 'error' => 'Предзаказ для этого товара недоступен'], JSON_UNESCAPED_UNICODE);
             return;
         }
 
@@ -1645,10 +1652,13 @@ public function cancelReservedOrder(int $orderId): void
         $existingId = $existingStmt->fetchColumn();
 
         $plannedBatchStmt = $this->pdo->prepare(
-            "SELECT pb.id, COALESCE(NULLIF(pb.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) AS preorder_price_per_box
+            "SELECT pb.id, pb.purchased_at, COALESCE(NULLIF(pb.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), 0) AS preorder_price_per_box,
+                    COALESCE(NULLIF(pb.instant_price_per_box, 0), NULLIF(p.price, 0), 0) AS regular_price_per_box,
+                    (COALESCE(NULLIF(pb.boxes_total, 0), pb.boxes_free + pb.boxes_reserved) - pb.boxes_reserved) AS available_boxes
              FROM purchase_batches pb
              JOIN products p ON p.id = pb.product_id
              WHERE pb.product_id = ? AND pb.status = 'planned'
+               AND (COALESCE(NULLIF(pb.boxes_total, 0), pb.boxes_free + pb.boxes_reserved) - pb.boxes_reserved) > 0
              ORDER BY pb.purchased_at ASC, pb.id ASC
              LIMIT 1"
         );
@@ -1656,8 +1666,28 @@ public function cancelReservedOrder(int $orderId): void
         $plannedBatch = $plannedBatchStmt->fetch(PDO::FETCH_ASSOC) ?: null;
         $hasPlannedBatch = $plannedBatch !== null;
         $autoOfferPrice = $hasPlannedBatch ? round((float)($plannedBatch['preorder_price_per_box'] ?? 0), 2) : 0.0;
-        $targetStatus = $hasPlannedBatch ? 'linked_to_batch' : 'waiting_batch';
-        $targetBatchId = $hasPlannedBatch ? (int)$plannedBatch['id'] : null;
+        if ($hasPlannedBatch && $autoOfferPrice <= 0) {
+            $regularForPreorder = (float)($plannedBatch['regular_price_per_box'] ?? ($product['price'] ?? 0));
+            $discountPercent = max(0.0, min(99.0, (float)(get_setting('ui_preorder_discount_percent', '10') ?? '10')));
+            if ($regularForPreorder > 0) {
+                $autoOfferPrice = round($regularForPreorder * ((100.0 - $discountPercent) / 100.0), 0);
+            }
+        }
+        if (!$hasPlannedBatch || $autoOfferPrice <= 0) {
+            error_log('Preorder price unavailable: ' . json_encode([
+                'product_id' => $productId,
+                'purchase_batch_id' => $plannedBatch['id'] ?? null,
+                'regular_price' => $plannedBatch['regular_price_per_box'] ?? ($product['price'] ?? null),
+                'expected_price' => $autoOfferPrice,
+            ], JSON_UNESCAPED_UNICODE));
+            http_response_code(422);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => false, 'error' => 'Цена предзаказа уточняется'], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+        $expectedPricePerBox = $autoOfferPrice;
+        $targetStatus = 'linked_to_batch';
+        $targetBatchId = (int)$plannedBatch['id'];
 
         $etaDateValue = null;
         if ($sourceSection === 'in_stock' && $sourceDeliveryDate !== '') {
