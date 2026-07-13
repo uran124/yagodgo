@@ -889,6 +889,9 @@
   document.addEventListener('DOMContentLoaded', () => {
     // Drag free carousels
     document.querySelectorAll('.embla.drag-free').forEach(wrapper => {
+      if (wrapper.classList.contains('product-mobile-carousel') && window.matchMedia('(max-width: 639px)').matches) {
+        return;
+      }
       const viewport = wrapper.querySelector('.embla__viewport');
       const embla = EmblaCarousel(viewport, { dragFree: true });
       const prev = wrapper.querySelector('[data-dir="left"]');
