@@ -115,8 +115,13 @@ class ClientCatalogServiceTest extends TestCase
         $this->assertSame('/pre.jpg', $data['preorderProducts'][0]['image_path']);
         $this->assertSame('material-1', $data['materials'][0]['mat_alias']);
         $this->assertSame(1, (int)$data['regularProducts'][0]['has_planned_batch']);
+        $this->assertSame(12, (int)$data['regularProducts'][0]['instant_purchase_batch_id']);
+        $this->assertSame(900.0, (float)$data['regularProducts'][0]['instant_price_per_box']);
+        $this->assertSame(14, (int)$data['regularProducts'][0]['preorder_purchase_batch_id']);
+        $this->assertSame('2025-03-29', $data['regularProducts'][0]['preorder_availability_date']);
         $saleByAlias = array_column($data['saleProducts'], null, 'alias');
         $this->assertSame(1, (int)$saleByAlias['sale-product']['has_planned_batch']);
+        $this->assertSame(0, (int)($saleByAlias['sale-product']['preorder_purchase_batch_id'] ?? 0));
     }
 
     public function testCatalogDataReturnsProductsAndTypes(): void
@@ -127,6 +132,8 @@ class ClientCatalogServiceTest extends TestCase
         $this->assertSame('Клубника', $data['types'][0]['name']);
         $productsByAlias = array_column($data['products'], null, 'alias');
         $this->assertSame('sale', $productsByAlias['sale-product']['catalog_section']);
+        $this->assertSame(12, (int)$productsByAlias['regular-product']['instant_purchase_batch_id']);
+        $this->assertSame(14, (int)$productsByAlias['regular-product']['preorder_purchase_batch_id']);
         $this->assertSame(1, (int)$productsByAlias['sale-product']['has_planned_batch']);
         $this->assertSame('in_stock', $productsByAlias['regular-product']['catalog_section']);
         $this->assertSame(900.0, (float)$productsByAlias['regular-product']['price']);
