@@ -233,9 +233,14 @@ class AdminOrdersPageService
      */
     public function buildCreateData(): array
     {
+        $availability = new ManualOrderAvailabilityService($this->pdo);
+        $offers = $availability->buildOffers();
+
         return [
             'products' => $this->fetchCreateFormProducts(),
             'purchaseBatches' => $this->fetchCreateFormPurchaseBatches(),
+            'inStockOffers' => $offers['inStockOffers'],
+            'preorderOffers' => $offers['preorderOffers'],
             'slots' => $this->fetchSlots(),
             'today' => date('Y-m-d'),
         ];
