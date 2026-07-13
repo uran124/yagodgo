@@ -332,6 +332,7 @@ CREATE TABLE `cart_items` (
   `quantity` decimal(8,2) NOT NULL,
   `unit_price` decimal(10,2) NOT NULL,
   `purchase_batch_id` int UNSIGNED DEFAULT NULL,
+  `purchase_batch_key` bigint UNSIGNED GENERATED ALWAYS AS (coalesce(`purchase_batch_id`,0)) STORED,
   `stock_mode` enum('preorder','instant','discount_stock') NOT NULL DEFAULT 'instant',
   `boxes` decimal(10,2) NOT NULL DEFAULT '0.00',
   `sale_price_per_box` decimal(10,2) NOT NULL DEFAULT '0.00'
@@ -2693,7 +2694,7 @@ ALTER TABLE `addresses`
 --
 ALTER TABLE `cart_items`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uniq_cart_items_user_product_mode_batch` (`user_id`,`product_id`,`stock_mode`,`purchase_batch_id`),
+  ADD UNIQUE KEY `uniq_cart_items_user_product_mode_batch_key` (`user_id`,`product_id`,`stock_mode`,`purchase_batch_key`),
   ADD KEY `idx_cart_items_user_id` (`user_id`),
   ADD KEY `idx_cart_items_product_id` (`product_id`),
   ADD KEY `idx_cart_items_purchase_batch` (`purchase_batch_id`),

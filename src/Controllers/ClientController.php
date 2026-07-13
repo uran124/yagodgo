@@ -208,13 +208,18 @@ public function cart(): void
             $this->pdo->prepare(
                 "INSERT INTO cart_items (user_id, product_id, quantity, unit_price, stock_mode, purchase_batch_id, boxes, sale_price_per_box)" .
                 " VALUES (?, ?, ?, ?, ?, ?, ?, ?)" .
-                " ON DUPLICATE KEY UPDATE quantity = quantity + VALUES(quantity)," .
+                " ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)," .
+                " quantity = quantity + VALUES(quantity)," .
                 " unit_price = VALUES(unit_price)," .
                 " stock_mode = VALUES(stock_mode)," .
                 " purchase_batch_id = VALUES(purchase_batch_id)," .
                 " boxes = VALUES(boxes)," .
                 " sale_price_per_box = VALUES(sale_price_per_box)"
             )->execute([$userId, $productId, $quantity, $priceBox, $stockMode, $purchaseBatchId, $quantity, $priceBox]);
+            $cartItemId = (int)$this->pdo->lastInsertId();
+            if ($cartItemId > 0 && $dateOpt) {
+                $_SESSION['delivery_date'][$cartItemId] = $dateOpt;
+            }
         }
 
         $this->refreshCartTotal();
@@ -1072,18 +1077,20 @@ public function cart(): void
         }
         if ($purchaseBatchId <= 0 || $priceBox <= 0) {
             unset($_SESSION['preorder_continue']);
-            $_SESSION['cart_error'] = 'Для предзаказа сейчас нет выкупленной партии с подтвержденной ценой.';
+            $_SESSION['cart_error'] = 'Для предзаказа сейчас нет подтверждённого варианта с финальной ценой.';
             return;
         }
 
         $desiredDeliveryDate = $this->normalizeDateString($intent['desired_delivery_date'] ?? null);
-        $_SESSION['delivery_date'][$productId] = $desiredDeliveryDate ?: PLACEHOLDER_DATE;
-
         $this->pdo->prepare(
             "INSERT INTO cart_items (user_id, product_id, quantity, unit_price, stock_mode, purchase_batch_id, boxes, sale_price_per_box)
              VALUES (?, ?, ?, ?, 'preorder', ?, ?, ?)
-             ON DUPLICATE KEY UPDATE quantity = VALUES(quantity), unit_price = VALUES(unit_price), stock_mode = 'preorder', purchase_batch_id = VALUES(purchase_batch_id), boxes = VALUES(boxes), sale_price_per_box = VALUES(sale_price_per_box)"
+             ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id), quantity = VALUES(quantity), unit_price = VALUES(unit_price), stock_mode = 'preorder', purchase_batch_id = VALUES(purchase_batch_id), boxes = VALUES(boxes), sale_price_per_box = VALUES(sale_price_per_box)"
         )->execute([$userId, $productId, $requestedBoxes, $priceBox, $purchaseBatchId, $requestedBoxes, $priceBox]);
+        $cartItemId = (int)$this->pdo->lastInsertId();
+        if ($cartItemId > 0) {
+            $_SESSION['delivery_date'][$cartItemId] = $desiredDeliveryDate ?: PLACEHOLDER_DATE;
+        }
 
         $this->pdo->prepare("UPDATE preorder_intents SET status = 'moved_to_cart', updated_at = NOW() WHERE id = ? AND user_id = ? AND status IN ('confirmed','moved_to_cart')")
             ->execute([$intentId, $userId]);
@@ -1929,39 +1936,28 @@ public function cancelReservedOrder(int $orderId): void
                 'ok' => true,
                 'intent_id' => $intentId,
                 'status' => $targetStatus,
-                'status_label' => 'Ждёт закупку',
+                'status_label' => 'Дата поступления уточняется',
                 'eta_delivery_date' => $etaDateValue,
                 'message' => 'Предзаказ сохранён' . ($desiredDeliveryDate ? ' на ' . date('d.m.Y', strtotime($desiredDeliveryDate)) : ' на ближайшую возможную дату') . '. Мы подтвердим его после назначения поставки и финальной цены.',
             ], JSON_UNESCAPED_UNICODE);
             return;
         }
 
-        $modeCheckStmt = $this->pdo->prepare(
-            "SELECT stock_mode FROM cart_items WHERE user_id = ? AND product_id = ? LIMIT 1"
-        );
-        $modeCheckStmt->execute([$userId, $productId]);
-        $existingCartMode = $modeCheckStmt->fetchColumn();
-        if ($existingCartMode !== false && (string)$existingCartMode !== 'preorder') {
-            http_response_code(409);
-            header('Content-Type: application/json; charset=utf-8');
-            echo json_encode([
-                'ok' => false,
-                'error' => 'Этот товар уже есть в корзине в другом режиме. Сначала удалите его из корзины.',
-            ], JSON_UNESCAPED_UNICODE);
-            return;
-        }
-
-        $_SESSION['delivery_date'][$productId] = $desiredDeliveryDate ?: PLACEHOLDER_DATE;
         $this->pdo->prepare(
             "INSERT INTO cart_items (user_id, product_id, quantity, unit_price, stock_mode, purchase_batch_id, boxes, sale_price_per_box)" .
             " VALUES (?, ?, ?, ?, 'preorder', ?, ?, ?)" .
-            " ON DUPLICATE KEY UPDATE quantity = VALUES(quantity)," .
+            " ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)," .
+            " quantity = VALUES(quantity)," .
             " unit_price = VALUES(unit_price)," .
             " stock_mode = 'preorder'," .
             " purchase_batch_id = VALUES(purchase_batch_id)," .
             " boxes = VALUES(boxes)," .
             " sale_price_per_box = VALUES(sale_price_per_box)"
         )->execute([$userId, $productId, $requestedBoxes, $autoOfferPrice, $targetBatchId, $requestedBoxes, $autoOfferPrice]);
+        $cartItemId = (int)$this->pdo->lastInsertId();
+        if ($cartItemId > 0) {
+            $_SESSION['delivery_date'][$cartItemId] = $desiredDeliveryDate ?: PLACEHOLDER_DATE;
+        }
         $this->refreshCartTotal();
 
         header('Content-Type: application/json; charset=utf-8');
@@ -1972,7 +1968,7 @@ public function cancelReservedOrder(int $orderId): void
             'status_label' => 'В корзине',
             'eta_delivery_date' => $etaDateValue,
             'cart_url' => '/cart',
-            'message' => 'Предзаказ добавлен в корзину' . ($desiredDeliveryDate ? ' на ' . date('d.m.Y', strtotime($desiredDeliveryDate)) : ': ' . $etaText) . '. Цена предварительная. Точная цена будет после выкупа.',
+            'message' => 'Предзаказ добавлен в корзину' . ($desiredDeliveryDate ? ' на ' . date('d.m.Y', strtotime($desiredDeliveryDate)) : ': ' . $etaText) . '. Предварительная цена зафиксирована для выбранного предзаказа.',
         ], JSON_UNESCAPED_UNICODE);
     }
 
@@ -2371,8 +2367,8 @@ public function cancelReservedOrder(int $orderId): void
     private function preorderIntentStatusLabel(string $status): string
     {
         return match ($status) {
-            'waiting_batch', 'intent_created' => 'Ожидает закупку',
-            'linked_to_batch' => 'Привязана к закупке',
+            'waiting_batch', 'intent_created' => 'Дата поступления уточняется',
+            'linked_to_batch' => 'Поставка подтверждена',
             'awaiting_price_confirmation', 'offer_sent' => 'Ожидает подтверждения цены',
             'confirmed' => 'Подтверждена',
             'moved_to_cart' => 'Переведена в корзину',
