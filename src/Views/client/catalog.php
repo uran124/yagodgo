@@ -60,7 +60,7 @@
         </a>
       </div>
     <?php else: ?>
-    <div id="productsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+    <div id="productsContainer" class="catalog-products-list grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
       <?php foreach ($products as $p): ?>
         <?php $cardSection = (string)($p['catalog_section'] ?? ''); ?>
         <?php include __DIR__ . '/_card.php'; ?>
