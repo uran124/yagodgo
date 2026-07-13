@@ -167,10 +167,12 @@ class ClientCatalogService
             "       instant_pb.id AS instant_purchase_batch_id,\n" .
             "       COALESCE(instant_pb.boxes_free, 0) AS instant_available_boxes,\n" .
             "       COALESCE(instant_pb.instant_price_per_box, 0) AS instant_price_per_box,\n" .
+            "       COALESCE(NULLIF(instant_pb.instant_price_per_box, 0), NULLIF(p.price, 0), 0) AS regular_price,\n" .
             "       preorder_pb.id AS preorder_purchase_batch_id,\n" .
             "       DATE(preorder_pb.purchased_at) AS preorder_availability_date,\n" .
             "       (COALESCE(NULLIF(preorder_pb.boxes_total, 0), preorder_pb.boxes_free + preorder_pb.boxes_reserved) - preorder_pb.boxes_reserved) AS preorder_available_boxes,\n" .
-            "       COALESCE(NULLIF(preorder_pb.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) AS confirmed_preorder_price_per_box\n" .
+            "       COALESCE(NULLIF(preorder_pb.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), 0) AS confirmed_preorder_price_per_box,\n" .
+            "       CASE WHEN p.seller_id IS NULL AND preorder_pb.id IS NOT NULL THEN 1 ELSE 0 END AS can_preorder\n" .
             "FROM products p\n" .
             "JOIN product_types t ON t.id = p.product_type_id\n" .
             "LEFT JOIN users u ON u.id = p.seller_id\n" .
@@ -200,7 +202,6 @@ class ClientCatalogService
             "      AND pb_p.status = 'planned'\n" .
             "      AND pb_p.purchased_at IS NOT NULL\n" .
             "      AND (COALESCE(NULLIF(pb_p.boxes_total, 0), pb_p.boxes_free + pb_p.boxes_reserved) - pb_p.boxes_reserved) > 0\n" .
-            "      AND COALESCE(NULLIF(pb_p.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) > 0\n" .
             "    ORDER BY pb_p.purchased_at ASC, pb_p.id ASC\n" .
             "    LIMIT 1\n" .
             ")\n" .
@@ -230,8 +231,18 @@ class ClientCatalogService
         $stmt->execute($params);
 
         $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $preorderDiscountPercent = max(0.0, min(99.0, (float)(get_setting('ui_preorder_discount_percent', '10') ?? '10')));
+        $preorderDiscountFactor = (100.0 - $preorderDiscountPercent) / 100.0;
         foreach ($products as &$product) {
             $this->normalizeProductImagePaths($product);
+            $regularPrice = (float)($product['regular_price'] ?? 0);
+            $expectedPreorderPrice = (float)($product['confirmed_preorder_price_per_box'] ?? 0);
+            if ((int)($product['can_preorder'] ?? 0) === 1 && $expectedPreorderPrice <= 0 && $regularPrice > 0) {
+                $expectedPreorderPrice = round($regularPrice * $preorderDiscountFactor, 0);
+            }
+            $product['regular_price'] = $regularPrice;
+            $product['expected_preorder_price'] = $expectedPreorderPrice;
+            $product['confirmed_preorder_price_per_box'] = $expectedPreorderPrice;
         }
         unset($product);
 
