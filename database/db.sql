@@ -326,6 +326,7 @@ INSERT INTO `addresses` (`id`, `user_id`, `street`, `apartment`, `created_at`, `
 --
 
 CREATE TABLE `cart_items` (
+  `id` bigint UNSIGNED NOT NULL,
   `user_id` int UNSIGNED NOT NULL,
   `product_id` int UNSIGNED NOT NULL,
   `quantity` decimal(8,2) NOT NULL,
@@ -340,17 +341,17 @@ CREATE TABLE `cart_items` (
 -- Дамп данных таблицы `cart_items`
 --
 
-INSERT INTO `cart_items` (`user_id`, `product_id`, `quantity`, `unit_price`, `purchase_batch_id`, `stock_mode`, `boxes`, `sale_price_per_box`) VALUES
-(25, 6, 1.00, 1624.00, NULL, 'instant', 1.00, 1624.00),
-(66, 24, 1.00, 1374.00, NULL, 'instant', 1.00, 1374.00),
-(89, 19, 1.00, 1200.00, NULL, 'instant', 1.00, 1200.00),
-(89, 20, 1.00, 1200.00, NULL, 'instant', 1.00, 1200.00),
-(116, 9, 2.00, 1500.00, NULL, 'instant', 2.00, 1500.00),
-(126, 9, 1.00, 1500.00, NULL, 'instant', 1.00, 1500.00),
-(228, 21, 1.00, 1500.00, NULL, 'instant', 1.00, 1500.00),
-(229, 20, 1.00, 1500.00, NULL, 'instant', 1.00, 1500.00),
-(231, 7, 1.00, 1100.00, NULL, 'instant', 1.00, 1100.00),
-(233, 7, 1.00, 1100.00, NULL, 'instant', 1.00, 1100.00);
+INSERT INTO `cart_items` (`id`, `user_id`, `product_id`, `quantity`, `unit_price`, `purchase_batch_id`, `stock_mode`, `boxes`, `sale_price_per_box`) VALUES
+(1, 25, 6, 1.00, 1624.00, NULL, 'instant', 1.00, 1624.00),
+(2, 66, 24, 1.00, 1374.00, NULL, 'instant', 1.00, 1374.00),
+(3, 89, 19, 1.00, 1200.00, NULL, 'instant', 1.00, 1200.00),
+(4, 89, 20, 1.00, 1200.00, NULL, 'instant', 1.00, 1200.00),
+(5, 116, 9, 2.00, 1500.00, NULL, 'instant', 2.00, 1500.00),
+(6, 126, 9, 1.00, 1500.00, NULL, 'instant', 1.00, 1500.00),
+(7, 228, 21, 1.00, 1500.00, NULL, 'instant', 1.00, 1500.00),
+(8, 229, 20, 1.00, 1500.00, NULL, 'instant', 1.00, 1500.00),
+(9, 231, 7, 1.00, 1100.00, NULL, 'instant', 1.00, 1100.00),
+(10, 233, 7, 1.00, 1100.00, NULL, 'instant', 1.00, 1100.00);
 
 -- --------------------------------------------------------
 
@@ -2691,8 +2692,10 @@ ALTER TABLE `addresses`
 -- Индексы таблицы `cart_items`
 --
 ALTER TABLE `cart_items`
-  ADD PRIMARY KEY (`user_id`,`product_id`),
-  ADD KEY `product_id` (`product_id`),
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uniq_cart_items_user_product_mode_batch` (`user_id`,`product_id`,`stock_mode`,`purchase_batch_id`),
+  ADD KEY `idx_cart_items_user_id` (`user_id`),
+  ADD KEY `idx_cart_items_product_id` (`product_id`),
   ADD KEY `idx_cart_items_purchase_batch` (`purchase_batch_id`),
   ADD KEY `idx_cart_items_stock_mode` (`stock_mode`);
 
@@ -2923,6 +2926,12 @@ ALTER TABLE `users`
 --
 ALTER TABLE `addresses`
   MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=290;
+
+--
+-- AUTO_INCREMENT для таблицы `cart_items`
+--
+ALTER TABLE `cart_items`
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT для таблицы `content_categories`
