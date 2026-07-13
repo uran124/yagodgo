@@ -74,16 +74,17 @@ $pickupAddress   = 'Самовывоз: 9 мая, 73';
               }
             }
             $placeholderDate = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
+            $dateValue = (strpos((string)$dateKey, '|') !== false) ? explode('|', (string)$dateKey, 2)[1] : (string)$dateKey;
             if ($isPreorderGroup) {
-              $label = ($dateKey === 'on_demand' || $dateKey === $placeholderDate)
-                ? 'После выкупа закупки'
-                : ('Предзаказ на ' . date('d.m.Y', strtotime((string)$dateKey)));
+              $label = ($dateValue === 'on_demand' || $dateValue === $placeholderDate)
+                ? 'Дата поступления уточняется'
+                : ('Предзаказ на ' . date('d.m.Y', strtotime($dateValue)));
               $emoji = '📦';
-            } elseif ($dateKey === $today) {
+            } elseif ($dateValue === $today) {
               $label = 'Сегодня';
               $emoji = '🚀';
             } else {
-              $label = date('d.m.Y', strtotime($dateKey));
+              $label = date('d.m.Y', strtotime($dateValue));
               $emoji = '📅';
             }
             $orderSum = 0;
@@ -120,7 +121,7 @@ $pickupAddress   = 'Самовывоз: 9 мая, 73';
                     </h3>
                     <p class="mt-1 text-xs text-gray-500">Галочка включает этот блок в оформление. У каждой даты свой способ получения, адрес и доставка.</p>
                     <?php if ($isPreorderGroup): ?>
-                      <p class="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">Цена предварительная. Точная цена будет после выкупа; заказ останется в статусе «Бронь» до подтверждения.</p>
+                      <p class="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">Предварительная цена зафиксирована для выбранного предзаказа; заказ останется в статусе «Бронь» до подтверждения.</p>
                     <?php endif; ?>
                   </div>
                 </div>
@@ -176,16 +177,16 @@ $pickupAddress   = 'Самовывоз: 9 мая, 73';
                         </div>
                         <div class="text-sm text-gray-500 mt-1">Количество: <?= htmlspecialchars($it['quantity']) ?></div>
                         <?php if ($isPreorderGroup): ?>
-                          <div class="mt-1 text-xs text-amber-600">Предварительная цена, точная цена будет после выкупа.</div>
+                          <div class="mt-1 text-xs text-amber-600">Предварительная цена для выбранного предзаказа.</div>
                         <?php endif; ?>
                       </div>
                       <div class="text-right font-semibold text-gray-800"><?= number_format($lineCost, 0, '.', ' ') ?> ₽</div>
 
                       <input type="hidden"
-                             name="items[<?= htmlspecialchars($dateKey) ?>][<?= (int)$it['product_id'] ?>][quantity]"
+                             name="items[<?= htmlspecialchars($dateKey) ?>][<?= (int)($it['cart_item_id'] ?? $it['product_id']) ?>][quantity]"
                              value="<?= htmlspecialchars($it['quantity']) ?>">
                       <input type="hidden"
-                             name="items[<?= htmlspecialchars($dateKey) ?>][<?= (int)$it['product_id'] ?>][unit_price]"
+                             name="items[<?= htmlspecialchars($dateKey) ?>][<?= (int)($it['cart_item_id'] ?? $it['product_id']) ?>][unit_price]"
                              value="<?= htmlspecialchars($it['unit_price']) ?>">
                     </div>
                   <?php endforeach; ?>
