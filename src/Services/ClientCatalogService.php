@@ -163,7 +163,14 @@ class ClientCatalogService
             "       COALESCE(availability.has_planned_batch, 0) AS has_planned_batch,\n" .
             "       COALESCE(availability.has_in_stock_batch, 0) AS has_in_stock_batch,\n" .
             "       COALESCE(availability.has_discount_batch, 0) AS has_discount_batch,\n" .
-            "       DATE(availability.next_planned_date) AS next_planned_date\n" .
+            "       DATE(availability.next_planned_date) AS next_planned_date,\n" .
+            "       instant_pb.id AS instant_purchase_batch_id,\n" .
+            "       COALESCE(instant_pb.boxes_free, 0) AS instant_available_boxes,\n" .
+            "       COALESCE(instant_pb.instant_price_per_box, 0) AS instant_price_per_box,\n" .
+            "       preorder_pb.id AS preorder_purchase_batch_id,\n" .
+            "       DATE(preorder_pb.purchased_at) AS preorder_availability_date,\n" .
+            "       (COALESCE(NULLIF(preorder_pb.boxes_total, 0), preorder_pb.boxes_free + preorder_pb.boxes_reserved) - preorder_pb.boxes_reserved) AS preorder_available_boxes,\n" .
+            "       COALESCE(NULLIF(preorder_pb.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) AS confirmed_preorder_price_per_box\n" .
             "FROM products p\n" .
             "JOIN product_types t ON t.id = p.product_type_id\n" .
             "LEFT JOIN users u ON u.id = p.seller_id\n" .
@@ -176,6 +183,27 @@ class ClientCatalogService
             "    FROM purchase_batches pbx\n" .
             "    GROUP BY pbx.product_id\n" .
             ") availability ON availability.product_id = p.id\n" .
+            "LEFT JOIN purchase_batches instant_pb ON instant_pb.id = (\n" .
+            "    SELECT pb_i.id\n" .
+            "    FROM purchase_batches pb_i\n" .
+            "    WHERE pb_i.product_id = p.id\n" .
+            "      AND pb_i.status IN ('purchased', 'arrived')\n" .
+            "      AND pb_i.boxes_free > 0\n" .
+            "      AND pb_i.instant_price_per_box > 0\n" .
+            "    ORDER BY pb_i.purchased_at ASC, pb_i.id ASC\n" .
+            "    LIMIT 1\n" .
+            ")\n" .
+            "LEFT JOIN purchase_batches preorder_pb ON preorder_pb.id = (\n" .
+            "    SELECT pb_p.id\n" .
+            "    FROM purchase_batches pb_p\n" .
+            "    WHERE pb_p.product_id = p.id\n" .
+            "      AND pb_p.status = 'planned'\n" .
+            "      AND pb_p.purchased_at IS NOT NULL\n" .
+            "      AND (COALESCE(NULLIF(pb_p.boxes_total, 0), pb_p.boxes_free + pb_p.boxes_reserved) - pb_p.boxes_reserved) > 0\n" .
+            "      AND COALESCE(NULLIF(pb_p.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) > 0\n" .
+            "    ORDER BY pb_p.purchased_at ASC, pb_p.id ASC\n" .
+            "    LIMIT 1\n" .
+            ")\n" .
             "LEFT JOIN purchase_batches pb ON pb.id = (\n" .
             "    SELECT pb2.id\n" .
             "    FROM purchase_batches pb2\n" .
