@@ -1591,9 +1591,37 @@ public function cancelReservedOrder(int $orderId): void
                          p.image_path AS product_image_path,
                          batch_photo.image_path AS batch_image_path,
                          DATE(pb.purchased_at) AS delivery_date,
-                         pb.purchased_at AS latest_purchase_date
+                         pb.purchased_at AS latest_purchase_date,
+                         instant_pb.id AS instant_purchase_batch_id,
+                         COALESCE(instant_pb.boxes_free, 0) AS instant_available_boxes,
+                         COALESCE(instant_pb.instant_price_per_box, 0) AS instant_price_per_box,
+                         preorder_pb.id AS preorder_purchase_batch_id,
+                         DATE(preorder_pb.purchased_at) AS preorder_availability_date,
+                         (COALESCE(NULLIF(preorder_pb.boxes_total, 0), preorder_pb.boxes_free + preorder_pb.boxes_reserved) - preorder_pb.boxes_reserved) AS preorder_available_boxes,
+                         COALESCE(NULLIF(preorder_pb.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) AS confirmed_preorder_price_per_box
                   FROM products p
                   JOIN product_types t ON t.id = p.product_type_id
+                  LEFT JOIN purchase_batches instant_pb ON instant_pb.id = (
+                      SELECT pb_i.id
+                      FROM purchase_batches pb_i
+                      WHERE pb_i.product_id = p.id
+                        AND pb_i.status IN ('purchased', 'arrived')
+                        AND pb_i.boxes_free > 0
+                        AND pb_i.instant_price_per_box > 0
+                      ORDER BY pb_i.purchased_at ASC, pb_i.id ASC
+                      LIMIT 1
+                  )
+                  LEFT JOIN purchase_batches preorder_pb ON preorder_pb.id = (
+                      SELECT pb_p.id
+                      FROM purchase_batches pb_p
+                      WHERE pb_p.product_id = p.id
+                        AND pb_p.status = 'planned'
+                        AND pb_p.purchased_at IS NOT NULL
+                        AND (COALESCE(NULLIF(pb_p.boxes_total, 0), pb_p.boxes_free + pb_p.boxes_reserved) - pb_p.boxes_reserved) > 0
+                        AND COALESCE(NULLIF(pb_p.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) > 0
+                      ORDER BY pb_p.purchased_at ASC, pb_p.id ASC
+                      LIMIT 1
+                  )
                   LEFT JOIN purchase_batches pb ON pb.id = (
                       SELECT pb2.id
                       FROM purchase_batches pb2

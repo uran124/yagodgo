@@ -16,6 +16,7 @@ use App\Services\DeliveryPricingService;
 use App\Services\OrderStatusHistoryService;
 use App\Services\OrderReturnService;
 use App\Services\OrderTotalsService;
+use App\Services\OrderGroupCreationService;
 use App\Services\ProductionJobService;
 
 class OrdersController
@@ -328,6 +329,39 @@ class OrdersController
     }
 
     // Сохранить заказ (POST, админ)
+    /**
+     * @param array<string,mixed> $items
+     * @param array<string,mixed> $deliveryDates
+     * @return array<int,array{stock_mode:string,purchase_batch_id:int,boxes:float,delivery_date:string}>
+     */
+    private function normalizeManualGroupedItems(array $items, array $deliveryDates, string $fallbackDate): array
+    {
+        $normalized = [];
+        foreach (['instant', 'preorder'] as $mode) {
+            if (!isset($items[$mode]) || !is_array($items[$mode])) {
+                continue;
+            }
+            foreach ($items[$mode] as $batchId => $boxesRaw) {
+                $boxes = (float)str_replace(',', '.', (string)$boxesRaw);
+                if ($boxes <= 0) {
+                    continue;
+                }
+                $date = $fallbackDate;
+                if (isset($deliveryDates[$mode]) && is_array($deliveryDates[$mode]) && isset($deliveryDates[$mode][$batchId])) {
+                    $date = (string)$deliveryDates[$mode][$batchId];
+                }
+                $date = substr($date, 0, 10);
+                $normalized[] = [
+                    'stock_mode' => $mode,
+                    'purchase_batch_id' => (int)$batchId,
+                    'boxes' => $boxes,
+                    'delivery_date' => $date,
+                ];
+            }
+        }
+        return $normalized;
+    }
+
     public function storeManual(): void
     {
         $userId = (int)($_POST['user_id'] ?? 0);
@@ -432,6 +466,50 @@ class OrdersController
         $slotId = $_POST['slot_id'] ?? null;
         $deliveryDate = $_POST['delivery_date'] ?? null;
         $couponCode = trim($_POST['coupon_code'] ?? '');
+
+        if (isset($_POST['items']) && is_array($_POST['items'])) {
+            $selectedItems = $this->normalizeManualGroupedItems($_POST['items'], $_POST['delivery_dates'] ?? [], (string)$deliveryDate);
+            if ($selectedItems === []) {
+                header('Location: ' . $this->basePath() . '/create?error=' . urlencode('Добавьте товары в заказ'));
+                exit;
+            }
+
+            $pointsBalance = 0;
+            $usePoints = (int)($_POST['use_points'] ?? 0) === 1;
+            if (!$isNew && $usePoints) {
+                $stmtPoints = $this->pdo->prepare('SELECT points_balance FROM users WHERE id = ?');
+                $stmtPoints->execute([$userId]);
+                $pointsBalance = (int)$stmtPoints->fetchColumn();
+            }
+
+            try {
+                $service = new OrderGroupCreationService($this->pdo);
+                $service->createForManualOrder(
+                    $userId,
+                    (int)$addressId,
+                    $slotId !== null && $slotId !== '' ? (int)$slotId : null,
+                    $selectedItems,
+                    [
+                        'created_by_user_id' => (int)($_SESSION['user_id'] ?? 0),
+                        'coupon_code' => $couponCode,
+                        'delivery_fee' => (int)($_POST['delivery_fee_preview'] ?? 300),
+                        'delivery_comment' => trim((string)($_POST['delivery_comment'] ?? '')),
+                        'referral_discount' => $referralDiscount,
+                        'points' => $usePoints ? (int)($_POST['points'] ?? 0) : 0,
+                        'available_points' => $pointsBalance,
+                    ]
+                );
+                if ($referralDiscount && $hasUsedReferral === 0) {
+                    $this->pdo->prepare('UPDATE users SET has_used_referral_coupon = 1 WHERE id = ?')->execute([$userId]);
+                }
+                header('Location: ' . $this->basePath());
+                exit;
+            } catch (\Throwable $e) {
+                error_log('[manual_order_group] ' . $e->getMessage());
+                header('Location: ' . $this->basePath() . '/create?error=' . urlencode($e->getMessage() ?: 'Заказ не создан. Попробуйте ещё раз'));
+                exit;
+            }
+        }
 
         $items = $_POST['batch_items'] ?? [];
         if (!$items) {
