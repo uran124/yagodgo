@@ -98,15 +98,15 @@
             <?php if ($it['quantity'] > 1): ?>
               <form action="/cart/update" method="post">
                 <?= csrf_field() ?>
-                <input type="hidden" name="product_id" value="<?= $it['product_id'] ?>">
+                <input type="hidden" name="cart_item_id" value="<?= (int)$it['cart_item_id'] ?>">
                 <button type="submit" name="action" value="decrease" class="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full">
                   <span class="material-icons-round text-gray-600">remove</span>
                 </button>
               </form>
             <?php else: ?>
-              <form action="/cart/remove" method="post" class="remove-from-cart-form" data-id="<?= $it['product_id'] ?>" data-name="<?= htmlspecialchars($it['product']) ?><?php if (!empty($it['variety'])): ?> <?= htmlspecialchars($it['variety']) ?><?php endif; ?>" data-price="<?= $unitPriceToUse ?>" data-qty="<?= $it['quantity'] ?>">
+              <form action="/cart/remove" method="post" class="remove-from-cart-form" data-id="<?= (int)$it['cart_item_id'] ?>" data-name="<?= htmlspecialchars($it['product']) ?><?php if (!empty($it['variety'])): ?> <?= htmlspecialchars($it['variety']) ?><?php endif; ?>" data-price="<?= $unitPriceToUse ?>" data-qty="<?= $it['quantity'] ?>">
                 <?= csrf_field() ?>
-                <input type="hidden" name="product_id" value="<?= $it['product_id'] ?>">
+                <input type="hidden" name="cart_item_id" value="<?= (int)$it['cart_item_id'] ?>">
                 <button type="submit" class="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full">
                   <span class="material-icons-round text-gray-600">delete_outline</span>
                 </button>
@@ -115,7 +115,7 @@
             <span class="font-medium text-gray-800"><?= $it['quantity'] ?></span>
             <form action="/cart/update" method="post">
               <?= csrf_field() ?>
-              <input type="hidden" name="product_id" value="<?= $it['product_id'] ?>">
+              <input type="hidden" name="cart_item_id" value="<?= (int)$it['cart_item_id'] ?>">
               <button type="submit" name="action" value="increase" class="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full">
                 <span class="material-icons-round text-gray-600">add</span>
               </button>
@@ -129,17 +129,17 @@
         <div>
           <label class="block text-sm text-gray-600 font-bold mb-1">Выберите дату получения</label>
           <?php if ($isPreorderItem): ?>
-            <input type="hidden" name="delivery_date[<?= $it['product_id'] ?>]" value="<?= htmlspecialchars($preorderDateValue ?? $placeholder) ?>" form="checkoutForm">
+            <input type="hidden" name="delivery_date[<?= (int)$it['cart_item_id'] ?>]" value="<?= htmlspecialchars($preorderDateValue ?? $placeholder) ?>" form="checkoutForm">
             <div class="w-full rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-800">
               <?php if (($preorderDateValue ?? $placeholder) !== $placeholder): ?>
                 Предзаказ на <?= htmlspecialchars(date('d.m.Y', strtotime((string)$preorderDateValue))) ?>
               <?php else: ?>
-                После назначения закупки
+                Дата поступления уточняется
               <?php endif; ?>
             </div>
-            <p class="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-700">Цена предварительная. Точная цена будет после выкупа.</p>
+            <p class="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-700">Предварительная цена зафиксирована для выбранного предзаказа.</p>
           <?php else: ?>
-            <select name="delivery_date[<?= $it['product_id'] ?>]"
+            <select name="delivery_date[<?= (int)$it['cart_item_id'] ?>]"
                     form="checkoutForm"
                     <?= empty($options) ? 'disabled' : 'required' ?>
                     class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-red-500 focus:ring-2 focus:ring-red-500/20 focus:outline-none transition-all bg-green-50 shadow-sm">
@@ -150,7 +150,7 @@
                   </option>
                 <?php endforeach; ?>
               <?php else: ?>
-                <option>После выкупа закупки</option>
+                <option>Дата поступления уточняется</option>
               <?php endif; ?>
             </select>
           <?php endif; ?>

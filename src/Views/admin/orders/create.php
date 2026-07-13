@@ -1,8 +1,11 @@
-<?php /** @var array $purchaseBatches @var array $slots @var string $today */ ?>
+<?php /** @var array $inStockOffers @var array $preorderOffers @var array $slots @var string $today */ ?>
 <?php
 $role = $_SESSION['role'] ?? '';
 $base = $role === 'manager' ? '/manager' : ($role === 'partner' ? '/partner' : '/admin');
-$batches = $purchaseBatches ?? [];
+$inStockOffers = $inStockOffers ?? [];
+$preorderOffers = $preorderOffers ?? [];
+$slots = $slots ?? [];
+$today = $today ?? date('Y-m-d');
 ?>
 
 <?php if (!empty($_GET['error'])): ?>
@@ -13,14 +16,14 @@ $batches = $purchaseBatches ?? [];
 
 <form action="<?= $base ?>/orders/create" method="post" class="order-create-form space-y-4 pb-24" id="orderForm">
   <?= csrf_field() ?>
-  <input type="hidden" name="stock_mode" id="stockMode" value="instant">
+  <input type="hidden" id="deliveryDate" name="delivery_date" value="<?= htmlspecialchars($today) ?>">
 
   <div class="rounded-2xl bg-slate-800/70 p-2 ring-1 ring-slate-700" aria-label="Прогресс оформления заказа">
-    <div class="mb-1.5 grid grid-cols-6 gap-1 text-center text-[8px] font-semibold uppercase tracking-tight text-slate-400 sm:text-[10px]">
-      <span>Кл.</span><span>Реж.</span><span>Зак.</span><span>Тов.</span><span>Дата</span><span>Итог</span>
+    <div class="mb-1.5 grid grid-cols-4 gap-1 text-center text-[10px] font-semibold uppercase tracking-tight text-slate-400">
+      <span>Клиент</span><span>Товары</span><span>Получение</span><span>Проверка</span>
     </div>
-    <div id="orderProgressSegments" class="grid grid-cols-6 gap-1">
-      <?php for ($i = 0; $i < 6; $i++): ?>
+    <div id="orderProgressSegments" class="grid grid-cols-4 gap-1">
+      <?php for ($i = 0; $i < 4; $i++): ?>
         <span class="progress-segment h-1.5 rounded-full <?= $i === 0 ? 'bg-[#F04483]' : 'bg-slate-700' ?>"></span>
       <?php endfor; ?>
     </div>
@@ -87,56 +90,106 @@ $batches = $purchaseBatches ?? [];
   </section>
 
   <section id="step2" class="hidden rounded-2xl bg-slate-800/90 p-3 text-slate-100 shadow-sm ring-1 ring-slate-700">
-    <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Шаг 2</p>
-    <h2 class="mb-3 text-base font-semibold">Режим продажи</h2>
-    <div class="grid grid-cols-2 gap-2">
-      <button type="button" class="mode-card rounded-2xl border-2 border-emerald-300 bg-transparent bg-white/10 p-3 text-center text-xs font-semibold text-emerald-300 ring-2 ring-[#F04483] transition hover:bg-white/10" data-mode="instant" data-group="in_stock">В наличии</button>
-      <button type="button" class="mode-card rounded-2xl border-2 border-amber-300 bg-transparent p-3 text-center text-xs font-semibold text-amber-300 transition hover:bg-white/10" data-mode="preorder" data-group="preorder">Предзаказ -10%</button>
+    <div class="mb-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Шаг 2</p>
+        <h2 class="text-base font-semibold">Состав заказа</h2>
+        <p class="text-xs text-slate-400">Выберите товары из наличия и будущих поставок. Закупки система подставит сама.</p>
+      </div>
+      <div class="rounded-xl bg-slate-900/70 px-3 py-2 text-xs text-slate-200"><span id="selectedCount">0</span> позиций · <span id="selectedSubtotalTop">0 ₽</span></div>
     </div>
+    <input id="productSearch" type="search" placeholder="Поиск по названию или сорту" class="mb-3 w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-sm text-white placeholder:text-slate-500">
+
+    <?php
+    $renderOffer = static function (array $offer, string $mode) use ($today): void {
+        $id = (int)$offer['purchase_batch_id'];
+        $name = trim((string)($offer['product_name'] ?? 'Товар'));
+        $variety = trim((string)($offer['variety'] ?? ''));
+        $title = trim($name . ($variety !== '' ? ' · ' . $variety : ''));
+        $date = substr((string)($offer['availability_date'] ?? ''), 0, 10);
+        $dateLabel = $date !== '' ? date('d.m', strtotime($date)) : '';
+        $badge = $mode === 'preorder' ? 'Под заказ · поступление ' . $dateLabel : 'В наличии · партия от ' . $dateLabel;
+        $badgeClass = $mode === 'preorder' ? 'bg-amber-500/15 text-amber-200 ring-amber-400/30' : 'bg-emerald-500/15 text-emerald-200 ring-emerald-400/30';
+        $img = (string)($offer['image_path'] ?? '');
+        ?>
+        <article class="offer-card rounded-2xl border border-slate-700 bg-slate-900/70 p-3" data-search="<?= htmlspecialchars(function_exists('mb_strtolower') ? mb_strtolower($title) : strtolower($title)) ?>" data-mode="<?= $mode ?>" data-date="<?= htmlspecialchars($date) ?>" data-title="<?= htmlspecialchars($title) ?>" data-price="<?= (float)$offer['price_per_box'] ?>" data-max="<?= (float)$offer['available_boxes'] ?>">
+          <div class="flex gap-3">
+            <div class="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-slate-800">
+              <?php if ($img !== ''): ?><img src="<?= htmlspecialchars($img) ?>" alt="" class="h-full w-full object-cover"><?php endif; ?>
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="flex flex-wrap items-center gap-2">
+                <h3 class="font-semibold text-slate-100"><?= htmlspecialchars($name) ?></h3>
+                <span class="rounded-full px-2 py-1 text-[11px] font-semibold ring-1 <?= $badgeClass ?>"><?= htmlspecialchars($badge) ?></span>
+              </div>
+              <?php if ($variety !== ''): ?><div class="text-xs text-slate-400">Сорт: <?= htmlspecialchars($variety) ?></div><?php endif; ?>
+              <div class="mt-1 grid gap-1 text-xs text-slate-300 sm:grid-cols-3">
+                <span>Фасовка: <?= htmlspecialchars((string)$offer['box_size']) ?> <?= htmlspecialchars((string)$offer['box_unit']) ?></span>
+                <span><?= $mode === 'preorder' ? 'Лимит' : 'Свободно' ?>: <?= number_format((float)$offer['available_boxes'], 0, '.', ' ') ?> ящ.</span>
+                <span class="font-semibold text-white"><?= number_format((float)$offer['price_per_box'], 0, '.', ' ') ?> ₽/ящ.</span>
+              </div>
+            </div>
+            <div class="w-24 shrink-0">
+              <label class="mb-1 block text-[11px] text-slate-400">Количество</label>
+              <input class="qty w-full rounded-xl border border-slate-600 bg-slate-950 px-2 py-2 text-center text-white" type="number" min="0" step="1" max="<?= (float)$offer['available_boxes'] ?>" name="items[<?= $mode ?>][<?= $id ?>]" value="0" data-mode="<?= $mode ?>" data-id="<?= $id ?>" data-date="<?= htmlspecialchars($date) ?>" data-title="<?= htmlspecialchars($title) ?>" data-price="<?= (float)$offer['price_per_box'] ?>" data-max="<?= (float)$offer['available_boxes'] ?>">
+              <input type="hidden" name="delivery_dates[<?= $mode ?>][<?= $id ?>]" value="<?= htmlspecialchars($mode === 'preorder' && $date !== '' ? $date : $today) ?>" data-delivery-date-for="<?= $mode ?>:<?= $id ?>">
+            </div>
+          </div>
+        </article>
+        <?php
+    };
+    ?>
+
+    <div class="space-y-4">
+      <div>
+        <h3 class="mb-2 text-sm font-semibold text-emerald-200">В наличии</h3>
+        <div class="space-y-2" id="inStockOffers">
+          <?php if (!$inStockOffers): ?><div class="rounded-xl border border-slate-700 bg-slate-900/70 p-3 text-xs text-slate-400">Нет товаров в наличии.</div><?php endif; ?>
+          <?php foreach ($inStockOffers as $offer) $renderOffer($offer, 'instant'); ?>
+        </div>
+      </div>
+      <div>
+        <h3 class="mb-2 text-sm font-semibold text-amber-200">Под заказ</h3>
+        <div class="space-y-2" id="preorderOffers">
+          <?php if (!$preorderOffers): ?><div class="rounded-xl border border-slate-700 bg-slate-900/70 p-3 text-xs text-slate-400">Нет подтверждённых будущих поставок.</div><?php endif; ?>
+          <?php foreach ($preorderOffers as $offer) $renderOffer($offer, 'preorder'); ?>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-4 rounded-2xl border border-slate-700 bg-slate-900/80 p-3">
+      <div class="mb-2 flex items-center justify-between"><h3 class="text-sm font-semibold">Выбрано</h3><span id="selectedSubtotalBottom" class="text-sm font-semibold">0 ₽</span></div>
+      <div id="selectedItemsPreview" class="space-y-2 text-xs text-slate-300">Пока ничего не выбрано.</div>
+    </div>
+
     <div class="order-step-actions fixed inset-x-0 bottom-0 z-50 grid grid-cols-2 gap-2 border-t border-slate-700 bg-slate-800/95 p-2 backdrop-blur sm:static sm:mx-0 sm:mt-4 sm:border-0 sm:bg-transparent sm:p-0"><button type="button" data-prev="step1" class="back-step rounded-xl border border-slate-600 bg-slate-900 px-4 py-3 font-semibold text-slate-100">Назад</button><button type="button" data-next="step3" class="next-step rounded-xl bg-[#F04483] px-4 py-3 font-semibold text-white shadow-sm shadow-pink-950/30">Далее</button></div>
   </section>
 
   <section id="step3" class="hidden rounded-2xl bg-slate-800/90 p-3 text-slate-100 shadow-sm ring-1 ring-slate-700">
     <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Шаг 3</p>
-    <h2 class="mb-3 text-base font-semibold">Закупка</h2>
-    <div id="batchList" class="space-y-3"></div>
+    <h2 class="mb-3 text-base font-semibold">Получение</h2>
+    <div id="deliveryGroups" class="space-y-3"></div>
+    <label class="mt-3 block text-xs font-medium text-slate-200">Интервал доставки</label>
+    <select name="slot_id" id="slotSelect" class="mt-1 w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-white">
+      <?php foreach ($slots as $i => $s): ?>
+        <option value="<?= $s['id'] ?>" <?= $i === 0 ? 'selected' : '' ?>><?= htmlspecialchars(format_time_range($s['time_from'], $s['time_to'])) ?></option>
+      <?php endforeach; ?>
+    </select>
     <div class="order-step-actions fixed inset-x-0 bottom-0 z-50 grid grid-cols-2 gap-2 border-t border-slate-700 bg-slate-800/95 p-2 backdrop-blur sm:static sm:mx-0 sm:mt-4 sm:border-0 sm:bg-transparent sm:p-0"><button type="button" data-prev="step2" class="back-step rounded-xl border border-slate-600 bg-slate-900 px-4 py-3 font-semibold text-slate-100">Назад</button><button type="button" data-next="step4" class="next-step rounded-xl bg-[#F04483] px-4 py-3 font-semibold text-white shadow-sm shadow-pink-950/30">Далее</button></div>
   </section>
 
   <section id="step4" class="hidden rounded-2xl bg-slate-800/90 p-3 text-slate-100 shadow-sm ring-1 ring-slate-700">
     <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Шаг 4</p>
-    <h2 class="mb-3 text-base font-semibold">Товары закупки</h2>
-    <div id="productsList" class="space-y-3"></div>
-    <div class="order-step-actions fixed inset-x-0 bottom-0 z-50 grid grid-cols-2 gap-2 border-t border-slate-700 bg-slate-800/95 p-2 backdrop-blur sm:static sm:mx-0 sm:mt-4 sm:border-0 sm:bg-transparent sm:p-0"><button type="button" data-prev="step3" class="back-step rounded-xl border border-slate-600 bg-slate-900 px-4 py-3 font-semibold text-slate-100">Назад</button><button type="button" data-next="step5" class="next-step rounded-xl bg-[#F04483] px-4 py-3 font-semibold text-white shadow-sm shadow-pink-950/30">Далее</button></div>
-  </section>
-
-  <section id="step5" class="hidden rounded-2xl bg-slate-800/90 p-3 text-slate-100 shadow-sm ring-1 ring-slate-700">
-    <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Шаг 5</p>
-    <h2 class="mb-3 text-base font-semibold">Дата и интервал</h2>
-    <div class="rounded-xl border border-blue-400/30 bg-blue-950/40 p-3 text-xs text-blue-100">Один заказ создается только на одну дату получения. Для другой даты оформите отдельный заказ.</div>
-    <div class="mt-3 grid grid-cols-3 gap-2" id="dateOptions"></div>
-    <input type="hidden" id="deliveryDate" name="delivery_date" value="<?= htmlspecialchars($today) ?>">
-    <label class="mt-3 block text-xs font-medium text-slate-200">Интервал</label>
-    <select name="slot_id" class="mt-1 w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-white">
-      <?php foreach ($slots as $i => $s): ?>
-        <option value="<?= $s['id'] ?>" <?= $i === 0 ? 'selected' : '' ?>>
-          <?= htmlspecialchars(format_time_range($s['time_from'], $s['time_to'])) ?>
-        </option>
-      <?php endforeach; ?>
-    </select>
-    <div class="order-step-actions fixed inset-x-0 bottom-0 z-50 grid grid-cols-2 gap-2 border-t border-slate-700 bg-slate-800/95 p-2 backdrop-blur sm:static sm:mx-0 sm:mt-4 sm:border-0 sm:bg-transparent sm:p-0"><button type="button" data-prev="step4" class="back-step rounded-xl border border-slate-600 bg-slate-900 px-4 py-3 font-semibold text-slate-100">Назад</button><button type="button" data-next="step6" class="next-step rounded-xl bg-[#F04483] px-4 py-3 font-semibold text-white shadow-sm shadow-pink-950/30">Далее</button></div>
-  </section>
-
-  <section id="step6" class="hidden rounded-2xl bg-slate-800/90 p-3 text-slate-100 shadow-sm ring-1 ring-slate-700">
-    <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Шаг 6</p>
     <h2 class="mb-3 text-base font-semibold">Проверка заказа</h2>
+    <div id="orderCreationNotice" class="mb-3 rounded-xl border border-blue-400/30 bg-blue-950/40 p-3 text-xs text-blue-100"></div>
     <div id="itemsList" class="space-y-2 text-xs"></div>
+    <div id="deliveriesSummary" class="mt-3 space-y-2 text-xs"></div>
     <div class="mt-3 space-y-2 rounded-xl bg-slate-900/70 p-3 text-xs text-slate-100">
       <div class="flex justify-between"><span>Товары:</span><span id="sumSubtotal">0 ₽</span></div>
       <div id="rowReferral" class="hidden justify-between"><span>Скидка -10%:</span><span id="sumReferral">0 ₽</span></div>
       <div id="rowPoints" class="hidden justify-between"><span>Баллы:</span><span id="sumPoints">0 ₽</span></div>
       <div id="rowShipping" class="flex justify-between"><span>Доставка:</span><span id="sumShipping">300 ₽</span></div>
-      <div class="flex justify-between border-t pt-2 text-base font-semibold"><span>Итого:</span><span id="sumTotal">0 ₽</span></div>
+      <div class="flex justify-between border-t border-slate-700 pt-2 text-base font-semibold"><span>Итого:</span><span id="sumTotal">0 ₽</span></div>
     </div>
 
     <div class="mt-3 space-y-3">
@@ -150,298 +203,168 @@ $batches = $purchaseBatches ?? [];
         </label>
       </div>
       <div id="pointsBlock" class="hidden rounded-xl border border-slate-600 bg-slate-900/70 p-3">
-        <label class="flex items-center justify-between gap-3 text-xs font-medium">
-          <span>Списать баллы</span>
-          <input type="checkbox" name="use_points" id="usePointsToggle" value="1" class="h-5 w-5">
-        </label>
+        <label class="flex items-center justify-between gap-3 text-xs font-medium"><span>Списать баллы</span><input type="checkbox" name="use_points" id="usePointsToggle" value="1" class="h-5 w-5"></label>
         <input type="number" name="points" id="pointsInput" min="0" value="0" class="mt-2 w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-2 text-white">
       </div>
     </div>
 
-    <div class="order-step-actions fixed inset-x-0 bottom-0 z-50 grid grid-cols-2 gap-2 border-t border-slate-700 bg-slate-800/95 p-2 backdrop-blur sm:static sm:mx-0 sm:mt-4 sm:border-0 sm:bg-transparent sm:p-0"><button type="button" data-prev="step5" class="back-step rounded-xl border border-slate-600 bg-slate-900 px-4 py-3 font-semibold text-slate-100">Назад</button><button type="submit" class="rounded-xl bg-emerald-600 px-4 py-3 font-semibold text-white">Создать заказ</button></div>
+    <div class="order-step-actions fixed inset-x-0 bottom-0 z-50 grid grid-cols-2 gap-2 border-t border-slate-700 bg-slate-800/95 p-2 backdrop-blur sm:static sm:mx-0 sm:mt-4 sm:border-0 sm:bg-transparent sm:p-0"><button type="button" data-prev="step3" class="back-step rounded-xl border border-slate-600 bg-slate-900 px-4 py-3 font-semibold text-slate-100">Назад</button><button type="submit" class="rounded-xl bg-emerald-600 px-4 py-3 font-semibold text-white">Создать заказ</button></div>
   </section>
 </form>
 
 <script>
-  const batches = <?= json_encode($batches, JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK) ?>;
   const basePath = '<?= $base ?>';
   const today = '<?= htmlspecialchars($today) ?>';
-  const state = { mode: 'instant', group: 'in_stock', batchKey: null, selectedClientCanReferral: true, deliveryFee: 300 };
-  const steps = ['step1','step2','step3','step4','step5','step6'];
-  const batchList = document.getElementById('batchList');
-  const productsList = document.getElementById('productsList');
-  const dateOptions = document.getElementById('dateOptions');
-  const deliveryDate = document.getElementById('deliveryDate');
-  const stockMode = document.getElementById('stockMode');
-  const itemsList = document.getElementById('itemsList');
-  const subtotalEl = document.getElementById('sumSubtotal');
-  const totalEl = document.getElementById('sumTotal');
-  const shippingEl = document.getElementById('sumShipping');
-  const shippingRow = document.getElementById('rowShipping');
-  const referralToggleWrap = document.getElementById('referralToggleWrap');
-  const referralToggle = document.getElementById('referralToggle');
-  const refRow = document.getElementById('rowReferral');
-  const refEl = document.getElementById('sumReferral');
-  const pointsBlock = document.getElementById('pointsBlock');
-  const usePointsToggle = document.getElementById('usePointsToggle');
-  const pointsInput = document.getElementById('pointsInput');
-  const pointsRow = document.getElementById('rowPoints');
-  const pointsEl = document.getElementById('sumPoints');
+  const state = { selectedClientCanReferral: true, deliveryFee: 300 };
+  const steps = ['step1','step2','step3','step4'];
+
+  const rub = value => Number(value || 0).toFixed(0) + ' ₽';
+  const formatDate = iso => iso ? iso.split('-').reverse().slice(0,2).join('.') : '';
+  const addDays = (iso, days) => { const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + days); return d.toISOString().slice(0, 10); };
+  const escapeHtml = text => String(text || '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c]));
 
   function showStep(stepId) {
+    if (stepId === 'step3' && selectedItems().length === 0) { alert('Добавьте хотя бы одну позицию.'); return; }
     steps.forEach(id => document.getElementById(id).classList.toggle('hidden', id !== stepId));
     const index = Math.max(0, steps.indexOf(stepId));
     document.querySelectorAll('.progress-segment').forEach((segment, i) => {
       segment.classList.toggle('bg-[#F04483]', i <= index);
       segment.classList.toggle('bg-slate-700', i > index);
     });
+    if (stepId === 'step3') renderDeliveryGroups();
+    if (stepId === 'step4') { prepareReferralToggle(); updateSummary(); }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+  document.querySelectorAll('.next-step').forEach(btn => btn.addEventListener('click', () => showStep(btn.dataset.next)));
+  document.querySelectorAll('.back-step').forEach(btn => btn.addEventListener('click', () => showStep(btn.dataset.prev)));
 
-  document.querySelectorAll('.next-step').forEach(btn => btn.addEventListener('click', () => {
-    let nextStep = btn.dataset.next;
-    if (nextStep === 'step3') {
-      const grouped = groupedBatches();
-      if (grouped.size === 1) {
-        state.batchKey = grouped.keys().next().value;
-        renderProducts();
-        nextStep = 'step4';
-      } else {
-        renderBatches();
-      }
-    }
-    if (nextStep === 'step4') renderProducts();
-    if (nextStep === 'step5') renderDates();
-    if (nextStep === 'step6') {
-      prepareReferralToggle();
-      updateSummary();
-    }
-    showStep(nextStep);
-  }));
+  function selectedItems() {
+    return Array.from(document.querySelectorAll('.qty')).map(input => {
+      const qty = Number(input.value || 0);
+      if (qty <= 0) return null;
+      const max = Number(input.dataset.max || input.max || 0);
+      if (qty > max) input.value = max;
+      return {
+        input,
+        mode: input.dataset.mode,
+        id: input.dataset.id,
+        title: input.dataset.title,
+        date: input.dataset.date || today,
+        price: Number(input.dataset.price || 0),
+        qty: Number(input.value || 0),
+      };
+    }).filter(Boolean);
+  }
 
-  document.querySelectorAll('.back-step').forEach(btn => btn.addEventListener('click', () => {
-    let prevStep = btn.dataset.prev;
-    if (prevStep === 'step3' && groupedBatches().size === 1) {
-      prevStep = 'step2';
-    }
-    showStep(prevStep);
-  }));
-
-  document.querySelectorAll('.mode-card').forEach(btn => btn.addEventListener('click', () => {
-    state.mode = btn.dataset.mode;
-    state.group = btn.dataset.group;
-    state.batchKey = null;
-    stockMode.value = state.mode;
-    document.querySelectorAll('.mode-card').forEach(card => card.classList.remove('bg-white/10', 'ring-2', 'ring-[#F04483]'));
-    btn.classList.add('bg-white/10', 'ring-2', 'ring-[#F04483]');
-  }));
-
-  function groupedBatches() {
-    const grouped = new Map();
-    batches.filter(b => b.mode_group === state.group).forEach(b => {
-      const key = [b.batch_date, b.status].join('|');
-      if (!grouped.has(key)) grouped.set(key, []);
-      grouped.get(key).push(b);
+  function groupedSelected() {
+    const map = new Map();
+    selectedItems().forEach(item => {
+      const date = item.mode === 'preorder' ? item.date : (document.getElementById('deliveryDate').value || today);
+      const key = item.mode + '|' + date;
+      if (!map.has(key)) map.set(key, { mode: item.mode, date, items: [], subtotal: 0 });
+      const group = map.get(key);
+      group.items.push(item);
+      group.subtotal += item.qty * item.price;
     });
-    return grouped;
+    return Array.from(map.values());
   }
 
-  function statusLabel(status) {
-    return { planned: 'Запланирована', purchased: 'Выкуплена', arrived: 'Готова к выдаче / В наличии' }[status] || status;
-  }
-
-  function renderBatches() {
-    batchList.innerHTML = '';
-    const grouped = groupedBatches();
-    if (grouped.size === 0) {
-      batchList.innerHTML = '<div class="rounded-xl border border-slate-600 bg-slate-900/70 p-4 text-xs text-slate-300">Нет доступных закупок для выбранного режима.</div>';
-      return;
-    }
-    grouped.forEach((items, key) => {
-      const [date, status] = key.split('|');
-      const totalBoxes = items.reduce((sum, b) => sum + Number(b.available_boxes || 0), 0);
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'batch-card w-full rounded-2xl border-2 p-4 text-left text-slate-100 ' + (state.mode === 'preorder' ? 'border-amber-500/40 bg-amber-950/30' : 'border-emerald-500/40 bg-emerald-950/30');
-      button.dataset.key = key;
-      const displayDate = date || 'дата уточняется';
-      button.innerHTML = '<div class="flex items-start justify-between gap-3"><div><div class="font-semibold">Закупка ' + displayDate + '</div><div class="text-xs text-slate-300">' + statusLabel(status) + '</div></div><div class="rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold text-slate-100">' + totalBoxes + ' ящ.</div></div>';
-      button.addEventListener('click', () => {
-        state.batchKey = key;
-        document.querySelectorAll('.batch-card').forEach(card => card.classList.remove('ring-2', 'ring-[#F04483]'));
-        button.classList.add('ring-2', 'ring-[#F04483]');
+  function syncDeliveryDateInputs() {
+    groupedSelected().forEach(group => {
+      group.items.forEach(item => {
+        const hidden = document.querySelector('[data-delivery-date-for="' + item.mode + ':' + item.id + '"]');
+        if (hidden) hidden.value = group.date;
       });
-      batchList.appendChild(button);
     });
   }
 
-  function selectedBatchItems() {
-    if (!state.batchKey) return [];
-    return batches.filter(b => b.mode_group === state.group && [b.batch_date, b.status].join('|') === state.batchKey);
+  function updateSelectedPreview() {
+    const items = selectedItems();
+    const subtotal = items.reduce((sum, item) => sum + item.qty * item.price, 0);
+    document.getElementById('selectedCount').textContent = String(items.length);
+    document.getElementById('selectedSubtotalTop').textContent = rub(subtotal);
+    document.getElementById('selectedSubtotalBottom').textContent = rub(subtotal);
+    const box = document.getElementById('selectedItemsPreview');
+    if (items.length === 0) { box.textContent = 'Пока ничего не выбрано.'; return; }
+    box.innerHTML = items.map(item => '<div class="flex justify-between rounded-xl bg-slate-950/60 p-2"><span>' + escapeHtml(item.title) + ' · ' + (item.mode === 'preorder' ? 'под заказ' : 'в наличии') + ' × ' + item.qty + '</span><span>' + rub(item.qty * item.price) + '</span></div>').join('');
   }
 
-  function productName(b) {
-    return b.product + (b.variety ? ' ' + b.variety : '');
-  }
+  document.querySelectorAll('.qty').forEach(input => input.addEventListener('input', () => { updateSelectedPreview(); updateSummary(); }));
+  document.getElementById('productSearch').addEventListener('input', event => {
+    const q = event.target.value.trim().toLowerCase();
+    document.querySelectorAll('.offer-card').forEach(card => card.classList.toggle('hidden', q !== '' && !card.dataset.search.includes(q)));
+  });
 
-  function escapeHtml(value) {
-    return String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
-  }
-
-  function renderProducts() {
-    productsList.innerHTML = '';
-    const selected = selectedBatchItems();
-    if (selected.length === 0) {
-      productsList.innerHTML = '<div class="rounded-xl border border-red-400/30 bg-red-950/40 p-4 text-xs text-red-100">Сначала выберите закупку.</div>';
-      return;
-    }
-    selected.forEach(b => {
-      const card = document.createElement('div');
-      card.className = 'rounded-2xl border border-slate-600 bg-slate-900/70 p-3 text-slate-100 shadow-sm';
-      const safeName = escapeHtml(productName(b));
-      const safeImage = b.image_path ? escapeHtml(b.image_path) : '';
-      card.innerHTML = `
-        <div class="flex gap-3">
-          ${safeImage ? `<img src="${safeImage}" class="h-16 w-16 rounded-xl object-cover" alt="">` : ''}
-          <div class="min-w-0 flex-1">
-            <div class="font-semibold">${safeName}</div>
-            <div class="text-xs text-slate-300">Свободно: <b>${b.available_boxes}</b> ящиков</div>
-            <div class="text-xs text-slate-300">Цена: <b>${Number(b.price_per_box).toFixed(0)} ₽/ящик</b></div>
-            <div class="text-xs text-slate-400">purchase_batch_id: ${b.purchase_batch_id}</div>
-          </div>
-        </div>
-        <div class="mt-3 flex items-center justify-between gap-2">
-          <button type="button" class="dec rounded-xl bg-slate-700 px-4 py-3 text-lg text-white" data-target="batch${b.purchase_batch_id}">−</button>
-          <input id="batch${b.purchase_batch_id}" name="batch_items[${b.purchase_batch_id}]" type="number" min="0" max="${b.available_boxes}" step="1" value="0" data-price="${b.price_per_box}" data-name="${safeName}" class="qty w-24 rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-center text-lg text-white">
-          <button type="button" class="inc rounded-xl bg-slate-700 px-4 py-3 text-lg text-white" data-target="batch${b.purchase_batch_id}">+</button>
-        </div>`;
-      productsList.appendChild(card);
-    });
-    wireQtyButtons();
-  }
-
-  function wireQtyButtons() {
-    document.querySelectorAll('.dec').forEach(btn => btn.addEventListener('click', () => {
-      const input = document.getElementById(btn.dataset.target);
-      input.stepDown();
+  function renderDeliveryGroups() {
+    const box = document.getElementById('deliveryGroups');
+    const groups = groupedSelected();
+    if (groups.length === 0) { box.innerHTML = '<div class="rounded-xl bg-slate-900/70 p-3 text-xs text-slate-400">Добавьте товары на предыдущем шаге.</div>'; return; }
+    box.innerHTML = groups.map((group, i) => {
+      const baseDate = group.mode === 'preorder' ? group.date : today;
+      const options = [0, 1, 2].map(offset => {
+        const value = addDays(baseDate, offset);
+        const checked = value === group.date ? 'checked' : '';
+        return '<label class="rounded-xl border border-slate-600 bg-slate-950 px-3 py-2 text-center text-xs"><input class="delivery-group-date sr-only" type="radio" name="delivery_group_date_' + i + '" data-mode="' + group.mode + '" data-old-date="' + group.date + '" value="' + value + '" ' + checked + '> ' + formatDate(value) + '</label>';
+      }).join('');
+      return '<div class="rounded-2xl border border-slate-700 bg-slate-900/70 p-3"><div class="mb-2 flex items-center justify-between gap-2"><div><div class="text-sm font-semibold">' + (group.mode === 'preorder' ? 'Под заказ' : 'В наличии') + '</div><div class="text-xs text-slate-400">Базовая дата: ' + formatDate(baseDate) + ' · товаров: ' + group.items.length + '</div></div><div class="text-xs text-slate-300">Доставка: ' + rub(isPickup() ? 0 : state.deliveryFee) + '</div></div><div class="grid grid-cols-3 gap-2">' + options + '</div></div>';
+    }).join('');
+    document.querySelectorAll('.delivery-group-date').forEach(radio => radio.addEventListener('change', event => {
+      const mode = event.target.dataset.mode;
+      const oldDate = event.target.dataset.oldDate;
+      const newDate = event.target.value;
+      selectedItems().filter(item => item.mode === mode && (item.mode === 'preorder' ? item.date : (document.getElementById('deliveryDate').value || today)) === oldDate).forEach(item => {
+        if (mode === 'preorder') item.input.dataset.date = newDate;
+      });
+      if (mode === 'instant') document.getElementById('deliveryDate').value = newDate;
+      syncDeliveryDateInputs();
+      renderDeliveryGroups();
       updateSummary();
     }));
-    document.querySelectorAll('.inc').forEach(btn => btn.addEventListener('click', () => {
-      const input = document.getElementById(btn.dataset.target);
-      const max = Number(input.max || 0);
-      if (Number(input.value || 0) < max) input.stepUp();
-      updateSummary();
-    }));
-    document.querySelectorAll('.qty').forEach(input => input.addEventListener('input', updateSummary));
-  }
-
-  function addDays(isoDate, days) {
-    const d = new Date(isoDate + 'T00:00:00');
-    d.setDate(d.getDate() + days);
-    return d.toISOString().slice(0, 10);
-  }
-
-  function formatDateShort(isoDate) {
-    const [year, month, day] = isoDate.split('-');
-    return day + '.' + month;
-  }
-
-  function renderDates() {
-    const selected = selectedBatchItems();
-    const baseDate = state.mode === 'preorder' && selected[0] && selected[0].batch_date ? selected[0].batch_date : today;
-    dateOptions.innerHTML = '';
-    for (let i = 0; i < 3; i++) {
-      const value = addDays(baseDate, i);
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'date-option rounded-xl border px-2 py-3 text-xs font-semibold ' + (i === 0 ? 'border-[#F04483] bg-[#F04483] text-white' : 'border-slate-600 bg-slate-900 text-slate-100');
-      btn.dataset.date = value;
-      btn.textContent = formatDateShort(value);
-      btn.addEventListener('click', () => {
-        deliveryDate.value = value;
-        document.querySelectorAll('.date-option').forEach(el => {
-          el.classList.remove('border-[#F04483]', 'bg-[#F04483]', 'text-white');
-          el.classList.add('border-slate-600', 'bg-slate-900', 'text-slate-100');
-        });
-        btn.classList.remove('border-slate-600', 'bg-slate-900', 'text-slate-100');
-        btn.classList.add('border-[#F04483]', 'bg-[#F04483]', 'text-white');
-      });
-      dateOptions.appendChild(btn);
-      if (i === 0) deliveryDate.value = value;
-    }
+    syncDeliveryDateInputs();
   }
 
   function isPickup() {
     const newBlock = document.getElementById('newBlock');
     const addressSelect = document.getElementById('addressSelect');
-    if (!newBlock.classList.contains('hidden')) {
-      const input = document.querySelector('input[name="new_address"]');
-      return input && input.value.trim() === '';
-    }
+    if (!newBlock.classList.contains('hidden')) return (document.getElementById('newClientAddress').value.trim() === '');
     return addressSelect && addressSelect.value === 'pickup';
   }
 
   function prepareReferralToggle() {
-    if (!referralToggleWrap) return;
-    if (state.selectedClientCanReferral) {
-      referralToggleWrap.classList.remove('hidden');
-    } else {
-      referralToggleWrap.classList.add('hidden');
-      if (referralToggle) referralToggle.checked = false;
-    }
+    const wrap = document.getElementById('referralToggleWrap');
+    const toggle = document.getElementById('referralToggle');
+    if (state.selectedClientCanReferral) wrap.classList.remove('hidden'); else { wrap.classList.add('hidden'); if (toggle) toggle.checked = false; }
   }
 
   function updateSummary() {
-    let subtotal = 0;
-    itemsList.innerHTML = '';
-    document.querySelectorAll('.qty').forEach(input => {
-      const qty = Number(input.value || 0);
-      const max = Number(input.max || 0);
-      if (qty > max) input.value = max;
-      const safeQty = Number(input.value || 0);
-      const price = Number(input.dataset.price || 0);
-      if (safeQty > 0) {
-        subtotal += safeQty * price;
-        const row = document.createElement('div');
-        row.className = 'flex justify-between rounded-xl bg-slate-900/70 p-2 text-slate-100';
-        row.innerHTML = '<span>' + input.dataset.name + ' × ' + safeQty + ' ящ.</span><span>' + (safeQty * price).toFixed(0) + ' ₽</span>';
-        itemsList.appendChild(row);
-      }
-    });
-    subtotalEl.textContent = subtotal.toFixed(0) + ' ₽';
-
-    let total = subtotal;
-    const referral = referralToggle && !referralToggleWrap.classList.contains('hidden') && referralToggle.checked;
-    if (referral) {
-      const discount = Math.floor(subtotal * 0.1);
-      refEl.textContent = '-' + discount + ' ₽';
-      refRow.classList.remove('hidden');
-      refRow.classList.add('flex');
-      total -= discount;
-    } else {
-      refRow.classList.add('hidden');
-      refRow.classList.remove('flex');
-    }
-
-    const usePoints = usePointsToggle && usePointsToggle.checked;
-    const requestedPoints = Number(pointsInput ? pointsInput.value || 0 : 0);
-    const points = usePoints ? Math.min(requestedPoints, total) : 0;
-    if (points > 0) {
-      pointsEl.textContent = '-' + points.toFixed(0) + ' ₽';
-      pointsRow.classList.remove('hidden');
-      pointsRow.classList.add('flex');
-      total -= points;
-    } else {
-      pointsRow.classList.add('hidden');
-      pointsRow.classList.remove('flex');
-    }
-
-    const shipping = isPickup() ? 0 : Number(state.deliveryFee || 300);
-    shippingEl.textContent = shipping.toFixed(0) + ' ₽';
-    shippingRow.classList.toggle('hidden', shipping === 0);
-    total += shipping;
-    totalEl.textContent = total.toFixed(0) + ' ₽';
+    const groups = groupedSelected();
+    syncDeliveryDateInputs();
+    const subtotal = groups.reduce((sum, g) => sum + g.subtotal, 0);
+    document.getElementById('sumSubtotal').textContent = rub(subtotal);
+    const referralToggle = document.getElementById('referralToggle');
+    const referral = referralToggle && !document.getElementById('referralToggleWrap').classList.contains('hidden') && referralToggle.checked;
+    const discount = referral ? Math.floor(subtotal * 0.1) : 0;
+    document.getElementById('sumReferral').textContent = '-' + rub(discount);
+    document.getElementById('rowReferral').classList.toggle('hidden', !referral);
+    document.getElementById('rowReferral').classList.toggle('flex', referral);
+    let afterDiscount = subtotal - discount;
+    const usePoints = document.getElementById('usePointsToggle').checked;
+    const points = usePoints ? Math.min(Number(document.getElementById('pointsInput').value || 0), afterDiscount) : 0;
+    afterDiscount -= points;
+    document.getElementById('sumPoints').textContent = '-' + rub(points);
+    document.getElementById('rowPoints').classList.toggle('hidden', points <= 0);
+    document.getElementById('rowPoints').classList.toggle('flex', points > 0);
+    const deliveryKeys = new Set(groups.map(g => g.date + '|address|' + (document.getElementById('slotSelect') ? document.getElementById('slotSelect').value : '')));
+    const shipping = isPickup() ? 0 : deliveryKeys.size * Number(state.deliveryFee || 300);
+    document.getElementById('sumShipping').textContent = rub(shipping);
+    document.getElementById('sumTotal').textContent = rub(afterDiscount + shipping);
+    document.getElementById('itemsList').innerHTML = groups.map(g => '<div class="rounded-xl bg-slate-900/70 p-2"><div class="mb-1 font-semibold">' + (g.mode === 'preorder' ? 'Под заказ' : 'В наличии') + ' · получение ' + formatDate(g.date) + '</div>' + g.items.map(item => '<div class="flex justify-between"><span>' + escapeHtml(item.title) + ' × ' + item.qty + ' ящ.</span><span>' + rub(item.qty * item.price) + '</span></div>').join('') + '</div>').join('');
+    document.getElementById('deliveriesSummary').innerHTML = Array.from(deliveryKeys).map(key => key.split('|')[0]).map(date => '<div class="rounded-xl border border-slate-700 bg-slate-900/70 p-2">Доставка ' + formatDate(date) + ': ' + rub(isPickup() ? 0 : state.deliveryFee) + '</div>').join('');
+    document.getElementById('orderCreationNotice').innerHTML = 'Будет создано ' + groups.length + ' связанных заказа:<ol class="mt-2 list-decimal pl-5">' + groups.map(g => '<li>' + (g.mode === 'preorder' ? 'Предзаказ' : 'Товары в наличии') + ' — получение ' + formatDate(g.date) + '</li>').join('') + '</ol>';
+    updateSelectedPreview();
   }
+
+  ['referralToggle','usePointsToggle','pointsInput','slotSelect'].forEach(id => { const el = document.getElementById(id); if (el) el.addEventListener('input', updateSummary); if (el) el.addEventListener('change', updateSummary); });
 
   const searchPhone = document.getElementById('searchPhone');
   const sugg = document.getElementById('suggestions');
@@ -452,13 +375,10 @@ $batches = $purchaseBatches ?? [];
   const addressNew = document.getElementById('addressNew');
   const newBlock = document.getElementById('newBlock');
   const newPhoneHidden = document.getElementById('newPhoneHidden');
-  const newClientAddress = document.getElementById('newClientAddress');
   const deliveryCalcBlock = document.getElementById('deliveryCalcBlock');
   const deliveryCalcText = document.getElementById('deliveryCalcText');
   const deliveryCalcNote = document.getElementById('deliveryCalcNote');
   const deliveryRecalcBtn = document.getElementById('deliveryRecalcBtn');
-  const deliveryCommentWrapper = document.getElementById('deliveryCommentWrapper');
-  const deliveryComment = document.getElementById('deliveryComment');
   const deliveryDistanceManual = document.getElementById('deliveryDistanceManual');
   const deliveryFeePreview = document.getElementById('deliveryFeePreview');
   const deliveryDistancePreview = document.getElementById('deliveryDistancePreview');
@@ -466,297 +386,109 @@ $batches = $purchaseBatches ?? [];
   const deliverySelectedLat = document.getElementById('deliverySelectedLat');
   const deliverySelectedLng = document.getElementById('deliverySelectedLng');
   const deliverySelectedAddress = document.getElementById('deliverySelectedAddress');
-  const addressNewSuggestions = document.getElementById('addressNewSuggestions');
-  const newClientAddressSuggestions = document.getElementById('newClientAddressSuggestions');
-  searchPhone.value = '';
 
   searchPhone.addEventListener('input', () => {
-    const raw = searchPhone.value.trim();
-    const q = raw.replace(/\D+/g, '');
-    userIdInput.value = '';
-    addressWrapper.classList.add('hidden');
-    userInfo.classList.add('hidden');
-    pointsBlock.classList.add('hidden');
-    state.selectedClientCanReferral = true;
-    if (q.length === 0) {
-      sugg.classList.add('hidden');
+    const q = searchPhone.value.trim().replace(/\D+/g, '');
+    userIdInput.value = ''; addressWrapper.classList.add('hidden'); userInfo.classList.add('hidden'); document.getElementById('pointsBlock').classList.add('hidden');
+    if (q.length === 0) { sugg.classList.add('hidden'); newBlock.classList.add('hidden'); return; }
+    fetch(basePath + '/users/search?term=' + encodeURIComponent(q)).then(r => r.json()).then(list => {
+      sugg.innerHTML = '';
+      if (list.length === 0) { createNewClient(q); return; }
       newBlock.classList.add('hidden');
-      return;
-    }
-
-    fetch(basePath + '/users/search?term=' + encodeURIComponent(q))
-      .then(r => r.json())
-      .then(list => {
-        sugg.innerHTML = '';
-        if (list.length === 0) {
-          createNewClient(q);
-          return;
-        }
-
-        newBlock.classList.add('hidden');
-        list.forEach(u => {
-          const li = document.createElement('li');
-          li.className = 'cursor-pointer px-3 py-2 text-slate-100 hover:bg-slate-800';
-          li.textContent = (u.name || 'Клиент') + ' — ' + u.phone;
-          li.addEventListener('click', () => selectUser(u));
-          sugg.appendChild(li);
-        });
-        sugg.classList.remove('hidden');
-      });
+      list.forEach(u => { const li = document.createElement('li'); li.className = 'cursor-pointer px-3 py-2 hover:bg-slate-800'; li.textContent = (u.name || 'Клиент') + ' — ' + u.phone; li.addEventListener('click', () => selectUser(u)); sugg.appendChild(li); });
+      sugg.classList.remove('hidden');
+    });
   });
 
   function selectUser(u) {
-    resetSelectedDeliverySuggestion();
-    searchPhone.value = u.phone;
-    userIdInput.value = u.id;
-    newBlock.classList.add('hidden');
-    userInfo.textContent = (u.name || 'Клиент') + ', баланс: ' + (u.points_balance || 0) + ' баллов';
-    userInfo.classList.remove('hidden');
-    pointsBlock.classList.remove('hidden');
-    state.selectedClientCanReferral = Number(u.has_used_referral_coupon || 0) === 0;
-    prepareReferralToggle();
-    sugg.classList.add('hidden');
-    loadAddresses(u.id);
+    searchPhone.value = u.phone; userIdInput.value = u.id; sugg.classList.add('hidden'); newBlock.classList.add('hidden');
+    userInfo.textContent = (u.name || 'Клиент') + ', баланс: ' + (u.points_balance || 0) + ' баллов'; userInfo.classList.remove('hidden');
+    document.getElementById('pointsBlock').classList.remove('hidden'); state.selectedClientCanReferral = Number(u.has_used_referral_coupon || 0) === 0; prepareReferralToggle();
+    fetch(basePath + '/users/addresses?user_id=' + u.id).then(r => r.json()).then(list => {
+      addressSelect.innerHTML = '';
+      list.forEach(a => { const opt = document.createElement('option'); opt.value = a.id; opt.textContent = a.street; opt.dataset.street = a.street || ''; opt.dataset.comment = a.last_checkout_comment || ''; opt.dataset.distanceKm = a.delivery_distance_km || ''; addressSelect.appendChild(opt); });
+      const optNew = document.createElement('option'); optNew.value = 'new'; optNew.textContent = 'Добавить новый адрес'; addressSelect.appendChild(optNew);
+      const optPickup = document.createElement('option'); optPickup.value = 'pickup'; optPickup.textContent = 'Самовывоз 9 мая 73'; addressSelect.appendChild(optPickup);
+      addressWrapper.classList.remove('hidden'); deliveryCalcBlock.classList.remove('hidden'); calculateDelivery(); updateSummary();
+    });
   }
-
-  function createNewClient(phone) {
-    resetSelectedDeliverySuggestion();
-    userIdInput.value = '';
-    newPhoneHidden.value = phone;
-    newBlock.classList.remove('hidden');
-    addressWrapper.classList.add('hidden');
-    if (deliveryCalcBlock) deliveryCalcBlock.classList.remove('hidden');
-    pointsBlock.classList.add('hidden');
-    userInfo.classList.add('hidden');
-    state.selectedClientCanReferral = true;
-    prepareReferralToggle();
-    sugg.classList.add('hidden');
-    calculateDelivery();
-    updateSummary();
-  }
-
-  function loadAddresses(uid) {
-    fetch(basePath + '/users/addresses?user_id=' + uid)
-      .then(r => r.json())
-      .then(list => {
-        addressSelect.innerHTML = '';
-        list.forEach(a => {
-          const opt = document.createElement('option');
-          opt.value = a.id;
-          opt.textContent = a.street;
-          opt.dataset.street = a.street || '';
-          opt.dataset.comment = a.last_checkout_comment || '';
-          opt.dataset.distanceKm = a.delivery_distance_km || '';
-          opt.dataset.provider = a.delivery_distance_provider || '';
-          addressSelect.appendChild(opt);
-        });
-        const optNew = document.createElement('option');
-        optNew.value = 'new';
-        optNew.textContent = 'Добавить новый адрес';
-        addressSelect.appendChild(optNew);
-        const optPickup = document.createElement('option');
-        optPickup.value = 'pickup';
-        optPickup.textContent = 'Самовывоз 9 мая 73';
-        addressSelect.appendChild(optPickup);
-        addressWrapper.classList.remove('hidden');
-        if (deliveryCalcBlock) deliveryCalcBlock.classList.remove('hidden');
-        calculateDelivery();
-        updateSummary();
-      });
-  }
+  function createNewClient(phone) { userIdInput.value = ''; newPhoneHidden.value = phone; newBlock.classList.remove('hidden'); addressWrapper.classList.add('hidden'); deliveryCalcBlock.classList.remove('hidden'); document.getElementById('pointsBlock').classList.add('hidden'); state.selectedClientCanReferral = true; calculateDelivery(); updateSummary(); sugg.classList.add('hidden'); }
 
   function currentDeliveryAddress() {
-    if (!newBlock.classList.contains('hidden')) {
-      return (newClientAddress && newClientAddress.value.trim()) || '';
-    }
-    if (!addressSelect) return '';
+    if (!newBlock.classList.contains('hidden')) return document.getElementById('newClientAddress').value.trim();
     if (addressSelect.value === 'pickup') return 'Самовывоз';
     if (addressSelect.value === 'new') return addressNew.value.trim();
     const selected = addressSelect.options[addressSelect.selectedIndex];
     return selected ? (selected.dataset.street || selected.textContent || '').trim() : '';
   }
-
   async function calculateDelivery() {
-    const pickup = isPickup();
-    if (deliveryCalcBlock) deliveryCalcBlock.classList.toggle('hidden', false);
-    if (deliveryCommentWrapper) deliveryCommentWrapper.classList.toggle('hidden', pickup);
-    if (pickup) {
-      state.deliveryFee = 0;
-      if (deliveryCalcText) deliveryCalcText.textContent = '0 ₽';
-      if (deliveryCalcNote) deliveryCalcNote.textContent = 'Самовывоз — доставка 0 ₽.';
-      if (deliveryFeePreview) deliveryFeePreview.value = '0';
-      if (deliveryDistancePreview) deliveryDistancePreview.value = '';
-      if (deliverySourcePreview) deliverySourcePreview.value = 'pickup';
-      updateSummary();
-      return;
-    }
-
+    if (isPickup()) { state.deliveryFee = 0; deliveryCalcText.textContent = '0 ₽'; deliveryCalcNote.textContent = 'Самовывоз — доставка 0 ₽.'; deliveryFeePreview.value = '0'; deliverySourcePreview.value = 'pickup'; updateSummary(); return; }
     const address = currentDeliveryAddress();
-    if (!address) {
-      state.deliveryFee = 300;
-      if (deliveryCalcText) deliveryCalcText.textContent = 'от 300 ₽';
-      if (deliveryCalcNote) deliveryCalcNote.textContent = 'Адрес не указан — точную стоимость проверит менеджер.';
-      if (deliveryFeePreview) deliveryFeePreview.value = '300';
-      if (deliveryDistancePreview) deliveryDistancePreview.value = '';
-      if (deliverySourcePreview) deliverySourcePreview.value = 'pending_review';
-      updateSummary();
-      return;
-    }
-
-    if (deliveryCalcText) deliveryCalcText.textContent = 'считаем…';
-    if (deliveryCalcNote) deliveryCalcNote.textContent = 'Считаем километраж и тариф доставки.';
-
-    const body = new URLSearchParams();
-    body.set('address', address);
-    const selectedAddress = deliverySelectedAddress ? deliverySelectedAddress.value.trim() : '';
-    if (selectedAddress && selectedAddress === address && deliverySelectedLat && deliverySelectedLng && deliverySelectedLat.value && deliverySelectedLng.value) {
-      body.set('selected_address', selectedAddress);
-      body.set('selected_lat', deliverySelectedLat.value);
-      body.set('selected_lng', deliverySelectedLng.value);
-    }
-    if (deliveryDistanceManual && deliveryDistanceManual.value.trim() !== '') {
-      body.set('delivery_distance_km_manual', deliveryDistanceManual.value.trim());
-    }
-
+    if (!address) { state.deliveryFee = 300; deliveryCalcText.textContent = 'от 300 ₽'; deliveryCalcNote.textContent = 'Адрес не указан — точную стоимость проверит менеджер.'; deliveryFeePreview.value = '300'; deliverySourcePreview.value = 'pending_review'; updateSummary(); return; }
+    deliveryCalcText.textContent = 'считаем…';
+    const body = new URLSearchParams(); body.set('address', address);
+    if (deliveryDistanceManual && deliveryDistanceManual.value.trim() !== '') body.set('delivery_distance_km_manual', deliveryDistanceManual.value.trim());
+    if (deliverySelectedAddress.value && deliverySelectedLat.value && deliverySelectedLng.value) { body.set('selected_address', deliverySelectedAddress.value); body.set('selected_lat', deliverySelectedLat.value); body.set('selected_lng', deliverySelectedLng.value); }
     try {
-      const response = await fetch(basePath + '/delivery/calculate', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest'},
-        body
-      });
-      const data = await response.json();
-      if (!response.ok || !data.ok) throw new Error(data.message || 'Не удалось рассчитать доставку');
-      const fee = Number(data.delivery_fee || data.price_rub || 300);
-      state.deliveryFee = fee;
-      if (deliveryCalcText) deliveryCalcText.textContent = fee.toFixed(0) + ' ₽';
-      const distance = data.distance_km ? data.distance_km + ' км' : 'километраж уточняется';
-      const warning = data.warning ? ' ' + data.warning : '';
-      if (deliveryCalcNote) deliveryCalcNote.textContent = 'Расстояние: ' + distance + '. ' + (data.message || '') + warning;
-      if (deliveryFeePreview) deliveryFeePreview.value = String(fee);
-      if (deliveryDistancePreview) deliveryDistancePreview.value = data.distance_km || '';
-      if (deliverySourcePreview) deliverySourcePreview.value = data.delivery_pricing_source || data.pricing_source || '';
-    } catch (error) {
-      state.deliveryFee = 300;
-      if (deliveryCalcText) deliveryCalcText.textContent = 'от 300 ₽';
-      if (deliveryCalcNote) deliveryCalcNote.textContent = (error.message || 'Не удалось рассчитать доставку') + '. Точную стоимость подтвердит менеджер.';
-      if (deliveryFeePreview) deliveryFeePreview.value = '300';
-      if (deliveryDistancePreview) deliveryDistancePreview.value = '';
-      if (deliverySourcePreview) deliverySourcePreview.value = 'pending_review';
-    }
+      const response = await fetch(basePath + '/delivery/calculate', { method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest'}, body });
+      const data = await response.json(); if (!response.ok || !data.ok) throw new Error(data.message || 'Не удалось рассчитать доставку');
+      const fee = Number(data.delivery_fee || data.price_rub || 300); state.deliveryFee = fee; deliveryCalcText.textContent = rub(fee); deliveryCalcNote.textContent = 'Расстояние: ' + (data.distance_km ? data.distance_km + ' км' : 'уточняется'); deliveryFeePreview.value = String(fee); deliveryDistancePreview.value = data.distance_km || ''; deliverySourcePreview.value = data.delivery_pricing_source || data.pricing_source || '';
+    } catch (e) { state.deliveryFee = 300; deliveryCalcText.textContent = 'от 300 ₽'; deliveryCalcNote.textContent = (e.message || 'Не удалось рассчитать доставку') + '. Точную стоимость подтвердит менеджер.'; deliveryFeePreview.value = '300'; deliverySourcePreview.value = 'pending_review'; }
     updateSummary();
   }
 
-  addressSelect.addEventListener('change', () => {
-    resetSelectedDeliverySuggestion();
-    addressNew.classList.toggle('hidden', addressSelect.value !== 'new');
-    if (addressNewSuggestions) addressNewSuggestions.classList.add('hidden');
-    const selected = addressSelect.options[addressSelect.selectedIndex];
-    if (deliveryComment && selected && selected.dataset.comment !== undefined) deliveryComment.value = selected.dataset.comment || '';
-    if (deliveryDistanceManual) deliveryDistanceManual.value = selected && selected.dataset.distanceKm ? selected.dataset.distanceKm : '';
-    calculateDelivery();
-    updateSummary();
-  });
-  function resetSelectedDeliverySuggestion() {
-    if (deliverySelectedLat) deliverySelectedLat.value = '';
-    if (deliverySelectedLng) deliverySelectedLng.value = '';
-    if (deliverySelectedAddress) deliverySelectedAddress.value = '';
-  }
+  addressSelect.addEventListener('change', () => { addressNew.classList.toggle('hidden', addressSelect.value !== 'new'); const selected = addressSelect.options[addressSelect.selectedIndex]; if (selected && selected.dataset.comment !== undefined) document.getElementById('deliveryComment').value = selected.dataset.comment || ''; if (deliveryDistanceManual) deliveryDistanceManual.value = selected && selected.dataset.distanceKm ? selected.dataset.distanceKm : ''; calculateDelivery(); updateSummary(); });
+  [addressNew, document.getElementById('newClientAddress'), deliveryDistanceManual].forEach(el => { if (el) el.addEventListener('input', () => { calculateDelivery(); updateSummary(); }); });
+  if (deliveryRecalcBtn) deliveryRecalcBtn.addEventListener('click', calculateDelivery);
 
-  function applyDeliverySuggestion(input, suggestionList, item) {
-    // В поле и в БД сохраняем короткий адрес DaData, как в админке настроек:
-    // "г Красноярск, ул 9 Мая, д 73", без индекса и полного региона.
-    const selectedAddress = item.value || item.label || item.unrestricted_value || '';
-    input.value = selectedAddress;
-    if (deliverySelectedLat) deliverySelectedLat.value = item.lat || '';
-    if (deliverySelectedLng) deliverySelectedLng.value = item.lng || '';
-    if (deliverySelectedAddress) deliverySelectedAddress.value = selectedAddress;
-    if (deliveryDistanceManual) deliveryDistanceManual.value = '';
-    if (suggestionList) suggestionList.classList.add('hidden');
-    calculateDelivery();
-    updateSummary();
-  }
-
-  function renderDeliverySuggestions(input, suggestionList, suggestions) {
-    if (!suggestionList) return;
-    suggestionList.innerHTML = '';
-    if (!Array.isArray(suggestions) || suggestions.length === 0) {
-      suggestionList.classList.add('hidden');
-      return;
-    }
+  function resetSelectedDeliverySuggestion() { deliverySelectedLat.value = ''; deliverySelectedLng.value = ''; deliverySelectedAddress.value = ''; }
+  function renderDeliverySuggestions(input, list, suggestions) {
+    if (!list) return;
+    list.innerHTML = '';
+    if (!Array.isArray(suggestions) || suggestions.length === 0) { list.classList.add('hidden'); return; }
     suggestions.forEach(item => {
       const li = document.createElement('li');
       li.className = 'cursor-pointer border-b border-slate-800 px-3 py-2 hover:bg-slate-900 last:border-b-0';
-      const title = document.createElement('div');
-      title.className = 'font-semibold text-slate-100';
-      title.textContent = item.value || item.unrestricted_value || '';
-      const meta = document.createElement('div');
-      meta.className = 'text-xs text-slate-400';
-      const parts = [];
-      if (item.label) parts.push(item.label);
-      if (item.qc_geo !== null && item.qc_geo !== undefined && item.qc_geo !== '') parts.push('qc_geo=' + item.qc_geo);
-      if (item.distance_from_center_km) parts.push(item.distance_from_center_km + ' км от центра поиска');
-      meta.textContent = parts.join(' · ');
-      li.appendChild(title);
-      li.appendChild(meta);
+      li.innerHTML = '<div class="font-semibold text-slate-100">' + escapeHtml(item.value || item.unrestricted_value || '') + '</div><div class="text-xs text-slate-400">' + escapeHtml(item.label || '') + '</div>';
       li.addEventListener('mousedown', event => {
         event.preventDefault();
-        applyDeliverySuggestion(input, suggestionList, item);
+        const selectedAddress = item.value || item.label || item.unrestricted_value || '';
+        input.value = selectedAddress;
+        deliverySelectedLat.value = item.lat || '';
+        deliverySelectedLng.value = item.lng || '';
+        deliverySelectedAddress.value = selectedAddress;
+        if (deliveryDistanceManual) deliveryDistanceManual.value = '';
+        list.classList.add('hidden');
+        calculateDelivery();
+        updateSummary();
       });
-      suggestionList.appendChild(li);
+      list.appendChild(li);
     });
-    suggestionList.classList.remove('hidden');
+    list.classList.remove('hidden');
   }
-
-  function attachDeliverySuggest(input, suggestionList) {
-    if (!input || !suggestionList) return;
+  function attachDeliverySuggest(input, list) {
+    if (!input || !list) return;
     let timer = null;
     input.addEventListener('input', () => {
       resetSelectedDeliverySuggestion();
-      calculateDelivery();
-      updateSummary();
       clearTimeout(timer);
       const query = input.value.trim();
-      if (query.length < 3) {
-        suggestionList.classList.add('hidden');
-        suggestionList.innerHTML = '';
-        return;
-      }
+      if (query.length < 3) { list.classList.add('hidden'); list.innerHTML = ''; return; }
       timer = setTimeout(async () => {
         try {
-          const response = await fetch(basePath + '/delivery/address-suggestions?query=' + encodeURIComponent(query), {
-            credentials: 'same-origin',
-            headers: {'X-Requested-With': 'XMLHttpRequest'}
-          });
+          const response = await fetch(basePath + '/delivery/address-suggestions?query=' + encodeURIComponent(query), { credentials: 'same-origin', headers: {'X-Requested-With': 'XMLHttpRequest'} });
           const data = await response.json();
           if (!response.ok || !data.ok) throw new Error(data.message || 'DaData не вернула подсказки');
-          renderDeliverySuggestions(input, suggestionList, data.suggestions || []);
+          renderDeliverySuggestions(input, list, data.suggestions || []);
         } catch (error) {
-          suggestionList.innerHTML = '<li class="px-3 py-2 text-xs text-red-200">' + escapeHtml(error.message || 'Ошибка подсказок DaData') + '</li>';
-          suggestionList.classList.remove('hidden');
+          list.innerHTML = '<li class="px-3 py-2 text-xs text-red-200">' + escapeHtml(error.message || 'Ошибка подсказок DaData') + '</li>';
+          list.classList.remove('hidden');
         }
       }, 250);
     });
-    input.addEventListener('focus', () => {
-      if (input.value.trim().length >= 3 && suggestionList.children.length > 0) {
-        suggestionList.classList.remove('hidden');
-      }
-    });
   }
+  attachDeliverySuggest(addressNew, document.getElementById('addressNewSuggestions'));
+  attachDeliverySuggest(document.getElementById('newClientAddress'), document.getElementById('newClientAddressSuggestions'));
 
-  attachDeliverySuggest(addressNew, addressNewSuggestions);
-  attachDeliverySuggest(newClientAddress, newClientAddressSuggestions);
-  document.addEventListener('click', event => {
-    if (addressNewSuggestions && !addressNewSuggestions.contains(event.target) && event.target !== addressNew) {
-      addressNewSuggestions.classList.add('hidden');
-    }
-    if (newClientAddressSuggestions && !newClientAddressSuggestions.contains(event.target) && event.target !== newClientAddress) {
-      newClientAddressSuggestions.classList.add('hidden');
-    }
-  });
-  if (deliveryRecalcBtn) deliveryRecalcBtn.addEventListener('click', calculateDelivery);
-  if (deliveryDistanceManual) deliveryDistanceManual.addEventListener('input', calculateDelivery);
-  if (referralToggle) referralToggle.addEventListener('change', updateSummary);
-  if (usePointsToggle) usePointsToggle.addEventListener('change', updateSummary);
-  if (pointsInput) pointsInput.addEventListener('input', updateSummary);
+  updateSelectedPreview();
 </script>

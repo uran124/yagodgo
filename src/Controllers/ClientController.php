@@ -74,6 +74,7 @@ public function cart(): void
     // 1) Получаем все товары из корзины, включая sale_price и is_active
     $stmt = $this->pdo->prepare(
         "SELECT 
+            ci.id AS cart_item_id,
             ci.product_id,
             ci.purchase_batch_id,
             ci.quantity,
@@ -101,7 +102,8 @@ public function cart(): void
     $today = date('Y-m-d');
     foreach ($rawItems as $row) {
         $pid = $row['product_id'];
-        $sessionDate = $_SESSION['delivery_date'][$pid] ?? null;
+        $cartItemId = (int)$row['cart_item_id'];
+        $sessionDate = $_SESSION['delivery_date'][$cartItemId] ?? $_SESSION['delivery_date'][$pid] ?? null;
         if ($sessionDate !== null) {
             $deliveryDate = $sessionDate;
         } else {
@@ -116,6 +118,7 @@ public function cart(): void
         }
 
         $items[] = [
+            'cart_item_id'  => (int)$row['cart_item_id'],
             'product_id'    => $pid,
             'product'       => $row['product'],
             'variety'       => $row['variety'],
@@ -175,16 +178,22 @@ public function cart(): void
             $resolver = new SellableBatchResolver($this->pdo);
             $batch = $resolver->resolveForProduct($productId, $stockMode);
             if ($batch === null) {
-                $_SESSION['cart_error'] = 'Для этого товара сейчас нет доступной партии.';
+                $_SESSION['cart_error'] = 'Для этого товара сейчас нет доступного варианта продажи.';
                 $referer = $_SERVER['HTTP_REFERER'] ?? '/';
                 header('Location: ' . $referer);
                 exit;
             }
             $purchaseBatchId = (int)($batch['id'] ?? 0);
+            if ($purchaseBatchId <= 0) {
+                $_SESSION['cart_error'] = 'Для этого товара сейчас нет доступного варианта продажи.';
+                $referer = $_SERVER['HTTP_REFERER'] ?? '/';
+                header('Location: ' . $referer);
+                exit;
+            }
             $priceBox = (float)($batch['price_per_box'] ?? 0);
             $available = (float)($batch['boxes_available'] ?? ($batch['boxes_free'] ?? 0));
             if ($priceBox <= 0) {
-                $_SESSION['cart_error'] = 'Для выбранной партии не задана цена.';
+                $_SESSION['cart_error'] = 'Для выбранного варианта продажи не задана цена.';
                 $referer = $_SERVER['HTTP_REFERER'] ?? '/';
                 header('Location: ' . $referer);
                 exit;
@@ -196,28 +205,21 @@ public function cart(): void
                 exit;
             }
 
-            $modeCheckStmt = $this->pdo->prepare(
-                "SELECT stock_mode FROM cart_items WHERE user_id = ? AND product_id = ? LIMIT 1"
-            );
-            $modeCheckStmt->execute([$userId, $productId]);
-            $existingMode = $modeCheckStmt->fetchColumn();
-            if ($existingMode !== false && (string)$existingMode !== $stockMode) {
-                $_SESSION['cart_error'] = 'Этот товар уже есть в корзине в другом режиме. Оформите текущую корзину или замените режим заказа.';
-                $referer = $_SERVER['HTTP_REFERER'] ?? '/cart';
-                header('Location: ' . $referer);
-                exit;
-            }
-
             $this->pdo->prepare(
                 "INSERT INTO cart_items (user_id, product_id, quantity, unit_price, stock_mode, purchase_batch_id, boxes, sale_price_per_box)" .
                 " VALUES (?, ?, ?, ?, ?, ?, ?, ?)" .
-                " ON DUPLICATE KEY UPDATE quantity = quantity + VALUES(quantity)," .
+                " ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)," .
+                " quantity = quantity + VALUES(quantity)," .
                 " unit_price = VALUES(unit_price)," .
                 " stock_mode = VALUES(stock_mode)," .
                 " purchase_batch_id = VALUES(purchase_batch_id)," .
                 " boxes = VALUES(boxes)," .
                 " sale_price_per_box = VALUES(sale_price_per_box)"
             )->execute([$userId, $productId, $quantity, $priceBox, $stockMode, $purchaseBatchId, $quantity, $priceBox]);
+            $cartItemId = (int)$this->pdo->lastInsertId();
+            if ($cartItemId > 0 && $dateOpt) {
+                $_SESSION['delivery_date'][$cartItemId] = $dateOpt;
+            }
         }
 
         $this->refreshCartTotal();
@@ -233,13 +235,13 @@ public function cart(): void
     {
         requireClient();
         $userId    = $_SESSION['user_id'];
-        $productId = (int)($_POST['product_id'] ?? 0);
-        $action    = $_POST['action'] ?? '';
+        $cartItemId = (int)($_POST['cart_item_id'] ?? 0);
+        $action     = $_POST['action'] ?? '';
 
         $stmt = $this->pdo->prepare(
-            "SELECT quantity FROM cart_items WHERE user_id = ? AND product_id = ?"
+            "SELECT quantity FROM cart_items WHERE user_id = ? AND id = ?"
         );
-        $stmt->execute([$userId, $productId]);
+        $stmt->execute([$userId, $cartItemId]);
         $current = (float)$stmt->fetchColumn();
 
         if ($current > 0) {
@@ -249,8 +251,8 @@ public function cart(): void
                 default    => $current,
             };
             $this->pdo->prepare(
-                "UPDATE cart_items SET quantity = ?, boxes = ? WHERE user_id = ? AND product_id = ?"
-            )->execute([$newQty, $newQty, $userId, $productId]);
+                "UPDATE cart_items SET quantity = ?, boxes = ? WHERE user_id = ? AND id = ?"
+            )->execute([$newQty, $newQty, $userId, $cartItemId]);
         }
 
         $this->refreshCartTotal();
@@ -263,13 +265,13 @@ public function cart(): void
     {
         requireClient();
         $userId    = $_SESSION['user_id'];
-        $productId = (int)($_POST['product_id'] ?? 0);
+        $cartItemId = (int)($_POST['cart_item_id'] ?? 0);
 
         $this->pdo->prepare(
-            "DELETE FROM cart_items WHERE user_id = ? AND product_id = ?"
-        )->execute([$userId, $productId]);
+            "DELETE FROM cart_items WHERE user_id = ? AND id = ?"
+        )->execute([$userId, $cartItemId]);
 
-        unset($_SESSION['delivery_date'][$productId]);
+        unset($_SESSION['delivery_date'][$cartItemId]);
         $this->refreshCartTotal();
         header('Location: /cart');
         exit;
@@ -494,7 +496,7 @@ public function cart(): void
 
     // 1) Получаем товары из корзины
        $stmt = $this->pdo->prepare(
-           "SELECT ci.product_id, ci.purchase_batch_id, ci.quantity, ci.unit_price,
+           "SELECT ci.id AS cart_item_id, ci.product_id, ci.purchase_batch_id, ci.quantity, ci.unit_price,
               p.box_size, p.box_unit, t.name AS product, t.alias AS type_alias, p.alias, p.variety, p.seller_id,
               ci.stock_mode
        FROM cart_items ci
@@ -508,17 +510,25 @@ public function cart(): void
     // 2) Группируем товары по дате доставки, храня выбранную дату из сессии
         $itemsByDate = [];
         foreach ($rawItems as $it) {
-        $pid = $it['product_id'];
-        $dateKey = $_SESSION['delivery_date'][$pid] ?? PLACEHOLDER_DATE;
+        $pid = (int)$it['product_id'];
+        $cartItemId = (int)$it['cart_item_id'];
+        $stockMode = (string)($it['stock_mode'] ?? 'instant');
+        $date = $_SESSION['delivery_date'][$cartItemId] ?? $_SESSION['delivery_date'][$pid] ?? PLACEHOLDER_DATE;
+        if ($stockMode !== 'preorder' && ($date === PLACEHOLDER_DATE || $date === 'on_demand')) {
+            $date = date('Y-m-d');
+        }
+        $dateKey = $this->cartGroupKey($stockMode, (string)$date);
         if (!isset($itemsByDate[$dateKey])) {
             $itemsByDate[$dateKey] = [];
         }
-        $itemsByDate[$dateKey][$pid] = [
+        $itemsByDate[$dateKey][$cartItemId] = [
+            'cart_item_id' => $cartItemId,
+            'product_id'  => $pid,
             'quantity'   => $it['quantity'],     // boxes
             'unit_price' => $it['unit_price'],   // price per box
             'box_size'   => $it['box_size'],
             'seller_id'  => $it['seller_id'],
-            'stock_mode' => $it['stock_mode'] ?? 'instant',
+            'stock_mode' => $stockMode,
             'purchase_batch_id' => isset($it['purchase_batch_id']) ? (int)$it['purchase_batch_id'] : null,
         ];
     }
@@ -537,13 +547,13 @@ public function cart(): void
 
         $selectedProductIdsForCheckout = [];
         foreach ($itemsByDate as $block) {
-            foreach (array_keys($block) as $productId) {
-                $selectedProductIdsForCheckout[(int)$productId] = true;
+            foreach ($block as $cartRow) {
+                $selectedProductIdsForCheckout[(int)($cartRow['cart_item_id'] ?? 0)] = true;
             }
         }
         $rawItems = array_values(array_filter(
             $rawItems,
-            static fn(array $item): bool => isset($selectedProductIdsForCheckout[(int)($item['product_id'] ?? 0)])
+            static fn(array $item): bool => isset($selectedProductIdsForCheckout[(int)($item['cart_item_id'] ?? 0)])
         ));
     }
 
@@ -635,6 +645,10 @@ public function cart(): void
     $orderStock = new OrderStockOrchestrator($this->pdo, $stockService);
 
     try {
+    $this->pdo->prepare(
+        "INSERT INTO order_groups (user_id, created_by_user_id, comment) VALUES (?, NULL, ?)"
+    )->execute([$userId, 'client checkout']);
+    $orderGroupId = (int)$this->pdo->lastInsertId();
 
     // 6) Если списываем баллы — обновляем баланс и фиксируем транзакцию
     if ($pointsToUse > 0) {
@@ -812,7 +826,7 @@ public function cart(): void
         $finalSum = $subAfterPickup - $pointsDiscount - $couponDiscount + $shippingFee;
         if ($isReservedOrder) {
             // В корзине показываем предварительную цену, но сумма reserved-заказа становится точной
-            // только после выкупа закупки и пересчёта order_items.
+            // только после подтверждения и пересчёта order_items.
             $finalSum = 0;
         }
 
@@ -822,21 +836,23 @@ public function cart(): void
         // (7.2) Вставляем заказ. Поскольку у таблицы orders есть колонки discount_applied, points_used, points_accrued, нужно задать их:
         $stmtOrder = $this->pdo->prepare(
             "INSERT INTO orders
-               (user_id, address_id, slot_id, status, total_amount,
+               (user_id, order_group_id, address_id, slot_id, status, total_amount,
                 discount_applied, points_used, points_accrued, coupon_code,
                 delivery_date, delivery_fee, delivery_distance_km, delivery_tariff_zone_id,
                 delivery_pricing_source, delivery_comment,
                 created_at, order_mode, bonuses_allowed, coupons_allowed, reserved_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?)"
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?)"
         );
         $pointsAccrued = 0; // пока 0, начислим ниже, если надо
-        $orderDeliveryDate = ($isReservedOrder && $dateKey === PLACEHOLDER_DATE) ? date('Y-m-d') : $dateKey;
+        $deliveryDateOnly = $this->dateFromCartGroupKey((string)$dateKey);
+        $orderDeliveryDate = ($isReservedOrder && $deliveryDateOnly === PLACEHOLDER_DATE) ? date('Y-m-d') : $deliveryDateOnly;
         $reservedAt = $isReservedOrder ? date('Y-m-d H:i:s') : null;
         $bonusesAllowed = $orderMode === 'discount_stock' ? 0 : 1;
         $couponsAllowed = $orderMode === 'discount_stock' ? 0 : 1;
 
         $stmtOrder->execute([
             $userId,
+            $orderGroupId,
             $addressIds[$dateKey],
             $slotId,
             $status,
@@ -864,7 +880,8 @@ public function cart(): void
             "INSERT INTO order_items (order_id, product_id, quantity, boxes, unit_price, stock_mode, purchase_batch_id)\n" .
             "VALUES (?, ?, ?, ?, ?, ?, ?)"
         );
-        foreach ($block as $prodId => $data) {
+        foreach ($block as $data) {
+            $prodId = (int)$data['product_id'];
             $kgQty   = $data['quantity'] * $data['box_size'];
             $kgPrice = $data['box_size'] > 0
                 ? $data['unit_price'] / $data['box_size']
@@ -943,19 +960,19 @@ public function cart(): void
     }
 
     // 10) Очищаем из корзины только выбранные для оформления блоки.
-    $selectedProductIds = [];
+    $selectedCartItemIds = [];
     foreach ($itemsByDate as $block) {
-        foreach (array_keys($block) as $productId) {
-            $selectedProductIds[] = (int)$productId;
+        foreach ($block as $cartRow) {
+            $selectedCartItemIds[] = (int)($cartRow['cart_item_id'] ?? 0);
         }
     }
-    $selectedProductIds = array_values(array_unique($selectedProductIds));
-    if ($selectedProductIds) {
-        $placeholders = implode(',', array_fill(0, count($selectedProductIds), '?'));
-        $deleteParams = array_merge([$userId], $selectedProductIds);
-        $this->pdo->prepare("DELETE FROM cart_items WHERE user_id = ? AND product_id IN ($placeholders)")->execute($deleteParams);
-        foreach ($selectedProductIds as $productId) {
-            unset($_SESSION['delivery_date'][$productId]);
+    $selectedCartItemIds = array_values(array_unique(array_filter($selectedCartItemIds)));
+    if ($selectedCartItemIds) {
+        $placeholders = implode(',', array_fill(0, count($selectedCartItemIds), '?'));
+        $deleteParams = array_merge([$userId], $selectedCartItemIds);
+        $this->pdo->prepare("DELETE FROM cart_items WHERE user_id = ? AND id IN ($placeholders)")->execute($deleteParams);
+        foreach ($selectedCartItemIds as $cartItemId) {
+            unset($_SESSION['delivery_date'][$cartItemId]);
         }
     }
     if (empty($_SESSION['delivery_date'])) {
@@ -1060,18 +1077,20 @@ public function cart(): void
         }
         if ($purchaseBatchId <= 0 || $priceBox <= 0) {
             unset($_SESSION['preorder_continue']);
-            $_SESSION['cart_error'] = 'Для предзаказа сейчас нет выкупленной партии с подтвержденной ценой.';
+            $_SESSION['cart_error'] = 'Для предзаказа сейчас нет подтверждённого варианта с финальной ценой.';
             return;
         }
 
         $desiredDeliveryDate = $this->normalizeDateString($intent['desired_delivery_date'] ?? null);
-        $_SESSION['delivery_date'][$productId] = $desiredDeliveryDate ?: PLACEHOLDER_DATE;
-
         $this->pdo->prepare(
             "INSERT INTO cart_items (user_id, product_id, quantity, unit_price, stock_mode, purchase_batch_id, boxes, sale_price_per_box)
              VALUES (?, ?, ?, ?, 'preorder', ?, ?, ?)
-             ON DUPLICATE KEY UPDATE quantity = VALUES(quantity), unit_price = VALUES(unit_price), stock_mode = 'preorder', purchase_batch_id = VALUES(purchase_batch_id), boxes = VALUES(boxes), sale_price_per_box = VALUES(sale_price_per_box)"
+             ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id), quantity = VALUES(quantity), unit_price = VALUES(unit_price), stock_mode = 'preorder', purchase_batch_id = VALUES(purchase_batch_id), boxes = VALUES(boxes), sale_price_per_box = VALUES(sale_price_per_box)"
         )->execute([$userId, $productId, $requestedBoxes, $priceBox, $purchaseBatchId, $requestedBoxes, $priceBox]);
+        $cartItemId = (int)$this->pdo->lastInsertId();
+        if ($cartItemId > 0) {
+            $_SESSION['delivery_date'][$cartItemId] = $desiredDeliveryDate ?: PLACEHOLDER_DATE;
+        }
 
         $this->pdo->prepare("UPDATE preorder_intents SET status = 'moved_to_cart', updated_at = NOW() WHERE id = ? AND user_id = ? AND status IN ('confirmed','moved_to_cart')")
             ->execute([$intentId, $userId]);
@@ -1591,9 +1610,37 @@ public function cancelReservedOrder(int $orderId): void
                          p.image_path AS product_image_path,
                          batch_photo.image_path AS batch_image_path,
                          DATE(pb.purchased_at) AS delivery_date,
-                         pb.purchased_at AS latest_purchase_date
+                         pb.purchased_at AS latest_purchase_date,
+                         instant_pb.id AS instant_purchase_batch_id,
+                         COALESCE(instant_pb.boxes_free, 0) AS instant_available_boxes,
+                         COALESCE(instant_pb.instant_price_per_box, 0) AS instant_price_per_box,
+                         preorder_pb.id AS preorder_purchase_batch_id,
+                         DATE(preorder_pb.purchased_at) AS preorder_availability_date,
+                         (COALESCE(NULLIF(preorder_pb.boxes_total, 0), preorder_pb.boxes_free + preorder_pb.boxes_reserved) - preorder_pb.boxes_reserved) AS preorder_available_boxes,
+                         COALESCE(NULLIF(preorder_pb.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) AS confirmed_preorder_price_per_box
                   FROM products p
                   JOIN product_types t ON t.id = p.product_type_id
+                  LEFT JOIN purchase_batches instant_pb ON instant_pb.id = (
+                      SELECT pb_i.id
+                      FROM purchase_batches pb_i
+                      WHERE pb_i.product_id = p.id
+                        AND pb_i.status IN ('purchased', 'arrived')
+                        AND pb_i.boxes_free > 0
+                        AND pb_i.instant_price_per_box > 0
+                      ORDER BY pb_i.purchased_at ASC, pb_i.id ASC
+                      LIMIT 1
+                  )
+                  LEFT JOIN purchase_batches preorder_pb ON preorder_pb.id = (
+                      SELECT pb_p.id
+                      FROM purchase_batches pb_p
+                      WHERE pb_p.product_id = p.id
+                        AND pb_p.status = 'planned'
+                        AND pb_p.purchased_at IS NOT NULL
+                        AND (COALESCE(NULLIF(pb_p.boxes_total, 0), pb_p.boxes_free + pb_p.boxes_reserved) - pb_p.boxes_reserved) > 0
+                        AND COALESCE(NULLIF(pb_p.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) > 0
+                      ORDER BY pb_p.purchased_at ASC, pb_p.id ASC
+                      LIMIT 1
+                  )
                   LEFT JOIN purchase_batches pb ON pb.id = (
                       SELECT pb2.id
                       FROM purchase_batches pb2
@@ -1859,39 +1906,28 @@ public function cancelReservedOrder(int $orderId): void
                 'ok' => true,
                 'intent_id' => $intentId,
                 'status' => $targetStatus,
-                'status_label' => 'Ждёт закупку',
+                'status_label' => 'Дата поступления уточняется',
                 'eta_delivery_date' => $etaDateValue,
                 'message' => 'Предзаказ сохранён' . ($desiredDeliveryDate ? ' на ' . date('d.m.Y', strtotime($desiredDeliveryDate)) : ' на ближайшую возможную дату') . '. Мы подтвердим его после назначения поставки и финальной цены.',
             ], JSON_UNESCAPED_UNICODE);
             return;
         }
 
-        $modeCheckStmt = $this->pdo->prepare(
-            "SELECT stock_mode FROM cart_items WHERE user_id = ? AND product_id = ? LIMIT 1"
-        );
-        $modeCheckStmt->execute([$userId, $productId]);
-        $existingCartMode = $modeCheckStmt->fetchColumn();
-        if ($existingCartMode !== false && (string)$existingCartMode !== 'preorder') {
-            http_response_code(409);
-            header('Content-Type: application/json; charset=utf-8');
-            echo json_encode([
-                'ok' => false,
-                'error' => 'Этот товар уже есть в корзине в другом режиме. Сначала удалите его из корзины.',
-            ], JSON_UNESCAPED_UNICODE);
-            return;
-        }
-
-        $_SESSION['delivery_date'][$productId] = $desiredDeliveryDate ?: PLACEHOLDER_DATE;
         $this->pdo->prepare(
             "INSERT INTO cart_items (user_id, product_id, quantity, unit_price, stock_mode, purchase_batch_id, boxes, sale_price_per_box)" .
             " VALUES (?, ?, ?, ?, 'preorder', ?, ?, ?)" .
-            " ON DUPLICATE KEY UPDATE quantity = VALUES(quantity)," .
+            " ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)," .
+            " quantity = VALUES(quantity)," .
             " unit_price = VALUES(unit_price)," .
             " stock_mode = 'preorder'," .
             " purchase_batch_id = VALUES(purchase_batch_id)," .
             " boxes = VALUES(boxes)," .
             " sale_price_per_box = VALUES(sale_price_per_box)"
         )->execute([$userId, $productId, $requestedBoxes, $autoOfferPrice, $targetBatchId, $requestedBoxes, $autoOfferPrice]);
+        $cartItemId = (int)$this->pdo->lastInsertId();
+        if ($cartItemId > 0) {
+            $_SESSION['delivery_date'][$cartItemId] = $desiredDeliveryDate ?: PLACEHOLDER_DATE;
+        }
         $this->refreshCartTotal();
 
         header('Content-Type: application/json; charset=utf-8');
@@ -1902,7 +1938,7 @@ public function cancelReservedOrder(int $orderId): void
             'status_label' => 'В корзине',
             'eta_delivery_date' => $etaDateValue,
             'cart_url' => '/cart',
-            'message' => 'Предзаказ добавлен в корзину' . ($desiredDeliveryDate ? ' на ' . date('d.m.Y', strtotime($desiredDeliveryDate)) : ': ' . $etaText) . '. Цена предварительная. Точная цена будет после выкупа.',
+            'message' => 'Предзаказ добавлен в корзину' . ($desiredDeliveryDate ? ' на ' . date('d.m.Y', strtotime($desiredDeliveryDate)) : ': ' . $etaText) . '. Предварительная цена зафиксирована для выбранного предзаказа.',
         ], JSON_UNESCAPED_UNICODE);
     }
 
@@ -2301,8 +2337,8 @@ public function cancelReservedOrder(int $orderId): void
     private function preorderIntentStatusLabel(string $status): string
     {
         return match ($status) {
-            'waiting_batch', 'intent_created' => 'Ожидает закупку',
-            'linked_to_batch' => 'Привязана к закупке',
+            'waiting_batch', 'intent_created' => 'Дата поступления уточняется',
+            'linked_to_batch' => 'Поставка подтверждена',
             'awaiting_price_confirmation', 'offer_sent' => 'Ожидает подтверждения цены',
             'confirmed' => 'Подтверждена',
             'moved_to_cart' => 'Переведена в корзину',
@@ -2347,6 +2383,18 @@ public function cancelReservedOrder(int $orderId): void
         return $orchestrator->allocateFifoBatches($productId, $requiredBoxes, $mode);
     }
 
+
+    private function cartGroupKey(string $stockMode, string $deliveryDate): string
+    {
+        return $stockMode . '|' . $deliveryDate;
+    }
+
+    private function dateFromCartGroupKey(string $groupKey): string
+    {
+        $parts = explode('|', $groupKey, 2);
+        return $parts[1] ?? $groupKey;
+    }
+
     public function normalizeOrderModes(array $itemsByDate, array $postedOrderModes): array
     {
         $allowedModes = ['preorder', 'instant', 'discount_stock'];
@@ -2355,7 +2403,7 @@ public function cancelReservedOrder(int $orderId): void
         foreach ($itemsByDate as $dateKey => $_) {
             $rawMode = (string)($postedOrderModes[$dateKey] ?? '');
             if (!in_array($rawMode, $allowedModes, true)) {
-                $rawMode = ($dateKey === PLACEHOLDER_DATE) ? 'preorder' : 'instant';
+                $rawMode = ($this->dateFromCartGroupKey((string)$dateKey) === PLACEHOLDER_DATE) ? 'preorder' : 'instant';
             }
             $result[(string)$dateKey] = $rawMode;
         }
@@ -2376,11 +2424,13 @@ public function cancelReservedOrder(int $orderId): void
 
         foreach ($rawItems as $it) {
             $pid = (int)$it['product_id'];
-            $dateKey = $_SESSION['delivery_date'][$pid] ?? PLACEHOLDER_DATE;
+            $cartItemId = (int)($it['cart_item_id'] ?? 0);
             $mode = (string)($it['stock_mode'] ?? 'instant');
+            $date = $_SESSION['delivery_date'][$cartItemId] ?? $_SESSION['delivery_date'][$pid] ?? PLACEHOLDER_DATE;
             if (!in_array($mode, $allowedModes, true)) {
-                $mode = ($dateKey === PLACEHOLDER_DATE) ? 'preorder' : 'instant';
+                $mode = ($date === PLACEHOLDER_DATE) ? 'preorder' : 'instant';
             }
+            $dateKey = $this->cartGroupKey($mode, (string)$date);
             if (!isset($modeByDate[$dateKey])) {
                 $modeByDate[$dateKey] = $mode;
             }
@@ -2391,7 +2441,7 @@ public function cancelReservedOrder(int $orderId): void
             if (!isset($modeByDate[$dateKey])) {
                 $rawMode = (string)($postedOrderModes[$dateKey] ?? '');
                 if (!in_array($rawMode, $allowedModes, true)) {
-                    $rawMode = ($dateKey === PLACEHOLDER_DATE) ? 'preorder' : 'instant';
+                    $rawMode = ($this->dateFromCartGroupKey((string)$dateKey) === PLACEHOLDER_DATE) ? 'preorder' : 'instant';
                 }
                 $modeByDate[$dateKey] = $rawMode;
             }
