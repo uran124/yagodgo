@@ -17,13 +17,14 @@ class OrderGroupCreationServiceTest extends TestCase
         $this->pdo->exec('CREATE TABLE users (id INTEGER PRIMARY KEY, points_balance INTEGER DEFAULT 0)');
         $this->pdo->exec('CREATE TABLE addresses (id INTEGER PRIMARY KEY, user_id INTEGER, street TEXT)');
         $this->pdo->exec('CREATE TABLE product_types (id INTEGER PRIMARY KEY, name TEXT)');
-        $this->pdo->exec('CREATE TABLE products (id INTEGER PRIMARY KEY, product_type_id INTEGER, variety TEXT, unit TEXT, box_size REAL, box_unit TEXT, image_path TEXT, is_active INTEGER)');
-        $this->pdo->exec('CREATE TABLE purchase_batches (id INTEGER PRIMARY KEY, product_id INTEGER, status TEXT, purchased_at TEXT, box_size_snapshot REAL, box_unit_snapshot TEXT, boxes_free REAL, boxes_total REAL, boxes_reserved REAL, instant_price_per_box REAL, preorder_price_per_box REAL)');
+        $this->pdo->exec('CREATE TABLE products (id INTEGER PRIMARY KEY, product_type_id INTEGER, variety TEXT, unit TEXT, box_size REAL, box_unit TEXT, image_path TEXT, is_active INTEGER, free_stock_boxes REAL DEFAULT 0, reserved_stock_boxes REAL DEFAULT 0, discount_stock_boxes REAL DEFAULT 0, sold_stock_boxes REAL DEFAULT 0, written_off_stock_boxes REAL DEFAULT 0, stock_status TEXT NULL)');
+        $this->pdo->exec('CREATE TABLE purchase_batches (id INTEGER PRIMARY KEY, product_id INTEGER, status TEXT, purchased_at TEXT, box_size_snapshot REAL, box_unit_snapshot TEXT, boxes_free REAL, boxes_total REAL, boxes_reserved REAL, boxes_discount REAL DEFAULT 0, boxes_sold REAL DEFAULT 0, boxes_written_off REAL DEFAULT 0, boxes_remaining REAL DEFAULT 0, instant_price_per_box REAL, preorder_price_per_box REAL)');
         $this->pdo->exec('CREATE TABLE order_groups (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, created_by_user_id INTEGER NULL, created_at TEXT DEFAULT CURRENT_TIMESTAMP, comment TEXT NULL)');
         $this->pdo->exec('CREATE TABLE orders (id INTEGER PRIMARY KEY AUTOINCREMENT, order_group_id INTEGER NULL, user_id INTEGER, address_id INTEGER, slot_id INTEGER NULL, status TEXT, total_amount INTEGER, discount_applied INTEGER DEFAULT 0, points_used INTEGER DEFAULT 0, points_accrued INTEGER DEFAULT 0, coupon_code TEXT NULL, delivery_date TEXT, created_by_user_id INTEGER NULL, created_at TEXT, order_mode TEXT, purchase_batch_id INTEGER NULL, delivery_fee INTEGER DEFAULT 0, delivery_comment TEXT NULL)');
         $this->pdo->exec('CREATE TABLE order_items (id INTEGER PRIMARY KEY AUTOINCREMENT, order_id INTEGER, product_id INTEGER, quantity REAL, boxes REAL, unit_price REAL, stock_mode TEXT, purchase_batch_id INTEGER)');
         $this->pdo->exec('CREATE TABLE points_transactions (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, order_id INTEGER, amount INTEGER, transaction_type TEXT, description TEXT, created_at TEXT)');
         $this->pdo->exec('CREATE TABLE cart_items (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, product_id INTEGER, stock_mode TEXT, purchase_batch_id INTEGER, quantity REAL, unit_price REAL, boxes REAL)');
+        $this->pdo->exec('CREATE TABLE stock_movements (id INTEGER PRIMARY KEY AUTOINCREMENT, purchase_batch_id INTEGER, product_id INTEGER, order_id INTEGER NULL, user_id INTEGER NULL, movement_type TEXT, stock_mode TEXT, boxes_delta REAL, comment TEXT NULL, created_at TEXT DEFAULT CURRENT_TIMESTAMP)');
         $this->pdo->exec("INSERT INTO users (id, points_balance) VALUES (1, 100)");
         $this->pdo->exec("INSERT INTO addresses (id, user_id, street) VALUES (1, 1, 'ул. Тестовая')");
         $this->pdo->exec("INSERT INTO product_types (id, name) VALUES (1, 'Клубника')");
@@ -33,7 +34,7 @@ class OrderGroupCreationServiceTest extends TestCase
 
     public function testCreatesSingleInstantOrder(): void
     {
-        $this->pdo->exec("INSERT INTO purchase_batches (id, product_id, status, purchased_at, box_size_snapshot, box_unit_snapshot, boxes_free, boxes_total, boxes_reserved, instant_price_per_box, preorder_price_per_box) VALUES (1, 10, 'purchased', '2026-07-04', 2, 'кг', 5, 5, 0, 1500, 0)");
+        $this->pdo->exec("INSERT INTO purchase_batches (id, product_id, status, purchased_at, box_size_snapshot, box_unit_snapshot, boxes_free, boxes_total, boxes_reserved, boxes_remaining, instant_price_per_box, preorder_price_per_box) VALUES (1, 10, 'purchased', '2026-07-04', 2, 'кг', 5, 5, 0, 5, 1500, 0)");
 
         $result = $this->service->createForManualOrder(1, 1, null, [
             ['stock_mode' => 'instant', 'purchase_batch_id' => 1, 'boxes' => 2, 'delivery_date' => '2026-07-15'],
@@ -45,13 +46,15 @@ class OrderGroupCreationServiceTest extends TestCase
         $this->assertSame('instant', $order['order_mode']);
         $this->assertSame(3300, (int)$order['total_amount']);
         $this->assertSame(1, (int)$this->pdo->query('SELECT COUNT(*) FROM order_items')->fetchColumn());
+        $this->assertSame(1, (int)$this->pdo->query("SELECT COUNT(*) FROM stock_movements WHERE movement_type = 'sale' AND stock_mode = 'instant'")->fetchColumn());
+        $this->assertSame(3.0, (float)$this->pdo->query('SELECT boxes_free FROM purchase_batches WHERE id = 1')->fetchColumn());
     }
 
     public function testCreatesLinkedInstantAndPreorderOrders(): void
     {
-        $this->pdo->exec("INSERT INTO purchase_batches (id, product_id, status, purchased_at, box_size_snapshot, box_unit_snapshot, boxes_free, boxes_total, boxes_reserved, instant_price_per_box, preorder_price_per_box) VALUES
-            (1, 10, 'purchased', '2026-07-04', 2, 'кг', 5, 5, 0, 1500, 0),
-            (2, 10, 'planned', '2026-07-18', 2, 'кг', 0, 5, 1, 0, 1350)");
+        $this->pdo->exec("INSERT INTO purchase_batches (id, product_id, status, purchased_at, box_size_snapshot, box_unit_snapshot, boxes_free, boxes_total, boxes_reserved, boxes_remaining, instant_price_per_box, preorder_price_per_box) VALUES
+            (1, 10, 'purchased', '2026-07-04', 2, 'кг', 5, 5, 0, 5, 1500, 0),
+            (2, 10, 'planned', '2026-07-18', 2, 'кг', 0, 5, 1, 5, 0, 1350)");
 
         $result = $this->service->createForManualOrder(1, 1, 5, [
             ['stock_mode' => 'instant', 'purchase_batch_id' => 1, 'boxes' => 1, 'delivery_date' => '2026-07-15'],
@@ -64,15 +67,16 @@ class OrderGroupCreationServiceTest extends TestCase
         $this->assertSame(['new', 'reserved'], array_column($orders, 'status'));
         $this->assertSame([300, 300], array_map('intval', array_column($orders, 'delivery_fee')));
         $this->assertSame(3.0, (float)$this->pdo->query('SELECT boxes_reserved FROM purchase_batches WHERE id = 2')->fetchColumn());
+        $this->assertSame(2, (int)$this->pdo->query("SELECT COUNT(*) FROM stock_movements WHERE movement_type IN ('sale', 'reserve')")->fetchColumn());
         $this->assertSame(2, (int)$this->pdo->query('SELECT COUNT(*) FROM points_transactions')->fetchColumn());
     }
 
 
     public function testDeliveryFeeChargedOnceForSameDateAddressAndSlot(): void
     {
-        $this->pdo->exec("INSERT INTO purchase_batches (id, product_id, status, purchased_at, box_size_snapshot, box_unit_snapshot, boxes_free, boxes_total, boxes_reserved, instant_price_per_box, preorder_price_per_box) VALUES
-            (1, 10, 'purchased', '2026-07-04', 2, 'кг', 5, 5, 0, 1500, 0),
-            (2, 10, 'planned', '2026-07-18', 2, 'кг', 0, 5, 0, 0, 1350)");
+        $this->pdo->exec("INSERT INTO purchase_batches (id, product_id, status, purchased_at, box_size_snapshot, box_unit_snapshot, boxes_free, boxes_total, boxes_reserved, boxes_remaining, instant_price_per_box, preorder_price_per_box) VALUES
+            (1, 10, 'purchased', '2026-07-04', 2, 'кг', 5, 5, 0, 5, 1500, 0),
+            (2, 10, 'planned', '2026-07-18', 2, 'кг', 0, 5, 0, 5, 0, 1350)");
 
         $this->service->createForManualOrder(1, 1, 5, [
             ['stock_mode' => 'instant', 'purchase_batch_id' => 1, 'boxes' => 1, 'delivery_date' => '2026-07-18'],
@@ -85,9 +89,9 @@ class OrderGroupCreationServiceTest extends TestCase
 
     public function testFifoCreatesSeparateOrderItemsForOneProduct(): void
     {
-        $this->pdo->exec("INSERT INTO purchase_batches (id, product_id, status, purchased_at, box_size_snapshot, box_unit_snapshot, boxes_free, boxes_total, boxes_reserved, instant_price_per_box, preorder_price_per_box) VALUES
-            (1, 10, 'purchased', '2026-07-01', 2, 'кг', 3, 3, 0, 1400, 0),
-            (2, 10, 'arrived', '2026-07-02', 2, 'кг', 4, 4, 0, 1500, 0)");
+        $this->pdo->exec("INSERT INTO purchase_batches (id, product_id, status, purchased_at, box_size_snapshot, box_unit_snapshot, boxes_free, boxes_total, boxes_reserved, boxes_remaining, instant_price_per_box, preorder_price_per_box) VALUES
+            (1, 10, 'purchased', '2026-07-01', 2, 'кг', 3, 3, 0, 3, 1400, 0),
+            (2, 10, 'arrived', '2026-07-02', 2, 'кг', 4, 4, 0, 4, 1500, 0)");
 
         $result = $this->service->createForManualOrder(1, 1, null, [
             ['stock_mode' => 'instant', 'purchase_batch_id' => 1, 'boxes' => 5, 'delivery_date' => '2026-07-15'],
@@ -101,9 +105,9 @@ class OrderGroupCreationServiceTest extends TestCase
 
     public function testClientCheckoutUsesSharedServiceAllocationsAndDeletesCartRows(): void
     {
-        $this->pdo->exec("INSERT INTO purchase_batches (id, product_id, status, purchased_at, box_size_snapshot, box_unit_snapshot, boxes_free, boxes_total, boxes_reserved, instant_price_per_box, preorder_price_per_box) VALUES
-            (1, 10, 'purchased', '2026-07-04', 2, 'кг', 5, 5, 0, 1500, 0),
-            (2, 10, 'planned', '2026-07-18', 2, 'кг', 0, 5, 0, 0, 1350)");
+        $this->pdo->exec("INSERT INTO purchase_batches (id, product_id, status, purchased_at, box_size_snapshot, box_unit_snapshot, boxes_free, boxes_total, boxes_reserved, boxes_remaining, instant_price_per_box, preorder_price_per_box) VALUES
+            (1, 10, 'purchased', '2026-07-04', 2, 'кг', 5, 5, 0, 5, 1500, 0),
+            (2, 10, 'planned', '2026-07-18', 2, 'кг', 0, 5, 0, 5, 0, 1350)");
         $this->pdo->exec("INSERT INTO cart_items (id, user_id, product_id, stock_mode, purchase_batch_id, quantity, unit_price, boxes) VALUES
             (101, 1, 10, 'instant', 1, 1, 1500, 1),
             (102, 1, 10, 'preorder', 2, 1, 1350, 1)");
@@ -134,7 +138,7 @@ class OrderGroupCreationServiceTest extends TestCase
 
     public function testFailureRollsBackCreatedOrders(): void
     {
-        $this->pdo->exec("INSERT INTO purchase_batches (id, product_id, status, purchased_at, box_size_snapshot, box_unit_snapshot, boxes_free, boxes_total, boxes_reserved, instant_price_per_box, preorder_price_per_box) VALUES (1, 10, 'planned', '2026-07-18', 2, 'кг', 0, 1, 0, 0, 1350)");
+        $this->pdo->exec("INSERT INTO purchase_batches (id, product_id, status, purchased_at, box_size_snapshot, box_unit_snapshot, boxes_free, boxes_total, boxes_reserved, boxes_remaining, instant_price_per_box, preorder_price_per_box) VALUES (1, 10, 'planned', '2026-07-18', 2, 'кг', 0, 1, 0, 1, 0, 1350)");
 
         $this->expectExceptionMessage('На выбранную дату осталось только 1 ящика');
         try {

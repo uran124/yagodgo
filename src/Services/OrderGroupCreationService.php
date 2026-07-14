@@ -36,36 +36,22 @@ class OrderGroupCreationService
         $requestedPoints = max(0, (int)($options['points'] ?? 0));
         $availablePoints = max(0, (int)($options['available_points'] ?? 0));
 
-        $prepared = $this->prepareItems($selectedItems);
-        if ($prepared === []) {
-            throw new RuntimeException('Добавьте товары в заказ');
-        }
-
-        $groups = [];
-        foreach ($prepared as $item) {
-            $key = $item['stock_mode'] . '|' . $item['delivery_date'];
-            if (!isset($groups[$key])) {
-                $groups[$key] = [
-                    'stock_mode' => $item['stock_mode'],
-                    'delivery_date' => $item['delivery_date'],
-                    'items' => [],
-                    'items_total' => 0,
-                ];
-            }
-            $groups[$key]['items'][] = $item;
-            $groups[$key]['items_total'] += (int)round($item['boxes'] * $item['price_per_box']);
-        }
-        $groups = array_values($groups);
-        $amounts = array_map(static fn(array $group): int => (int)$group['items_total'], $groups);
-        $discounts = $useReferralDiscount ? $this->allocator->allocatePercentDiscount($amounts, 10.0) : array_fill(0, count($groups), 0);
-        $afterDiscountAmounts = [];
-        foreach ($amounts as $idx => $amount) {
-            $afterDiscountAmounts[$idx] = max(0, $amount - (int)($discounts[$idx] ?? 0));
-        }
-        $points = $this->allocator->allocatePoints($afterDiscountAmounts, $requestedPoints, $availablePoints, array_sum($afterDiscountAmounts));
-
         try {
             $this->pdo->beginTransaction();
+            $this->lockSelectedBatches($selectedItems);
+            $prepared = $this->prepareItems($selectedItems);
+            if ($prepared === []) {
+                throw new RuntimeException('Добавьте товары в заказ');
+            }
+
+            $groups = $this->groupPreparedItems($prepared);
+            $amounts = array_map(static fn(array $group): int => (int)$group['items_total'], $groups);
+            $discounts = $useReferralDiscount ? $this->allocator->allocatePercentDiscount($amounts, 10.0) : array_fill(0, count($groups), 0);
+            $afterDiscountAmounts = [];
+            foreach ($amounts as $idx => $amount) {
+                $afterDiscountAmounts[$idx] = max(0, $amount - (int)($discounts[$idx] ?? 0));
+            }
+            $points = $this->allocator->allocatePoints($afterDiscountAmounts, $requestedPoints, $availablePoints, array_sum($afterDiscountAmounts));
             $groupId = $this->insertOrderGroup($userId, $createdBy, $deliveryComment);
             $orderIds = [];
             $orders = [];
@@ -140,47 +126,6 @@ class OrderGroupCreationService
             throw new RuntimeException('Заказ не создан. Проверьте клиента');
         }
 
-        $prepared = $this->prepareItems($selectedItems);
-        if ($prepared === []) {
-            throw new RuntimeException('Добавьте товары в заказ');
-        }
-
-        $groupsByKey = [];
-        foreach ($prepared as $item) {
-            $key = $item['stock_mode'] . '|' . $item['delivery_date'];
-            if (!isset($groupsByKey[$key])) {
-                $groupsByKey[$key] = [
-                    'group_key' => $key,
-                    'stock_mode' => $item['stock_mode'],
-                    'delivery_date' => $item['delivery_date'],
-                    'items' => [],
-                    'items_total' => 0,
-                ];
-            }
-            $groupsByKey[$key]['items'][] = $item;
-            $groupsByKey[$key]['items_total'] += (int)round((float)$item['boxes'] * (float)$item['price_per_box']);
-        }
-        $groups = array_values($groupsByKey);
-        $amounts = array_map(static fn(array $group): int => (int)$group['items_total'], $groups);
-        $discountPercent = max(0.0, (float)($options['discount_percent'] ?? 0));
-        $percentDiscounts = $discountPercent > 0 ? $this->allocator->allocatePercentDiscount($amounts, $discountPercent) : array_fill(0, count($groups), 0);
-
-        $afterPercent = [];
-        foreach ($amounts as $idx => $amount) {
-            $afterPercent[$idx] = max(0, (int)$amount - (int)($percentDiscounts[$idx] ?? 0));
-        }
-        $couponPointDiscounts = $this->allocator->allocateFixedAmount($afterPercent, max(0, (int)($options['coupon_points'] ?? 0)));
-        $afterCouponPoints = [];
-        foreach ($afterPercent as $idx => $amount) {
-            $afterCouponPoints[$idx] = max(0, (int)$amount - (int)($couponPointDiscounts[$idx] ?? 0));
-        }
-        $userPoints = $this->allocator->allocatePoints(
-            $afterCouponPoints,
-            max(0, (int)($options['points'] ?? 0)),
-            max(0, (int)($options['available_points'] ?? 0)),
-            array_sum($afterCouponPoints)
-        );
-
         $couponCode = trim((string)($options['coupon_code'] ?? ''));
         $deliveryGroups = is_array($options['delivery_groups'] ?? null) ? $options['delivery_groups'] : [];
         $cartItemIds = array_values(array_unique(array_filter(array_map('intval', (array)($options['cart_item_ids_to_delete'] ?? [])))));
@@ -189,6 +134,33 @@ class OrderGroupCreationService
 
         try {
             $this->pdo->beginTransaction();
+            $this->lockSelectedBatches($selectedItems);
+            $prepared = $this->prepareItems($selectedItems);
+            if ($prepared === []) {
+                throw new RuntimeException('Добавьте товары в заказ');
+            }
+
+            $groups = $this->groupPreparedItems($prepared);
+            $amounts = array_map(static fn(array $group): int => (int)$group['items_total'], $groups);
+            $discountPercent = max(0.0, (float)($options['discount_percent'] ?? 0));
+            $percentDiscounts = $discountPercent > 0 ? $this->allocator->allocatePercentDiscount($amounts, $discountPercent) : array_fill(0, count($groups), 0);
+
+            $afterPercent = [];
+            foreach ($amounts as $idx => $amount) {
+                $afterPercent[$idx] = max(0, (int)$amount - (int)($percentDiscounts[$idx] ?? 0));
+            }
+            $couponPointDiscounts = $this->allocator->allocateFixedAmount($afterPercent, max(0, (int)($options['coupon_points'] ?? 0)));
+            $afterCouponPoints = [];
+            foreach ($afterPercent as $idx => $amount) {
+                $afterCouponPoints[$idx] = max(0, (int)$amount - (int)($couponPointDiscounts[$idx] ?? 0));
+            }
+            $userPoints = $this->allocator->allocatePoints(
+                $afterCouponPoints,
+                max(0, (int)($options['points'] ?? 0)),
+                max(0, (int)($options['available_points'] ?? 0)),
+                array_sum($afterCouponPoints)
+            );
+
             $groupId = $this->insertOrderGroup($userId, $createdBy > 0 ? $createdBy : null, $groupComment);
             $orderIds = [];
             $orders = [];
@@ -278,6 +250,28 @@ class OrderGroupCreationService
         }
     }
 
+
+    /** @param array<int,array<string,mixed>> $selectedItems */
+    private function lockSelectedBatches(array $selectedItems): void
+    {
+        if ((string)$this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) !== 'mysql') {
+            return;
+        }
+        $batchIds = [];
+        foreach ($selectedItems as $item) {
+            $batchId = (int)($item['purchase_batch_id'] ?? 0);
+            if ($batchId > 0) {
+                $batchIds[$batchId] = $batchId;
+            }
+        }
+        if ($batchIds === []) {
+            return;
+        }
+        $placeholders = implode(',', array_fill(0, count($batchIds), '?'));
+        $stmt = $this->pdo->prepare("SELECT id FROM purchase_batches WHERE id IN ($placeholders) FOR UPDATE");
+        $stmt->execute(array_values($batchIds));
+    }
+
     /** @param array<int,array{stock_mode:string,purchase_batch_id:int,boxes:float,delivery_date:string}> $selectedItems @return array<int,array<string,mixed>> */
     private function prepareItems(array $selectedItems): array
     {
@@ -318,6 +312,28 @@ class OrderGroupCreationService
         }
 
         return $prepared;
+    }
+
+
+    /** @param array<int,array<string,mixed>> $prepared @return array<int,array<string,mixed>> */
+    private function groupPreparedItems(array $prepared): array
+    {
+        $groupsByKey = [];
+        foreach ($prepared as $item) {
+            $key = $item['stock_mode'] . '|' . $item['delivery_date'];
+            if (!isset($groupsByKey[$key])) {
+                $groupsByKey[$key] = [
+                    'group_key' => $key,
+                    'stock_mode' => $item['stock_mode'],
+                    'delivery_date' => $item['delivery_date'],
+                    'items' => [],
+                    'items_total' => 0,
+                ];
+            }
+            $groupsByKey[$key]['items'][] = $item;
+            $groupsByKey[$key]['items_total'] += (int)round((float)$item['boxes'] * (float)$item['price_per_box']);
+        }
+        return array_values($groupsByKey);
     }
 
     private function loadInstantProductId(int $batchId): int
@@ -364,14 +380,23 @@ class OrderGroupCreationService
     private function insertItemsAndReserve(int $orderId, array $items): void
     {
         $stmt = $this->pdo->prepare('INSERT INTO order_items (order_id, product_id, quantity, boxes, unit_price, stock_mode, purchase_batch_id) VALUES (?, ?, ?, ?, ?, ?, ?)');
+        $orchestrator = new OrderStockOrchestrator($this->pdo, new StockService($this->pdo));
         foreach ($items as $item) {
             $boxSize = (float)$item['box_size'];
             $boxes = (float)$item['boxes'];
-            $unitPrice = $boxSize > 0 ? (float)$item['price_per_box'] / $boxSize : (float)$item['price_per_box'];
-            $stmt->execute([$orderId, (int)$item['product_id'], $boxes * $boxSize, $boxes, $unitPrice, $item['stock_mode'], (int)$item['purchase_batch_id']]);
-            if ($item['stock_mode'] === 'preorder') {
-                $this->pdo->prepare('UPDATE purchase_batches SET boxes_reserved = boxes_reserved + ? WHERE id = ?')->execute([$boxes, (int)$item['purchase_batch_id']]);
-            }
+            $orchestrator->persistOrderItemWithStock(
+                $stmt,
+                $orderId,
+                (int)$item['product_id'],
+                [
+                    'quantity' => $boxes,
+                    'box_size' => $boxSize,
+                    'unit_price' => (float)$item['price_per_box'],
+                    'purchase_batch_id' => (int)$item['purchase_batch_id'],
+                ],
+                (string)$item['stock_mode'],
+                (string)$item['stock_mode'] === 'preorder'
+            );
         }
     }
 
