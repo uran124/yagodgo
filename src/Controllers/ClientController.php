@@ -906,41 +906,35 @@ public function cart(): void
         }
 
         $purchaseBatchId = (int)($intent['purchase_batch_id'] ?? 0);
-        $batchStmt = $this->pdo->prepare(
-            "SELECT pb.id, COALESCE(NULLIF(pb.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) AS preorder_price_per_box
-             FROM purchase_batches pb
-             JOIN products p ON p.id = pb.product_id
-             WHERE pb.product_id = ?
-               AND pb.id = ?
-               AND pb.status IN ('purchased','arrived')
-               AND COALESCE(NULLIF(pb.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) > 0
-             LIMIT 1"
-        );
-        $batchStmt->execute([$productId, $purchaseBatchId]);
-        $batch = $batchStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        $batch = $purchaseBatchId > 0
+            ? $this->loadConfirmedPreorderBatch($productId, $purchaseBatchId, $requestedBoxes)
+            : (new SellableBatchResolver($this->pdo))->resolveForProduct($productId, 'preorder');
+
+        if (!$batch) {
+            unset($_SESSION['preorder_continue']);
+            $_SESSION['cart_error'] = 'Для предзаказа сейчас нет подтверждённого варианта с финальной ценой.';
+            return;
+        }
+
+        $purchaseBatchId = (int)$batch['id'];
         $priceBox = (float)($intent['offered_price_per_box'] ?? 0);
         if ($priceBox <= 0) {
-            $priceBox = (float)($batch['preorder_price_per_box'] ?? 0);
+            $priceBox = (float)($batch['price_per_box'] ?? 0);
         }
-        if ($purchaseBatchId <= 0 || $priceBox <= 0) {
+        $availableBoxes = (float)($batch['boxes_available'] ?? 0);
+        if ($purchaseBatchId <= 0 || $priceBox <= 0 || $availableBoxes + 0.0001 < $requestedBoxes) {
             unset($_SESSION['preorder_continue']);
             $_SESSION['cart_error'] = 'Для предзаказа сейчас нет подтверждённого варианта с финальной ценой.';
             return;
         }
 
         $desiredDeliveryDate = $this->normalizeDateString($intent['desired_delivery_date'] ?? null);
-        $this->pdo->prepare(
-            "INSERT INTO cart_items (user_id, product_id, quantity, unit_price, stock_mode, purchase_batch_id, boxes, sale_price_per_box)
-             VALUES (?, ?, ?, ?, 'preorder', ?, ?, ?)
-             ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id), quantity = VALUES(quantity), unit_price = VALUES(unit_price), stock_mode = 'preorder', purchase_batch_id = VALUES(purchase_batch_id), boxes = VALUES(boxes), sale_price_per_box = VALUES(sale_price_per_box)"
-        )->execute([$userId, $productId, $requestedBoxes, $priceBox, $purchaseBatchId, $requestedBoxes, $priceBox]);
-        $cartItemId = (int)$this->pdo->lastInsertId();
+        $cartItemId = $this->upsertPreorderCartItem($userId, $productId, $requestedBoxes, $priceBox, $purchaseBatchId);
         if ($cartItemId > 0) {
             $_SESSION['delivery_date'][$cartItemId] = $desiredDeliveryDate ?: PLACEHOLDER_DATE;
         }
 
-        $this->pdo->prepare("UPDATE preorder_intents SET status = 'moved_to_cart', updated_at = NOW() WHERE id = ? AND user_id = ? AND status IN ('confirmed','moved_to_cart')")
-            ->execute([$intentId, $userId]);
+        $this->markPreorderIntentMovedToCart($intentId, $userId);
         $this->logPreorderEvent($intentId, 'moved_to_cart', 'confirmed', 'moved_to_cart');
         $_SESSION['preorder_checkout_intent_id'] = $intentId;
         unset($_SESSION['preorder_continue']);
@@ -949,6 +943,85 @@ public function cart(): void
 
 
 
+    private function markPreorderIntentMovedToCart(int $intentId, int $userId): void
+    {
+        $set = "status = 'moved_to_cart'";
+        if ($this->tableColumnExists('preorder_intents', 'updated_at')) {
+            $set .= ', updated_at = ' . $this->currentTimestampExpression();
+        }
+        $stmt = $this->pdo->prepare("UPDATE preorder_intents SET {$set} WHERE id = ? AND user_id = ? AND status IN ('confirmed','moved_to_cart')");
+        $stmt->execute([$intentId, $userId]);
+    }
+
+    private function tableColumnExists(string $table, string $column): bool
+    {
+        if ((string)$this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite') {
+            $stmt = $this->pdo->query('PRAGMA table_info(' . $table . ')');
+            foreach ($stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [] as $row) {
+                if ((string)($row['name'] ?? '') === $column) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        $stmt = $this->pdo->prepare(
+            'SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?'
+        );
+        $stmt->execute([$table, $column]);
+        return (int)$stmt->fetchColumn() > 0;
+    }
+
+    private function currentTimestampExpression(): string
+    {
+        return (string)$this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite' ? 'CURRENT_TIMESTAMP' : 'NOW()';
+    }
+
+    /** @return array<string,mixed>|null */
+    private function loadConfirmedPreorderBatch(int $productId, int $purchaseBatchId, float $requestedBoxes): ?array
+    {
+        $plannedAvailableExpr = "(COALESCE(NULLIF(pb.boxes_total, 0), pb.boxes_free + pb.boxes_reserved) - pb.boxes_reserved)";
+        $stmt = $this->pdo->prepare(
+            "SELECT pb.id, pb.preorder_price_per_box AS price_per_box, {$plannedAvailableExpr} AS boxes_available
+             FROM purchase_batches pb
+             JOIN products p ON p.id = pb.product_id
+             WHERE pb.product_id = ?
+               AND pb.id = ?
+               AND pb.status = 'planned'
+               AND pb.purchased_at IS NOT NULL
+               AND {$plannedAvailableExpr} >= CAST(? AS REAL)
+               AND pb.preorder_price_per_box > 0
+               AND p.is_active = 1
+             LIMIT 1"
+        );
+        $stmt->execute([$productId, $purchaseBatchId, $requestedBoxes]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
+    private function upsertPreorderCartItem(int $userId, int $productId, float $boxes, float $priceBox, int $purchaseBatchId): int
+    {
+        if ((string)$this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite') {
+            $existing = $this->pdo->prepare("SELECT id FROM cart_items WHERE user_id = ? AND product_id = ? AND stock_mode = 'preorder' AND purchase_batch_id = ? LIMIT 1");
+            $existing->execute([$userId, $productId, $purchaseBatchId]);
+            $cartItemId = (int)($existing->fetchColumn() ?: 0);
+            if ($cartItemId > 0) {
+                $this->pdo->prepare('UPDATE cart_items SET quantity = ?, unit_price = ?, boxes = ?, sale_price_per_box = ? WHERE id = ?')
+                    ->execute([$boxes, $priceBox, $boxes, $priceBox, $cartItemId]);
+                return $cartItemId;
+            }
+            $this->pdo->prepare("INSERT INTO cart_items (user_id, product_id, quantity, unit_price, stock_mode, purchase_batch_id, boxes, sale_price_per_box) VALUES (?, ?, ?, ?, 'preorder', ?, ?, ?)")
+                ->execute([$userId, $productId, $boxes, $priceBox, $purchaseBatchId, $boxes, $priceBox]);
+            return (int)$this->pdo->lastInsertId();
+        }
+
+        $this->pdo->prepare(
+            "INSERT INTO cart_items (user_id, product_id, quantity, unit_price, stock_mode, purchase_batch_id, boxes, sale_price_per_box)
+             VALUES (?, ?, ?, ?, 'preorder', ?, ?, ?)
+             ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id), quantity = VALUES(quantity), unit_price = VALUES(unit_price), stock_mode = 'preorder', purchase_batch_id = VALUES(purchase_batch_id), boxes = VALUES(boxes), sale_price_per_box = VALUES(sale_price_per_box)"
+        )->execute([$userId, $productId, $boxes, $priceBox, $purchaseBatchId, $boxes, $priceBox]);
+        return (int)$this->pdo->lastInsertId();
+    }
 
 
 public function showOrder(int $orderId): void
