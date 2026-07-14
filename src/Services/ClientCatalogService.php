@@ -230,8 +230,18 @@ class ClientCatalogService
         $stmt->execute($params);
 
         $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $preorderDiscountPercent = max(0.0, min(99.0, (float)(get_setting('ui_preorder_discount_percent', '10') ?? '10')));
+        $preorderDiscountFactor = (100.0 - $preorderDiscountPercent) / 100.0;
         foreach ($products as &$product) {
             $this->normalizeProductImagePaths($product);
+            $regularPrice = (float)($product['regular_price'] ?? 0);
+            $expectedPreorderPrice = (float)($product['confirmed_preorder_price_per_box'] ?? 0);
+            if ((int)($product['can_preorder'] ?? 0) === 1 && $expectedPreorderPrice <= 0 && $regularPrice > 0) {
+                $expectedPreorderPrice = round($regularPrice * $preorderDiscountFactor, 0);
+            }
+            $product['regular_price'] = $regularPrice;
+            $product['expected_preorder_price'] = $expectedPreorderPrice;
+            $product['confirmed_preorder_price_per_box'] = $expectedPreorderPrice;
         }
         unset($product);
 
