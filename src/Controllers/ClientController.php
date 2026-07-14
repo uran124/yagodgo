@@ -304,20 +304,21 @@ public function cart(): void
         $userId = $_SESSION['user_id'];
         $this->syncPreorderContinueToCart($userId);
     
-        // 0) Если в GET переданы новые даты для продуктов, сохраняем их в сессии:
+        // 0) Если в GET переданы новые даты, сохраняем их в сессии по cart_item_id.
         if (!empty($_GET['delivery_date']) && is_array($_GET['delivery_date'])) {
-            foreach ($_GET['delivery_date'] as $pid => $date) {
-                // Проверим формат даты, например, YYYY-MM-DD (можно добавить более строгую валидацию)
-                if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
-                    $_SESSION['delivery_date'][(int)$pid] = $date;
+            foreach ($_GET['delivery_date'] as $cartItemId => $date) {
+                if (preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$date)) {
+                    $_SESSION['delivery_date'][(int)$cartItemId] = (string)$date;
                 }
             }
         }
     
-        // 1) Получаем все товары из корзины вместе с основной информацией
+        // 1) Получаем все товары из корзины вместе с основной информацией и партией.
         $stmt = $this->pdo->prepare(
             "SELECT
+                ci.id AS cart_item_id,
                 ci.product_id,
+                ci.purchase_batch_id,
                 ci.quantity,
                 ci.unit_price,
                 ci.stock_mode,
@@ -327,27 +328,44 @@ public function cart(): void
                 t.alias AS type_alias,
                 p.box_size,
                 p.box_unit,
-                p.image_path
+                p.image_path,
+                DATE(pb.purchased_at) AS batch_delivery_date
              FROM cart_items ci
              JOIN products p ON p.id = ci.product_id
              JOIN product_types t ON t.id = p.product_type_id
-             WHERE ci.user_id = ?"
+             LEFT JOIN purchase_batches pb ON pb.id = ci.purchase_batch_id
+             WHERE ci.user_id = ?
+             ORDER BY ci.id ASC"
         );
         $stmt->execute([$userId]);
         $rawItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-        // 2) Прикрепляем к каждому товару дату из сессии (или сегодняшнюю, если до этого не указывалось)
+        // 2) Прикрепляем к каждой строке корзины дату из сессии, сохраняя разные даты одного товара.
+        $todayDate = date('Y-m-d');
         foreach ($rawItems as &$it) {
-            $pid = $it['product_id'];
-            $it['delivery_date'] = $_SESSION['delivery_date'][$pid]
-                                  ?? PLACEHOLDER_DATE;
+            $pid = (int)$it['product_id'];
+            $cartItemId = (int)$it['cart_item_id'];
+            $stockMode = (string)($it['stock_mode'] ?? 'instant');
+            $sessionDate = $_SESSION['delivery_date'][$cartItemId] ?? $_SESSION['delivery_date'][$pid] ?? null;
+            if ($sessionDate !== null && preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$sessionDate)) {
+                $deliveryDate = (string)$sessionDate;
+            } elseif ($stockMode === 'preorder' && !empty($it['batch_delivery_date'])) {
+                $deliveryDate = (string)$it['batch_delivery_date'];
+            } else {
+                $deliveryDate = $todayDate;
+            }
+            if ($stockMode !== 'preorder' && ($deliveryDate === PLACEHOLDER_DATE || $deliveryDate === 'on_demand')) {
+                $deliveryDate = $todayDate;
+            }
+            $it['delivery_date'] = $deliveryDate;
+            $it['cart_group_key'] = $this->cartGroupKey($stockMode, $deliveryDate);
         }
         unset($it);
     
-        // 3) Группируем товары по дате доставки
+        // 3) Группируем товары по режиму + дате доставки.
         $groups = [];
         foreach ($rawItems as $it) {
-            $dateKey = $it['delivery_date'];
+            $dateKey = (string)$it['cart_group_key'];
             if (!isset($groups[$dateKey])) {
                 $groups[$dateKey] = [];
             }

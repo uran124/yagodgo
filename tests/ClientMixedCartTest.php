@@ -35,6 +35,19 @@ final class ClientMixedCartTest extends TestCase
         $this->assertStringContainsString('stockMode . \'|\' . $deliveryDate', $controller);
     }
 
+
+    public function testCheckoutGroupsByCartItemDateAndMode(): void
+    {
+        $controller = file_get_contents(__DIR__ . '/../src/Controllers/ClientController.php');
+
+        $this->assertStringContainsString('ci.id AS cart_item_id', $controller);
+        $this->assertStringContainsString('ci.purchase_batch_id', $controller);
+        $this->assertStringContainsString('DATE(pb.purchased_at) AS batch_delivery_date', $controller);
+        $this->assertStringContainsString('$_SESSION[\'delivery_date\'][$cartItemId]', $controller);
+        $this->assertStringContainsString('$this->cartGroupKey($stockMode, $deliveryDate)', $controller);
+        $this->assertStringContainsString('$this->cartGroupKey($stockMode, (string)$date)', $controller);
+    }
+
     public function testClientCheckoutCreatesLinkedOrderGroup(): void
     {
         $controller = file_get_contents(__DIR__ . '/../src/Controllers/ClientController.php');

@@ -214,13 +214,25 @@ $today = $today ?? date('Y-m-d');
 
 <script>
   const basePath = '<?= $base ?>';
-  const today = '<?= htmlspecialchars($today) ?>';
+  const serverToday = '<?= htmlspecialchars($today) ?>';
+  const clientNow = new Date();
+  const clientToday = clientNow.getFullYear() + '-' + String(clientNow.getMonth() + 1).padStart(2, '0') + '-' + String(clientNow.getDate()).padStart(2, '0');
+  const today = serverToday > clientToday ? serverToday : clientToday;
+  if (document.getElementById('deliveryDate') && document.getElementById('deliveryDate').value < today) document.getElementById('deliveryDate').value = today;
   const state = { selectedClientCanReferral: true, deliveryFee: 300 };
   const steps = ['step1','step2','step3','step4'];
 
   const rub = value => Number(value || 0).toFixed(0) + ' ₽';
   const formatDate = iso => iso ? iso.split('-').reverse().slice(0,2).join('.') : '';
-  const addDays = (iso, days) => { const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + days); return d.toISOString().slice(0, 10); };
+  const addDays = (iso, days) => {
+    const parts = String(iso || today).split('-').map(Number);
+    const d = new Date(parts[0], (parts[1] || 1) - 1, parts[2] || 1);
+    d.setDate(d.getDate() + days);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + day;
+  };
   const escapeHtml = text => String(text || '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c]));
 
   function showStep(stepId) {
@@ -300,11 +312,12 @@ $today = $today ?? date('Y-m-d');
     const groups = groupedSelected();
     if (groups.length === 0) { box.innerHTML = '<div class="rounded-xl bg-slate-900/70 p-3 text-xs text-slate-400">Добавьте товары на предыдущем шаге.</div>'; return; }
     box.innerHTML = groups.map((group, i) => {
-      const baseDate = group.mode === 'preorder' ? group.date : today;
+      const baseDate = (group.mode === 'preorder' && group.date > today) ? group.date : today;
       const options = [0, 1, 2].map(offset => {
         const value = addDays(baseDate, offset);
         const checked = value === group.date ? 'checked' : '';
-        return '<label class="rounded-xl border border-slate-600 bg-slate-950 px-3 py-2 text-center text-xs"><input class="delivery-group-date sr-only" type="radio" name="delivery_group_date_' + i + '" data-mode="' + group.mode + '" data-old-date="' + group.date + '" value="' + value + '" ' + checked + '> ' + formatDate(value) + '</label>';
+        const active = value === group.date ? ' border-pink-400 bg-pink-500/20 text-white' : ' border-slate-600 bg-slate-950 text-slate-100';
+        return '<label class="cursor-pointer rounded-xl border px-3 py-2 text-center text-xs transition' + active + '"><input class="delivery-group-date sr-only" type="radio" name="delivery_group_date_' + i + '" data-mode="' + group.mode + '" data-old-date="' + group.date + '" value="' + value + '" ' + checked + '> ' + formatDate(value) + '</label>';
       }).join('');
       return '<div class="rounded-2xl border border-slate-700 bg-slate-900/70 p-3"><div class="mb-2 flex items-center justify-between gap-2"><div><div class="text-sm font-semibold">' + (group.mode === 'preorder' ? 'Под заказ' : 'В наличии') + '</div><div class="text-xs text-slate-400">Базовая дата: ' + formatDate(baseDate) + ' · товаров: ' + group.items.length + '</div></div><div class="text-xs text-slate-300">Доставка: ' + rub(isPickup() ? 0 : state.deliveryFee) + '</div></div><div class="grid grid-cols-3 gap-2">' + options + '</div></div>';
     }).join('');
