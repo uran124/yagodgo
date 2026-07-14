@@ -53,4 +53,26 @@ class OrdersControllerTest extends TestCase
 
         $this->assertSame(6, $method->invoke($controller));
     }
+
+
+    public function testAdminDeliveryDatePickerUsesLocalDatesAndClickableLabels(): void
+    {
+        $source = file_get_contents(__DIR__ . '/../src/Views/admin/orders/create.php');
+
+        $this->assertStringContainsString('clientToday', $source);
+        $this->assertStringContainsString('serverToday > clientToday ? serverToday : clientToday', $source);
+        $this->assertStringContainsString('new Date(parts[0], (parts[1] || 1) - 1, parts[2] || 1)', $source);
+        $this->assertStringContainsString('cursor-pointer rounded-xl border', $source);
+        $this->assertStringNotContainsString('toISOString().slice(0, 10)', $source);
+    }
+
+    public function testManualStoreDoesNotExposeLegacyMixedOrderErrors(): void
+    {
+        $source = file_get_contents(__DIR__ . '/../src/Controllers/OrdersController.php');
+
+        $this->assertStringNotContainsString('mixed_mode', $source);
+        $this->assertStringNotContainsString('mixed_delivery_date', $source);
+        $this->assertStringNotContainsString("\$_POST['batch_items']", $source);
+    }
+
 }

@@ -16,6 +16,7 @@ use App\Services\DeliveryPricingService;
 use App\Services\OrderStatusHistoryService;
 use App\Services\OrderReturnService;
 use App\Services\OrderTotalsService;
+use App\Services\OrderGroupCreationService;
 use App\Services\ProductionJobService;
 
 class OrdersController
@@ -328,6 +329,39 @@ class OrdersController
     }
 
     // Сохранить заказ (POST, админ)
+    /**
+     * @param array<string,mixed> $items
+     * @param array<string,mixed> $deliveryDates
+     * @return array<int,array{stock_mode:string,purchase_batch_id:int,boxes:float,delivery_date:string}>
+     */
+    private function normalizeManualGroupedItems(array $items, array $deliveryDates, string $fallbackDate): array
+    {
+        $normalized = [];
+        foreach (['instant', 'preorder'] as $mode) {
+            if (!isset($items[$mode]) || !is_array($items[$mode])) {
+                continue;
+            }
+            foreach ($items[$mode] as $batchId => $boxesRaw) {
+                $boxes = (float)str_replace(',', '.', (string)$boxesRaw);
+                if ($boxes <= 0) {
+                    continue;
+                }
+                $date = $fallbackDate;
+                if (isset($deliveryDates[$mode]) && is_array($deliveryDates[$mode]) && isset($deliveryDates[$mode][$batchId])) {
+                    $date = (string)$deliveryDates[$mode][$batchId];
+                }
+                $date = substr($date, 0, 10);
+                $normalized[] = [
+                    'stock_mode' => $mode,
+                    'purchase_batch_id' => (int)$batchId,
+                    'boxes' => $boxes,
+                    'delivery_date' => $date,
+                ];
+            }
+        }
+        return $normalized;
+    }
+
     public function storeManual(): void
     {
         $userId = (int)($_POST['user_id'] ?? 0);
@@ -433,313 +467,51 @@ class OrdersController
         $deliveryDate = $_POST['delivery_date'] ?? null;
         $couponCode = trim($_POST['coupon_code'] ?? '');
 
-        $items = $_POST['batch_items'] ?? [];
-        if (!$items) {
-            header('Location: ' . $this->basePath() . '/create?error=' . urlencode('empty'));
-            exit;
-        }
-
-        $selectedMode = $_POST['stock_mode'] ?? '';
-        if (!in_array($selectedMode, ['instant', 'preorder'], true)) {
-            header('Location: ' . $this->basePath() . '/create?error=' . urlencode('stock_mode'));
-            exit;
-        }
-
-        $batchIds = [];
-        foreach ($items as $batchId => $boxes) {
-            if ((float)$boxes > 0) {
-                $batchIds[] = (int)$batchId;
-            }
-        }
-        if ($batchIds === []) {
-            header('Location: ' . $this->basePath() . '/create?error=' . urlencode('empty'));
-            exit;
-        }
-
-        $placeholders = implode(',', array_fill(0, count($batchIds), '?'));
-        $stmtBatches = $this->pdo->prepare(
-            "SELECT pb.id AS purchase_batch_id, pb.product_id, pb.status, pb.purchased_at,\n" .
-            "       pb.boxes_free, pb.boxes_total, pb.boxes_reserved,\n" .
-            "       pb.instant_price_per_box, pb.preorder_price_per_box,\n" .
-            "       p.price AS product_price_per_box, p.preorder_price_per_box AS product_preorder_price_per_box,\n" .
-            "       COALESCE(NULLIF(pb.box_size_snapshot, 0), NULLIF(p.box_size, 0), 1) AS box_size\n" .
-            "FROM purchase_batches pb\n" .
-            "JOIN products p ON p.id = pb.product_id\n" .
-            "WHERE pb.id IN ({$placeholders})"
-        );
-        $stmtBatches->execute($batchIds);
-        $batchRows = [];
-        foreach ($stmtBatches->fetchAll(PDO::FETCH_ASSOC) as $row) {
-            $batchRows[(int)$row['purchase_batch_id']] = $row;
-        }
-
-        $total = 0;
-        $itemsPrepared = [];
-        $dateBases = [];
-        foreach ($batchIds as $batchId) {
-            if (!isset($batchRows[$batchId])) {
-                header('Location: ' . $this->basePath() . '/create?error=' . urlencode('batch'));
-                exit;
-            }
-            $boxes = (float)$items[$batchId];
-            $batch = $batchRows[$batchId];
-            $isPreorderBatch = ($batch['status'] ?? '') === 'planned';
-            $mode = $isPreorderBatch ? 'preorder' : 'instant';
-            if ($mode !== $selectedMode) {
-                header('Location: ' . $this->basePath() . '/create?error=' . urlencode('mixed_mode'));
-                exit;
-            }
-            if ($mode === 'instant' && !in_array($batch['status'], ['purchased', 'arrived'], true)) {
-                header('Location: ' . $this->basePath() . '/create?error=' . urlencode('batch_status'));
-                exit;
-            }
-            $availableBoxes = $mode === 'preorder'
-                ? max(0.0, (float)($batch['boxes_total'] ?: ((float)$batch['boxes_free'] + (float)$batch['boxes_reserved'])) - (float)$batch['boxes_reserved'])
-                : (float)$batch['boxes_free'];
-            if ($boxes > $availableBoxes) {
-                header('Location: ' . $this->basePath() . '/create?error=' . urlencode('stock'));
+        if (isset($_POST['items']) && is_array($_POST['items'])) {
+            $selectedItems = $this->normalizeManualGroupedItems($_POST['items'], $_POST['delivery_dates'] ?? [], (string)$deliveryDate);
+            if ($selectedItems === []) {
+                header('Location: ' . $this->basePath() . '/create?error=' . urlencode('Добавьте товары в заказ'));
                 exit;
             }
 
-            $pricePerBox = (float)($mode === 'preorder' ? $batch['preorder_price_per_box'] : $batch['instant_price_per_box']);
-            if ($mode === 'preorder' && $pricePerBox <= 0) {
-                $pricePerBox = (float)(($batch['product_preorder_price_per_box'] ?? 0) ?: ($batch['product_price_per_box'] ?? 0));
-            }
-            if ($pricePerBox <= 0) {
-                header('Location: ' . $this->basePath() . '/create?error=' . urlencode('price'));
-                exit;
-            }
-            $total += $boxes * $pricePerBox;
-            $batchDate = substr((string)($batch['purchased_at'] ?? ''), 0, 10);
-            $dateBases[] = $mode === 'preorder' && $batchDate !== '' ? $batchDate : ($deliveryDate !== '' ? $deliveryDate : date('Y-m-d'));
-            $itemsPrepared[] = [
-                'product_id' => (int)$batch['product_id'],
-                'purchase_batch_id' => $batchId,
-                'boxes' => $boxes,
-                'box_size' => (float)$batch['box_size'],
-                'price_per_box' => $pricePerBox,
-                'stock_mode' => $mode,
-            ];
-        }
-
-        if (count(array_unique($dateBases)) > 1) {
-            header('Location: ' . $this->basePath() . '/create?error=' . urlencode('mixed_delivery_date'));
-            exit;
-        }
-
-        $baseDate = min($dateBases);
-        $allowedDates = [];
-        for ($i = 0; $i <= 2; $i++) {
-            $allowedDates[] = date('Y-m-d', strtotime($baseDate . " +{$i} day"));
-        }
-        if (!in_array($deliveryDate, $allowedDates, true)) {
-            header('Location: ' . $this->basePath() . '/create?error=' . urlencode('delivery_date'));
-            exit;
-        }
-
-        if ($referralDiscount) {
-            $total = (int)floor($total * 0.9);
-            if ($hasUsedReferral === 0) {
-                $this->pdo->prepare("UPDATE users SET has_used_referral_coupon = 1 WHERE id = ?")->execute([$userId]);
-            }
-        }
-
-        $pointsUsed = 0;
-        $usePoints = (int)($_POST['use_points'] ?? 0) === 1;
-        if (!$isNew && $usePoints) {
-            $stmtPoints = $this->pdo->prepare("SELECT points_balance FROM users WHERE id = ?");
-            $stmtPoints->execute([$userId]);
-            $balance = (int)$stmtPoints->fetchColumn();
-            $pointsUsed = min($balance, (int)($_POST['points'] ?? 0), (int)$total);
-            $total -= $pointsUsed;
-        }
-
-        $deliveryComment = trim((string)($_POST['delivery_comment'] ?? ''));
-        $deliveryDistanceManualRaw = str_replace(',', '.', trim((string)($_POST['delivery_distance_km_manual'] ?? '')));
-        $selectedLatRaw = str_replace(',', '.', trim((string)($_POST['selected_lat'] ?? '')));
-        $selectedLngRaw = str_replace(',', '.', trim((string)($_POST['selected_lng'] ?? '')));
-        $selectedAddressRaw = trim((string)($_POST['selected_address'] ?? ''));
-        $selectedAddressPayload = [];
-        if ($selectedLatRaw !== '' && $selectedLngRaw !== '' && is_numeric($selectedLatRaw) && is_numeric($selectedLngRaw)) {
-            $selectedAddressPayload = [
-                'selected_lat' => $selectedLatRaw,
-                'selected_lng' => $selectedLngRaw,
-                'selected_address' => $selectedAddressRaw,
-            ];
-        }
-        $deliveryFee = 300;
-        $deliveryDistanceKm = null;
-        $deliveryDistanceM = null;
-        $deliveryTariffZoneId = null;
-        $deliveryPricingSource = 'pending_review';
-        $deliveryLat = null;
-        $deliveryLng = null;
-        $deliveryNormalizedAddress = null;
-        $deliveryDistanceError = null;
-
-        if ($isPickup) {
-            $deliveryFee = 0;
-            $deliveryPricingSource = 'pickup';
-        } else {
-            $addressForDelivery = '';
-            if ($isNew) {
-                $addressForDelivery = $address;
-            } elseif (($addrInput ?? null) === 'new') {
-                $addressForDelivery = $newStreet ?? '';
-            } elseif (!empty($addressId)) {
-                $stmtAddress = $this->pdo->prepare('SELECT street FROM addresses WHERE id = ? AND user_id = ?');
-                $stmtAddress->execute([$addressId, $userId]);
-                $addressForDelivery = (string)($stmtAddress->fetchColumn() ?: '');
+            $pointsBalance = 0;
+            $usePoints = (int)($_POST['use_points'] ?? 0) === 1;
+            if (!$isNew && $usePoints) {
+                $stmtPoints = $this->pdo->prepare('SELECT points_balance FROM users WHERE id = ?');
+                $stmtPoints->execute([$userId]);
+                $pointsBalance = (int)$stmtPoints->fetchColumn();
             }
 
             try {
-                $deliveryPricing = new DeliveryPricingService($this->pdo);
-                if ($deliveryDistanceManualRaw !== '' && is_numeric($deliveryDistanceManualRaw)) {
-                    $deliveryDistanceKm = max(0.0, (float)$deliveryDistanceManualRaw);
-                    $deliveryDistanceM = (int)round($deliveryDistanceKm * 1000);
-                    $pricing = $deliveryPricing->calculatePriceForDistance($deliveryDistanceKm);
-                    $deliveryFee = (int)$pricing['price_rub'];
-                    $deliveryTariffZoneId = is_array($pricing['zone']) && isset($pricing['zone']['id']) ? (int)$pricing['zone']['id'] : null;
-                    $deliveryPricingSource = 'manual';
-                    $deliveryNormalizedAddress = $addressForDelivery;
-                } elseif ($addressForDelivery !== '') {
-                    $deliveryCalc = $deliveryPricing->calculateForAddress($addressForDelivery, null, $selectedAddressPayload);
-                    $deliveryFee = (int)($deliveryCalc['delivery_fee'] ?? $deliveryCalc['price_rub'] ?? 300);
-                    $deliveryDistanceKm = isset($deliveryCalc['distance_km']) && $deliveryCalc['distance_km'] !== '' ? (float)$deliveryCalc['distance_km'] : null;
-                    $deliveryDistanceM = isset($deliveryCalc['distance_m']) && $deliveryCalc['distance_m'] !== '' ? (int)round((float)$deliveryCalc['distance_m']) : null;
-                    $deliveryTariffZoneId = $deliveryCalc['delivery_tariff_zone_id'] ?? null;
-                    $deliveryPricingSource = (string)($deliveryCalc['delivery_pricing_source'] ?? $deliveryCalc['pricing_source'] ?? '');
-                    $deliveryLat = $deliveryCalc['lat'] ?? null;
-                    $deliveryLng = $deliveryCalc['lng'] ?? null;
-                    $deliveryNormalizedAddress = $deliveryCalc['normalized_address'] ?? $deliveryCalc['address'] ?? $addressForDelivery;
+                $service = new OrderGroupCreationService($this->pdo);
+                $service->createForManualOrder(
+                    $userId,
+                    (int)$addressId,
+                    $slotId !== null && $slotId !== '' ? (int)$slotId : null,
+                    $selectedItems,
+                    [
+                        'created_by_user_id' => (int)($_SESSION['user_id'] ?? 0),
+                        'coupon_code' => $couponCode,
+                        'delivery_fee' => (int)($_POST['delivery_fee_preview'] ?? 300),
+                        'delivery_comment' => trim((string)($_POST['delivery_comment'] ?? '')),
+                        'referral_discount' => $referralDiscount,
+                        'points' => $usePoints ? (int)($_POST['points'] ?? 0) : 0,
+                        'available_points' => $pointsBalance,
+                    ]
+                );
+                if ($referralDiscount && $hasUsedReferral === 0) {
+                    $this->pdo->prepare('UPDATE users SET has_used_referral_coupon = 1 WHERE id = ?')->execute([$userId]);
                 }
+                header('Location: ' . $this->basePath());
+                exit;
             } catch (\Throwable $e) {
-                $deliveryFee = 300;
-                $deliveryPricingSource = 'pending_review';
-                $deliveryDistanceError = $e->getMessage();
+                error_log('[manual_order_group] ' . $e->getMessage());
+                header('Location: ' . $this->basePath() . '/create?error=' . urlencode($e->getMessage() ?: 'Заказ не создан. Попробуйте ещё раз'));
+                exit;
             }
         }
 
-        $shippingFee = $deliveryFee;
-        $total += $shippingFee;
-
-        if (!empty($addressId) && !$isPickup) {
-            $addressSet = [];
-            $addressValues = [];
-            foreach ([
-                'last_checkout_comment' => $deliveryComment,
-                'delivery_distance_km' => $deliveryDistanceKm,
-                'delivery_distance_m' => $deliveryDistanceM,
-                'delivery_lat' => $deliveryLat,
-                'delivery_lng' => $deliveryLng,
-                'delivery_normalized_address' => $deliveryNormalizedAddress,
-                'delivery_distance_provider' => $deliveryPricingSource,
-                'delivery_distance_error' => $deliveryDistanceError,
-            ] as $column => $value) {
-                if ($this->columnExists('addresses', $column)) {
-                    $addressSet[] = $column . ' = ?';
-                    $addressValues[] = $value;
-                }
-            }
-            if ($this->columnExists('addresses', 'delivery_distance_calculated_at')) {
-                $addressSet[] = 'delivery_distance_calculated_at = NOW()';
-            }
-            if ($addressSet) {
-                $addressValues[] = $addressId;
-                $addressValues[] = $userId;
-                $this->pdo->prepare('UPDATE addresses SET ' . implode(', ', $addressSet) . ' WHERE id = ? AND user_id = ?')
-                    ->execute($addressValues);
-            }
-        }
-
-        $createdByUserId = (int)($_SESSION['user_id'] ?? 0);
-        $orderStatus = $selectedMode === 'preorder' ? 'reserved' : 'new';
-        $orderMode = $selectedMode === 'preorder' ? 'preorder' : 'instant';
-        $orderBatchId = count($itemsPrepared) === 1 ? $itemsPrepared[0]['purchase_batch_id'] : null;
-
-        try {
-            $this->pdo->beginTransaction();
-            $orderColumns = ['user_id', 'address_id', 'slot_id', 'status', 'total_amount', 'discount_applied', 'points_used', 'points_accrued', 'coupon_code', 'delivery_date', 'created_by_user_id', 'created_at'];
-            $orderValues = [$userId, $addressId, $slotId, $orderStatus, $total, 0, $pointsUsed, 0, $couponCode, $deliveryDate, $createdByUserId > 0 ? $createdByUserId : null];
-            $orderPlaceholders = ['?', '?', '?', '?', '?', '?', '?', '?', '?', '?', '?', 'NOW()'];
-            if ($this->columnExists('orders', 'order_mode')) {
-                $orderColumns[] = 'order_mode';
-                $orderValues[] = $orderMode;
-                $orderPlaceholders[] = '?';
-            }
-            if ($this->columnExists('orders', 'purchase_batch_id')) {
-                $orderColumns[] = 'purchase_batch_id';
-                $orderValues[] = $orderBatchId;
-                $orderPlaceholders[] = '?';
-            }
-            foreach ([
-                'delivery_fee' => $deliveryFee,
-                'delivery_distance_km' => $deliveryDistanceKm,
-                'delivery_tariff_zone_id' => $deliveryTariffZoneId,
-                'delivery_pricing_source' => $deliveryPricingSource,
-                'delivery_comment' => $deliveryComment,
-            ] as $column => $value) {
-                if ($this->columnExists('orders', $column)) {
-                    $orderColumns[] = $column;
-                    $orderValues[] = $value;
-                    $orderPlaceholders[] = '?';
-                }
-            }
-
-            $stmt = $this->pdo->prepare(
-                'INSERT INTO orders (' . implode(', ', $orderColumns) . ') VALUES (' . implode(', ', $orderPlaceholders) . ')'
-            );
-            $stmt->execute($orderValues);
-            $orderId = (int)$this->pdo->lastInsertId();
-
-            $stmtItem = $this->pdo->prepare(
-                "INSERT INTO order_items (order_id, product_id, quantity, boxes, unit_price, stock_mode, purchase_batch_id) VALUES (?, ?, ?, ?, ?, ?, ?)"
-            );
-            $orderStock = new OrderStockOrchestrator($this->pdo, new StockService($this->pdo));
-            foreach ($itemsPrepared as $data) {
-                $itemPayload = [
-                    'quantity' => $data['boxes'],
-                    'box_size' => $data['box_size'],
-                    'unit_price' => $data['price_per_box'],
-                    'purchase_batch_id' => $data['purchase_batch_id'],
-                ];
-                if ($selectedMode === 'preorder') {
-                    $orderStock->persistOrderItemWithStock(
-                        $stmtItem,
-                        $orderId,
-                        $data['product_id'],
-                        $itemPayload,
-                        $data['stock_mode'],
-                        true
-                    );
-                } else {
-                    $orderStock->persistOrderItemOnly(
-                        $stmtItem,
-                        $orderId,
-                        $data['product_id'],
-                        $itemPayload,
-                        $data['stock_mode']
-                    );
-                }
-            }
-            $this->pdo->commit();
-        } catch (\Throwable $e) {
-            if ($this->pdo->inTransaction()) {
-                $this->pdo->rollBack();
-            }
-            header('Location: ' . $this->basePath() . '/create?error=' . urlencode($e->getMessage()));
-            exit;
-        }
-
-        if ($pointsUsed > 0) {
-            $this->pdo->prepare("UPDATE users SET points_balance = points_balance - ? WHERE id = ?")->execute([$pointsUsed, $userId]);
-            $desc = "Списание {$pointsUsed} клубничек за заказ #{$orderId}";
-            $this->pdo->prepare(
-                "INSERT INTO points_transactions (user_id, order_id, amount, transaction_type, description, created_at) VALUES (?, ?, ?, 'usage', ?, NOW())"
-            )->execute([$userId, $orderId, -$pointsUsed, $desc]);
-        }
-
-        header('Location: ' . $this->basePath());
+        header('Location: ' . $this->basePath() . '/create?error=' . urlencode('Добавьте товары в заказ'));
         exit;
     }
 
