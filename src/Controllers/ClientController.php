@@ -1702,12 +1702,19 @@ public function cancelReservedOrder(int $orderId): void
             return;
         }
 
-        $productStmt = $this->pdo->prepare("SELECT id FROM products WHERE id = ? AND is_active = 1 LIMIT 1");
+        $productStmt = $this->pdo->prepare("SELECT id, seller_id, price, preorder_price_per_box FROM products WHERE id = ? AND is_active = 1 LIMIT 1");
         $productStmt->execute([$productId]);
-        if (!$productStmt->fetchColumn()) {
+        $product = $productStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$product) {
             http_response_code(404);
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode(['ok' => false, 'error' => 'Товар не найден'], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+        if (!empty($product['seller_id'])) {
+            http_response_code(422);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => false, 'error' => 'Предзаказ для этого товара недоступен'], JSON_UNESCAPED_UNICODE);
             return;
         }
 

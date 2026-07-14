@@ -216,6 +216,51 @@
     .embla__slide {
       position: relative;
     }
+    .product-mobile-slide {
+      width: 66vw;
+    }
+    .catalog-products-list {
+      display: flex;
+      gap: 1rem;
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
+      scroll-snap-type: x proximity;
+    }
+    .catalog-products-list > .product-card {
+      flex: 0 0 66vw;
+      scroll-snap-align: start;
+    }
+    @media (max-width: 639px) {
+      .product-mobile-carousel .embla__viewport {
+        overflow-x: auto;
+        scroll-behavior: smooth;
+        scroll-snap-type: x proximity;
+        -webkit-overflow-scrolling: touch;
+      }
+      .product-mobile-carousel .embla__slide {
+        scroll-snap-align: start;
+      }
+    }
+    @media (min-width: 640px) {
+      .product-mobile-slide {
+        width: 50%;
+      }
+      .catalog-products-list {
+        display: grid;
+        gap: 1.5rem;
+        overflow-x: visible;
+        padding-bottom: 0;
+        scroll-snap-type: none;
+      }
+      .catalog-products-list > .product-card {
+        flex-basis: auto;
+      }
+    }
+    @media (min-width: 768px) {
+      .product-mobile-slide {
+        width: 350px;
+      }
+    }
     .embla--fade {
       position: relative;
     }
