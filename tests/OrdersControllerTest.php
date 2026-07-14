@@ -53,4 +53,14 @@ class OrdersControllerTest extends TestCase
 
         $this->assertSame(6, $method->invoke($controller));
     }
+
+    public function testManualStoreDoesNotExposeLegacyMixedOrderErrors(): void
+    {
+        $source = file_get_contents(__DIR__ . '/../src/Controllers/OrdersController.php');
+
+        $this->assertStringNotContainsString('mixed_mode', $source);
+        $this->assertStringNotContainsString('mixed_delivery_date', $source);
+        $this->assertStringNotContainsString("\$_POST['batch_items']", $source);
+    }
+
 }
