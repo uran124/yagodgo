@@ -86,9 +86,82 @@ class ClientCatalogService
             [$today]
         );
 
+        $this->assignCatalogSections($products);
+
+        return [
+            'products' => $products,
+            'types' => $this->fetchActiveTypes(),
+        ];
+    }
+
+    /**
+     * Return card-ready products for one public product type page.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getProductsByTypeId(int $typeId): array
+    {
+        if ($typeId <= 0) {
+            return [];
+        }
+
+        $products = $this->fetchProducts(
+            'p.product_type_id = ? AND p.is_active = 1',
+            'p.id DESC',
+            [$typeId]
+        );
+        $this->assignCatalogSections($products);
+
+        return $products;
+    }
+
+    /**
+     * Return card-ready products for material/article recommendations while
+     * preserving the order selected by the content editor.
+     *
+     * @param array<int, int> $productIds
+     * @return array<int, array<string, mixed>>
+     */
+    public function getProductsByIds(array $productIds): array
+    {
+        $productIds = array_values(array_unique(array_filter(
+            array_map('intval', $productIds),
+            static fn (int $id): bool => $id > 0
+        )));
+        if ($productIds === []) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($productIds), '?'));
+        $products = $this->fetchProducts(
+            "p.id IN ({$placeholders}) AND p.is_active = 1",
+            'p.id DESC',
+            $productIds
+        );
+        $this->assignCatalogSections($products);
+
+        $indexed = [];
+        foreach ($products as $product) {
+            $indexed[(int)($product['id'] ?? 0)] = $product;
+        }
+
+        $ordered = [];
+        foreach ($productIds as $productId) {
+            if (isset($indexed[$productId])) {
+                $ordered[] = $indexed[$productId];
+            }
+        }
+
+        return $ordered;
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $products
+     */
+    private function assignCatalogSections(array &$products): void
+    {
         foreach ($products as &$product) {
             $isSeller = !empty($product['seller_id']);
-
             $hasPlannedBatch = (int)($product['has_planned_batch'] ?? 0) === 1;
             $hasInStockBatch = (int)($product['has_in_stock_batch'] ?? 0) === 1;
             $hasDiscountBatch = (int)($product['has_discount_batch'] ?? 0) === 1;
@@ -106,11 +179,6 @@ class ClientCatalogService
             }
         }
         unset($product);
-
-        return [
-            'products' => $products,
-            'types' => $this->fetchActiveTypes(),
-        ];
     }
 
     /**
@@ -142,6 +210,9 @@ class ClientCatalogService
             "       p.origin_country,\n" .
             "       p.box_size,\n" .
             "       p.box_unit,\n" .
+            "       p.requires_production,\n" .
+            "       p.price AS product_base_price,\n" .
+            "       p.instant_price_per_box AS product_instant_price_per_box,\n" .
             "       CASE\n" .
             "         WHEN COALESCE(pb.boxes_discount, 0) > 0 AND COALESCE(pb.discount_price_per_box, 0) > 0 THEN pb.discount_price_per_box\n" .
             "         WHEN pb.status = 'planned' THEN COALESCE(NULLIF(pb.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0)\n" .
@@ -163,10 +234,15 @@ class ClientCatalogService
             "       COALESCE(availability.has_planned_batch, 0) AS has_planned_batch,\n" .
             "       COALESCE(availability.has_in_stock_batch, 0) AS has_in_stock_batch,\n" .
             "       COALESCE(availability.has_discount_batch, 0) AS has_discount_batch,\n" .
+            "       COALESCE(availability.has_any_purchase_batch, 0) AS has_any_purchase_batch,\n" .
             "       DATE(availability.next_planned_date) AS next_planned_date,\n" .
             "       instant_pb.id AS instant_purchase_batch_id,\n" .
             "       COALESCE(instant_pb.boxes_free, 0) AS instant_available_boxes,\n" .
             "       COALESCE(instant_pb.instant_price_per_box, 0) AS instant_price_per_box,\n" .
+            "       discount_pb.id AS discount_purchase_batch_id,\n" .
+            "       COALESCE(discount_pb.boxes_discount, 0) AS discount_available_boxes,\n" .
+            "       COALESCE(discount_pb.discount_price_per_box, 0) AS available_discount_price_per_box,\n" .
+            "       COALESCE(latest_price_pb.instant_price_per_box, 0) AS latest_regular_price_per_box,\n" .
             "       preorder_pb.id AS preorder_purchase_batch_id,\n" .
             "       DATE(preorder_pb.purchased_at) AS preorder_availability_date,\n" .
             "       (COALESCE(NULLIF(preorder_pb.boxes_total, 0), preorder_pb.boxes_free + preorder_pb.boxes_reserved) - preorder_pb.boxes_reserved) AS preorder_available_boxes,\n" .
@@ -179,6 +255,7 @@ class ClientCatalogService
             "           MAX(CASE WHEN pbx.status = 'planned' AND pbx.purchased_at IS NOT NULL AND (COALESCE(NULLIF(pbx.boxes_total, 0), pbx.boxes_free + pbx.boxes_reserved) - pbx.boxes_reserved) > 0 AND pbx.preorder_price_per_box > 0 THEN 1 ELSE 0 END) AS has_planned_batch,\n" .
             "           MAX(CASE WHEN pbx.status IN ('purchased', 'arrived') AND pbx.boxes_free > 0 THEN 1 ELSE 0 END) AS has_in_stock_batch,\n" .
             "           MAX(CASE WHEN pbx.status IN ('purchased', 'arrived') AND pbx.boxes_discount > 0 THEN 1 ELSE 0 END) AS has_discount_batch,\n" .
+            "           MAX(1) AS has_any_purchase_batch,\n" .
             "           MIN(CASE WHEN pbx.status = 'planned' AND pbx.purchased_at IS NOT NULL AND (COALESCE(NULLIF(pbx.boxes_total, 0), pbx.boxes_free + pbx.boxes_reserved) - pbx.boxes_reserved) > 0 AND pbx.preorder_price_per_box > 0 THEN pbx.purchased_at ELSE NULL END) AS next_planned_date\n" .
             "    FROM purchase_batches pbx\n" .
             "    GROUP BY pbx.product_id\n" .
@@ -191,6 +268,24 @@ class ClientCatalogService
             "      AND pb_i.boxes_free > 0\n" .
             "      AND pb_i.instant_price_per_box > 0\n" .
             "    ORDER BY pb_i.purchased_at ASC, pb_i.id ASC\n" .
+            "    LIMIT 1\n" .
+            ")\n" .
+            "LEFT JOIN purchase_batches discount_pb ON discount_pb.id = (\n" .
+            "    SELECT pb_d.id\n" .
+            "    FROM purchase_batches pb_d\n" .
+            "    WHERE pb_d.product_id = p.id\n" .
+            "      AND pb_d.status IN ('purchased', 'arrived')\n" .
+            "      AND pb_d.boxes_discount > 0\n" .
+            "      AND pb_d.discount_price_per_box > 0\n" .
+            "    ORDER BY pb_d.purchased_at ASC, pb_d.id ASC\n" .
+            "    LIMIT 1\n" .
+            ")\n" .
+            "LEFT JOIN purchase_batches latest_price_pb ON latest_price_pb.id = (\n" .
+            "    SELECT pb_l.id\n" .
+            "    FROM purchase_batches pb_l\n" .
+            "    WHERE pb_l.product_id = p.id\n" .
+            "      AND pb_l.instant_price_per_box > 0\n" .
+            "    ORDER BY CASE WHEN pb_l.purchased_at IS NULL THEN 1 ELSE 0 END, pb_l.purchased_at DESC, pb_l.id DESC\n" .
             "    LIMIT 1\n" .
             ")\n" .
             "LEFT JOIN purchase_batches preorder_pb ON preorder_pb.id = (\n" .
@@ -230,18 +325,50 @@ class ClientCatalogService
         $stmt->execute($params);
 
         $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        $preorderDiscountPercent = max(0.0, min(99.0, (float)(get_setting('ui_preorder_discount_percent', '10') ?? '10')));
+        $preorderDiscountPercent = function_exists('get_setting')
+            ? (float)(get_setting('ui_preorder_discount_percent', '10') ?? '10')
+            : 10.0;
+        $preorderDiscountPercent = max(0.0, min(99.0, $preorderDiscountPercent));
         $preorderDiscountFactor = (100.0 - $preorderDiscountPercent) / 100.0;
         foreach ($products as &$product) {
             $this->normalizeProductImagePaths($product);
-            $regularPrice = (float)($product['regular_price'] ?? 0);
-            $expectedPreorderPrice = (float)($product['confirmed_preorder_price_per_box'] ?? 0);
-            if ((int)($product['can_preorder'] ?? 0) === 1 && $expectedPreorderPrice <= 0 && $regularPrice > 0) {
-                $expectedPreorderPrice = round($regularPrice * $preorderDiscountFactor, 0);
-            }
+
+            $instantPrice = (float)($product['instant_price_per_box'] ?? 0);
+            $latestRegularPrice = (float)($product['latest_regular_price_per_box'] ?? 0);
+            $productInstantPrice = (float)($product['product_instant_price_per_box'] ?? 0);
+            $productBasePrice = (float)($product['product_base_price'] ?? 0);
+
+            $regularPrice = $instantPrice > 0
+                ? $instantPrice
+                : ($latestRegularPrice > 0
+                    ? $latestRegularPrice
+                    : ($productInstantPrice > 0 ? $productInstantPrice : $productBasePrice));
+
+            $isOwnProduct = empty($product['seller_id']);
+            $requiresProduction = (int)($product['requires_production'] ?? 0) === 1;
+            $hasPurchaseModel = (int)($product['has_any_purchase_batch'] ?? 0) === 1;
+            $canPreorder = (int)($product['is_active'] ?? 0) === 1
+                && $isOwnProduct
+                && !$requiresProduction
+                && $hasPurchaseModel
+                && $regularPrice > 0;
+
+            $expectedPreorderPrice = $canPreorder
+                ? round($regularPrice * $preorderDiscountFactor, 0)
+                : 0.0;
+
             $product['regular_price'] = $regularPrice;
             $product['expected_preorder_price'] = $expectedPreorderPrice;
-            $product['confirmed_preorder_price_per_box'] = $expectedPreorderPrice;
+            $product['can_preorder'] = $canPreorder ? 1 : 0;
+            $canBuyInstant = (int)($product['is_active'] ?? 0) === 1
+                && $instantPrice > 0
+                && (float)($product['instant_available_boxes'] ?? 0) > 0;
+            $canBuyDiscount = (int)($product['is_active'] ?? 0) === 1
+                && (float)($product['available_discount_price_per_box'] ?? 0) > 0
+                && (float)($product['discount_available_boxes'] ?? 0) > 0;
+            $product['can_buy_instant'] = $canBuyInstant ? 1 : 0;
+            $product['can_buy_discount'] = $canBuyDiscount ? 1 : 0;
+            $product['can_buy_now'] = ($canBuyInstant || $canBuyDiscount) ? 1 : 0;
         }
         unset($product);
 

@@ -105,6 +105,11 @@ class OrderGroupCreationService
                 $this->pdo->prepare('UPDATE users SET points_balance = points_balance - ? WHERE id = ?')->execute([array_sum($points), $userId]);
             }
             $this->pdo->commit();
+            try {
+                (new Florix24IntegrationService($this->pdo))->enqueueNewOrders($orderIds, 'admin');
+            } catch (Throwable $integrationError) {
+                error_log('florix24 order enqueue failed: ' . $integrationError->getMessage());
+            }
             return ['order_group_id' => $groupId, 'order_ids' => $orderIds, 'orders' => $orders];
         } catch (Throwable $e) {
             if ($this->pdo->inTransaction()) {
@@ -241,6 +246,11 @@ class OrderGroupCreationService
                 $this->pdo->prepare("DELETE FROM cart_items WHERE user_id = ? AND id IN ($placeholders)")->execute($params);
             }
             $this->pdo->commit();
+            try {
+                (new Florix24IntegrationService($this->pdo))->enqueueNewOrders($orderIds, 'site');
+            } catch (Throwable $integrationError) {
+                error_log('florix24 order enqueue failed: ' . $integrationError->getMessage());
+            }
             return ['order_group_id' => $groupId, 'order_ids' => $orderIds, 'orders' => $orders, 'deleted_cart_item_ids' => $cartItemIds];
         } catch (Throwable $e) {
             if ($this->pdo->inTransaction()) {

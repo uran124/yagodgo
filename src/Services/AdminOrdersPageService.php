@@ -74,6 +74,7 @@ class AdminOrdersPageService
             'products' => $this->fetchActiveProducts(),
             'productionJobs' => $this->fetchProductionJobs($id),
             'productionExecutors' => $this->fetchProductionExecutors(),
+            'florixSync' => (new Florix24IntegrationService($this->pdo))->orderSyncState($id),
         ];
     }
 

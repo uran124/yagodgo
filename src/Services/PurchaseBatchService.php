@@ -385,8 +385,19 @@ class PurchaseBatchService
         $ids = array_keys($affectedOrderIds);
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
         $params = array_merge(['cancelled'], $ids);
-        $upd = $this->pdo->prepare("UPDATE orders SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN ({$placeholders}) AND status = 'reserved'");
+        $upd = $this->pdo->prepare("UPDATE orders SET status = ? WHERE id IN ({$placeholders}) AND status = 'reserved'");
         $upd->execute($params);
+
+        foreach ($ids as $orderId) {
+            (new OrderStatusHistoryService($this->pdo))->record(
+                (int)$orderId,
+                'reserved',
+                'cancelled',
+                null,
+                'system',
+                'Автоматическая отмена брони по партии'
+            );
+        }
 
         return count($ids);
     }
