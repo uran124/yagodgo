@@ -4,6 +4,14 @@ declare(strict_types=1);
 
 return [
     static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('POST', '/api/integrations/florix24/order-status', $method, $uri)) {
+            return false;
+        }
+
+        (new App\Controllers\Florix24IntegrationController($c['pdo']))->webhook();
+        return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
         if (!routeExact('POST', '/telegram/webhook', $method, $uri)) {
             return false;
         }
