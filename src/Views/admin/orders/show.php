@@ -1,4 +1,4 @@
-<?php /** @var array $order @var array $items @var array $addresses @var array $slots @var array $products */ ?>
+<?php /** @var array $order @var array $items @var array $addresses @var array $slots @var array $products @var array|null $florixSync */ ?>
 <?php $role = $_SESSION['role'] ?? ''; $isManager = in_array($role, ['manager','partner'], true); $base = $role === 'manager' ? '/manager' : ($role === 'partner' ? '/partner' : '/admin'); ?>
 <style>
   .order-details { font-size: 0.82rem; gap: 0.35rem; padding-bottom: 4.4rem; }
@@ -108,6 +108,50 @@
       </span>
     </div>
   </div>
+
+  <?php if (!empty($florixSync)): ?>
+    <?php
+      $florixState = (string)($florixSync['sync_status'] ?? 'pending');
+      $florixStateLabels = [
+        'pending' => 'Ожидает отправки',
+        'sent' => 'Синхронизирован',
+        'error' => 'Ошибка синхронизации',
+        'conflict' => 'Конфликт статусов',
+      ];
+      $florixStateClasses = [
+        'pending' => 'bg-gray-100 text-gray-700',
+        'sent' => 'bg-emerald-100 text-emerald-800',
+        'error' => 'bg-red-100 text-red-800',
+        'conflict' => 'bg-amber-100 text-amber-800',
+      ];
+    ?>
+    <div class="bg-white p-2 md:p-4 rounded shadow card">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div class="font-semibold">Florix24</div>
+          <div class="text-xs opacity-70">
+            <?php if (!empty($florixSync['florix_order_number'])): ?>
+              Заказ: <?= htmlspecialchars((string)$florixSync['florix_order_number']) ?>
+            <?php elseif (!empty($florixSync['florix_order_id'])): ?>
+              ID заказа: <?= (int)$florixSync['florix_order_id'] ?>
+            <?php else: ?>
+              Внешний ID: <?= htmlspecialchars((string)$florixSync['external_order_id']) ?>
+            <?php endif; ?>
+            <?php if (!empty($florixSync['last_synced_at'])): ?>
+              · <?= htmlspecialchars((string)$florixSync['last_synced_at']) ?>
+            <?php endif; ?>
+          </div>
+        </div>
+        <span class="inline-flex rounded-full px-2 py-1 text-xs font-semibold <?= $florixStateClasses[$florixState] ?? $florixStateClasses['pending'] ?>">
+          <?= htmlspecialchars($florixStateLabels[$florixState] ?? $florixState) ?>
+        </span>
+      </div>
+      <?php if (!empty($florixSync['last_error'])): ?>
+        <div class="mt-2 rounded bg-red-50 p-2 text-xs text-red-800"><?= htmlspecialchars((string)$florixSync['last_error']) ?></div>
+        <a href="/admin/settings/integrations" class="mt-2 inline-flex text-xs font-semibold text-[#C86052] hover:underline">Открыть журнал интеграции</a>
+      <?php endif; ?>
+    </div>
+  <?php endif; ?>
 
   <div class="bg-white p-2 md:p-4 rounded shadow card space-y-1">
     <?php foreach ($items as $it): ?>

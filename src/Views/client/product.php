@@ -1,227 +1,208 @@
-<?php /** @var array $product */ ?>
+<?php /** @var array<string,mixed> $product */ ?>
+<?php
+$active = (int)($product['is_active'] ?? 0) === 1;
+$role = (string)($_SESSION['role'] ?? '');
+$isLoggedIn = !empty($_SESSION['user_id']) && in_array($role, ['client', 'partner', 'manager', 'seller', 'admin'], true);
+
+$catalogSection = (string)($product['catalog_section'] ?? '');
+$regularPrice = (float)($product['regular_price'] ?? $product['price'] ?? 0);
+$expectedPreorderPrice = (float)($product['expected_preorder_price'] ?? 0);
+$instantPriceBox = (float)($product['instant_price_per_box'] ?? 0);
+$instantAvailableBoxes = max(0, (int)floor((float)($product['instant_available_boxes'] ?? 0)));
+$discountPriceBox = (float)($product['available_discount_price_per_box'] ?? 0);
+$discountAvailableBoxes = max(0, (int)floor((float)($product['discount_available_boxes'] ?? 0)));
+$isDiscountOffer = $catalogSection === 'sale' && $discountPriceBox > 0 && $discountAvailableBoxes > 0;
+$buyPriceBox = $isDiscountOffer ? $discountPriceBox : $instantPriceBox;
+$buyAvailableBoxes = $isDiscountOffer ? $discountAvailableBoxes : $instantAvailableBoxes;
+$buyStockMode = $isDiscountOffer ? 'discount_stock' : 'instant';
+$preorderAvailableBoxes = max(0, (int)floor((float)($product['preorder_available_boxes'] ?? 0)));
+$canBuyNow = $active && $buyPriceBox > 0 && $buyAvailableBoxes > 0;
+$canPreorder = $active && (int)($product['can_preorder'] ?? 0) === 1 && $expectedPreorderPrice > 0;
+
+$preorderDiscountPercent = function_exists('get_setting')
+    ? (float)(get_setting('ui_preorder_discount_percent', '10') ?? '10')
+    : 10.0;
+$preorderDiscountPercent = max(0, min(99, $preorderDiscountPercent));
+$preorderMax = $preorderAvailableBoxes > 0 ? $preorderAvailableBoxes : 99;
+$quantityMax = max(1, $buyAvailableBoxes, $preorderMax);
+$confirmedPreorderDate = trim((string)($product['preorder_availability_date'] ?? ''));
+$sourceDeliveryDate = trim((string)($product['delivery_date'] ?? ''));
+$schemaPrice = $canBuyNow ? $buyPriceBox : $regularPrice;
+$boxSize = (float)($product['box_size'] ?? 0);
+$boxUnit = trim((string)($product['box_unit'] ?? ''));
+$productTitle = trim((string)($product['product'] ?? '') . ' ' . (string)($product['variety'] ?? ''));
+?>
 <main class="bg-gradient-to-br from-orange-50 via-white to-pink-50 min-h-screen pb-52 md:pb-24">
   <article class="max-w-screen-md mx-auto" itemscope itemtype="https://schema.org/Product">
 
-    <!-- Изображение — от края до края на мобиле, скруглённое на десктопе -->
     <?php if (!empty($product['image_path'])): ?>
       <div class="md:px-4 md:pt-6">
-        <img src="<?= htmlspecialchars($product['image_path']) ?>"
-             alt="<?= htmlspecialchars($product['product']) ?>"
+        <img src="<?= htmlspecialchars((string)$product['image_path']) ?>"
+             alt="<?= htmlspecialchars($productTitle) ?>"
              class="w-full object-cover md:rounded-2xl md:shadow-lg product-image"
              style="aspect-ratio:1/1; max-height:420px; object-fit:cover"
              itemprop="image">
       </div>
     <?php endif; ?>
 
-    <!-- Основной контент -->
     <div class="px-4 pt-4 md:pt-6 md:flex md:space-x-6">
-
-      <!-- Левая колонка (на мобиле — всё в один поток) -->
       <div class="md:w-1/2 space-y-3 md:space-y-4">
-
-        <!-- Заголовок -->
         <h1 class="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 leading-snug" itemprop="name">
-          <?= htmlspecialchars($product['product']) ?>
+          <?= htmlspecialchars((string)($product['product'] ?? '')) ?>
           <?php if (!empty($product['variety'])): ?>
-            <?= ' ' . htmlspecialchars($product['variety']) ?>
+            <?= ' ' . htmlspecialchars((string)$product['variety']) ?>
           <?php endif; ?>
-          <?php if (!empty($product['box_size'])): ?>
-            <span class="font-normal text-gray-500"> (<?= htmlspecialchars($product['box_size'] . ' ' . $product['box_unit']) ?>)</span>
+          <?php if ($boxSize > 0 && $boxUnit !== ''): ?>
+            <span class="font-normal text-gray-500"> (<?= htmlspecialchars(rtrim(rtrim(number_format($boxSize, 2, '.', ''), '0'), '.') . ' ' . $boxUnit) ?>)</span>
           <?php endif; ?>
         </h1>
-        <meta itemprop="brand" content="<?= htmlspecialchars($product['manufacturer'] ?? 'BerryGo') ?>">
+        <meta itemprop="brand" content="<?= htmlspecialchars((string)($product['manufacturer'] ?? 'BerryGo')) ?>">
 
-        <!-- Состав -->
         <?php
-        $comp = [];
+        $composition = [];
         if (!empty($product['composition'])) {
-            $dec = json_decode($product['composition'], true);
-            if (is_array($dec)) { $comp = $dec; }
+            $decoded = json_decode((string)$product['composition'], true);
+            if (is_array($decoded)) {
+                $composition = $decoded;
+            }
         }
-        if ($comp): ?>
+        ?>
+        <?php if ($composition): ?>
           <div class="bg-white rounded-xl px-4 py-3 shadow-sm">
             <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Состав</h2>
             <ul class="space-y-1">
-              <?php foreach ($comp as $c): ?>
+              <?php foreach ($composition as $item): ?>
                 <li class="flex items-start gap-2 text-sm text-gray-700">
                   <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-pink-400 shrink-0"></span>
-                  <?= htmlspecialchars($c) ?>
+                  <?= htmlspecialchars((string)$item) ?>
                 </li>
               <?php endforeach; ?>
             </ul>
           </div>
         <?php endif; ?>
 
-        <!-- Описание -->
-        <?php $desc = $product['full_description'] !== '' ? $product['full_description'] : ($product['description'] ?? ''); ?>
-        <?php if ($desc !== ''): ?>
+        <?php
+        $fullDescription = trim((string)($product['full_description'] ?? ''));
+        $description = $fullDescription !== '' ? $fullDescription : trim((string)($product['description'] ?? ''));
+        ?>
+        <?php if ($description !== ''): ?>
           <p class="text-sm sm:text-base text-gray-600 leading-relaxed" itemprop="description">
-            <?= nl2br(htmlspecialchars($desc)) ?>
+            <?= nl2br(htmlspecialchars($description)) ?>
           </p>
         <?php endif; ?>
       </div>
 
-      <!-- Правая колонка / sticky-блок покупки -->
       <div class="md:w-1/2">
-        <?php
-        $active = (int)($product['is_active'] ?? 0);
-        $price  = floatval($product['price'] ?? 0); // цена за ящик
-        $sale   = floatval($product['sale_price'] ?? 0); // legacy-акция за базовую единицу, если заполнена
-        $boxSize = floatval($product['box_size'] ?? 0);
-        $boxUnit = $product['box_unit'] ?? '';
-        $regularBox = $price;
-        $regularKg  = $boxSize > 0 ? round($regularBox / $boxSize, 2) : round($regularBox, 2);
-        $priceBox   = $sale > 0 && $boxSize > 0 ? ($sale * $boxSize) : $regularBox;
-        $pricePerKg = $boxSize > 0 ? round($priceBox / $boxSize, 2) : round($priceBox, 2);
-        $deliveryDate = (string)($product['delivery_date'] ?? '');
-        $placeholderDate = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
-        $preorderDateKnown = ($deliveryDate !== '' && $deliveryDate !== $placeholderDate);
-        $preorderDateText = $preorderDateKnown ? date('d.m.Y', strtotime($deliveryDate)) : '';
-        $minPreorderDate = date('Y-m-d', strtotime('+2 day'));
-        $defaultPreorderDate = $preorderDateKnown && $deliveryDate >= $minPreorderDate ? $deliveryDate : $minPreorderDate;
-        $instantPriceBox = (float)($product['instant_price_per_box'] ?? 0);
-        $instantAvailableBoxes = (float)($product['instant_available_boxes'] ?? 0);
-        $canBuyNow = $active === 1 && $instantPriceBox > 0 && $instantAvailableBoxes > 0;
-        $confirmedPreorderPriceBox = (float)($product['confirmed_preorder_price_per_box'] ?? 0);
-        $confirmedPreorderDate = (string)($product['preorder_availability_date'] ?? '');
-        $preorderAvailableBoxes = (float)($product['preorder_available_boxes'] ?? 0);
-        $canConfirmedPreorder = $active === 1 && (int)($product['preorder_purchase_batch_id'] ?? 0) > 0 && $confirmedPreorderDate !== '' && $confirmedPreorderPriceBox > 0 && $preorderAvailableBoxes > 0;
-        $confirmedPreorderDateText = $canConfirmedPreorder ? date('d.m', strtotime($confirmedPreorderDate)) : '';
-        $canPreorder = $canConfirmedPreorder;
-        ?>
-
-        <!-- Блок цены + кнопок (floating над навбаром на мобиле, встроенный на md+) -->
         <div class="fixed bottom-[72px] left-3 right-3 z-19 bg-white/95 backdrop-blur-md rounded-2xl border border-gray-100 shadow-[0_-2px_24px_rgba(0,0,0,0.10)] px-4 pt-3 pb-3
-                    md:relative md:bottom-auto md:left-auto md:right-auto md:z-auto md:bg-transparent md:backdrop-blur-none md:rounded-none md:border-0 md:shadow-none md:px-0 md:pt-0 md:pb-0 md:mt-0 md:sticky md:top-6
-                    product-card"
-             data-base-box="<?= $sale > 0 ? $priceBox : $regularBox ?>"
-             data-base-kg="<?= $sale > 0 ? $pricePerKg : $regularKg ?>">
+                    md:relative md:bottom-auto md:left-auto md:right-auto md:z-auto md:bg-transparent md:backdrop-blur-none md:rounded-none md:border-0 md:shadow-none md:px-0 md:pt-0 md:pb-0 md:mt-0 md:sticky md:top-6"
+             data-product-card
+             data-buy-max="<?= $buyAvailableBoxes ?>"
+             data-preorder-max="<?= $preorderMax ?>">
 
-          <!-- Цена -->
-          <div class="md:bg-white md:rounded-2xl md:shadow-sm md:p-4 md:mb-3 pb-2 md:pb-4">
-            <?php if ($sale > 0): ?>
-              <div class="flex items-end gap-2 mb-0.5">
-                <span class="text-2xl sm:text-3xl font-bold text-gray-900 box-price leading-none">
-                  <?= number_format($priceBox, 0, '.', ' ') ?> ₽
-                </span>
-                <span class="text-sm text-gray-400 line-through leading-none pb-0.5">
-                  <?= number_format($regularBox, 0, '.', ' ') ?> ₽
-                </span>
-              </div>
-              <p class="text-xs text-gray-400 kg-price"><?= htmlspecialchars($pricePerKg) ?> ₽/кг</p>
-            <?php else: ?>
-              <div class="flex items-end justify-between">
-                <span class="text-2xl sm:text-3xl font-bold text-gray-900 box-price leading-none">
-                  <?= number_format($regularBox, 0, '.', ' ') ?> ₽
-                </span>
-                <span class="text-xs text-gray-400 kg-price pb-0.5"><?= htmlspecialchars($regularKg) ?> ₽/кг</span>
-              </div>
-            <?php endif; ?>
-          </div>
-
-          <div itemprop="offers" itemscope itemtype="https://schema.org/Offer">
-            <meta itemprop="price" content="<?= number_format($priceBox, 2, '.', '') ?>">
-            <meta itemprop="priceCurrency" content="RUB">
-            <link itemprop="availability" href="<?= $active ? 'http://schema.org/InStock' : 'http://schema.org/OutOfStock' ?>">
-          </div>
-
-          <?php if (in_array((string)($_SESSION['role'] ?? ''), ['client','partner','manager','seller','admin']) && $active): ?>
-            <?php if ($canBuyNow): ?>
-              <form action="/cart/add" method="post"
-                    class="add-to-cart-form"
-                    data-id="<?= $product['id'] ?>"
-                    data-name="<?= htmlspecialchars($product['product'] . ($product['variety'] ? ' ' . $product['variety'] : '')) ?>"
-                    data-price="<?= $instantPriceBox ?>">
-                <?= csrf_field() ?>
-                <input type="hidden" name="product_id" value="<?= $product['id'] ?>">
-                <input type="hidden" name="stock_mode" value="instant">
-                <div class="flex items-center gap-2 mb-2">
-                  <div class="flex items-center rounded-xl border border-gray-200 bg-gray-50 overflow-hidden h-11 shrink-0">
-                    <button type="button" class="w-10 h-11 flex items-center justify-center text-gray-500 hover:bg-gray-100 active:bg-gray-200 transition-colors" onclick="let inp=this.nextElementSibling; if(+inp.value>1) inp.value=+inp.value-1;"><span class="material-icons-round text-base leading-none">remove</span></button>
-                    <input type="number" id="buyNowQty" name="quantity" value="1" min="1" max="<?= max(1, (int)$instantAvailableBoxes) ?>" step="1" class="w-11 h-11 text-center text-sm font-medium bg-transparent border-x border-gray-200 focus:outline-none" />
-                    <button type="button" class="w-10 h-11 flex items-center justify-center text-gray-500 hover:bg-gray-100 active:bg-gray-200 transition-colors" onclick="let inp=this.previousElementSibling; if(+inp.value < <?= max(1, (int)$instantAvailableBoxes) ?>) inp.value=+inp.value+1;"><span class="material-icons-round text-base leading-none">add</span></button>
+          <div class="md:bg-white md:rounded-2xl md:shadow-sm md:p-4 md:mb-3 product-card-actions">
+            <div class="product-card-price-row">
+              <div class="product-card-price-block">
+                <?php if ($canBuyNow && $buyPriceBox > 0): ?>
+                  <div class="product-card-current-price"><?= number_format($buyPriceBox, 0, '.', ' ') ?> ₽</div>
+                  <?php if ($canPreorder): ?>
+                    <div class="product-card-preorder-price">Предзаказ: <span><?= number_format($expectedPreorderPrice, 0, '.', ' ') ?> ₽*</span></div>
+                  <?php endif; ?>
+                <?php elseif ($canPreorder): ?>
+                  <div class="product-card-price-pair">
+                    <span class="product-card-regular-price"><?= number_format($regularPrice, 0, '.', ' ') ?> ₽</span>
+                    <span class="product-card-expected-price"><?= number_format($expectedPreorderPrice, 0, '.', ' ') ?> ₽*</span>
                   </div>
-                  <button type="submit" class="flex-1 h-11 flex items-center justify-center gap-2 bg-gradient-to-r from-red-500 to-pink-500 accent-gradient text-white font-semibold text-sm rounded-xl transition-opacity hover:opacity-90 active:opacity-80">
-                    <span class="material-icons-round text-base leading-none">add_shopping_cart</span>
-                    Купить сейчас — <?= number_format($instantPriceBox, 0, '.', ' ') ?> ₽
-                  </button>
-                </div>
-              </form>
-            <?php endif; ?>
-
-            <?php if ($canConfirmedPreorder): ?>
-              <button id="preorderBtn" type="button"
-                      class="w-full h-10 flex items-center justify-center gap-1.5 border font-medium text-sm rounded-xl transition-colors mb-1 border-emerald-500 text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100">
-                <span class="material-icons-round text-base leading-none">schedule</span>
-                Предзаказать на <?= htmlspecialchars($confirmedPreorderDateText) ?> — <?= number_format($confirmedPreorderPriceBox, 0, '.', ' ') ?> ₽
-              </button>
-            <?php elseif (!$canBuyNow): ?>
-              <button id="preorderBtn" type="button"
-                      class="w-full h-10 flex items-center justify-center gap-1.5 border font-medium text-sm rounded-xl transition-colors mb-1 border-emerald-500 text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100">
-                <span class="material-icons-round text-base leading-none">notifications</span>
-                Сообщить о поступлении
-              </button>
-              <p class="text-xs text-gray-400 text-center mb-1">Дата поступления уточняется</p>
-            <?php endif; ?>
-            <p id="preorderHint" class="text-xs text-gray-400 text-center hidden"></p>
-
-            <script>
-              document.getElementById('preorderBtn')?.addEventListener('click', async () => {
-                const qtyInput = document.getElementById('buyNowQty');
-                const qty = qtyInput ? parseFloat(qtyInput.value || '1') : 1;
-                const payload = new URLSearchParams();
-                payload.set('product_id', '<?= (int)$product['id'] ?>');
-                payload.set('requested_boxes', String(qty > 0 ? qty : 1));
-                <?php if ($canConfirmedPreorder): ?>
-                payload.set('desired_delivery_date', '<?= htmlspecialchars($confirmedPreorderDate) ?>');
-                payload.set('expected_price_per_box', '<?= (float)$confirmedPreorderPriceBox ?>');
+                <?php elseif ($regularPrice > 0): ?>
+                  <div class="product-card-current-price"><?= number_format($regularPrice, 0, '.', ' ') ?> ₽</div>
+                <?php else: ?>
+                  <div class="product-card-price-pending">Цена уточняется</div>
                 <?php endif; ?>
-                const res = await fetch('/preorder-intents', { method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: payload.toString() });
-                const data = await res.json();
-                const hint = document.getElementById('preorderHint');
-                if (hint) { hint.classList.remove('hidden'); hint.textContent = data?.message || 'Заявка сохранена'; }
-                if (data?.ok && data?.cart_url) window.location.href = data.cart_url;
-              });
-            </script>
+              </div>
 
-          <?php else: ?>
-            <?php if (!empty($_SESSION['user_id']) && !$active): ?>
-              <button disabled
-                      class="w-full h-11 bg-gray-100 text-gray-400 text-sm rounded-xl cursor-not-allowed">
-                Товар недоступен
-              </button>
-            <?php else: ?>
-              <a href="/login"
-                 class="w-full h-11 flex items-center justify-center gap-2 bg-gradient-to-r from-red-500 to-pink-500 accent-gradient text-white font-semibold text-sm rounded-xl transition-opacity hover:opacity-90">
-                <span class="material-icons-round text-base">login</span>
-                Войдите, чтобы заказать
-              </a>
+              <div class="product-card-quantity" data-card-qty data-max="<?= $quantityMax ?>">
+                <button type="button" aria-label="Уменьшить количество" data-qty-minus>−</button>
+                <input type="number" value="1" min="1" max="<?= $quantityMax ?>" step="1" inputmode="numeric" aria-label="Количество" data-qty-input>
+                <button type="button" aria-label="Увеличить количество" data-qty-plus>+</button>
+              </div>
+            </div>
+
+            <?php if ($canPreorder): ?>
+              <p class="product-card-price-note">* Ожидаемая цена. Точная стоимость будет подтверждена после поступления в магазин.</p>
             <?php endif; ?>
-          <?php endif; ?>
 
+            <div itemprop="offers" itemscope itemtype="https://schema.org/Offer">
+              <?php if ($schemaPrice > 0): ?>
+                <meta itemprop="price" content="<?= number_format($schemaPrice, 2, '.', '') ?>">
+              <?php endif; ?>
+              <meta itemprop="priceCurrency" content="RUB">
+              <link itemprop="availability" href="<?= $canBuyNow ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock' ?>">
+            </div>
+
+            <div class="product-card-buttons">
+              <?php if ($canBuyNow && $isLoggedIn): ?>
+                <form action="/cart/add" method="post"
+                      class="add-to-cart-form product-card-buy-form"
+                      data-id="<?= (int)$product['id'] ?>"
+                      data-name="<?= htmlspecialchars($productTitle) ?>"
+                      data-price="<?= $buyPriceBox ?>"
+                      data-buy-max="<?= $buyAvailableBoxes ?>">
+                  <?= csrf_field() ?>
+                  <input type="hidden" name="product_id" value="<?= (int)$product['id'] ?>">
+                  <input type="hidden" name="stock_mode" value="<?= htmlspecialchars($buyStockMode) ?>">
+                  <input type="hidden" name="quantity" value="1" data-cart-quantity>
+                  <button type="submit" class="product-card-button product-card-button--buy">
+                    <span class="material-icons-round">add_shopping_cart</span><span>Купить</span>
+                  </button>
+                </form>
+              <?php elseif ($canBuyNow): ?>
+                <a href="/login" class="product-card-button product-card-button--buy">
+                  <span class="material-icons-round">add_shopping_cart</span><span>Купить</span>
+                </a>
+              <?php else: ?>
+                <button type="button" disabled class="product-card-button product-card-button--disabled">Нет в наличии</button>
+              <?php endif; ?>
+
+              <?php if ($canPreorder && $isLoggedIn): ?>
+                <button type="button"
+                        class="product-card-button product-card-button--preorder preorder-intent-btn"
+                        data-product-id="<?= (int)$product['id'] ?>"
+                        data-product-title="<?= htmlspecialchars($productTitle) ?>"
+                        data-preorder-price="<?= htmlspecialchars((string)$expectedPreorderPrice) ?>"
+                        data-preorder-discount="<?= htmlspecialchars((string)$preorderDiscountPercent) ?>"
+                        data-source-section="<?= htmlspecialchars($catalogSection) ?>"
+                        data-delivery-date="<?= htmlspecialchars($sourceDeliveryDate) ?>"
+                        data-supply-date="<?= htmlspecialchars($confirmedPreorderDate) ?>"
+                        data-preorder-max="<?= $preorderMax ?>"
+                        data-unit="ящик">
+                  <span class="material-icons-round">schedule</span><span>Предзаказ −<?= number_format($preorderDiscountPercent, 0, '.', '') ?>%</span>
+                </button>
+              <?php elseif ($canPreorder): ?>
+                <a href="/login" class="product-card-button product-card-button--preorder">
+                  <span class="material-icons-round">schedule</span><span>Предзаказ −<?= number_format($preorderDiscountPercent, 0, '.', '') ?>%</span>
+                </a>
+              <?php endif; ?>
+            </div>
+
+            <p class="product-card-message hidden" data-card-message aria-live="polite"></p>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Навигационные ссылки -->
     <div class="px-4 pt-6 pb-2 flex flex-wrap gap-2 md:px-4">
-      <a href="/"
-         class="flex items-center gap-1 text-xs font-medium text-gray-500 bg-white border border-gray-200 px-3 py-2 rounded-full hover:bg-gray-50 transition-colors">
+      <a href="/" class="flex items-center gap-1 text-xs font-medium text-gray-500 bg-white border border-gray-200 px-3 py-2 rounded-full hover:bg-gray-50 transition-colors">
         <span class="material-icons-round text-sm leading-none">home</span>
         На главную
       </a>
-      <a href="/catalog"
-         class="flex items-center gap-1 text-xs font-medium text-gray-500 bg-white border border-gray-200 px-3 py-2 rounded-full hover:bg-gray-50 transition-colors">
+      <a href="/catalog" class="flex items-center gap-1 text-xs font-medium text-gray-500 bg-white border border-gray-200 px-3 py-2 rounded-full hover:bg-gray-50 transition-colors">
         <span class="material-icons-round text-sm leading-none">grid_view</span>
         Каталог
       </a>
-      <a href="/catalog/<?= urlencode($product['type_alias']) ?>"
-         class="flex items-center gap-1 text-xs font-medium text-gray-500 bg-white border border-gray-200 px-3 py-2 rounded-full hover:bg-gray-50 transition-colors">
+      <a href="/catalog/<?= urlencode((string)$product['type_alias']) ?>" class="flex items-center gap-1 text-xs font-medium text-gray-500 bg-white border border-gray-200 px-3 py-2 rounded-full hover:bg-gray-50 transition-colors">
         <span class="material-icons-round text-sm leading-none">chevron_right</span>
-        <?= htmlspecialchars($product['product']) ?>
+        <?= htmlspecialchars((string)$product['product']) ?>
       </a>
     </div>
-
   </article>
 </main>
 <script>
@@ -231,11 +212,9 @@ window.dataLayer.push({
     currencyCode: 'RUB',
     detail: {
       products: [{
-        id: '<?= $product['id'] ?>',
-        name: '<?= addslashes($product['product'] . ($product['variety'] ? ' ' . $product['variety'] : '')) ?>',
-        price: <?= ($product['sale_price']>0?
-            ($product['sale_price']*$product['box_size']):
-            ($product['price']*$product['box_size'])) ?>,
+        id: '<?= (int)$product['id'] ?>',
+        name: '<?= addslashes($productTitle) ?>',
+        price: <?= json_encode((float)$schemaPrice) ?>,
         quantity: 1
       }]
     }

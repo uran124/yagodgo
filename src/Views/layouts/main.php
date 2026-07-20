@@ -82,7 +82,7 @@
   <link rel="icon" type="image/png" sizes="192x192" href="/assets/images/icon-192-maskable.png" purpose="maskable">
   <link rel="icon" type="image/png" sizes="512x512" href="/assets/images/icon-512-maskable.png" purpose="maskable">
 
-  <link rel="stylesheet" href="/assets/css/theme.css">
+  <link rel="stylesheet" href="/assets/css/theme.css?v=20260714-cardfix1">
   
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#FF6B6B">

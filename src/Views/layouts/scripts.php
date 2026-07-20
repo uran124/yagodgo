@@ -28,6 +28,7 @@
   };
 })();
 </script>
+<script src="/assets/js/product-cards.js?v=20260714-cardfix1"></script>
 <!-- Analytics and other script includes -->
 
 <!-- Yandex.Metrika counter -->

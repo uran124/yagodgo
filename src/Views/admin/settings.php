@@ -4,11 +4,19 @@
 /** @var array $deliveryTariffZones */
 $themeColors = $themeColors ?? [];
 $deliveryTariffZones = $deliveryTariffZones ?? [];
+$florix24Journal = $florix24Journal ?? [];
+$florix24WebhookUrl = $florix24WebhookUrl ?? 'https://berrygo.ru/api/integrations/florix24/order-status';
 $settingsSections = $settingsSections ?? ['general' => 'Основные'];
 $activeSection = $activeSection ?? 'general';
 $sectionUrl = static fn(string $section): string => $section === 'general' ? '/admin/settings' : '/admin/settings/' . $section;
 ?>
 <div class="max-w-5xl space-y-4">
+  <?php if (!empty($_GET['message'])): ?>
+    <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"><?= htmlspecialchars((string)$_GET['message']) ?></div>
+  <?php endif; ?>
+  <?php if (!empty($_GET['error'])): ?>
+    <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"><?= htmlspecialchars((string)$_GET['error']) ?></div>
+  <?php endif; ?>
   <nav class="flex flex-wrap gap-2 rounded bg-white p-3 shadow" aria-label="Разделы настроек">
     <?php foreach ($settingsSections as $sectionKey => $sectionLabel): ?>
       <?php $isActiveSection = $activeSection === $sectionKey; ?>
@@ -527,6 +535,96 @@ $sectionUrl = static fn(string $section): string => $section === 'general' ? '/a
   </fieldset>
   <?php endif; ?>
 
+  <?php if ($activeSection === 'integrations'): ?>
+  <fieldset class="border border-gray-200 rounded-lg p-4 space-y-4" data-florix24-settings>
+    <legend class="px-2 text-sm font-semibold text-gray-600">Florix24</legend>
+
+    <div class="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+      <p class="font-semibold">Автоматическая передача заказов</p>
+      <p class="mt-1">После включения все новые заказы с сайта, из админ-панели и Telegram будут ставиться в очередь и отправляться во Florix24. Старые заказы не отправляются.</p>
+    </div>
+
+    <label class="flex items-start gap-3 rounded-lg border border-gray-200 p-4">
+      <input type="checkbox" name="florix24_enabled" value="1"
+             <?= (($settings['florix24_enabled'] ?? '0') === '1') ? 'checked' : '' ?>
+             class="mt-1 h-4 w-4 rounded border-gray-300 text-[#C86052] focus:ring-[#C86052]">
+      <span>
+        <span class="block font-semibold text-gray-800">Включить интеграцию с Florix24</span>
+        <span class="block text-xs text-gray-500">Момент первого включения станет началом синхронизации. Заказы, созданные раньше, останутся только в BerryGo.</span>
+      </span>
+    </label>
+
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div class="sm:col-span-2">
+        <label class="block mb-1 font-medium">Адрес Florix24</label>
+        <input name="florix24_base_url" type="url" required
+               value="<?= htmlspecialchars($settings['florix24_base_url'] ?? 'https://florix24.ru') ?>"
+               class="w-full border px-3 py-2 rounded" placeholder="https://florix24.ru">
+      </div>
+      <div>
+        <label class="block mb-1 font-medium">API-токен</label>
+        <input name="florix24_api_token" type="password" autocomplete="new-password"
+               value="" class="w-full border px-3 py-2 rounded"
+               placeholder="<?= !empty($settings['florix24_api_token']) ? 'Токен сохранён — оставьте пустым, чтобы не менять' : 'Вставьте токен из Florix24' ?>">
+        <p class="mt-1 text-xs text-gray-500">Полностью токен после сохранения не отображается.</p>
+      </div>
+      <div>
+        <label class="block mb-1 font-medium">Webhook secret</label>
+        <input name="florix24_webhook_secret" type="password" autocomplete="new-password"
+               value="" class="w-full border px-3 py-2 rounded"
+               placeholder="<?= !empty($settings['florix24_webhook_secret']) ? 'Секрет сохранён — оставьте пустым, чтобы не менять' : 'Вставьте секрет из Florix24' ?>">
+        <p class="mt-1 text-xs text-gray-500">Используется для проверки подписи входящих статусов.</p>
+      </div>
+    </div>
+
+    <div class="grid gap-3 sm:grid-cols-2">
+      <?php
+      $florixToggles = [
+        'florix24_send_orders' => ['Отправлять новые заказы', 'Любой новый заказ BerryGo автоматически уходит во Florix24.'],
+        'florix24_send_statuses' => ['Отправлять изменения статусов', 'Передавать new, confirmed, completed и cancelled.'],
+        'florix24_receive_statuses' => ['Принимать статусы из Florix24', 'Обновлять основные статусы BerryGo по подписанному webhook.'],
+        'florix24_auto_retry' => ['Повторять отправку при ошибке', 'Очередь автоматически повторяет запросы при временной недоступности.'],
+      ];
+      ?>
+      <?php foreach ($florixToggles as $toggleKey => [$toggleLabel, $toggleHint]): ?>
+        <label class="flex items-start gap-3 rounded-lg border border-gray-200 p-3">
+          <input type="checkbox" name="<?= htmlspecialchars($toggleKey) ?>" value="1"
+                 <?= (($settings[$toggleKey] ?? '1') === '1') ? 'checked' : '' ?>
+                 class="mt-1 h-4 w-4 rounded border-gray-300 text-[#C86052] focus:ring-[#C86052]">
+          <span>
+            <span class="block text-sm font-medium text-gray-800"><?= htmlspecialchars($toggleLabel) ?></span>
+            <span class="block text-xs text-gray-500"><?= htmlspecialchars($toggleHint) ?></span>
+          </span>
+        </label>
+      <?php endforeach; ?>
+    </div>
+
+    <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+      <label class="block mb-1 text-sm font-semibold text-gray-700">Webhook URL для Florix24</label>
+      <div class="flex flex-col gap-2 sm:flex-row">
+        <input type="text" readonly data-florix24-webhook-url
+               value="<?= htmlspecialchars($florix24WebhookUrl) ?>"
+               class="min-w-0 flex-1 border bg-white px-3 py-2 rounded font-mono text-sm">
+        <button type="button" data-copy-florix24-webhook
+                class="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-100">Скопировать</button>
+      </div>
+      <p class="mt-2 text-xs text-gray-500">Этот адрес укажите в Florix24 в поле адреса отправки статусов.</p>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-3">
+      <button type="button" data-test-florix24
+              class="rounded border border-[#C86052] px-4 py-2 text-sm font-semibold text-[#C86052] hover:bg-red-50">
+        Проверить подключение
+      </button>
+      <span data-florix24-test-result class="text-sm text-gray-600"></span>
+    </div>
+
+    <?php if (!empty($settings['florix24_enabled_at'])): ?>
+      <p class="text-xs text-gray-500">Синхронизация новых заказов начата: <strong><?= htmlspecialchars($settings['florix24_enabled_at']) ?></strong>.</p>
+    <?php endif; ?>
+  </fieldset>
+  <?php endif; ?>
+
   <?php if ($activeSection === 'theme' && !empty($themeColors)): ?>
     <fieldset class="border border-gray-200 rounded-lg p-4 space-y-3">
       <legend class="px-2 text-sm font-semibold text-gray-600">Цветовая тема</legend>
@@ -572,6 +670,126 @@ $sectionUrl = static fn(string $section): string => $section === 'general' ? '/a
     Сохранить раздел
   </button>
 </form>
+<?php if ($activeSection === 'integrations'): ?>
+  <section class="rounded bg-white p-5 shadow space-y-3">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <div>
+        <h2 class="text-lg font-semibold text-gray-800">Журнал Florix24</h2>
+        <p class="text-xs text-gray-500">Последние исходящие и входящие события. Токены и секреты в журнал не записываются.</p>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead>
+          <tr class="border-b text-left text-xs uppercase tracking-wide text-gray-500">
+            <th class="px-2 py-2">Дата</th>
+            <th class="px-2 py-2">Заказ</th>
+            <th class="px-2 py-2">Событие</th>
+            <th class="px-2 py-2">Направление</th>
+            <th class="px-2 py-2">Статус</th>
+            <th class="px-2 py-2">Попытки</th>
+            <th class="px-2 py-2">Ошибка</th>
+            <th class="px-2 py-2"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php if (!$florix24Journal): ?>
+            <tr><td colspan="8" class="px-2 py-5 text-center text-gray-500">Событий пока нет.</td></tr>
+          <?php else: ?>
+            <?php foreach ($florix24Journal as $event): ?>
+              <?php
+                $status = (string)($event['status'] ?? '');
+                $statusClass = in_array($status, ['sent', 'processed'], true)
+                  ? 'bg-emerald-100 text-emerald-800'
+                  : ($status === 'conflict' ? 'bg-amber-100 text-amber-800' : (in_array($status, ['error'], true) ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-700'));
+              ?>
+              <tr class="border-b align-top">
+                <td class="px-2 py-2 whitespace-nowrap"><?= htmlspecialchars((string)($event['created_at'] ?? '')) ?></td>
+                <td class="px-2 py-2"><?= (int)($event['entity_id'] ?? 0) > 0 ? '#' . (int)$event['entity_id'] : '—' ?></td>
+                <td class="px-2 py-2 font-mono text-xs"><?= htmlspecialchars((string)($event['event_type'] ?? '')) ?></td>
+                <td class="px-2 py-2"><?= (($event['direction'] ?? '') === 'incoming') ? 'Florix24 → BerryGo' : 'BerryGo → Florix24' ?></td>
+                <td class="px-2 py-2"><span class="inline-flex rounded-full px-2 py-1 text-xs font-semibold <?= $statusClass ?>"><?= htmlspecialchars($status) ?></span></td>
+                <td class="px-2 py-2 text-center"><?= (int)($event['attempts'] ?? 0) ?></td>
+                <td class="max-w-xs px-2 py-2 text-xs text-red-700 break-words"><?= htmlspecialchars((string)($event['last_error'] ?? '')) ?></td>
+                <td class="px-2 py-2">
+                  <?php if (($event['direction'] ?? '') === 'outgoing' && in_array($status, ['error', 'conflict'], true)): ?>
+                    <form method="post" action="/admin/settings/integrations/florix24/retry">
+                      <?= csrf_field() ?>
+                      <input type="hidden" name="event_id" value="<?= (int)$event['id'] ?>">
+                      <button type="submit" class="whitespace-nowrap rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-100">Повторить</button>
+                    </form>
+                  <?php endif; ?>
+                </td>
+              </tr>
+            <?php endforeach; ?>
+          <?php endif; ?>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+<script>
+(function () {
+  const root = document.querySelector('[data-florix24-settings]');
+  if (!root) return;
+  const copyButton = root.querySelector('[data-copy-florix24-webhook]');
+  const webhookInput = root.querySelector('[data-florix24-webhook-url]');
+  const testButton = root.querySelector('[data-test-florix24]');
+  const result = root.querySelector('[data-florix24-test-result]');
+  const form = root.closest('form');
+
+  if (copyButton && webhookInput) {
+    copyButton.addEventListener('click', async function () {
+      try {
+        await navigator.clipboard.writeText(webhookInput.value);
+        copyButton.textContent = 'Скопировано';
+        setTimeout(() => { copyButton.textContent = 'Скопировать'; }, 1500);
+      } catch (e) {
+        webhookInput.select();
+        document.execCommand('copy');
+      }
+    });
+  }
+
+  if (testButton && form) {
+    testButton.addEventListener('click', async function () {
+      testButton.disabled = true;
+      if (result) {
+        result.textContent = 'Проверяем…';
+        result.className = 'text-sm text-gray-600';
+      }
+      const body = new URLSearchParams();
+      const csrf = form.querySelector('input[name="csrf_token"]');
+      const baseUrl = form.querySelector('input[name="florix24_base_url"]');
+      const token = form.querySelector('input[name="florix24_api_token"]');
+      if (csrf) body.set('csrf_token', csrf.value);
+      if (baseUrl) body.set('base_url', baseUrl.value);
+      if (token) body.set('api_token', token.value);
+      try {
+        const response = await fetch('/admin/settings/integrations/florix24/test', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'},
+          body: body.toString(),
+          credentials: 'same-origin'
+        });
+        const data = await response.json();
+        if (result) {
+          result.textContent = data.message || (data.ok ? 'Подключение установлено.' : 'Ошибка подключения.');
+          result.className = data.ok ? 'text-sm font-medium text-emerald-700' : 'text-sm font-medium text-red-700';
+        }
+      } catch (e) {
+        if (result) {
+          result.textContent = 'Не удалось выполнить проверку: ' + (e.message || 'ошибка сети');
+          result.className = 'text-sm font-medium text-red-700';
+        }
+      } finally {
+        testButton.disabled = false;
+      }
+    });
+  }
+})();
+</script>
+<?php endif; ?>
 <?php if ($activeSection === 'delivery'): ?>
 
 <style>
