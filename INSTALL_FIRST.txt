@@ -1,0 +1,8 @@
+BerryGo → Florix24
+
+1. Сделайте резервную копию файлов и базы.
+2. Импортируйте database/20260719_florix24_integration.sql.
+3. Загрузите содержимое этой папки поверх корня berrygo.ru.
+4. Прочитайте BERRYGO_FLORIX24_MODULE_README.md.
+5. Добавьте cron process_florix24_queue.php каждую минуту.
+6. Настройте BerryGo Admin → Настройки → Интеграции.

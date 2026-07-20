@@ -47,6 +47,7 @@ class ClientCatalogServiceTest extends TestCase
             box_size REAL,
             box_unit TEXT,
             price REAL,
+            instant_price_per_box REAL DEFAULT 0,
             preorder_price_per_box REAL DEFAULT 0,
             sale_price REAL,
             is_active INTEGER,
@@ -55,7 +56,8 @@ class ClientCatalogServiceTest extends TestCase
             current_purchase_batch_id INTEGER NULL,
             free_stock_boxes REAL DEFAULT 0,
             discount_stock_boxes REAL DEFAULT 0,
-            stock_status TEXT DEFAULT "sold_out"
+            stock_status TEXT DEFAULT "sold_out",
+            requires_production INTEGER DEFAULT 0
         )');
         $this->pdo->exec('CREATE TABLE content_categories (id INTEGER PRIMARY KEY, alias TEXT)');
         $this->pdo->exec('CREATE TABLE materials (
@@ -86,11 +88,11 @@ class ClientCatalogServiceTest extends TestCase
         ");
 
         $this->pdo->exec(
-            "INSERT INTO products (id, alias, product_type_id, seller_id, variety, description, origin_country, box_size, box_unit, price, preorder_price_per_box, sale_price, is_active, image_path, delivery_date, current_purchase_batch_id, free_stock_boxes, discount_stock_boxes, stock_status) VALUES
-            (1, 'sale-product', 1, NULL, 'Клери', 'sale', 'KG', 1, 'кг', 1000, 0, 800, 1, '/sale.jpg', '2025-03-25', 11, 0, 3, 'in_stock'),
-            (2, 'regular-product', 1, NULL, 'Азия', 'regular', 'KG', 1, 'кг', 900, 0, 0, 1, '/regular.jpg', '2025-03-24', 12, 5, 0, 'in_stock'),
-            (3, 'seller-product', 1, 1, 'Seller', 'seller', 'KG', 1, 'кг', 1200, 0, 0, 1, '/seller.jpg', '2025-03-26', NULL, 0, 0, 'sold_out'),
-            (4, 'preorder-product', 1, NULL, 'Pre', 'preorder', 'KG', 1, 'кг', 1100, 1070, 0, 1, '/pre.jpg', NULL, 13, 0, 0, 'preorder')"
+            "INSERT INTO products (id, alias, product_type_id, seller_id, variety, description, origin_country, box_size, box_unit, price, instant_price_per_box, preorder_price_per_box, sale_price, is_active, image_path, delivery_date, current_purchase_batch_id, free_stock_boxes, discount_stock_boxes, stock_status, requires_production) VALUES
+            (1, 'sale-product', 1, NULL, 'Клери', 'sale', 'KG', 1, 'кг', 1000, 1000, 0, 800, 1, '/sale.jpg', '2025-03-25', 11, 0, 3, 'in_stock', 0),
+            (2, 'regular-product', 1, NULL, 'Азия', 'regular', 'KG', 1, 'кг', 900, 900, 0, 0, 1, '/regular.jpg', '2025-03-24', 12, 5, 0, 'in_stock', 0),
+            (3, 'seller-product', 1, 1, 'Seller', 'seller', 'KG', 1, 'кг', 1200, 1200, 0, 0, 1, '/seller.jpg', '2025-03-26', NULL, 0, 0, 'sold_out', 0),
+            (4, 'preorder-product', 1, NULL, 'Pre', 'preorder', 'KG', 1, 'кг', 1100, 0, 1070, 0, 1, '/pre.jpg', NULL, 13, 0, 0, 'preorder', 0)"
         );
         $this->pdo->exec(
             "INSERT INTO materials (id, alias, category_id, title, short_desc, image_path, created_at, is_active, show_on_home) VALUES
@@ -117,9 +119,14 @@ class ClientCatalogServiceTest extends TestCase
         $this->assertSame(1, (int)$data['regularProducts'][0]['has_planned_batch']);
         $this->assertSame(12, (int)$data['regularProducts'][0]['instant_purchase_batch_id']);
         $this->assertSame(900.0, (float)$data['regularProducts'][0]['instant_price_per_box']);
+        $this->assertSame(900.0, (float)$data['regularProducts'][0]['regular_price']);
+        $this->assertSame(810.0, (float)$data['regularProducts'][0]['expected_preorder_price']);
+        $this->assertSame(1, (int)$data['regularProducts'][0]['can_preorder']);
+        $this->assertSame(0, (int)$data['sellerProducts'][0]['can_preorder']);
         $this->assertSame(14, (int)$data['regularProducts'][0]['preorder_purchase_batch_id']);
         $this->assertSame('2025-03-29', $data['regularProducts'][0]['preorder_availability_date']);
         $saleByAlias = array_column($data['saleProducts'], null, 'alias');
+        $this->assertSame(1, (int)$saleByAlias['sale-product']['can_buy_discount']);
         $this->assertSame(0, (int)$saleByAlias['sale-product']['has_planned_batch']);
         $this->assertSame(0, (int)($saleByAlias['sale-product']['preorder_purchase_batch_id'] ?? 0));
     }
@@ -144,4 +151,18 @@ class ClientCatalogServiceTest extends TestCase
         $this->assertSame(1070.0, (float)$productsByAlias['preorder-product']['price']);
         $this->assertSame('/pre.jpg', $productsByAlias['preorder-product']['image_path']);
     }
+
+    public function testCardReadyProductHelpersPreserveConfiguredOrder(): void
+    {
+        $typeProducts = $this->service->getProductsByTypeId(1);
+        $this->assertCount(4, $typeProducts);
+
+        $selected = $this->service->getProductsByIds([4, 2]);
+        $this->assertSame(['preorder-product', 'regular-product'], array_column($selected, 'alias'));
+        $this->assertSame(1, (int)$selected[0]['can_preorder']);
+        $this->assertSame(1, (int)$selected[1]['can_preorder']);
+        $this->assertSame('preorder', $selected[0]['catalog_section']);
+        $this->assertSame('in_stock', $selected[1]['catalog_section']);
+    }
+
 }

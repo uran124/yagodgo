@@ -173,7 +173,9 @@ foreach ($pending as $filename) {
             'execution_time_ms' => $executionTimeMs,
         ]);
 
-        $pdo->commit();
+        if ($pdo->inTransaction()) {
+            $pdo->commit();
+        }
         fwrite(STDOUT, "Applied {$filename} ({$executionTimeMs} ms)\n");
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) {

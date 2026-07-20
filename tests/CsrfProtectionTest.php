@@ -48,6 +48,7 @@ class CsrfProtectionTest extends TestCase
         $this->assertTrue(is_csrf_exempt_path('/telegram/webhook'));
         $this->assertTrue(is_csrf_exempt_path('/telegram/callback'));
         $this->assertTrue(is_csrf_exempt_path('/payments/robokassa/result'));
+        $this->assertTrue(is_csrf_exempt_path('/api/integrations/florix24/order-status'));
         $this->assertFalse(is_csrf_exempt_path('/admin/orders/status'));
     }
 
@@ -58,6 +59,7 @@ class CsrfProtectionTest extends TestCase
         $this->assertFalse($middleware->shouldProtect('GET', '/admin/orders/status'));
         $this->assertFalse($middleware->shouldProtect('POST', '/telegram/webhook'));
         $this->assertFalse($middleware->shouldProtect('POST', '/payments/robokassa/result'));
+        $this->assertFalse($middleware->shouldProtect('POST', '/api/integrations/florix24/order-status'));
         $this->assertTrue($middleware->shouldProtect('POST', '/admin/orders/status'));
         $this->assertTrue($middleware->shouldProtect('post', '/checkout'));
     }

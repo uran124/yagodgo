@@ -1,0 +1,4 @@
+ALTER TABLE content_categories
+  ADD COLUMN meta_title VARCHAR(255) DEFAULT NULL,
+  ADD COLUMN meta_description VARCHAR(255) DEFAULT NULL,
+  ADD COLUMN meta_keywords VARCHAR(255) DEFAULT NULL;
