@@ -187,6 +187,14 @@ return [
         requireAdmin(); (new App\Controllers\SettingsController($c['pdo']))->testDeliveryTariff(); return true;
     },
     static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('POST', '/admin/settings/integrations/florix24/test', $method, $uri)) return false;
+        requireAdmin(); (new App\Controllers\Florix24IntegrationController($c['pdo']))->testConnection(); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('POST', '/admin/settings/integrations/florix24/retry', $method, $uri)) return false;
+        requireAdmin(); (new App\Controllers\Florix24IntegrationController($c['pdo']))->retry(); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
         if (!routeExact('POST', '/admin/delivery/calculate', $method, $uri)) return false;
         requireAdmin(); (new App\Controllers\DeliveryController($c['pdo']))->calculate(); return true;
     },
@@ -197,14 +205,6 @@ return [
     static function (string $method, string $uri, array $c): bool {
         if (!routeRegex('POST', '#^/admin/settings/(general|pricing|preorder|payments|registration_notifications|delivery|integrations|theme)$#', $method, $uri, $m)) return false;
         requireAdmin(); (new App\Controllers\SettingsController($c['pdo']))->save($m[1]); return true;
-    },
-    static function (string $method, string $uri, array $c): bool {
-        if (!routeExact('POST', '/admin/settings/integrations/florix24/test', $method, $uri)) return false;
-        requireAdmin(); (new App\Controllers\Florix24IntegrationController($c['pdo']))->testConnection(); return true;
-    },
-    static function (string $method, string $uri, array $c): bool {
-        if (!routeExact('POST', '/admin/settings/integrations/florix24/retry', $method, $uri)) return false;
-        requireAdmin(); (new App\Controllers\Florix24IntegrationController($c['pdo']))->retry(); return true;
     },
     static function (string $method, string $uri, array $c): bool {
         $map = [
