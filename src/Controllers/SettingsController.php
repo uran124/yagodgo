@@ -2,6 +2,7 @@
 namespace App\Controllers;
 
 use App\Services\DeliveryPricingService;
+use App\Services\Florix24IntegrationService;
 use PDO;
 
 class SettingsController
@@ -32,6 +33,7 @@ class SettingsController
             'payments' => 'Оплата',
             'registration_notifications' => 'Регистрация / Уведомления',
             'delivery' => 'Доставка',
+            'integrations' => 'Интеграции',
             'theme'    => 'Тема',
         ];
     }
@@ -50,11 +52,14 @@ class SettingsController
         $stmt = $this->pdo->query("SELECT setting_key, setting_value FROM settings");
         $all = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
+        $florix24 = new Florix24IntegrationService($this->pdo);
         viewAdmin('settings', [
           'pageTitle'           => 'Настройки — ' . $this->sections()[$activeSection],
           'settings'            => $all,
           'themeColors'         => \get_theme_palette(),
           'deliveryTariffZones' => $activeSection === 'delivery' ? $this->getDeliveryTariffZones() : [],
+          'florix24Journal'     => $activeSection === 'integrations' ? $florix24->journal(100) : [],
+          'florix24WebhookUrl'  => $florix24->webhookUrl(),
           'settingsSections'    => $this->sections(),
           'activeSection'       => $activeSection,
         ]);
@@ -93,6 +98,17 @@ class SettingsController
             'registration_notifications' => [
                 'registration_phone_verification_enabled',
                 'registration_email_verification_ttl_minutes',
+            ],
+            'integrations' => [
+                'florix24_enabled',
+                'florix24_base_url',
+                'florix24_api_token',
+                'florix24_webhook_secret',
+                'florix24_send_orders',
+                'florix24_send_statuses',
+                'florix24_receive_statuses',
+                'florix24_auto_retry',
+                'florix24_enabled_at',
             ],
             'delivery' => [
                 'delivery_store_address',
@@ -197,6 +213,34 @@ class SettingsController
             $_POST['registration_phone_verification_enabled'] = isset($_POST['registration_phone_verification_enabled']) ? '1' : '0';
             $ttl = isset($_POST['registration_email_verification_ttl_minutes']) ? (int)$_POST['registration_email_verification_ttl_minutes'] : 60;
             $_POST['registration_email_verification_ttl_minutes'] = (string)max(5, min(1440, $ttl));
+        }
+
+        if ($activeSection === 'integrations') {
+            $existing = $this->getSettingsMap();
+            $wasEnabled = (($existing['florix24_enabled'] ?? '0') === '1');
+            $_POST['florix24_enabled'] = isset($_POST['florix24_enabled']) ? '1' : '0';
+            foreach (['florix24_send_orders', 'florix24_send_statuses', 'florix24_receive_statuses', 'florix24_auto_retry'] as $checkboxKey) {
+                $_POST[$checkboxKey] = isset($_POST[$checkboxKey]) ? '1' : '0';
+            }
+
+            $baseUrl = rtrim(trim((string)($_POST['florix24_base_url'] ?? 'https://florix24.ru')), '/');
+            if (!filter_var($baseUrl, FILTER_VALIDATE_URL) || !preg_match('#^https?://#i', $baseUrl)) {
+                $baseUrl = 'https://florix24.ru';
+            }
+            $_POST['florix24_base_url'] = $baseUrl;
+
+            foreach (['florix24_api_token', 'florix24_webhook_secret'] as $secretKey) {
+                if (trim((string)($_POST[$secretKey] ?? '')) === '') {
+                    unset($_POST[$secretKey]);
+                }
+            }
+
+            $isEnabled = $_POST['florix24_enabled'] === '1';
+            if ($isEnabled && !$wasEnabled) {
+                $_POST['florix24_enabled_at'] = date('Y-m-d H:i:s');
+            } else {
+                unset($_POST['florix24_enabled_at']);
+            }
         }
 
         if ($activeSection === 'delivery') {

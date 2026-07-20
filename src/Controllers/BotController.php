@@ -414,6 +414,12 @@ class BotController
         ");
         $stmtItem->execute([$orderId, $productId, $quantity, $unitPrice]);
 
+        try {
+            (new \App\Services\Florix24IntegrationService($this->pdo))->enqueueNewOrder($orderId, 'telegram');
+        } catch (\Throwable $integrationError) {
+            error_log('florix24 telegram order enqueue failed: ' . $integrationError->getMessage());
+        }
+
         // 6) Уведомление администратору/группе
         $textAdmin = "🆕 *Новый заказ* #{$orderId}:" . PHP_EOL .
                      "• Клиент (telegram_id): {$telegramId}" . PHP_EOL .

@@ -1194,6 +1194,19 @@ public function cancelReservedOrder(int $orderId): void
             )->execute([$userId, $orderId, $pointsUsed, $desc]);
         }
 
+        try {
+            (new \App\Services\Florix24IntegrationService($this->pdo))->enqueueStatusChange(
+                $orderId,
+                'reserved',
+                'cancelled',
+                $userId,
+                null,
+                'client'
+            );
+        } catch (\Throwable $integrationError) {
+            error_log('florix24 reservation cancellation enqueue failed: ' . $integrationError->getMessage());
+        }
+
         $this->pdo->prepare("DELETE FROM seller_payouts WHERE order_id = ?")->execute([$orderId]);
         $this->pdo->prepare("DELETE FROM order_items WHERE order_id = ?")->execute([$orderId]);
         $this->pdo->prepare("DELETE FROM orders WHERE id = ?")->execute([$orderId]);
@@ -1472,49 +1485,15 @@ public function cancelReservedOrder(int $orderId): void
             return;
         }
 
-        $products = [];
-        foreach (['product1_id','product2_id','product3_id'] as $f) {
-            $pid = $material[$f] ?? null;
-            if ($pid) {
-                $pStmt = $this->pdo->prepare(
-                    "SELECT p.id, p.alias, t.name AS product, t.alias AS type_alias, p.variety, p.description, p.origin_country,
-                            p.box_size, p.box_unit,
-                            CASE
-                                WHEN COALESCE(pb.boxes_discount, 0) > 0 AND COALESCE(pb.discount_price_per_box, 0) > 0 THEN pb.discount_price_per_box
-                                ELSE COALESCE(pb.instant_price_per_box, p.price, 0)
-                            END AS price,
-                            COALESCE(pb.instant_price_per_box, 0) AS current_price_per_box, p.sale_price, p.is_active,
-                            COALESCE(NULLIF(batch_photo.image_path, ''), NULLIF(p.image_path, ''), '') AS image_path,
-                            p.image_path AS product_image_path,
-                            batch_photo.image_path AS batch_image_path,
-                            DATE(pb.purchased_at) AS delivery_date,
-                            COALESCE(u.company_name,u.name,'berryGo') AS seller_name
-                       FROM products p
-                       JOIN product_types t ON t.id = p.product_type_id
-                       LEFT JOIN purchase_batches pb ON pb.id = (
-                           SELECT pb2.id
-                           FROM purchase_batches pb2
-                           WHERE pb2.product_id = p.id
-                             AND pb2.status IN ('purchased', 'arrived')
-                             AND (pb2.boxes_free > 0 OR pb2.boxes_discount > 0)
-                           ORDER BY pb2.purchased_at ASC, pb2.id ASC
-                           LIMIT 1
-                       )
-                       LEFT JOIN purchase_batch_photos batch_photo ON batch_photo.id = (
-                           SELECT pbp.id
-                           FROM purchase_batch_photos pbp
-                           WHERE pbp.purchase_batch_id = pb.id
-                           ORDER BY pbp.id DESC
-                           LIMIT 1
-                       )
-                       LEFT JOIN users u ON u.id = p.seller_id
-                       WHERE p.id = ?"
-                );
-                $pStmt->execute([$pid]);
-                $prod = $pStmt->fetch(PDO::FETCH_ASSOC);
-                if ($prod) { $products[] = $prod; }
+        $productIds = [];
+        foreach (['product1_id', 'product2_id', 'product3_id'] as $field) {
+            $productId = (int)($material[$field] ?? 0);
+            if ($productId > 0) {
+                $productIds[] = $productId;
             }
         }
+        $products = (new ClientCatalogService($this->pdo))->getProductsByIds($productIds);
+
 
         view('client/material', [
             'material'    => $material,
@@ -1613,6 +1592,13 @@ public function cancelReservedOrder(int $orderId): void
             $product['image_path'] = $product['display_image_path'];
         }
 
+        $cardProducts = (new ClientCatalogService($this->pdo))->getProductsByIds([(int)$product['id']]);
+        if ($cardProducts !== []) {
+            // Keep full product-page fields while using the same public availability
+            // and pricing projection as the home page and catalog cards.
+            $product = array_merge($product, $cardProducts[0]);
+        }
+
         view('client/product', [
             'product' => $product,
             'breadcrumbs' => [
@@ -1642,45 +1628,8 @@ public function cancelReservedOrder(int $orderId): void
             return;
         }
 
-        $pStmt = $this->pdo->prepare(
-            "SELECT p.id, p.alias, t.name AS product, t.alias AS type_alias, p.variety, p.description, p.origin_country, p.box_size, p.box_unit,
-                    CASE
-                        WHEN COALESCE(pb_latest.boxes_discount, 0) > 0 AND COALESCE(pb_latest.discount_price_per_box, 0) > 0 THEN pb_latest.discount_price_per_box
-                        WHEN pb_latest.status = 'planned' THEN COALESCE(NULLIF(pb_latest.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0)
-                        ELSE COALESCE(pb_latest.instant_price_per_box, p.price, 0)
-                    END AS price,
-                    COALESCE(pb_latest.instant_price_per_box, 0) AS current_price_per_box,
-                    CASE WHEN pb_latest.status = 'planned' THEN COALESCE(NULLIF(pb_latest.preorder_price_per_box, 0), NULLIF(p.preorder_price_per_box, 0), p.price, 0) ELSE COALESCE(pb_latest.preorder_price_per_box, 0) END AS preorder_price_per_box,
-                    p.sale_price, p.is_active,
-                    COALESCE(NULLIF(batch_photo.image_path, ''), NULLIF(p.image_path, ''), '') AS image_path,
-                    p.image_path AS product_image_path,
-                    batch_photo.image_path AS batch_image_path,
-                    DATE(pb_latest.purchased_at) AS delivery_date,
-                    COALESCE(u.company_name,u.name,'berryGo') AS seller_name,
-                    pb_latest.purchased_at AS latest_purchase_date
-             FROM products p
-             JOIN product_types t ON t.id = p.product_type_id
-             LEFT JOIN users u ON u.id = p.seller_id
-             LEFT JOIN purchase_batches pb_latest ON pb_latest.id = (
-                 SELECT pb2.id
-                 FROM purchase_batches pb2
-                 WHERE pb2.product_id = p.id
-                   AND ((pb2.status IN ('purchased', 'arrived') AND (pb2.boxes_free > 0 OR pb2.boxes_discount > 0))
-                        OR (pb2.status = 'planned' AND pb2.purchased_at IS NOT NULL AND (COALESCE(NULLIF(pb2.boxes_total, 0), pb2.boxes_free + pb2.boxes_reserved) - pb2.boxes_reserved) > 0 AND pb2.preorder_price_per_box > 0))
-                 ORDER BY CASE WHEN pb2.status IN ('purchased', 'arrived') AND pb2.boxes_free > 0 THEN 1 WHEN pb2.status IN ('purchased', 'arrived') AND pb2.boxes_discount > 0 THEN 2 WHEN pb2.status = 'planned' THEN 3 ELSE 9 END, pb2.purchased_at ASC, pb2.id ASC
-                 LIMIT 1
-             )
-             LEFT JOIN purchase_batch_photos batch_photo ON batch_photo.id = (
-                 SELECT pbp.id
-                 FROM purchase_batch_photos pbp
-                 WHERE pbp.purchase_batch_id = pb_latest.id
-                 ORDER BY pbp.id DESC
-                 LIMIT 1
-             )
-             WHERE p.product_type_id = ? AND p.is_active = 1"
-        );
-        $pStmt->execute([$type['id']]);
-        $products = $pStmt->fetchAll(PDO::FETCH_ASSOC);
+        $products = (new ClientCatalogService($this->pdo))->getProductsByTypeId((int)$type['id']);
+
 
         view('client/catalog', [
             'products'          => $products,
@@ -1710,50 +1659,73 @@ public function cancelReservedOrder(int $orderId): void
         $sourceSection = trim((string)($_POST['source_section'] ?? ''));
         $sourceDeliveryDate = trim((string)($_POST['source_delivery_date'] ?? ''));
         $desiredDeliveryDateRaw = trim((string)($_POST['desired_delivery_date'] ?? ''));
-        $expectedPricePerBox = round((float)($_POST['expected_price_per_box'] ?? 0), 2);
-        $discountPercentSnapshot = round((float)($_POST['discount_percent_snapshot'] ?? 0), 2);
 
-        if ($userId <= 0 || $productId <= 0 || $requestedBoxes <= 0) {
+        if ($userId <= 0 || $productId <= 0 || $requestedBoxes <= 0 || $requestedBoxes > 99) {
             http_response_code(422);
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode(['ok' => false, 'error' => 'Некорректные параметры предзаказа'], JSON_UNESCAPED_UNICODE);
             return;
         }
 
-        $productStmt = $this->pdo->prepare("SELECT id, seller_id, price, preorder_price_per_box FROM products WHERE id = ? AND is_active = 1 LIMIT 1");
+        $productStmt = $this->pdo->prepare(
+            "SELECT p.id, p.seller_id, p.requires_production,
+                    EXISTS(SELECT 1 FROM purchase_batches pb_any WHERE pb_any.product_id = p.id LIMIT 1) AS has_purchase_model,
+                    COALESCE(
+                        (SELECT pb_i.instant_price_per_box
+                         FROM purchase_batches pb_i
+                         WHERE pb_i.product_id = p.id
+                           AND pb_i.status IN ('purchased', 'arrived')
+                           AND pb_i.boxes_free > 0
+                           AND pb_i.instant_price_per_box > 0
+                         ORDER BY pb_i.purchased_at ASC, pb_i.id ASC
+                         LIMIT 1),
+                        (SELECT pb_l.instant_price_per_box
+                         FROM purchase_batches pb_l
+                         WHERE pb_l.product_id = p.id
+                           AND pb_l.instant_price_per_box > 0
+                         ORDER BY CASE WHEN pb_l.purchased_at IS NULL THEN 1 ELSE 0 END,
+                                  pb_l.purchased_at DESC,
+                                  pb_l.id DESC
+                         LIMIT 1),
+                        NULLIF(p.instant_price_per_box, 0),
+                        NULLIF(p.price, 0),
+                        0
+                    ) AS regular_price
+             FROM products p
+             WHERE p.id = ? AND p.is_active = 1
+             LIMIT 1"
+        );
         $productStmt->execute([$productId]);
         $product = $productStmt->fetch(PDO::FETCH_ASSOC);
+
         if (!$product) {
             http_response_code(404);
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode(['ok' => false, 'error' => 'Товар не найден'], JSON_UNESCAPED_UNICODE);
             return;
         }
-        if (!empty($product['seller_id'])) {
+
+        $preorderAllowed = empty($product['seller_id'])
+            && (int)($product['requires_production'] ?? 0) === 0
+            && (int)($product['has_purchase_model'] ?? 0) === 1;
+        if (!$preorderAllowed) {
             http_response_code(422);
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode(['ok' => false, 'error' => 'Предзаказ для этого товара недоступен'], JSON_UNESCAPED_UNICODE);
             return;
         }
 
-        $existingStmt = $this->pdo->prepare(
-            "SELECT id FROM preorder_intents WHERE user_id = ? AND product_id = ? AND status IN ('waiting_batch','linked_to_batch','awaiting_price_confirmation','intent_created','offer_sent') ORDER BY id DESC LIMIT 1"
-        );
-        $existingStmt->execute([$userId, $productId]);
-        $existingId = $existingStmt->fetchColumn();
-
-        $plannedBatch = (new SellableBatchResolver($this->pdo))->resolveForProduct($productId, 'preorder');
-        $hasPlannedBatch = $plannedBatch !== null;
-        $autoOfferPrice = $hasPlannedBatch ? round((float)($plannedBatch['price_per_box'] ?? 0), 2) : 0.0;
-        $targetStatus = $hasPlannedBatch ? 'linked_to_batch' : 'waiting_batch';
-        $targetBatchId = $hasPlannedBatch ? (int)$plannedBatch['id'] : null;
-
-        $etaDateValue = null;
-        if ($sourceSection === 'in_stock' && $sourceDeliveryDate !== '') {
-            $ts = strtotime($sourceDeliveryDate);
-            if ($ts !== false) {
-                $etaDateValue = date('Y-m-d', strtotime('+2 day', $ts));
-            }
+        $regularPrice = round((float)($product['regular_price'] ?? 0), 2);
+        $discountPercent = function_exists('get_setting')
+            ? (float)(get_setting('ui_preorder_discount_percent', '10') ?? '10')
+            : 10.0;
+        $discountPercent = max(0.0, min(99.0, $discountPercent));
+        $expectedPricePerBox = round($regularPrice * ((100.0 - $discountPercent) / 100.0), 0);
+        if ($regularPrice <= 0 || $expectedPricePerBox <= 0) {
+            http_response_code(422);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => false, 'error' => 'Цена предзаказа уточняется'], JSON_UNESCAPED_UNICODE);
+            return;
         }
 
         $desiredDeliveryDate = null;
@@ -1762,7 +1734,7 @@ public function cancelReservedOrder(int $orderId): void
             if ($tsDesired === false) {
                 http_response_code(422);
                 header('Content-Type: application/json; charset=utf-8');
-                echo json_encode(['ok' => false, 'error' => 'Некорректная дата получения предзаказа'], JSON_UNESCAPED_UNICODE);
+                echo json_encode(['ok' => false, 'error' => 'Некорректная желаемая дата получения'], JSON_UNESCAPED_UNICODE);
                 return;
             }
             $desiredDeliveryDate = date('Y-m-d', $tsDesired);
@@ -1772,109 +1744,119 @@ public function cancelReservedOrder(int $orderId): void
                 header('Content-Type: application/json; charset=utf-8');
                 echo json_encode([
                     'ok' => false,
-                    'error' => 'Предзаказ можно оформить не раньше ' . date('d.m.Y', strtotime($minPreorderDate)) . '. Если ягода нужна раньше, оформите обычную покупку по текущей цене.',
+                    'error' => 'Предзаказ можно оформить не раньше ' . date('d.m.Y', strtotime($minPreorderDate)) . '.',
                 ], JSON_UNESCAPED_UNICODE);
                 return;
             }
         }
-        $expectedPriceStored = $expectedPricePerBox > 0 ? $expectedPricePerBox : null;
-        $discountSnapshotStored = $discountPercentSnapshot >= 0 ? $discountPercentSnapshot : null;
 
-        if ($existingId) {
+        $plannedBatch = (new SellableBatchResolver($this->pdo))->resolveForProduct($productId, 'preorder');
+        $targetBatchId = $plannedBatch !== null ? (int)($plannedBatch['id'] ?? 0) : 0;
+        if ($targetBatchId <= 0) {
+            $targetBatchId = null;
+        }
+        $targetStatus = $targetBatchId !== null ? 'linked_to_batch' : 'waiting_batch';
+
+        $etaDateValue = null;
+        if ($sourceSection === 'in_stock' && $sourceDeliveryDate !== '') {
+            $ts = strtotime($sourceDeliveryDate);
+            if ($ts !== false) {
+                $etaDateValue = date('Y-m-d', strtotime('+2 day', $ts));
+            }
+        }
+
+        $existingStmt = $this->pdo->prepare(
+            "SELECT id, status
+             FROM preorder_intents
+             WHERE user_id = ? AND product_id = ?
+               AND status IN ('waiting_batch','linked_to_batch','awaiting_price_confirmation','intent_created','offer_sent')
+             ORDER BY id DESC
+             LIMIT 1"
+        );
+        $existingStmt->execute([$userId, $productId]);
+        $existing = $existingStmt->fetch(PDO::FETCH_ASSOC);
+        $nowExpr = $this->currentTimestampExpression();
+
+        if ($existing) {
+            $intentId = (int)$existing['id'];
+            $fromStatus = (string)($existing['status'] ?? '');
             $this->pdo->prepare(
                 "UPDATE preorder_intents
-                 SET requested_boxes = ?, desired_delivery_date = ?, expected_price_per_box = ?, discount_percent_snapshot = ?,
-                     purchase_batch_id = ?, status = ?, offered_price_per_box = ?, offer_expires_at = NULL, checkout_token = NULL, updated_at = NOW()
+                 SET requested_boxes = ?,
+                     desired_delivery_date = ?,
+                     expected_price_per_box = ?,
+                     discount_percent_snapshot = ?,
+                     purchase_batch_id = ?,
+                     status = ?,
+                     offered_price_per_box = NULL,
+                     offer_expires_at = NULL,
+                     checkout_token = NULL,
+                     updated_at = {$nowExpr}
                  WHERE id = ?"
             )->execute([
                 $requestedBoxes,
                 $desiredDeliveryDate,
-                $expectedPriceStored,
-                $discountSnapshotStored,
+                $expectedPricePerBox,
+                $discountPercent,
                 $targetBatchId,
                 $targetStatus,
-                $autoOfferPrice > 0 ? $autoOfferPrice : null,
-                (int)$existingId,
+                $intentId,
             ]);
-            $intentId = (int)$existingId;
-            $this->logPreorderEvent($intentId, 'intent_updated', null, 'intent_created', [
+            $this->logPreorderEvent($intentId, 'intent_updated', $fromStatus, $targetStatus, [
                 'requested_boxes' => $requestedBoxes,
                 'source_section' => $sourceSection,
                 'source_delivery_date' => $sourceDeliveryDate,
                 'eta_delivery_date' => $etaDateValue,
                 'desired_delivery_date' => $desiredDeliveryDate ?? 'any',
-                'expected_price_per_box' => $expectedPriceStored,
-                'discount_percent_snapshot' => $discountSnapshotStored,
+                'expected_price_per_box' => $expectedPricePerBox,
+                'discount_percent_snapshot' => $discountPercent,
                 'planned_batch_id' => $targetBatchId,
-                'status' => $targetStatus,
             ]);
         } else {
             $this->pdo->prepare(
                 "INSERT INTO preorder_intents (
-                    user_id, product_id, purchase_batch_id, requested_boxes, desired_delivery_date, expected_price_per_box, discount_percent_snapshot, status, offered_price_per_box, created_at, updated_at
-                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())"
-            )->execute([$userId, $productId, $targetBatchId, $requestedBoxes, $desiredDeliveryDate, $expectedPriceStored, $discountSnapshotStored, $targetStatus, $autoOfferPrice > 0 ? $autoOfferPrice : null]);
+                    user_id, product_id, purchase_batch_id, requested_boxes, desired_delivery_date,
+                    expected_price_per_box, discount_percent_snapshot, status, offered_price_per_box,
+                    created_at, updated_at
+                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, {$nowExpr}, {$nowExpr})"
+            )->execute([
+                $userId,
+                $productId,
+                $targetBatchId,
+                $requestedBoxes,
+                $desiredDeliveryDate,
+                $expectedPricePerBox,
+                $discountPercent,
+                $targetStatus,
+            ]);
             $intentId = (int)$this->pdo->lastInsertId();
-            $this->logPreorderEvent($intentId, 'intent_created', null, 'intent_created', [
+            $this->logPreorderEvent($intentId, 'intent_created', null, $targetStatus, [
                 'requested_boxes' => $requestedBoxes,
                 'source_section' => $sourceSection,
                 'source_delivery_date' => $sourceDeliveryDate,
                 'eta_delivery_date' => $etaDateValue,
                 'desired_delivery_date' => $desiredDeliveryDate ?? 'any',
-                'expected_price_per_box' => $expectedPriceStored,
-                'discount_percent_snapshot' => $discountSnapshotStored,
+                'expected_price_per_box' => $expectedPricePerBox,
+                'discount_percent_snapshot' => $discountPercent,
                 'planned_batch_id' => $targetBatchId,
-                'status' => $targetStatus,
             ]);
         }
 
-        $etaText = 'на ближайшую возможную дату';
-        if ($sourceSection === 'in_stock' && $sourceDeliveryDate !== '') {
-            $ts = strtotime($sourceDeliveryDate);
-            if ($ts !== false) {
-                $etaText = 'на ' . date('d.m.Y', strtotime('+2 day', $ts));
-            }
-        }
-
-        if ($targetBatchId === null || $autoOfferPrice <= 0) {
-            header('Content-Type: application/json; charset=utf-8');
-            echo json_encode([
-                'ok' => true,
-                'intent_id' => $intentId,
-                'status' => $targetStatus,
-                'status_label' => 'Дата поступления уточняется',
-                'eta_delivery_date' => $etaDateValue,
-                'message' => 'Предзаказ сохранён' . ($desiredDeliveryDate ? ' на ' . date('d.m.Y', strtotime($desiredDeliveryDate)) : ' на ближайшую возможную дату') . '. Мы подтвердим его после назначения поставки и финальной цены.',
-            ], JSON_UNESCAPED_UNICODE);
-            return;
-        }
-
-        $this->pdo->prepare(
-            "INSERT INTO cart_items (user_id, product_id, quantity, unit_price, stock_mode, purchase_batch_id, boxes, sale_price_per_box)" .
-            " VALUES (?, ?, ?, ?, 'preorder', ?, ?, ?)" .
-            " ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)," .
-            " quantity = VALUES(quantity)," .
-            " unit_price = VALUES(unit_price)," .
-            " stock_mode = 'preorder'," .
-            " purchase_batch_id = VALUES(purchase_batch_id)," .
-            " boxes = VALUES(boxes)," .
-            " sale_price_per_box = VALUES(sale_price_per_box)"
-        )->execute([$userId, $productId, $requestedBoxes, $autoOfferPrice, $targetBatchId, $requestedBoxes, $autoOfferPrice]);
-        $cartItemId = (int)$this->pdo->lastInsertId();
-        if ($cartItemId > 0) {
-            $_SESSION['delivery_date'][$cartItemId] = $desiredDeliveryDate ?: PLACEHOLDER_DATE;
-        }
-        $this->refreshCartTotal();
+        $dateText = $desiredDeliveryDate
+            ? ' на ' . date('d.m.Y', strtotime($desiredDeliveryDate))
+            : ' на ближайшую возможную дату';
 
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode([
             'ok' => true,
             'intent_id' => $intentId,
-            'status' => 'in_cart',
-            'status_label' => 'В корзине',
+            'status' => $targetStatus,
+            'status_label' => 'Ожидает поступления',
             'eta_delivery_date' => $etaDateValue,
-            'cart_url' => '/cart',
-            'message' => 'Предзаказ добавлен в корзину' . ($desiredDeliveryDate ? ' на ' . date('d.m.Y', strtotime($desiredDeliveryDate)) : ': ' . $etaText) . '. Предварительная цена зафиксирована для выбранного предзаказа.',
+            'expected_price_per_box' => $expectedPricePerBox,
+            'message' => 'Предзаказ сохранён' . $dateText
+                . '. Ожидаемая цена — ' . number_format($expectedPricePerBox, 0, '.', ' ')
+                . ' ₽ за ящик. Точная стоимость будет подтверждена после поступления в магазин.',
         ], JSON_UNESCAPED_UNICODE);
     }
 

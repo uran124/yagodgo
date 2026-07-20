@@ -1055,6 +1055,12 @@ class OrdersController
             $this->pdo->prepare("DELETE FROM cart_items WHERE user_id = ?")->execute([$user['id']]);
             $this->pdo->commit();
 
+            try {
+                (new \App\Services\Florix24IntegrationService($this->pdo))->enqueueNewOrder($orderId, 'site');
+            } catch (\Throwable $integrationError) {
+                error_log('florix24 legacy order enqueue failed: ' . $integrationError->getMessage());
+            }
+
             // Уведомляем админов в Telegram
             $this->notifyAdmins($orderId);
 
