@@ -7,7 +7,6 @@ return [
         if (!routeExact('POST', '/api/integrations/florix24/order-status', $method, $uri)) {
             return false;
         }
-
         (new App\Controllers\Florix24IntegrationController($c['pdo']))->webhook();
         return true;
     },
