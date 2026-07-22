@@ -4,7 +4,7 @@
   style.textContent = `.material-icons-round,.material-icons{display:inline-block;width:1em;height:1em;font-size:24px;line-height:1;vertical-align:-0.125em;flex-shrink:0;background-color:currentColor;mask:var(--local-icon-url) center/contain no-repeat;-webkit-mask:var(--local-icon-url) center/contain no-repeat}.material-icons-round:not([data-local-svg-icon]),.material-icons:not([data-local-svg-icon]){background-color:transparent;width:auto;height:auto}`;
   document.head.appendChild(style);
   const iconMap = {
-    add: 'plus', close: 'x', delete: 'trash', remove: 'minus', menu: 'menu', search: 'search', home: 'home',
+    add: 'plus', close: 'x', delete: 'trash', remove: 'minus', menu: 'menu', search: 'search', home: 'home', map: 'map', settings: 'settings',
     grid_view: 'layout-grid', dashboard: 'dashboard', auto_awesome_mosaic: 'dashboard', category: 'layout-grid',
     shopping_cart: 'shopping-cart', shopping_bag: 'shopping-cart', receipt_long: 'orders', receipt: 'receipt-text',
     notifications: 'bell', priority_high: 'alert-circle', forum: 'message-circle', support_agent: 'messages-square',
