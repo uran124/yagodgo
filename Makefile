@@ -1,4 +1,4 @@
-.PHONY: migrate migrate-no-backup status test lint static-checks supply-smoke supply-digest supply-release-check supply-discount-rollover
+.PHONY: migrate migrate-no-backup status test lint static-checks florix24-release-check supply-smoke supply-digest supply-release-check supply-discount-rollover
 
 migrate:
 	php bin/migrate.php up
@@ -17,6 +17,9 @@ lint:
 
 static-checks:
 	php bin/static_checks.php
+
+florix24-release-check:
+	php bin/florix24_release_check.php
 
 supply-smoke:
 	php bin/supply_smoke.php
