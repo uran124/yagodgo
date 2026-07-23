@@ -15,7 +15,9 @@ final class Florix24InboundJournalService
         if (($filters['correlation_id'] ?? '') !== '') { $where[]='correlation_id = ?'; $params[]=trim((string)$filters['correlation_id']); }
         $sql=' FROM integration_request_logs WHERE '.implode(' AND ',$where);
         $count=$this->pdo->prepare('SELECT COUNT(*)'.$sql);$count->execute($params);
-        $stmt=$this->pdo->prepare('SELECT id,endpoint,http_status,external_order_id,partner_user_id,points_used,error_code,correlation_id,processing_ms,request_payload,response_payload,created_at'.$sql.' ORDER BY id DESC LIMIT '.max(1,min(200,$limit)));$stmt->execute($params);
+        // Payloads remain in the immutable audit table but are deliberately not
+        // exposed by this operator-facing listing.
+        $stmt=$this->pdo->prepare('SELECT id,endpoint,http_status,external_order_id,partner_user_id,points_used,error_code,correlation_id,processing_ms,created_at'.$sql.' ORDER BY id DESC LIMIT '.max(1,min(200,$limit)));$stmt->execute($params);
         return ['rows'=>$stmt->fetchAll(PDO::FETCH_ASSOC)?:[],'total'=>(int)$count->fetchColumn()];
     }
 }
