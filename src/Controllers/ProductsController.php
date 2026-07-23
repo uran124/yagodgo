@@ -551,6 +551,7 @@ class ProductsController
                     $stmt->execute([$price, $batchId]);
                 }
             }
+            (new CatalogFeedService($this->pdo))->markDirty();
         }
         // Redirect back to the page where the price was updated.
         // If the "Referer" header is available, return to that page

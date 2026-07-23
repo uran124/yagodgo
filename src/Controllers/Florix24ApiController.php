@@ -7,10 +7,18 @@ use PDO;
 
 final class Florix24ApiController
 {
+    /** @var array<string,mixed> */
+    private array $requestPayload = [];
     public function __construct(private PDO $pdo) {}
     public function customer(): void { $this->respond('customers.read', fn() => (new Florix24InboundService($this->pdo))->customerByPhone((string)($_GET['phone'] ?? ''))); }
     public function order(): void { $this->respond('orders.create', fn() => (new Florix24InboundService($this->pdo))->createOrder($this->body())); }
     public function cancel(string $externalId): void { $this->respond('orders.cancel', fn() => (new Florix24InboundService($this->pdo))->cancel(urldecode($externalId))); }
+    public function feed(): void
+    {
+        $path = dirname(__DIR__, 2) . '/feeds/catalog.yml';
+        if (!is_file($path)) { http_response_code(404); header('Content-Type: text/plain; charset=UTF-8'); echo 'Catalog feed is not generated yet.'; return; }
+        header('Content-Type: application/xml; charset=UTF-8'); header('Content-Length: ' . (string)filesize($path)); readfile($path);
+    }
 
     private function respond(string $permission, callable $action): void
     {
@@ -23,7 +31,7 @@ final class Florix24ApiController
         $this->audit($client, $status, $response, $correlation, (int)round((microtime(true)-$started)*1000));
         http_response_code($status); header('Content-Type: application/json; charset=UTF-8'); header('X-Correlation-ID: '.$correlation); echo json_encode($response, JSON_UNESCAPED_UNICODE);
     }
-    private function body(): array { $data=json_decode((string)file_get_contents('php://input'), true); if (!is_array($data)) throw new \RuntimeException('validation_error'); return $data; }
+    private function body(): array { $data=json_decode((string)file_get_contents('php://input'), true); if (!is_array($data)) throw new \RuntimeException('validation_error'); $this->requestPayload=$data; return $data; }
     private function authorize(string $permission): array
     {
         if (!preg_match('/^Bearer\s+(.+)$/i', (string)($_SERVER['HTTP_AUTHORIZATION'] ?? ''), $m)) throw new FlorixApiException('invalid_token', 401);
@@ -39,7 +47,7 @@ final class Florix24ApiController
     }
     private function audit(?array $client, int $status, array $response, string $correlation, int $ms): void
     {
-        try {$payload=$_SERVER['REQUEST_METHOD']==='GET'?$_GET:json_decode((string)file_get_contents('php://input'),true); $this->pdo->prepare('INSERT INTO integration_request_logs (integration_client_id,source,endpoint,request_payload,response_payload,http_status,external_order_id,partner_user_id,points_used,error_code,correlation_id,processing_ms) VALUES (?,\'florix24\',?,?,?,?,?,?,?,?,?,?,?)')->execute([$client['id']??null,parse_url((string)$_SERVER['REQUEST_URI'],PHP_URL_PATH),json_encode($payload,JSON_UNESCAPED_UNICODE),json_encode($response,JSON_UNESCAPED_UNICODE),$status,$payload['external_order_id']??null,$response['partner']['user_id']??null,$response['customer']['points_used']??0,$response['error']??null,$correlation,$ms]);}catch(\Throwable){}
+        try {$payload=$_SERVER['REQUEST_METHOD']==='GET'?$_GET:$this->requestPayload; $this->pdo->prepare('INSERT INTO integration_request_logs (integration_client_id,source,endpoint,request_payload,response_payload,http_status,external_order_id,partner_user_id,points_used,error_code,correlation_id,processing_ms) VALUES (?,\'florix24\',?,?,?,?,?,?,?,?,?,?,?)')->execute([$client['id']??null,parse_url((string)$_SERVER['REQUEST_URI'],PHP_URL_PATH),json_encode($payload,JSON_UNESCAPED_UNICODE),json_encode($response,JSON_UNESCAPED_UNICODE),$status,$payload['external_order_id']??null,$response['partner']['user_id']??null,$response['customer']['points_used']??0,$response['error']??null,$correlation,$ms]);}catch(\Throwable){}
     }
 }
 final class FlorixApiException extends \RuntimeException { public function __construct(public string $errorCode, public int $httpStatus, public int $retryAfter=0) { parent::__construct($errorCode); } }
