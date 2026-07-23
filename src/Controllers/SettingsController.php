@@ -3,6 +3,7 @@ namespace App\Controllers;
 
 use App\Services\DeliveryPricingService;
 use App\Services\Florix24IntegrationService;
+use App\Services\Florix24InboundJournalService;
 use PDO;
 
 class SettingsController
@@ -53,6 +54,13 @@ class SettingsController
         $all = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
         $florix24 = new Florix24IntegrationService($this->pdo);
+        $florixInboundJournal = ['rows'=>[], 'total'=>0];
+        $florixInboundClient = null;
+        if ($activeSection === 'integrations') {
+            $stmt = $this->pdo->prepare("SELECT token_prefix, created_at, last_used_at, expires_at, revoked_at, is_active, permissions, ip_check_enabled, allowed_ips FROM integration_clients WHERE source='florix24' LIMIT 1");
+            try { $stmt->execute(); $florixInboundClient = $stmt->fetch(PDO::FETCH_ASSOC) ?: null; } catch (\Throwable) { $florixInboundClient = null; }
+            try { $florixInboundJournal=(new Florix24InboundJournalService($this->pdo))->search(['status'=>$_GET['inbound_status']??'', 'external_order_id'=>$_GET['inbound_order']??'', 'correlation_id'=>$_GET['inbound_correlation']??'']); } catch (\Throwable) { $florixInboundJournal=['rows'=>[], 'total'=>0]; }
+        }
         viewAdmin('settings', [
           'pageTitle'           => 'Настройки — ' . $this->sections()[$activeSection],
           'settings'            => $all,
@@ -62,7 +70,11 @@ class SettingsController
           'florix24WebhookUrl'  => $florix24->webhookUrl(),
           'settingsSections'    => $this->sections(),
           'activeSection'       => $activeSection,
+          'florixInboundClient' => $florixInboundClient,
+          'florix24NewToken'    => $_SESSION['florix24_new_token'] ?? null,
+          'florixInboundJournal'=> $florixInboundJournal,
         ]);
+        unset($_SESSION['florix24_new_token']);
     }
 
     // Сохранение

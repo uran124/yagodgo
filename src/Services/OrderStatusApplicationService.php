@@ -116,6 +116,38 @@ class OrderStatusApplicationService
         }
     }
 
+    /**
+     * Cancels an order on behalf of Florix24 without performing loyalty refunds.
+     * The caller owns refund/reversal transactions so that their Florix-specific
+     * external IDs and related transaction links remain intact.
+     */
+    public function cancelFromFlorix(int $orderId): void
+    {
+        $stmt = $this->pdo->prepare('SELECT status FROM orders WHERE id = ?' . ($this->driver() === 'mysql' ? ' FOR UPDATE' : ''));
+        $stmt->execute([$orderId]);
+        $previous = $stmt->fetchColumn();
+        if ($previous === false) {
+            throw new RuntimeException('Заказ BerryGo не найден.');
+        }
+        if ((string)$previous === 'cancelled') {
+            return;
+        }
+
+        if ($this->stockSchemaAvailable()) {
+            (new OrderStockOrchestrator($this->pdo, new StockService($this->pdo)))->rollbackReservationByOrderId($orderId);
+        }
+        $this->updateStatus($orderId, 'cancelled');
+        (new OrderStatusHistoryService($this->pdo))->record(
+            $orderId,
+            (string)$previous,
+            'cancelled',
+            null,
+            'florix24',
+            'Заказ отменен запросом Florix24',
+            true
+        );
+    }
+
     private function updateStatus(int $orderId, string $status): void
     {
         $stmt = $this->pdo->prepare('UPDATE orders SET status = ? WHERE id = ?');
@@ -148,29 +180,52 @@ class OrderStatusApplicationService
             $refStmt = $this->pdo->prepare('SELECT referred_by FROM users WHERE id = ?');
             $refStmt->execute([$userId]);
             $refId = (int)($refStmt->fetchColumn() ?: 0);
+            // Florix24 stores the sale partner on the order.  It deliberately
+            // takes precedence over the customer's permanent referral link.
+            $explicitPartner = 0;
+            try {
+                $partnerStmt = $this->pdo->prepare('SELECT partner_user_id FROM orders WHERE id = ?');
+                $partnerStmt->execute([$orderId]);
+                $explicitPartner = (int)($partnerStmt->fetchColumn() ?: 0);
+            } catch (Throwable) {
+                // Older schemas used by maintenance tools do not have the column.
+            }
+            if ($explicitPartner > 0) {
+                $refId = $explicitPartner;
+            }
             if ($refId > 0) {
                 $infoStmt = $this->pdo->prepare('SELECT role FROM users WHERE id = ?');
                 $infoStmt->execute([$refId]);
                 $refRole = (string)($infoStmt->fetchColumn() ?: '');
-                $isPartner = $refRole === 'partner';
+                $isPartner = $refRole === 'partner' || $explicitPartner > 0;
                 $isFirstClientOrder = false;
                 if ($isPartner) {
                     $count = $this->pdo->prepare("SELECT COUNT(*) FROM orders WHERE user_id = ? AND status = 'completed' AND id <> ?");
                     $count->execute([$userId, $orderId]);
                     $isFirstClientOrder = (int)$count->fetchColumn() === 0;
                 }
-                $isSelfPlaced = empty($order['created_by_user_id']);
-                if ($refRole === 'manager') {
+                $isSelfPlaced = empty($order['created_by_user_id']) || $explicitPartner > 0;
+                if ($explicitPartner > 0) {
+                    // The order-level Florix24 partner always follows the
+                    // 10% first-order / 3% repeat-order partner rule.
+                    $refBonus = Order::calculateReferralBonus($sum, true, $isFirstClientOrder);
+                } elseif ($refRole === 'manager') {
                     $refBonus = $isSelfPlaced ? Order::calculateManagerReferralBonus($sum) : 0;
                 } else {
                     $refBonus = Order::calculateReferralBonus($sum, $isPartner, $isFirstClientOrder);
                 }
                 if ($refBonus > 0) {
                     $this->pdo->prepare('UPDATE users SET points_balance = points_balance + ? WHERE id = ?')->execute([$refBonus, $refId]);
-                    $description = $refRole === 'manager'
+                    $description = $explicitPartner > 0
+                        ? "Партнерское начисление Florix24 за заказ №{$orderId}"
+                        : ($refRole === 'manager'
                         ? "Бонус менеджера за самостоятельный заказ по ссылке №{$orderId}"
-                        : "Бонус за заказ №{$orderId}";
-                    $this->insertPointsTransaction($refId, $orderId, $refBonus, $description);
+                        : "Бонус за заказ №{$orderId}");
+                    if ($explicitPartner > 0) {
+                        $this->insertPartnerReward($refId, $orderId, $refBonus, $description);
+                    } else {
+                        $this->insertPointsTransaction($refId, $orderId, $refBonus, $description);
+                    }
                 }
             }
 
@@ -238,6 +293,22 @@ class OrderStatusApplicationService
         $stmt->execute([$userId, $orderId, $amount, $description]);
     }
 
+    private function insertPartnerReward(int $userId, int $orderId, int $amount, string $description): void
+    {
+        if ($amount <= 0) return;
+        try {
+            $timestamp = $this->driver() === 'sqlite' ? "datetime('now')" : 'NOW()';
+            $stmt = $this->pdo->prepare(
+                "INSERT INTO points_transactions (user_id, order_id, amount, transaction_type, description, source, created_at)
+                 VALUES (?, ?, ?, 'partner_reward', ?, 'florix24', {$timestamp})"
+            );
+            $stmt->execute([$userId, $orderId, $amount, $description]);
+        } catch (Throwable $e) {
+            // Compatibility with older local schemas; production migration adds source.
+            $this->insertPointsTransaction($userId, $orderId, $amount, $description);
+        }
+    }
+
     private function findProjectManagerId(): int
     {
         $stmt = $this->pdo->query("SELECT id FROM users WHERE role = 'manager' AND referred_by IS NULL ORDER BY id LIMIT 1");
@@ -274,6 +345,14 @@ class OrderStatusApplicationService
         } catch (Throwable $e) {
             return false;
         }
+    }
+
+    private function stockSchemaAvailable(): bool
+    {
+        return $this->tableExists('order_items')
+            && $this->tableExists('purchase_batches')
+            && $this->tableExists('stock_movements')
+            && $this->tableExists('products');
     }
 
     private function driver(): string

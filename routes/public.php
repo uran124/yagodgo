@@ -4,6 +4,22 @@ declare(strict_types=1);
 
 return [
     static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('GET', '/feeds/catalog.yml', $method, $uri)) return false;
+        (new App\Controllers\Florix24ApiController($c['pdo']))->feed(); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('GET', '/api/v1/integrations/florix/customers/by-phone', $method, $uri)) return false;
+        (new App\Controllers\Florix24ApiController($c['pdo']))->customer(); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('POST', '/api/v1/integrations/florix/orders', $method, $uri)) return false;
+        (new App\Controllers\Florix24ApiController($c['pdo']))->order(); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
+        if ($method !== 'POST' || !preg_match('#^/api/v1/integrations/florix/orders/([^/]+)/cancel$#', $uri, $m)) return false;
+        (new App\Controllers\Florix24ApiController($c['pdo']))->cancel($m[1]); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
         if (!routeExact('POST', '/api/integrations/florix24/order-status', $method, $uri)) {
             return false;
         }

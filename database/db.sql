@@ -4162,6 +4162,33 @@ ALTER TABLE `support_message_attachments`
 --
 ALTER TABLE `users`
   ADD CONSTRAINT `fk_users_referred_by` FOREIGN KEY (`referred_by`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+-- Florix24 inbound integration schema (kept here for clean installations).
+CREATE TABLE IF NOT EXISTS `integration_clients` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL, `source` varchar(50) NOT NULL,
+  `token_hash` varchar(255) NOT NULL, `token_prefix` varchar(32) NOT NULL DEFAULT '',
+  `permissions` json DEFAULT NULL, `is_active` tinyint(1) NOT NULL DEFAULT '1',
+  `allowed_ips` text, `ip_check_enabled` tinyint(1) NOT NULL DEFAULT '0', `trusted_proxy_mode` tinyint(1) NOT NULL DEFAULT '0',
+  `rate_limit_per_minute` int unsigned NOT NULL DEFAULT '60', `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `last_used_at` datetime DEFAULT NULL, `expires_at` datetime DEFAULT NULL, `revoked_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`), UNIQUE KEY `uq_integration_clients_source` (`source`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS `integration_request_logs` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT, `integration_client_id` bigint unsigned DEFAULT NULL,
+  `source` varchar(50) NOT NULL, `endpoint` varchar(255) NOT NULL, `request_payload` json DEFAULT NULL, `response_payload` json DEFAULT NULL,
+  `http_status` smallint unsigned NOT NULL, `external_order_id` varchar(128) DEFAULT NULL, `partner_user_id` int unsigned DEFAULT NULL,
+  `points_used` int NOT NULL DEFAULT '0', `error_code` varchar(64) DEFAULT NULL, `correlation_id` varchar(64) NOT NULL,
+  `processing_ms` int unsigned NOT NULL DEFAULT '0', `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`), KEY `idx_integration_request_logs_source_created` (`source`,`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS `integration_rate_limit_windows` (`integration_client_id` bigint unsigned NOT NULL,`window_started_at` datetime NOT NULL,`request_count` int unsigned NOT NULL DEFAULT '0',PRIMARY KEY (`integration_client_id`,`window_started_at`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS `catalog_feed_state` (`id` tinyint unsigned NOT NULL,`is_dirty` tinyint(1) NOT NULL DEFAULT '1',`generated_at` datetime DEFAULT NULL,`last_error` text,`updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+INSERT IGNORE INTO `catalog_feed_state` (`id`,`is_dirty`) VALUES (1,1);
+ALTER TABLE `orders` ADD COLUMN `integration_source` varchar(50) DEFAULT NULL, ADD COLUMN `external_order_id` varchar(128) DEFAULT NULL, ADD COLUMN `partner_user_id` int unsigned DEFAULT NULL, ADD COLUMN `partner_source` varchar(50) DEFAULT NULL, ADD COLUMN `external_partner_id` varchar(128) DEFAULT NULL, ADD COLUMN `external_partner_name` varchar(255) DEFAULT NULL, ADD COLUMN `subtotal_before_points` decimal(10,2) DEFAULT NULL, ADD COLUMN `points_discount_amount` decimal(10,2) NOT NULL DEFAULT '0', ADD COLUMN `total_after_points` decimal(10,2) DEFAULT NULL, ADD UNIQUE KEY `uq_orders_integration_external` (`integration_source`,`external_order_id`);
+ALTER TABLE `products` ADD COLUMN `external_catalog_enabled` tinyint(1) NOT NULL DEFAULT '0', ADD COLUMN `external_name` varchar(255) DEFAULT NULL, ADD COLUMN `external_description` text, ADD COLUMN `external_sku` varchar(128) DEFAULT NULL, ADD COLUMN `external_image_path` varchar(255) DEFAULT NULL, ADD COLUMN `external_updated_at` datetime DEFAULT NULL;
+ALTER TABLE `users` ADD COLUMN `integration_partner_enabled` tinyint(1) NOT NULL DEFAULT '0';
+ALTER TABLE `points_transactions` MODIFY COLUMN `transaction_type` enum('accrual','usage','payout','refund','partner_reward','partner_reward_reversal') NOT NULL, ADD COLUMN `source` varchar(64) DEFAULT NULL, ADD COLUMN `external_order_id` varchar(128) DEFAULT NULL, ADD COLUMN `related_transaction_id` int unsigned DEFAULT NULL;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
