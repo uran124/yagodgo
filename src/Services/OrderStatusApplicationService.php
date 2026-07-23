@@ -148,18 +148,31 @@ class OrderStatusApplicationService
             $refStmt = $this->pdo->prepare('SELECT referred_by FROM users WHERE id = ?');
             $refStmt->execute([$userId]);
             $refId = (int)($refStmt->fetchColumn() ?: 0);
+            // Florix24 stores the sale partner on the order.  It deliberately
+            // takes precedence over the customer's permanent referral link.
+            $explicitPartner = 0;
+            try {
+                $partnerStmt = $this->pdo->prepare('SELECT partner_user_id FROM orders WHERE id = ?');
+                $partnerStmt->execute([$orderId]);
+                $explicitPartner = (int)($partnerStmt->fetchColumn() ?: 0);
+            } catch (Throwable) {
+                // Older schemas used by maintenance tools do not have the column.
+            }
+            if ($explicitPartner > 0) {
+                $refId = $explicitPartner;
+            }
             if ($refId > 0) {
                 $infoStmt = $this->pdo->prepare('SELECT role FROM users WHERE id = ?');
                 $infoStmt->execute([$refId]);
                 $refRole = (string)($infoStmt->fetchColumn() ?: '');
-                $isPartner = $refRole === 'partner';
+                $isPartner = $refRole === 'partner' || $explicitPartner > 0;
                 $isFirstClientOrder = false;
                 if ($isPartner) {
                     $count = $this->pdo->prepare("SELECT COUNT(*) FROM orders WHERE user_id = ? AND status = 'completed' AND id <> ?");
                     $count->execute([$userId, $orderId]);
                     $isFirstClientOrder = (int)$count->fetchColumn() === 0;
                 }
-                $isSelfPlaced = empty($order['created_by_user_id']);
+                $isSelfPlaced = empty($order['created_by_user_id']) || $explicitPartner > 0;
                 if ($refRole === 'manager') {
                     $refBonus = $isSelfPlaced ? Order::calculateManagerReferralBonus($sum) : 0;
                 } else {
@@ -167,9 +180,11 @@ class OrderStatusApplicationService
                 }
                 if ($refBonus > 0) {
                     $this->pdo->prepare('UPDATE users SET points_balance = points_balance + ? WHERE id = ?')->execute([$refBonus, $refId]);
-                    $description = $refRole === 'manager'
+                    $description = $explicitPartner > 0
+                        ? "Партнерское начисление Florix24 за заказ №{$orderId}"
+                        : ($refRole === 'manager'
                         ? "Бонус менеджера за самостоятельный заказ по ссылке №{$orderId}"
-                        : "Бонус за заказ №{$orderId}";
+                        : "Бонус за заказ №{$orderId}");
                     $this->insertPointsTransaction($refId, $orderId, $refBonus, $description);
                 }
             }
