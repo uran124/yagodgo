@@ -30,4 +30,31 @@ final class Florix24TokenAdminController
         $this->pdo->prepare("UPDATE integration_clients SET is_active=0,revoked_at=CURRENT_TIMESTAMP WHERE source='florix24'")->execute();
         header('Location: /admin/settings/integrations?token_revoked=1'); exit;
     }
+
+    public function saveNetworkPolicy(): void
+    {
+        $enabled = isset($_POST['ip_check_enabled']) ? 1 : 0;
+        $allowlist = trim((string)($_POST['ip_allowlist'] ?? ''));
+        $entries = array_values(array_filter(array_map('trim', preg_split('/[\r\n,]+/', $allowlist) ?: [])));
+        foreach ($entries as $entry) {
+            if (!$this->isIpOrCidr($entry)) {
+                header('Location: /admin/settings/integrations?error=invalid_ip_allowlist'); exit;
+            }
+        }
+        if ($enabled && $entries === []) {
+            header('Location: /admin/settings/integrations?error=empty_ip_allowlist'); exit;
+        }
+        $this->pdo->prepare("UPDATE integration_clients SET allowed_ips=?,ip_check_enabled=? WHERE source='florix24'")
+            ->execute([implode("\n", $entries), $enabled]);
+        header('Location: /admin/settings/integrations?network_policy_saved=1'); exit;
+    }
+
+    private function isIpOrCidr(string $value): bool
+    {
+        [$ip, $bits] = array_pad(explode('/', $value, 2), 2, null);
+        if (filter_var($ip, FILTER_VALIDATE_IP) === false) return false;
+        if ($bits === null) return true;
+        if (!ctype_digit($bits)) return false;
+        return (int)$bits >= 0 && (int)$bits <= (str_contains($ip, ':') ? 128 : 32);
+    }
 }

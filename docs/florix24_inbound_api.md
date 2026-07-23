@@ -6,6 +6,8 @@
 
 Ключ Florix24 получает права `customers.read`, `orders.create`, `orders.cancel`, `catalog.read`. Каждый запрос использует `Authorization: Bearer <token>`. Превышение 60 запросов в минуту возвращает `429`, `Retry-After: 60` и `{ "result": "error", "error": "rate_limit", "retry_after": 60 }`.
 
+IP-ограничение по умолчанию выключено. После подтверждения исходящих адресов Florix24 его можно включить в этой же карточке, указав IP или CIDR по одному на строку. До отдельной настройки trusted proxy BerryGo использует только `REMOTE_ADDR` и намеренно не доверяет `X-Forwarded-For`.
+
 ## Endpoints
 
 * `GET /api/v1/integrations/florix/customers/by-phone?phone=79000000000` — требуется `customers.read`.

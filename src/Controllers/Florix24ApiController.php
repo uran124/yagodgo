@@ -38,7 +38,20 @@ final class Florix24ApiController
         $q=$this->pdo->prepare("SELECT * FROM integration_clients WHERE source='florix24' LIMIT 1"); $q->execute(); $client=$q->fetch(PDO::FETCH_ASSOC);
         if (!$client || !(int)$client['is_active'] || $client['revoked_at'] || ($client['expires_at'] && strtotime($client['expires_at']) < time()) || !password_verify($m[1], $client['token_hash'])) throw new FlorixApiException('invalid_token', 401);
         $permissions=json_decode((string)$client['permissions'], true) ?: []; if (!in_array($permission, $permissions, true)) throw new FlorixApiException('permission_denied', 403);
+        if ((int)($client['ip_check_enabled'] ?? 0) && !$this->isAllowedIp((string)($_SERVER['REMOTE_ADDR'] ?? ''), (string)($client['allowed_ips'] ?? ''))) throw new FlorixApiException('permission_denied', 403);
         $this->limit($client); $this->pdo->prepare('UPDATE integration_clients SET last_used_at = CURRENT_TIMESTAMP WHERE id=?')->execute([$client['id']]); return $client;
+    }
+    private function isAllowedIp(string $remoteIp, string $allowlist): bool
+    {
+        if (filter_var($remoteIp, FILTER_VALIDATE_IP) === false) return false;
+        foreach (preg_split('/[\r\n,]+/', $allowlist) ?: [] as $entry) {
+            $entry=trim($entry); if ($entry === '') continue;
+            if (!str_contains($entry, '/') && hash_equals($entry, $remoteIp)) return true;
+            [$network,$bits]=array_pad(explode('/', $entry, 2),2,null); if ($bits===null || filter_var($network,FILTER_VALIDATE_IP)===false || !ctype_digit($bits)) continue;
+            $packedIp=@inet_pton($remoteIp);$packedNetwork=@inet_pton($network);$length=strlen((string)$packedIp);$prefix=(int)$bits;if($packedIp===false||$packedNetwork===false||strlen($packedNetwork)!==$length||$prefix<0||$prefix>$length*8)continue;
+            $full=intdiv($prefix,8);$rem=$prefix%8;if(substr($packedIp,0,$full)!==substr($packedNetwork,0,$full))continue;if($rem===0)return true;$mask=(0xFF << (8-$rem)) & 0xFF;if((ord($packedIp[$full])&$mask)===(ord($packedNetwork[$full])&$mask))return true;
+        }
+        return false;
     }
     private function limit(array $client): void
     {

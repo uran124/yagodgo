@@ -55,7 +55,7 @@ class SettingsController
         $florix24 = new Florix24IntegrationService($this->pdo);
         $florixInboundClient = null;
         if ($activeSection === 'integrations') {
-            $stmt = $this->pdo->prepare("SELECT token_prefix, created_at, last_used_at, expires_at, revoked_at, is_active, permissions, ip_check_enabled FROM integration_clients WHERE source='florix24' LIMIT 1");
+            $stmt = $this->pdo->prepare("SELECT token_prefix, created_at, last_used_at, expires_at, revoked_at, is_active, permissions, ip_check_enabled, allowed_ips FROM integration_clients WHERE source='florix24' LIMIT 1");
             try { $stmt->execute(); $florixInboundClient = $stmt->fetch(PDO::FETCH_ASSOC) ?: null; } catch (\Throwable) { $florixInboundClient = null; }
         }
         viewAdmin('settings', [

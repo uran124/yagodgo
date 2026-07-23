@@ -203,6 +203,10 @@ return [
         requireAdmin(); (new App\Controllers\Florix24TokenAdminController($c['pdo']))->revoke(); return true;
     },
     static function (string $method, string $uri, array $c): bool {
+        if (!routeExact('POST', '/admin/settings/integrations/florix24/network-policy', $method, $uri)) return false;
+        requireAdmin(); (new App\Controllers\Florix24TokenAdminController($c['pdo']))->saveNetworkPolicy(); return true;
+    },
+    static function (string $method, string $uri, array $c): bool {
         if (!routeExact('POST', '/admin/delivery/calculate', $method, $uri)) return false;
         requireAdmin(); (new App\Controllers\DeliveryController($c['pdo']))->calculate(); return true;
     },
