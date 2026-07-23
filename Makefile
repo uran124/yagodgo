@@ -1,7 +1,10 @@
-.PHONY: migrate status test lint static-checks supply-smoke supply-digest supply-release-check supply-discount-rollover
+.PHONY: migrate migrate-no-backup status test lint static-checks supply-smoke supply-digest supply-release-check supply-discount-rollover
 
 migrate:
 	php bin/migrate.php up
+
+migrate-no-backup:
+	php bin/migrate.php up --skip-backup
 
 status:
 	php bin/migrate.php status
