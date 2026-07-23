@@ -651,7 +651,7 @@ class UsersController
         $auth = Auth::user();
 
         $stmt = $this->pdo->prepare(
-            "SELECT id, name, phone, role, is_blocked, telegram_id, referral_code, referred_by,
+            "SELECT id, name, phone, role, is_blocked, integration_partner_enabled, telegram_id, referral_code, referred_by,
                     points_balance, rub_balance, created_at
              FROM users WHERE id = ?"
         );
@@ -713,14 +713,14 @@ class UsersController
         if ($id) {
             try {
                 $stmt = $this->pdo->prepare(
-                    "SELECT id, name, phone, role, is_blocked, rub_balance
+                    "SELECT id, name, phone, role, is_blocked, integration_partner_enabled, rub_balance
                      FROM users
                      WHERE id = ?"
                 );
                 $stmt->execute([$id]);
             } catch (\PDOException $e) {
                 $stmt = $this->pdo->prepare(
-                    "SELECT id, name, phone, role, rub_balance
+                    "SELECT id, name, phone, role, integration_partner_enabled, rub_balance
                      FROM users
                      WHERE id = ?"
                 );
@@ -772,7 +772,7 @@ class UsersController
         if ($id) {
             try {
                 $stmt = $this->pdo->prepare(
-                    "SELECT id, name, phone, role, referred_by FROM users WHERE id = ?"
+                    "SELECT id, name, phone, role, referred_by, integration_partner_enabled FROM users WHERE id = ?"
                 );
                 $stmt->execute([$id]);
             } catch (\PDOException $e) {
@@ -825,14 +825,15 @@ class UsersController
                 $refBy = (int)($_POST['referred_by'] ?? 0) ?: null;
             }
             $isBlocked = isset($_POST['is_blocked']) ? 1 : 0;
+            $integrationPartnerEnabled = (!$authStaff && in_array($role, ['partner', 'manager', 'admin'], true) && isset($_POST['integration_partner_enabled'])) ? 1 : 0;
 
             try {
                 $stmt = $this->pdo->prepare(
                     "UPDATE users
-                     SET name = ?, phone = ?, role = ?, is_blocked = ?, referred_by = ?
+                     SET name = ?, phone = ?, role = ?, is_blocked = ?, referred_by = ?, integration_partner_enabled = ?
                      WHERE id = ?"
                 );
-                $stmt->execute([$name, $phone, $role, $isBlocked, $refBy, $id]);
+                $stmt->execute([$name, $phone, $role, $isBlocked, $refBy, $integrationPartnerEnabled, $id]);
             } catch (\PDOException $e) {
                 try {
                     $stmt = $this->pdo->prepare(

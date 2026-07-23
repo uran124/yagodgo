@@ -113,7 +113,7 @@ if (!function_exists('is_csrf_exempt_path')) {
      */
     function is_csrf_exempt_path(string $uri): bool
     {
-        if (in_array($uri, ['/telegram/webhook', '/telegram/callback', '/api/integrations/florix24/order-status'], true)) {
+        if (in_array($uri, ['/telegram/webhook', '/telegram/callback', '/api/integrations/florix24/order-status'], true) || str_starts_with($uri, '/api/v1/integrations/florix/')) {
             return true;
         }
 
