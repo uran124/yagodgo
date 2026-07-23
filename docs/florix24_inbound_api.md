@@ -12,7 +12,7 @@ IP-ограничение по умолчанию выключено. После
 
 * `GET /api/v1/integrations/florix/customers/by-phone?phone=79000000000` — требуется `customers.read`.
 * `POST /api/v1/integrations/florix/orders` — требуется `orders.create`; `external_order_id` идемпотентен в пределах источника `florix24`.
-* `POST /api/v1/integrations/florix/orders/{external_order_id}/cancel` — требуется `orders.cancel`; возврат баллов и reversal партнёра идемпотентны.
+* `POST /api/v1/integrations/florix/orders/{external_order_id}/cancel` — требуется `orders.cancel`; отмена откатывает резерв/продажу склада по стандартным правилам BerryGo, записывает историю статуса, а возврат баллов и reversal партнёра идемпотентны.
 
 Во всех API-ответах присутствует или возвращается заголовок `X-Correlation-ID`. Токены никогда не записываются в журнал запросов.
 

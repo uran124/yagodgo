@@ -116,6 +116,38 @@ class OrderStatusApplicationService
         }
     }
 
+    /**
+     * Cancels an order on behalf of Florix24 without performing loyalty refunds.
+     * The caller owns refund/reversal transactions so that their Florix-specific
+     * external IDs and related transaction links remain intact.
+     */
+    public function cancelFromFlorix(int $orderId): void
+    {
+        $stmt = $this->pdo->prepare('SELECT status FROM orders WHERE id = ?' . ($this->driver() === 'mysql' ? ' FOR UPDATE' : ''));
+        $stmt->execute([$orderId]);
+        $previous = $stmt->fetchColumn();
+        if ($previous === false) {
+            throw new RuntimeException('Заказ BerryGo не найден.');
+        }
+        if ((string)$previous === 'cancelled') {
+            return;
+        }
+
+        if ($this->stockSchemaAvailable()) {
+            (new OrderStockOrchestrator($this->pdo, new StockService($this->pdo)))->rollbackReservationByOrderId($orderId);
+        }
+        $this->updateStatus($orderId, 'cancelled');
+        (new OrderStatusHistoryService($this->pdo))->record(
+            $orderId,
+            (string)$previous,
+            'cancelled',
+            null,
+            'florix24',
+            'Заказ отменен запросом Florix24',
+            true
+        );
+    }
+
     private function updateStatus(int $orderId, string $status): void
     {
         $stmt = $this->pdo->prepare('UPDATE orders SET status = ? WHERE id = ?');
@@ -313,6 +345,14 @@ class OrderStatusApplicationService
         } catch (Throwable $e) {
             return false;
         }
+    }
+
+    private function stockSchemaAvailable(): bool
+    {
+        return $this->tableExists('order_items')
+            && $this->tableExists('purchase_batches')
+            && $this->tableExists('stock_movements')
+            && $this->tableExists('products');
     }
 
     private function driver(): string

@@ -59,9 +59,9 @@ final class Florix24InboundService
             $q->execute([$externalId]); $order = $q->fetch(PDO::FETCH_ASSOC);
             if (!$order) throw new RuntimeException('validation_error');
             if ($order['status'] === 'cancelled') { $this->pdo->commit(); return ['result'=>'success','order_id'=>(int)$order['id'],'status'=>'cancelled','points_returned'=>0]; }
+            (new OrderStatusApplicationService($this->pdo))->cancelFromFlorix((int)$order['id']);
             $returned = $this->refundPoints($order, $externalId);
             $this->reversePartnerReward((int)$order['id'], $externalId);
-            $this->pdo->prepare("UPDATE orders SET status='cancelled' WHERE id=?")->execute([$order['id']]);
             $this->pdo->commit();
             return ['result'=>'success','order_id'=>(int)$order['id'],'status'=>'cancelled','points_returned'=>$returned];
         } catch (\Throwable $e) { if ($this->pdo->inTransaction()) $this->pdo->rollBack(); throw $e; }
