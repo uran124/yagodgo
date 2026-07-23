@@ -270,6 +270,11 @@ class ProductsController
         $externalName = trim((string)($_POST['external_name'] ?? ''));
         $externalDescription = trim((string)($_POST['external_description'] ?? ''));
         $externalSku = trim((string)($_POST['external_sku'] ?? ''));
+        $externalImagePath = trim((string)($_POST['external_image_path'] ?? ''));
+        if ($externalImagePath !== '' && !filter_var($externalImagePath, FILTER_VALIDATE_URL)) {
+            http_response_code(422);
+            exit('Внешнее изображение должно быть корректным URL.');
+        }
 
         // дата поставки (NULL → под заказ)
         $deliveryDateRaw = trim($_POST['delivery_date'] ?? '');
@@ -349,13 +354,13 @@ class ProductsController
                         preorder_price_per_box = ?,
                         sale_price      = ?,
                         delivery_date   = ?,
-                        is_active       = ?, external_catalog_enabled = ?, external_name = ?, external_description = ?, external_sku = ?, external_updated_at = CURRENT_TIMESTAMP";
+                        is_active       = ?, external_catalog_enabled = ?, external_name = ?, external_description = ?, external_sku = ?, external_image_path = ?, external_updated_at = CURRENT_TIMESTAMP";
             $params = [
                 $typeId, $alias, $variety, $description, $fullDesc, $compositionJson,
                 $metaTitle, $metaDesc, $metaKeys,
                 $manufacturer, $originCountry, $boxSize, $boxUnit,
                 $unit, $price, $preorderPrice, $salePrice,
-                $deliveryDate, $isActive, $externalCatalogEnabled, $externalName ?: null, $externalDescription ?: null, $externalSku ?: null
+                $deliveryDate, $isActive, $externalCatalogEnabled, $externalName ?: null, $externalDescription ?: null, $externalSku ?: null, $externalImagePath ?: null
             ];
 
             if ($imagePath) {
@@ -385,15 +390,15 @@ class ProductsController
 
         } else {
             // INSERT
-            $columns      = "product_type_id,alias,variety,description,full_description,composition,meta_title,meta_description,meta_keywords,manufacturer,origin_country,box_size,box_unit,unit,price,preorder_price_per_box,sale_price,delivery_date,is_active,external_catalog_enabled,external_name,external_description,external_sku,external_updated_at";
+            $columns      = "product_type_id,alias,variety,description,full_description,composition,meta_title,meta_description,meta_keywords,manufacturer,origin_country,box_size,box_unit,unit,price,preorder_price_per_box,sale_price,delivery_date,is_active,external_catalog_enabled,external_name,external_description,external_sku,external_image_path,external_updated_at";
             // 19 placeholders corresponding to the columns above
-            $placeholders = "?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP";
+            $placeholders = "?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP";
             $params       = [
                 $typeId, $alias, $variety, $description, $fullDesc, $compositionJson,
                 $metaTitle, $metaDesc, $metaKeys,
                 $manufacturer, $originCountry, $boxSize, $boxUnit,
                 $unit, $price, $preorderPrice, $salePrice,
-                $deliveryDate, $isActive, $externalCatalogEnabled, $externalName ?: null, $externalDescription ?: null, $externalSku ?: null
+                $deliveryDate, $isActive, $externalCatalogEnabled, $externalName ?: null, $externalDescription ?: null, $externalSku ?: null, $externalImagePath ?: null
             ];
             if ($sellerId) {
                 $columns      .= ",seller_id";
