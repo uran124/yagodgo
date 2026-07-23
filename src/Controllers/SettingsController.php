@@ -53,6 +53,11 @@ class SettingsController
         $all = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
         $florix24 = new Florix24IntegrationService($this->pdo);
+        $florixInboundClient = null;
+        if ($activeSection === 'integrations') {
+            $stmt = $this->pdo->prepare("SELECT token_prefix, created_at, last_used_at, expires_at, revoked_at, is_active, permissions, ip_check_enabled FROM integration_clients WHERE source='florix24' LIMIT 1");
+            try { $stmt->execute(); $florixInboundClient = $stmt->fetch(PDO::FETCH_ASSOC) ?: null; } catch (\Throwable) { $florixInboundClient = null; }
+        }
         viewAdmin('settings', [
           'pageTitle'           => 'Настройки — ' . $this->sections()[$activeSection],
           'settings'            => $all,
@@ -62,7 +67,10 @@ class SettingsController
           'florix24WebhookUrl'  => $florix24->webhookUrl(),
           'settingsSections'    => $this->sections(),
           'activeSection'       => $activeSection,
+          'florixInboundClient' => $florixInboundClient,
+          'florix24NewToken'    => $_SESSION['florix24_new_token'] ?? null,
         ]);
+        unset($_SESSION['florix24_new_token']);
     }
 
     // Сохранение
