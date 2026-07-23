@@ -536,6 +536,12 @@ $sectionUrl = static fn(string $section): string => $section === 'general' ? '/a
   <?php endif; ?>
 
   <?php if ($activeSection === 'integrations'): ?>
+  <fieldset class="border border-gray-200 rounded-lg p-4 space-y-3">
+    <legend class="px-2 text-sm font-semibold text-gray-600">Входящий API Florix24</legend>
+    <?php if (!empty($florix24NewToken)): ?><div class="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"><strong>Скопируйте токен сейчас — повторно он не показывается:</strong><code class="mt-2 block break-all rounded bg-white p-2"><?= htmlspecialchars($florix24NewToken) ?></code></div><?php endif; ?>
+    <?php if (!empty($florixInboundClient)): ?><dl class="grid gap-2 text-sm sm:grid-cols-2"><div><dt class="text-gray-500">Префикс</dt><dd class="font-mono"><?= htmlspecialchars($florixInboundClient['token_prefix'] ?: '—') ?>…</dd></div><div><dt class="text-gray-500">Статус</dt><dd><?= !empty($florixInboundClient['is_active']) && empty($florixInboundClient['revoked_at']) ? 'Активен' : 'Отключен' ?></dd></div><div><dt class="text-gray-500">Последнее использование</dt><dd><?= htmlspecialchars($florixInboundClient['last_used_at'] ?: '—') ?></dd></div><div><dt class="text-gray-500">Права</dt><dd><?= htmlspecialchars(implode(', ', json_decode($florixInboundClient['permissions'] ?? '[]', true) ?: [])) ?></dd></div></dl><?php else: ?><p class="text-sm text-gray-500">Токен для входящего API ещё не создан.</p><?php endif; ?>
+    <div class="flex gap-2"><form method="post" action="/admin/settings/integrations/florix24/inbound-token"><?= csrf_field() ?><button class="rounded bg-[#C86052] px-3 py-2 text-sm font-semibold text-white"><?= empty($florixInboundClient) ? 'Создать токен' : 'Ротировать токен' ?></button></form><?php if (!empty($florixInboundClient) && empty($florixInboundClient['revoked_at'])): ?><form method="post" action="/admin/settings/integrations/florix24/inbound-token/revoke"><?= csrf_field() ?><button class="rounded border border-red-300 px-3 py-2 text-sm font-semibold text-red-700">Отключить ключ</button></form><?php endif; ?></div>
+  </fieldset>
   <fieldset class="border border-gray-200 rounded-lg p-4 space-y-4" data-florix24-settings>
     <legend class="px-2 text-sm font-semibold text-gray-600">Florix24</legend>
 
