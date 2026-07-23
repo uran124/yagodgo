@@ -3,6 +3,7 @@ namespace App\Controllers;
 
 use PDO;
 use App\Services\PricingService;
+use App\Services\CatalogFeedService;
 
 class ProductsController
 {
@@ -265,6 +266,15 @@ class ProductsController
         $preorderPrice = (float)($_POST['preorder_price_per_box'] ?? 0);
         $salePrice     = (float)($_POST['sale_price'] ?? 0);
         $isActive      = isset($_POST['is_active']) ? 1 : 0;
+        $externalCatalogEnabled = isset($_POST['external_catalog_enabled']) ? 1 : 0;
+        $externalName = trim((string)($_POST['external_name'] ?? ''));
+        $externalDescription = trim((string)($_POST['external_description'] ?? ''));
+        $externalSku = trim((string)($_POST['external_sku'] ?? ''));
+        $externalImagePath = trim((string)($_POST['external_image_path'] ?? ''));
+        if ($externalImagePath !== '' && !filter_var($externalImagePath, FILTER_VALIDATE_URL)) {
+            http_response_code(422);
+            exit('Внешнее изображение должно быть корректным URL.');
+        }
 
         // дата поставки (NULL → под заказ)
         $deliveryDateRaw = trim($_POST['delivery_date'] ?? '');
@@ -344,13 +354,13 @@ class ProductsController
                         preorder_price_per_box = ?,
                         sale_price      = ?,
                         delivery_date   = ?,
-                        is_active       = ?";
+                        is_active       = ?, external_catalog_enabled = ?, external_name = ?, external_description = ?, external_sku = ?, external_image_path = ?, external_updated_at = CURRENT_TIMESTAMP";
             $params = [
                 $typeId, $alias, $variety, $description, $fullDesc, $compositionJson,
                 $metaTitle, $metaDesc, $metaKeys,
                 $manufacturer, $originCountry, $boxSize, $boxUnit,
                 $unit, $price, $preorderPrice, $salePrice,
-                $deliveryDate, $isActive
+                $deliveryDate, $isActive, $externalCatalogEnabled, $externalName ?: null, $externalDescription ?: null, $externalSku ?: null, $externalImagePath ?: null
             ];
 
             if ($imagePath) {
@@ -367,6 +377,7 @@ class ProductsController
 
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute($params);
+            (new CatalogFeedService($this->pdo))->markDirty();
             $placeholder = defined('PLACEHOLDER_DATE') ? PLACEHOLDER_DATE : '2025-05-15';
             $wasUnknown = ($oldDeliveryDate === null || $oldDeliveryDate === '' || $oldDeliveryDate === $placeholder);
             $isNowKnown = ($deliveryDate !== null && $deliveryDate !== '' && $deliveryDate !== $placeholder);
@@ -379,15 +390,15 @@ class ProductsController
 
         } else {
             // INSERT
-            $columns      = "product_type_id,alias,variety,description,full_description,composition,meta_title,meta_description,meta_keywords,manufacturer,origin_country,box_size,box_unit,unit,price,preorder_price_per_box,sale_price,delivery_date,is_active";
+            $columns      = "product_type_id,alias,variety,description,full_description,composition,meta_title,meta_description,meta_keywords,manufacturer,origin_country,box_size,box_unit,unit,price,preorder_price_per_box,sale_price,delivery_date,is_active,external_catalog_enabled,external_name,external_description,external_sku,external_image_path,external_updated_at";
             // 19 placeholders corresponding to the columns above
-            $placeholders = "?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?";
+            $placeholders = "?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP";
             $params       = [
                 $typeId, $alias, $variety, $description, $fullDesc, $compositionJson,
                 $metaTitle, $metaDesc, $metaKeys,
                 $manufacturer, $originCountry, $boxSize, $boxUnit,
                 $unit, $price, $preorderPrice, $salePrice,
-                $deliveryDate, $isActive
+                $deliveryDate, $isActive, $externalCatalogEnabled, $externalName ?: null, $externalDescription ?: null, $externalSku ?: null, $externalImagePath ?: null
             ];
             if ($sellerId) {
                 $columns      .= ",seller_id";
@@ -404,6 +415,7 @@ class ProductsController
             $sql  = "INSERT INTO products ({$columns}) VALUES ({$placeholders})";
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute($params);
+            (new CatalogFeedService($this->pdo))->markDirty();
         }
 
         header('Location: ' . $this->basePath());
@@ -423,6 +435,7 @@ class ProductsController
                 $params[] = $_SESSION['user_id'] ?? 0;
             }
             $this->pdo->prepare($sql)->execute($params);
+            (new CatalogFeedService($this->pdo))->markDirty();
         }
         header('Location: ' . $this->basePath());
         exit;
@@ -543,6 +556,7 @@ class ProductsController
                     $stmt->execute([$price, $batchId]);
                 }
             }
+            (new CatalogFeedService($this->pdo))->markDirty();
         }
         // Redirect back to the page where the price was updated.
         // If the "Referer" header is available, return to that page
