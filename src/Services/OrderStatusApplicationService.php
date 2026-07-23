@@ -173,7 +173,11 @@ class OrderStatusApplicationService
                     $isFirstClientOrder = (int)$count->fetchColumn() === 0;
                 }
                 $isSelfPlaced = empty($order['created_by_user_id']) || $explicitPartner > 0;
-                if ($refRole === 'manager') {
+                if ($explicitPartner > 0) {
+                    // The order-level Florix24 partner always follows the
+                    // 10% first-order / 3% repeat-order partner rule.
+                    $refBonus = Order::calculateReferralBonus($sum, true, $isFirstClientOrder);
+                } elseif ($refRole === 'manager') {
                     $refBonus = $isSelfPlaced ? Order::calculateManagerReferralBonus($sum) : 0;
                 } else {
                     $refBonus = Order::calculateReferralBonus($sum, $isPartner, $isFirstClientOrder);
@@ -185,7 +189,11 @@ class OrderStatusApplicationService
                         : ($refRole === 'manager'
                         ? "Бонус менеджера за самостоятельный заказ по ссылке №{$orderId}"
                         : "Бонус за заказ №{$orderId}");
-                    $this->insertPointsTransaction($refId, $orderId, $refBonus, $description);
+                    if ($explicitPartner > 0) {
+                        $this->insertPartnerReward($refId, $orderId, $refBonus, $description);
+                    } else {
+                        $this->insertPointsTransaction($refId, $orderId, $refBonus, $description);
+                    }
                 }
             }
 
@@ -251,6 +259,22 @@ class OrderStatusApplicationService
              VALUES (?, ?, ?, 'accrual', ?, {$timestamp})"
         );
         $stmt->execute([$userId, $orderId, $amount, $description]);
+    }
+
+    private function insertPartnerReward(int $userId, int $orderId, int $amount, string $description): void
+    {
+        if ($amount <= 0) return;
+        try {
+            $timestamp = $this->driver() === 'sqlite' ? "datetime('now')" : 'NOW()';
+            $stmt = $this->pdo->prepare(
+                "INSERT INTO points_transactions (user_id, order_id, amount, transaction_type, description, source, created_at)
+                 VALUES (?, ?, ?, 'partner_reward', ?, 'florix24', {$timestamp})"
+            );
+            $stmt->execute([$userId, $orderId, $amount, $description]);
+        } catch (Throwable $e) {
+            // Compatibility with older local schemas; production migration adds source.
+            $this->insertPointsTransaction($userId, $orderId, $amount, $description);
+        }
     }
 
     private function findProjectManagerId(): int

@@ -51,6 +51,38 @@ final class Florix24InboundService
         } catch (\Throwable $e) { if($this->pdo->inTransaction())$this->pdo->rollBack(); throw $e; }
     }
 
-    public function cancel(string $externalId): array { $this->pdo->beginTransaction(); try { $q=$this->pdo->prepare("SELECT id,user_id,status,points_used FROM orders WHERE integration_source='florix24' AND external_order_id=? LIMIT 1");$q->execute([$externalId]);$o=$q->fetch(PDO::FETCH_ASSOC);if(!$o)throw new RuntimeException('validation_error');if($o['status']==='cancelled'){$this->pdo->commit();return ['result'=>'success','order_id'=>(int)$o['id'],'status'=>'cancelled','points_returned'=>0];}$returned=0;if((int)$o['points_used']>0){$check=$this->pdo->prepare("SELECT id FROM points_transactions WHERE order_id=? AND source='florix24_order_cancel' LIMIT 1");$check->execute([$o['id']]);if(!$check->fetchColumn()){$usage=$this->pdo->prepare("SELECT id FROM points_transactions WHERE order_id=? AND transaction_type='usage' AND source='florix24_order' LIMIT 1");$usage->execute([$o['id']]);$related=$usage->fetchColumn();$returned=(int)$o['points_used'];$this->pdo->prepare('UPDATE users SET points_balance=points_balance+? WHERE id=?')->execute([$returned,$o['user_id']]);$this->pdo->prepare("INSERT INTO points_transactions (user_id,order_id,amount,transaction_type,description,source,external_order_id,related_transaction_id,created_at) VALUES (?,?,?,'refund',?,'florix24_order_cancel',?,?,CURRENT_TIMESTAMP)")->execute([$o['user_id'],$o['id'],$returned,'Florix24 cancellation '.$externalId,$externalId,$related]);}}$this->pdo->prepare("UPDATE orders SET status='cancelled' WHERE id=?")->execute([$o['id']]);$this->pdo->commit();return ['result'=>'success','order_id'=>(int)$o['id'],'status'=>'cancelled','points_returned'=>$returned];}catch(\Throwable $e){if($this->pdo->inTransaction())$this->pdo->rollBack();throw $e;}}
+    public function cancel(string $externalId): array
+    {
+        $this->pdo->beginTransaction();
+        try {
+            $q = $this->pdo->prepare("SELECT id,user_id,status,points_used FROM orders WHERE integration_source='florix24' AND external_order_id=? LIMIT 1");
+            $q->execute([$externalId]); $order = $q->fetch(PDO::FETCH_ASSOC);
+            if (!$order) throw new RuntimeException('validation_error');
+            if ($order['status'] === 'cancelled') { $this->pdo->commit(); return ['result'=>'success','order_id'=>(int)$order['id'],'status'=>'cancelled','points_returned'=>0]; }
+            $returned = $this->refundPoints($order, $externalId);
+            $this->reversePartnerReward((int)$order['id'], $externalId);
+            $this->pdo->prepare("UPDATE orders SET status='cancelled' WHERE id=?")->execute([$order['id']]);
+            $this->pdo->commit();
+            return ['result'=>'success','order_id'=>(int)$order['id'],'status'=>'cancelled','points_returned'=>$returned];
+        } catch (\Throwable $e) { if ($this->pdo->inTransaction()) $this->pdo->rollBack(); throw $e; }
+    }
+
+    private function refundPoints(array $order, string $externalId): int
+    {
+        if ((int)$order['points_used'] <= 0) return 0;
+        $check=$this->pdo->prepare("SELECT id FROM points_transactions WHERE order_id=? AND source='florix24_order_cancel' LIMIT 1"); $check->execute([$order['id']]); if ($check->fetchColumn()) return 0;
+        $usage=$this->pdo->prepare("SELECT id FROM points_transactions WHERE order_id=? AND transaction_type='usage' AND source='florix24_order' LIMIT 1"); $usage->execute([$order['id']]); $related=$usage->fetchColumn(); $returned=(int)$order['points_used'];
+        $this->pdo->prepare('UPDATE users SET points_balance=points_balance+? WHERE id=?')->execute([$returned,$order['user_id']]);
+        $this->pdo->prepare("INSERT INTO points_transactions (user_id,order_id,amount,transaction_type,description,source,external_order_id,related_transaction_id,created_at) VALUES (?,?,?,'refund',?,'florix24_order_cancel',?,?,CURRENT_TIMESTAMP)")->execute([$order['user_id'],$order['id'],$returned,'Florix24 cancellation '.$externalId,$externalId,$related]);
+        return $returned;
+    }
+
+    private function reversePartnerReward(int $orderId, string $externalId): void
+    {
+        $reward=$this->pdo->prepare("SELECT id,user_id,amount FROM points_transactions WHERE order_id=? AND transaction_type='partner_reward' LIMIT 1"); $reward->execute([$orderId]); $row=$reward->fetch(PDO::FETCH_ASSOC); if (!$row) return;
+        $exists=$this->pdo->prepare("SELECT id FROM points_transactions WHERE related_transaction_id=? AND transaction_type='partner_reward_reversal' LIMIT 1"); $exists->execute([$row['id']]); if ($exists->fetchColumn()) return;
+        $amount=abs((int)$row['amount']); $this->pdo->prepare('UPDATE users SET points_balance=points_balance-? WHERE id=?')->execute([$amount,$row['user_id']]);
+        $this->pdo->prepare("INSERT INTO points_transactions (user_id,order_id,amount,transaction_type,description,source,external_order_id,related_transaction_id,created_at) VALUES (?,?,?,'partner_reward_reversal',?,'florix24_order_cancel',?,?,CURRENT_TIMESTAMP)")->execute([$row['user_id'],$orderId,-$amount,'Reversal partner reward for Florix24 order '.$externalId,$externalId,$row['id']]);
+    }
     private function partner(array $p): array { if(!isset($p['berrygo_user_id']))return [null,[]];$q=$this->pdo->prepare("SELECT id,role,is_blocked,integration_partner_enabled,name FROM users WHERE id=?");$q->execute([(int)$p['berrygo_user_id']]);$u=$q->fetch(PDO::FETCH_ASSOC);if(!$u||(int)$u['is_blocked']||!(int)$u['integration_partner_enabled']||!in_array($u['role'],['partner','manager','admin'],true))return [null,[['code'=>'partner_not_available','message'=>'Партнер не назначен']]];return [['id'=>(int)$u['id'],'external_id'=>(string)($p['florix_user_id']??''),'name'=>(string)($p['name']??$u['name'])],[]]; }
 }
