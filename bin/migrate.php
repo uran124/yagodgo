@@ -13,10 +13,11 @@ $dsn = sprintf(
 
 $command = $argv[1] ?? null;
 $dryRun = in_array('--dry-run', $argv, true);
+$skipBackup = in_array('--skip-backup', $argv, true);
 
 if ($command === null || in_array($command, ['-h', '--help'], true)) {
     fwrite(STDOUT, "Usage:\n");
-    fwrite(STDOUT, "  php bin/migrate.php up [--dry-run]\n");
+    fwrite(STDOUT, "  php bin/migrate.php up [--dry-run] [--skip-backup]\n");
     fwrite(STDOUT, "  php bin/migrate.php status\n");
     exit(0);
 }
@@ -42,6 +43,26 @@ if ($dryRun && $command === 'status') {
     fwrite(STDERR, "The --dry-run flag is supported only for the 'up' command.\n");
     exit(1);
 }
+
+/** Create a consistent backup before a production schema change. */
+$createBackup = static function (array $config, string $baseDir): string {
+    $directory = getenv('MIGRATION_BACKUP_DIR') ?: $baseDir . '/backups/database';
+    if (!is_dir($directory) && !mkdir($directory, 0700, true) && !is_dir($directory)) {
+        throw new RuntimeException("Cannot create migration backup directory: {$directory}");
+    }
+    $target = rtrim($directory, '/') . '/' . date('Ymd-His') . '-' . $config['dbname'] . '.sql';
+    $credentials = tempnam(sys_get_temp_dir(), 'berrygo-mysql-');
+    if ($credentials === false) throw new RuntimeException('Cannot create temporary MySQL credentials file.');
+    try {
+        if (file_put_contents($credentials, "[client]\nhost={$config['host']}\nuser={$config['user']}\npassword={$config['password']}\n") === false) throw new RuntimeException('Cannot write temporary MySQL credentials file.');
+        chmod($credentials, 0600);
+        $command = sprintf('mysqldump --defaults-extra-file=%s --single-transaction --routines --events --default-character-set=%s %s > %s', escapeshellarg($credentials), escapeshellarg($config['charset']), escapeshellarg($config['dbname']), escapeshellarg($target));
+        exec($command, $output, $status);
+        if ($status !== 0 || !is_file($target) || filesize($target) === 0) { @unlink($target); throw new RuntimeException('mysqldump failed; no migration was applied.'); }
+        chmod($target, 0600);
+        return $target;
+    } finally { @unlink($credentials); }
+};
 
 $ensureSchemaMigrations = static function (PDO $pdo): void {
     $pdo->exec(
@@ -126,6 +147,17 @@ $pending = array_values(array_filter($files, static fn (string $file): bool => !
 if ($pending === []) {
     fwrite(STDOUT, "No pending migrations.\n");
     exit(0);
+}
+
+if (!$skipBackup) {
+    try {
+        $backupPath = $createBackup($dbConfig, $baseDir);
+        fwrite(STDOUT, "Database backup created: {$backupPath}\n");
+    } catch (Throwable $e) {
+        fwrite(STDERR, "Migration backup failed: {$e->getMessage()}\n");
+        fwrite(STDERR, "Use --skip-backup only after an externally verified backup.\n");
+        exit(1);
+    }
 }
 
 foreach ($files as $filename) {
