@@ -79,6 +79,12 @@ $redirectPath = $currentPath ? (parse_url($currentPath, PHP_URL_PATH) ?: '') : '
     </label>
     <div class="text-sm text-gray-500">Создан: <?= date('d.m.Y H:i', strtotime($user['created_at'])) ?></div>
   </div>
+  <?php if (!$isManager): ?>
+    <label class="flex items-start gap-2 rounded border border-amber-200 bg-amber-50 p-3 text-sm">
+      <input type="checkbox" name="integration_partner_enabled" value="1" <?= !empty($user['integration_partner_enabled']) ? 'checked' : '' ?> <?= in_array($user['role'], ['partner','manager','admin'], true) ? '' : 'disabled' ?>>
+      <span><strong>Партнёр интеграции Florix24</strong><br><span class="text-xs text-gray-600">Доступно только ролям партнёра, менеджера или администратора. Без этого флага заказ не назначает пользователя партнёром.</span></span>
+    </label>
+  <?php endif; ?>
   <div>Telegram: <?= htmlspecialchars($user['telegram_id'] ?? '') ?></div>
   <div>Пригласительный код: <?= htmlspecialchars($user['referral_code']) ?></div>
   <?php if (!$isManager): ?>

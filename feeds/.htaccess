@@ -1,0 +1,5 @@
+Options -ExecCGI
+AddType application/xml .yml
+<FilesMatch "\.(php|phtml|phar)$">
+  Require all denied
+</FilesMatch>
