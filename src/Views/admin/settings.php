@@ -536,6 +536,11 @@ $sectionUrl = static fn(string $section): string => $section === 'general' ? '/a
   <?php endif; ?>
 
   <?php if ($activeSection === 'integrations'): ?>
+  </form>
+
+  <!-- Keep lifecycle forms separate from the integration settings form.
+       HTML does not support nested forms: without this boundary, browsers submit
+       "Создать токен" to /admin/settings/integrations instead of its POST route. -->
   <fieldset class="border border-gray-200 rounded-lg p-4 space-y-3">
     <legend class="px-2 text-sm font-semibold text-gray-600">Входящий API Florix24</legend>
     <?php if (!empty($florix24NewToken)): ?><div class="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"><strong>Скопируйте токен сейчас — повторно он не показывается:</strong><code class="mt-2 block break-all rounded bg-white p-2"><?= htmlspecialchars($florix24NewToken) ?></code></div><?php endif; ?>
@@ -543,6 +548,9 @@ $sectionUrl = static fn(string $section): string => $section === 'general' ? '/a
     <div class="flex gap-2"><form method="post" action="/admin/settings/integrations/florix24/inbound-token"><?= csrf_field() ?><button class="rounded bg-[#C86052] px-3 py-2 text-sm font-semibold text-white"><?= empty($florixInboundClient) ? 'Создать токен' : 'Ротировать токен' ?></button></form><?php if (!empty($florixInboundClient) && empty($florixInboundClient['revoked_at'])): ?><form method="post" action="/admin/settings/integrations/florix24/inbound-token/revoke"><?= csrf_field() ?><button class="rounded border border-red-300 px-3 py-2 text-sm font-semibold text-red-700">Отключить ключ</button></form><?php endif; ?></div>
     <?php if (!empty($florixInboundClient)): ?><form method="post" action="/admin/settings/integrations/florix24/network-policy" class="rounded border bg-gray-50 p-3 text-sm"><?= csrf_field() ?><label class="flex items-center gap-2 font-medium"><input type="checkbox" name="ip_check_enabled" value="1" <?= !empty($florixInboundClient['ip_check_enabled']) ? 'checked' : '' ?>> Включить IP-ограничение</label><label class="mt-2 block text-xs text-gray-600">Разрешённые IP/CIDR, по одному на строку<textarea name="ip_allowlist" rows="3" class="mt-1 w-full border p-2 font-mono text-xs"><?= htmlspecialchars($florixInboundClient['allowed_ips'] ?? '') ?></textarea></label><p class="mt-1 text-xs text-gray-500">По умолчанию проверка отключена. `X-Forwarded-For` не используется, пока не настроен trusted proxy.</p><button class="mt-2 rounded border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold">Сохранить сетевую политику</button></form><?php endif; ?>
   </fieldset>
+
+  <form action="<?= htmlspecialchars($sectionUrl($activeSection)) ?>" method="post" class="bg-white p-6 rounded shadow space-y-4">
+    <?= csrf_field() ?>
   <fieldset class="border border-gray-200 rounded-lg p-4 space-y-4" data-florix24-settings>
     <legend class="px-2 text-sm font-semibold text-gray-600">Florix24</legend>
 

@@ -95,4 +95,18 @@ class CsrfProtectionTest extends TestCase
 
         $this->assertSame([], $missing);
     }
+
+    public function testIntegrationTokenLifecycleFormIsNotNestedInSettingsForm(): void
+    {
+        $view = (string) file_get_contents(dirname(__DIR__) . '/src/Views/admin/settings.php');
+        $integrationStart = strpos($view, "<?php if (\$activeSection === 'integrations'): ?>");
+        $tokenForm = strpos($view, 'action="/admin/settings/integrations/florix24/inbound-token"');
+        $settingsFormAfterToken = strpos($view, '<form action="<?= htmlspecialchars($sectionUrl($activeSection)) ?>" method="post"', $tokenForm);
+
+        $this->assertNotFalse($integrationStart);
+        $this->assertNotFalse($tokenForm);
+        $this->assertNotFalse($settingsFormAfterToken);
+        $this->assertLessThan($tokenForm, strpos($view, '</form>', $integrationStart));
+        $this->assertLessThan($settingsFormAfterToken, $tokenForm);
+    }
 }
