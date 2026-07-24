@@ -8,6 +8,7 @@ $florix24Journal = $florix24Journal ?? [];
 $florix24WebhookUrl = $florix24WebhookUrl ?? 'https://berrygo.ru/api/integrations/florix24/order-status';
 $settingsSections = $settingsSections ?? ['general' => 'Основные'];
 $activeSection = $activeSection ?? 'general';
+$catalogFeedState = $catalogFeedState ?? null;
 $sectionUrl = static fn(string $section): string => $section === 'general' ? '/admin/settings' : '/admin/settings/' . $section;
 ?>
 <div class="max-w-5xl space-y-4">
@@ -29,6 +30,28 @@ $sectionUrl = static fn(string $section): string => $section === 'general' ? '/a
 
 <form action="<?= htmlspecialchars($sectionUrl($activeSection)) ?>" method="post" class="bg-white p-6 rounded shadow space-y-4">
   <?= csrf_field() ?>
+  <?php if ($activeSection === 'import_export'): ?>
+  <?php $catalogFeedState = is_array($catalogFeedState) ? $catalogFeedState : ['is_available' => false, 'is_dirty' => true, 'generated_at' => null, 'last_error' => null]; ?>
+  <fieldset class="space-y-4 rounded-lg border border-gray-200 p-4">
+    <legend class="px-2 text-sm font-semibold text-gray-600">YML-каталог</legend>
+    <div class="rounded-lg bg-blue-50 p-4 text-sm text-blue-900">
+      <p class="font-semibold">Выгрузка каталога для внешних сервисов</p>
+      <p class="mt-1">В файл попадают только активные товары с включённой опцией «Выгружать во внешние каталоги».</p>
+    </div>
+    <dl class="grid gap-3 text-sm sm:grid-cols-2">
+      <div><dt class="text-gray-500">Статус файла</dt><dd class="font-medium text-gray-800"><?= !empty($catalogFeedState['is_available']) ? 'Доступен' : 'Ещё не сформирован' ?></dd></div>
+      <div><dt class="text-gray-500">Последнее обновление</dt><dd class="font-medium text-gray-800"><?= htmlspecialchars((string)($catalogFeedState['generated_at'] ?? 'Никогда')) ?></dd></div>
+      <div><dt class="text-gray-500">Актуальность</dt><dd class="font-medium <?= !empty($catalogFeedState['is_dirty']) ? 'text-amber-700' : 'text-emerald-700' ?>"><?= !empty($catalogFeedState['is_dirty']) ? 'Требуется обновление' : 'Актуален' ?></dd></div>
+      <div><dt class="text-gray-500">Адрес выгрузки</dt><dd><a href="/feeds/catalog.yml" target="_blank" rel="noopener" class="font-medium text-[#C86052] hover:underline">/feeds/catalog.yml</a></dd></div>
+    </dl>
+    <?php if (!empty($catalogFeedState['last_error'])): ?><p class="rounded bg-red-50 p-3 text-sm text-red-800">Последняя ошибка: <?= htmlspecialchars((string)$catalogFeedState['last_error']) ?></p><?php endif; ?>
+    <p class="text-xs text-gray-500">После изменения товара обновите выгрузку или настройте запуск команды <code>php bin/generate_catalog_feed.php</code> по расписанию.</p>
+    <div class="flex flex-wrap gap-2">
+      <a href="/feeds/catalog.yml" target="_blank" rel="noopener" class="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">Открыть YML</a>
+      <button type="submit" formaction="/admin/settings/import_export/yml/generate" class="rounded bg-[#C86052] px-4 py-2 text-sm font-semibold text-white hover:bg-[#B44D47]">Сформировать YML</button>
+    </div>
+  </fieldset>
+  <?php endif; ?>
   <?php if ($activeSection === 'general'): ?>
   <div>
     <label class="block mb-1">Название компании</label>
@@ -680,10 +703,12 @@ $sectionUrl = static fn(string $section): string => $section === 'general' ? '/a
       <p class="text-xs text-gray-500">Выбранный цвет применится к основным кнопкам, ссылкам и акцентам пользовательского интерфейса.</p>
     </fieldset>
   <?php endif; ?>
-  <button type="submit"
-          class="accent-gradient text-white px-4 py-2 rounded accent-focus transition">
-    Сохранить раздел
-  </button>
+  <?php if ($activeSection !== 'import_export'): ?>
+    <button type="submit"
+            class="accent-gradient text-white px-4 py-2 rounded accent-focus transition">
+      Сохранить раздел
+    </button>
+  <?php endif; ?>
 </form>
 <?php if ($activeSection === 'integrations'): ?>
   <section class="rounded bg-white p-5 shadow space-y-3">

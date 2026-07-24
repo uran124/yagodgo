@@ -2,6 +2,7 @@
 namespace App\Controllers;
 
 use App\Services\DeliveryPricingService;
+use App\Services\CatalogFeedService;
 use App\Services\Florix24IntegrationService;
 use App\Services\Florix24InboundJournalService;
 use PDO;
@@ -35,6 +36,7 @@ class SettingsController
             'registration_notifications' => 'Регистрация / Уведомления',
             'delivery' => 'Доставка',
             'integrations' => 'Интеграции',
+            'import_export' => 'Импорт / экспорт',
             'theme'    => 'Тема',
         ];
     }
@@ -73,6 +75,7 @@ class SettingsController
           'florixInboundClient' => $florixInboundClient,
           'florix24NewToken'    => $_SESSION['florix24_new_token'] ?? null,
           'florixInboundJournal'=> $florixInboundJournal,
+          'catalogFeedState'    => $activeSection === 'import_export' ? $this->catalogFeedState() : null,
         ]);
         unset($_SESSION['florix24_new_token']);
     }
@@ -386,6 +389,19 @@ class SettingsController
         }
     }
 
+    public function generateCatalogFeed(): void
+    {
+        try {
+            (new CatalogFeedService($this->pdo))->generate(true);
+            $query = 'message=' . urlencode('YML-файл каталога успешно обновлён.');
+        } catch (\Throwable $e) {
+            $query = 'error=' . urlencode('Не удалось обновить YML: ' . $e->getMessage());
+        }
+
+        header('Location: /admin/settings/import_export?' . $query);
+        exit;
+    }
+
     public function suggestDeliveryAddresses(): void
     {
         header('Content-Type: application/json; charset=UTF-8');
@@ -427,6 +443,27 @@ class SettingsController
     private function sectionUrl(string $section): string
     {
         return $section === 'general' ? '/admin/settings' : '/admin/settings/' . $section;
+    }
+
+    /**
+     * @return array{is_dirty: int, generated_at: string|null, last_error: string|null, is_available: bool}
+     */
+    private function catalogFeedState(): array
+    {
+        $state = ['is_dirty' => 1, 'generated_at' => null, 'last_error' => null];
+        try {
+            $stmt = $this->pdo->query('SELECT is_dirty, generated_at, last_error FROM catalog_feed_state WHERE id = 1');
+            $row = $stmt ? $stmt->fetch(PDO::FETCH_ASSOC) : false;
+            if (is_array($row)) {
+                $state = array_merge($state, $row);
+            }
+        } catch (\Throwable) {
+            // The feed migration may not have been applied yet; keep the block usable.
+        }
+
+        $state['is_dirty'] = (int)$state['is_dirty'];
+        $state['is_available'] = is_file(dirname(__DIR__, 2) . '/feeds/catalog.yml');
+        return $state;
     }
 
     /**
