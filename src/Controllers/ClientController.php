@@ -1738,7 +1738,7 @@ public function cancelReservedOrder(int $orderId): void
                 return;
             }
             $desiredDeliveryDate = date('Y-m-d', $tsDesired);
-            $minPreorderDate = date('Y-m-d', strtotime('+2 day'));
+            $minPreorderDate = date('Y-m-d', strtotime('+1 day'));
             if ($desiredDeliveryDate < $minPreorderDate) {
                 http_response_code(422);
                 header('Content-Type: application/json; charset=utf-8');
