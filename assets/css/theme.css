@@ -180,6 +180,124 @@
       --badge-border: rgba(59, 130, 246, 0.26);
     }
 
+    /* Product card controls are intentionally component-scoped: the catalog and
+       the product page share the same markup, while their surrounding layouts
+       are different. */
+    .product-card-actions {
+      color: #1f2937;
+    }
+    .product-card-price-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .75rem;
+    }
+    .product-card-price-block { min-width: 0; }
+    .product-card-current-price,
+    .product-card-expected-price {
+      color: #111827;
+      font-size: 1.25rem;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    .product-card-preorder-price,
+    .product-card-price-note {
+      color: #6b7280;
+      font-size: .75rem;
+      line-height: 1.35;
+    }
+    .product-card-preorder-price span { color: #047857; font-weight: 600; }
+    .product-card-price-pair { display: flex; align-items: baseline; flex-wrap: wrap; gap: .4rem; }
+    .product-card-regular-price { color: #9ca3af; font-size: .875rem; text-decoration: line-through; }
+    .product-card-price-pending { color: #9ca3af; font-size: .875rem; font-weight: 600; }
+    .product-card-quantity {
+      display: inline-flex;
+      flex: 0 0 auto;
+      align-items: center;
+      height: 2.5rem;
+      overflow: hidden;
+      border: 1px solid #e5e7eb;
+      border-radius: .75rem;
+      background: #fff;
+    }
+    .product-card-quantity button {
+      display: grid;
+      width: 2rem;
+      height: 100%;
+      place-items: center;
+      color: #4b5563;
+      font-size: 1.125rem;
+      line-height: 1;
+      transition: background-color .15s ease, color .15s ease;
+    }
+    .product-card-quantity button:hover { background: #f9fafb; color: #111827; }
+    .product-card-quantity input {
+      width: 2.25rem;
+      min-width: 0;
+      border: 0;
+      background: transparent;
+      color: #111827;
+      font-weight: 700;
+      text-align: center;
+      -moz-appearance: textfield;
+    }
+    .product-card-quantity input::-webkit-inner-spin-button,
+    .product-card-quantity input::-webkit-outer-spin-button { margin: 0; -webkit-appearance: none; }
+    .product-card-price-note { margin: .5rem 0 .75rem; }
+    .product-card-buttons { display: grid; gap: .5rem; }
+    .product-card-buy-form { display: block; }
+    .product-card-button {
+      display: flex;
+      width: 100%;
+      min-height: 2.5rem;
+      align-items: center;
+      justify-content: center;
+      gap: .4rem;
+      border-radius: .75rem;
+      padding: .55rem .75rem;
+      font-size: .875rem;
+      font-weight: 600;
+      line-height: 1.2;
+      text-align: center;
+      transition: opacity .15s ease, background-color .15s ease, border-color .15s ease;
+    }
+    .product-card-button .material-icons-round { font-size: 1rem; }
+    .product-card-button--buy { background: linear-gradient(135deg, #ef4444, #ec4899); color: #fff; }
+    .product-card-button--buy:hover { opacity: .9; }
+    .product-card-button--preorder { border: 1px solid #10b981; color: #047857; background: #fff; }
+    .product-card-button--preorder:hover { background: #ecfdf5; }
+    .product-card-button--disabled { background: #f3f4f6; color: #9ca3af; cursor: not-allowed; }
+    .product-card-message { margin: .5rem 0 0; color: #047857; font-size: .75rem; line-height: 1.35; }
+    .product-card-message.is-error { color: #dc2626; }
+    .preorder-dialog {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      display: grid;
+      place-items: center;
+      padding: 1rem;
+      background: rgb(17 24 39 / .55);
+    }
+    .preorder-dialog__panel {
+      position: relative;
+      width: min(100%, 24rem);
+      border-radius: 1rem;
+      background: #fff;
+      padding: 1.25rem;
+      box-shadow: 0 25px 50px -12px rgb(0 0 0 / .3);
+    }
+    .preorder-dialog h2 { margin: 0; color: #111827; font-size: 1.125rem; }
+    .preorder-dialog__product { margin: .25rem 1.5rem .875rem 0; color: #6b7280; font-size: .875rem; }
+    .preorder-dialog label { display: grid; gap: .35rem; margin-top: .75rem; color: #374151; font-size: .8125rem; font-weight: 600; }
+    .preorder-dialog input { width: 100%; height: 2.5rem; border: 1px solid #d1d5db; border-radius: .625rem; padding: 0 .75rem; background: #fff; }
+    .preorder-dialog__price { margin: .875rem 0 .25rem; color: #111827; font-weight: 700; }
+    .preorder-dialog__notice { margin: 0; color: #6b7280; font-size: .75rem; line-height: 1.35; }
+    .preorder-dialog__actions { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin-top: 1rem; }
+    .preorder-dialog__actions button { min-height: 2.5rem; border-radius: .625rem; background: #059669; color: #fff; font-size: .875rem; font-weight: 600; }
+    .preorder-dialog__actions .preorder-dialog__cancel { border: 1px solid #d1d5db; background: #fff; color: #374151; }
+    .preorder-dialog__close { position: absolute; top: .75rem; right: .75rem; width: 2rem; height: 2rem; border-radius: 9999px; color: #6b7280; font-size: 1.5rem; line-height: 1; }
+    .preorder-dialog__close:hover { background: #f3f4f6; }
+
     @media (prefers-color-scheme: dark) {
       .availability-badge {
         --badge-bg: rgba(15, 23, 42, 0.7);
