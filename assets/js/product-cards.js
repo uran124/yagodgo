@@ -54,7 +54,9 @@
       document.body.appendChild(form);
 
       var date = form.elements.desired_delivery_date;
-      var minimum = new Date(); minimum.setDate(minimum.getDate() + 2);
+      // Same constraint as the server: today is unavailable, tomorrow is the
+      // first valid date for a preorder.
+      var minimum = new Date(); minimum.setDate(minimum.getDate() + 1);
       var minimumIso = minimum.toISOString().slice(0, 10);
       date.min = minimumIso;
       var supplyDate = button.dataset.supplyDate || button.dataset.deliveryDate || '';
